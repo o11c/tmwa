@@ -3576,7 +3576,7 @@ void display_conf_warnings (void)
     }
     if (access_order == ACO_ALLOW_DENY)
     {
-        if (access_allownum == 0)
+        if (access_allownum == 0 && access_denynum != 0)
         {
             printf ("***WARNING: The IP security order is 'allow,deny' (deny if not allowed).\n");
             printf ("            But you never allowed any IP!\n");
@@ -3585,7 +3585,7 @@ void display_conf_warnings (void)
     else
     {
         // ACO_MUTUAL_FAILURE
-        if (access_allownum == 0)
+        if (access_allownum == 0 && access_denynum != 0)
         {
             printf ("***WARNING: The IP security order is 'mutual-failure'\n");
             printf ("            (allow if in the allow list and not in the deny list).\n");

@@ -11,8 +11,6 @@
 // set to another value if you want to check (1)
 # define CMP_AUTHFIFO_IP 1
 
-# define CMP_AUTHFIFO_LOGIN2 1
-
 # define MAX_MAP_PER_SERVER 512
 # define MAX_INVENTORY 100
 # define MAX_AMOUNT 30000
@@ -56,6 +54,9 @@
 # define MAX_STATUS_TYPE 5
 
 # define CHAR_CONF_NAME  "conf/char_athena.conf"
+
+typedef uint32_t account_t;
+typedef uint8_t gm_level_t;
 
 struct item
 {
@@ -146,8 +147,8 @@ struct map_session_data;
 
 struct gm_account
 {
-    int  account_id;
-    int  level;
+    account_t account_id;
+    gm_level_t level;
 };
 
 struct party_member

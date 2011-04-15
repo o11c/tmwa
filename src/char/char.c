@@ -4016,7 +4016,7 @@ void term_func (void)
     char_log ("----End of char-server (normal end with closing of all files).\n");
 }
 
-int do_init (int argc, char **argv)
+void do_init (int argc, char **argv)
 {
     int  i;
 

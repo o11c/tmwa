@@ -6426,7 +6426,7 @@ void term_func (void)
 //------------------------
 // Main function of ladmin
 //------------------------
-int do_init (int argc, char **argv)
+void do_init (int argc, char **argv)
 {
     eathena_interactive_session = isatty (0);
     // read ladmin configuration

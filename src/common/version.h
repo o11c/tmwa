@@ -1,5 +1,6 @@
 /// Some constants to identify the version of (e)Athena
 /// The values are different if the client connects (-1,'T','M','W',flags32)
+// The flavor characters are now settable below
 // These numbers have never been changed while TMW
 #ifndef VERSION_H
 #define VERSION_H
@@ -20,5 +21,10 @@
 
 // and this as two bytes
 # define ATHENA_MOD_VERSION   1052   // mod version (patch No.)
+
+/// Flavor of the server
+// EVOL uses this to identify itself to manaplus
+// however, this is recommended for generally useful features
+static const uint8_t PUBLIC_VERSION[3] = {'T', 'M', 'W'};
 
 #endif // VERSION_H

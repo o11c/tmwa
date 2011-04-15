@@ -1,41 +1,99 @@
-// $Id: login.h,v 1.1.1.1 2004/09/10 17:26:53 MagicalTux Exp $
-#ifndef _LOGIN_H_
-#define _LOGIN_H_
+#ifndef LOGIN_H
+#define LOGIN_H
 
-#define MAX_SERVERS 30
+/// Max number of char servers to accept
+# define MAX_SERVERS 30
 
-#define LOGIN_CONF_NAME "conf/login_athena.conf"
-#define LAN_CONF_NAME "conf/lan_support.conf"
-// It seems we don't need to emulate RO's "password encryption" - MC/TMW
-//#define PASSWORDENC 3           // A definition is given when making an encryption password correspond.
-                        // It is 1 at the time of passwordencrypt.
-                        // It is made into 2 at the time of passwordencrypt2.
-                        // When it is made 3, it corresponds to both.
-#define START_ACCOUNT_NUM 2000000
-#define END_ACCOUNT_NUM 100000000
+# define LOGIN_CONF_NAME "conf/login_athena.conf"
+# define LAN_CONF_NAME "conf/lan_support.conf"
+/// Start and end of user accounts
+// TODO figure out why it is like this
+# define START_ACCOUNT_NUM 2000000
+# define END_ACCOUNT_NUM 100000000
+
+#include <netinet/in.h>
+
+#include "../common/sanity.h"
+#include "../common/mmo.h"
+
+enum gender
+{
+    SEX_FEMALE,
+    SEX_MALE,
+    SEX_SERVER,
+    SEX_ERROR,
+};
+
+static inline enum gender sex_from_char(char c)
+{
+    switch (c | 0x20)
+    {
+    case 's': return SEX_SERVER;
+    case 'm': return SEX_MALE;
+    case 'f': return SEX_FEMALE;
+    default: return SEX_ERROR;
+    }
+}
+
+static inline char sex_to_char(enum gender sex)
+{
+    switch (sex)
+    {
+    case SEX_FEMALE: return 'F';
+    case SEX_MALE: return 'M';
+    case SEX_SERVER: return 'S';
+    default: return '\0';
+    }
+}
 
 struct mmo_account
 {
     char *userid;
     char *passwd;
-    int  passwdenc;
 
-    long account_id;
-    long login_id1;
-    long login_id2;
-    long char_id;
+    account_t account_id;
+    /// magic cookies used to authenticate?
+    uint32_t login_id1, login_id2;
+    // ? This is not used by the login server ...
+    uint32_t char_id;
+    // why is this needed?
     char lastlogin[24];
-    int  sex;
+    // this is used redundantly ...
+    enum gender sex;
 };
 
 struct mmo_char_server
 {
     char name[20];
-    long ip;
-    short port;
-    int  users;
-    int  maintenance;
-    int  is_new;
+    in_addr_t ip;
+    in_port_t port;
+    uint32_t users;
+    uint32_t maintenance;
+    uint32_t is_new;
 };
 
+/// Reason a login can fail
+// Note - packet 0x6a uses one less than this (no AUTH_OK)
+enum auth_failure
+{
+    AUTH_OK = 0,
+    AUTH_UNREGISTERED_ID = 1,
+    AUTH_INVALID_PASSWORD = 2,
+    AUTH_EXPIRED = 3,
+    AUTH_REJECTED_BY_SERVER = 4,
+    AUTH_BLOCKED_BY_GM = 5,
+    AUTH_CLIENT_TOO_OLD = 6,
+    AUTH_BANNED_TEMPORARILY = 7,
+    AUTH_SERVER_OVERPOPULATED = 8,
+    AUTH_ALREADY_EXISTS = 10,
+    AUTH_ID_ERASED = 100,
+};
+
+enum passwd_failure
+{
+    PASSWD_NO_ACCOUNT = 0,
+    PASSWD_OK = 1,
+    PASSWD_WRONG_PASSWD = 2,
+    PASSWD_TOO_SHORT = 3,
+};
 #endif

@@ -11,10 +11,6 @@
 #include "mt_rand.h"
 #include "nullpo.h"
 
-/// Defined by each server
-extern int  do_init (int, char **);
-extern void term_func (void);
-
 static void chld_proc (int UNUSED)
 {
     wait(NULL);

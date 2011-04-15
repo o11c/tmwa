@@ -567,7 +567,7 @@ void mmo_auth_init (void)
 
         remove_control_chars (tmp.lastlogin);
 
-        auth_dat[auth_num].sex = sex_from_char(sex);
+        tmp.sex = sex_from_char(sex);
         tmp.state = (enum auth_failure)state;
 
         if (!e_mail_check (tmp.email))

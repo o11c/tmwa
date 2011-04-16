@@ -1,4 +1,5 @@
 /// Global structures and defines
+// BUG: many of these are only applicable for one of the servers
 #ifndef MMO_H
 #define MMO_H
 

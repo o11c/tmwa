@@ -4,6 +4,8 @@
 #include "sanity.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <arpa/inet.h>
 
@@ -34,4 +36,13 @@ static inline void ip_to_str (in_addr_t ip, char out[16])
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+/// Like strncpy but ensures a NUL-terminator
+// return true if there already was one, false if we had to add it
+static inline bool strzcpy (char *dst, const char *src, size_t n)
+{
+    if (!n) abort();
+    strncpy (dst, src, n);
+    dst[n-1] = '\0';
+    return strnlen (src, n) != n;
+}
 #endif //UTILS_H

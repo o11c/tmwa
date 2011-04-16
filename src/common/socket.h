@@ -88,6 +88,7 @@ struct socket_data
     /// Can be set explicitly or via set_defaultparse
     void (*func_parse) (int);
     /// Server-specific data type
+    // TODO make this into a type-safe-but-generic struct session_data *
     void *session_data;
 };
 

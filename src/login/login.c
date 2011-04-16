@@ -1601,6 +1601,911 @@ void parse_fromchar (int fd)
 }
 
 
+
+/// Request of the server version
+// uint16_t packet
+void x7530 (int fd)
+{
+    login_log ("'ladmin': Request server version (ip: %s)\n", ip_of (fd));
+    WFIFOW (fd, 0) = 0x7531;
+    WFIFOB (fd, 2) = ATHENA_MAJOR_VERSION;
+    WFIFOB (fd, 3) = ATHENA_MINOR_VERSION;
+    WFIFOB (fd, 4) = ATHENA_REVISION;
+    WFIFOB (fd, 5) = ATHENA_RELEASE_FLAG;
+    WFIFOB (fd, 6) = ATHENA_OFFICIAL_FLAG;
+    WFIFOB (fd, 7) = ATHENA_SERVER_LOGIN;
+    WFIFOW (fd, 8) = ATHENA_MOD_VERSION;
+    WFIFOSET (fd, 10);
+}
+
+/// Request of end of connection
+// uint16_t packet
+void x7532 (int fd)
+{
+    login_log ("'ladmin': End of connection (ip: %s)\n", ip_of (fd));
+    session[fd]->eof = 1;
+}
+
+/// Request list of accounts
+// uint16_t packet, uint32_t start, uint32_t end
+void x7920 (int fd)
+{
+    account_t st = RFIFOL (fd, 2);
+    account_t ed = RFIFOL (fd, 6);
+    WFIFOW (fd, 0) = 0x7921;
+    if (st >= END_ACCOUNT_NUM)
+        st = 0;
+    if (ed > END_ACCOUNT_NUM || ed < st)
+        ed = END_ACCOUNT_NUM;
+    login_log ("'ladmin': List accounts from %d to %d (ip: %s)\n",
+                st, ed, ip_of (fd));
+    // Note: this is a vla
+    int  id[auth_num];
+    sort_accounts (id);
+    // Sending accounts information
+    uint16_t len = 4;
+    for (int i = 0; i < auth_num && len < 30000; i++)
+    {
+        account_t account_id = auth_dat[id[i]].account_id;   // use sorted index
+        if (account_id < st || account_id > ed)
+            continue;
+        WFIFOL (fd, len) = account_id;
+        WFIFOB (fd, len + 4) = isGM (account_id);
+        strcpy ((char *)WFIFOP (fd, len + 5), auth_dat[id[i]].userid);
+        WFIFOB (fd, len + 29) = (uint8_t)auth_dat[id[i]].sex;
+        WFIFOL (fd, len + 30) = auth_dat[id[i]].logincount;
+        // if no state, but banished - FIXME can this happen?
+        if (!auth_dat[id[i]].state == 0 && auth_dat[id[i]].ban_until_time)
+            WFIFOL (fd, len + 34) = 7;
+        else
+            WFIFOL (fd, len + 34) = auth_dat[id[i]].state;
+        len += 38;
+    }
+    WFIFOW (fd, 2) = len;
+    WFIFOSET (fd, len);
+}
+
+/// Itemfrob: change ID of an existing item
+// uint16_t packet, uint32_t old_id, uint32_t new_id
+void x7924 (int fd)
+{
+    charif_sendallwos (-1, RFIFOP (fd, 0), 10); // forward package to char servers
+    WFIFOW (fd, 0) = 0x7925;
+    WFIFOSET (fd, 2);
+}
+
+/// Request for account creation
+// uint16_t packet, char userid[24], char passwd[24], char sex, char email[40]
+void x7930 (int fd)
+{
+    struct mmo_account ma;
+    ma.userid = (char *)RFIFOP (fd, 2);
+    ma.passwd = (char *)RFIFOP (fd, 26);
+    strcpy (ma.lastlogin, "-");
+    ma.sex = sex_from_char(RFIFOB (fd, 50));
+    WFIFOW (fd, 0) = 0x7931;
+    WFIFOL (fd, 2) = -1;
+    strcpy ((char *)WFIFOP (fd, 6), ma.userid);
+    if (strlen (ma.userid) < 4 || strlen (ma.passwd) < 4)
+    {
+        login_log ("'ladmin': Attempt to create an invalid account (account or pass is too short, ip: %s)\n",
+                   ip_of (fd));
+        return;
+    }
+    if (ma.sex != SEX_FEMALE && ma.sex != SEX_MALE)
+    {
+        login_log ("'ladmin': Attempt to create an invalid account (account: %s, invalid sex, ip: %s)\n",
+                   ma.userid, ip_of (fd));
+        return;
+    }
+    if (account_id_count > END_ACCOUNT_NUM)
+    {
+        login_log ("'ladmin': Attempt to create an account, but there is no more available id number (account: %s, sex: %c, ip: %s)\n",
+                   ma.userid, sex_to_char(ma.sex), ip_of (fd));
+        return;
+    }
+    remove_control_chars (ma.userid);
+    remove_control_chars (ma.passwd);
+    for (int i = 0; i < auth_num; i++)
+    {
+        if (strcmp (auth_dat[i].userid, ma.userid) == 0)
+        {
+            login_log ("'ladmin': Attempt to create an already existing account (account: %s, ip: %s)\n",
+                       auth_dat[i].userid, ip_of (fd));
+            return;
+        }
+    }
+    char email[40] = {};
+    strncpy (email, (char *)RFIFOP (fd, 51), 39);
+    remove_control_chars (email);
+    int new_id = mmo_auth_new (&ma, email);
+    login_log ("'ladmin': Account creation (account: %s (id: %d), sex: %c, email: %s, ip: %s)\n",
+               ma.userid, new_id, sex_to_char(ma.sex), auth_dat[auth_num-1].email, ip_of (fd));
+    WFIFOL (fd, 2) = new_id;
+}
+
+/// Request for an account deletion
+// uint16_t packet, char userid[24]
+void x7932 (int fd)
+{
+    WFIFOW (fd, 0) = 0x7933;
+    WFIFOL (fd, 2) = -1;
+    char *account_name = (char *)RFIFOP (fd, 2);
+    account_name[23] = '\0';
+    remove_control_chars (account_name);
+    int i = account_index_by_name (account_name);
+    if (i == -1)
+    {
+        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        login_log ("'ladmin': Attempt to delete an unknown account (account: %s, ip: %s)\n",
+                    account_name, ip_of (fd));
+        return;
+    }
+    // Char-server is notified of deletion (for characters deletion).
+    unsigned char buf[6];
+    WBUFW (buf, 0) = 0x2730;
+    WBUFL (buf, 2) = auth_dat[i].account_id;
+    charif_sendallwos (-1, buf, 6);
+    // send answer
+    memcpy (WFIFOP (fd, 6), auth_dat[i].userid, 24);
+    WFIFOL (fd, 2) = auth_dat[i].account_id;
+    // save deleted account in log file
+    login_log ("'ladmin': Account deletion (account: %s, id: %d, ip: %s) - saved in next line:\n",
+                auth_dat[i].userid, auth_dat[i].account_id, ip_of (fd));
+    mmo_auth_to_file (logfp, &auth_dat[i]);
+    // delete account
+    memset (auth_dat[i].userid, '\0', sizeof (auth_dat[i].userid));
+    auth_dat[i].account_id = -1;
+}
+
+/// Request to change password
+// uint16_t packet, char userid[24], char passwd[24]
+void x7934 (int fd)
+{
+    WFIFOW (fd, 0) = 0x7935;
+    WFIFOL (fd, 2) = -1;
+    char *account_name = (char *)RFIFOP (fd, 2);
+    account_name[23] = '\0';
+    remove_control_chars (account_name);
+    int i = account_index_by_name (account_name);
+    if (i == -1)
+    {
+        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        login_log ("'ladmin': Attempt to modify the password of an unknown account (account: %s, ip: %s)\n",
+                   account_name, ip_of (fd));
+        return;
+    }
+    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    strcpy (auth_dat[i].pass, MD5_saltcrypt((char *)RFIFOP (fd, 26), make_salt()));
+    WFIFOL (fd, 2) = auth_dat[i].account_id;
+    login_log ("'ladmin': Modification of a password (account: %s, new password: %s, ip: %s)\n",
+               auth_dat[i].userid, auth_dat[i].pass, ip_of (fd));
+}
+
+/// Modify a state
+// uint16_t packet, char userid[24], uint32_t state, char error_message[20]
+// error_message is usually the date of the end of banishment
+void x7936 (int fd)
+{
+    WFIFOW (fd, 0) = 0x7937;
+    WFIFOL (fd, 2) = -1;
+    char *account_name = (char *)RFIFOP (fd, 2);
+    account_name[23] = '\0';
+    remove_control_chars (account_name);
+    uint32_t status = RFIFOL (fd, 26);
+    WFIFOL (fd, 30) = status;
+    char error_message[20] = {};
+    strncpy (error_message, (char *)RFIFOP (fd, 30), 19);
+    remove_control_chars (error_message);
+    if (status != 7 || error_message[0] == '\0')
+        // 7: // 6 = Your are Prohibited to log in until %s
+        strcpy (error_message, "-");
+    int i = account_index_by_name (account_name);
+    if (i == -1)
+    {
+        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        login_log ("'ladmin': Attempt to modify the state of an unknown account (account: %s, received state: %d, ip: %s)\n",
+                    account_name, status, ip_of (fd));
+        return;
+    }
+    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    WFIFOL (fd, 2) = auth_dat[i].account_id;
+    if (auth_dat[i].state == status &&
+            strcmp (auth_dat[i].error_message, error_message) == 0)
+    {
+        login_log ("'ladmin': Modification of a state, but the state of the account is already the requested state (account: %s, received state: %d, ip: %s)\n",
+                   account_name, status, ip_of (fd));
+        return;
+    }
+    if (status == 7)
+        login_log ("'ladmin': Modification of a state (account: %s, new state: %d - prohibited to login until '%s', ip: %s)\n",
+                    auth_dat[i].userid, status, error_message, ip_of (fd));
+    else
+        login_log ("'ladmin': Modification of a state (account: %s, new state: %d, ip: %s)\n",
+                    auth_dat[i].userid, status, ip_of (fd));
+    if (auth_dat[i].state == 0)
+    {
+        unsigned char buf[16];
+        WBUFW (buf, 0) = 0x2731;
+        WBUFL (buf, 2) = auth_dat[i].account_id;
+        WBUFB (buf, 6) = 0; // 0: change of state, 1: ban
+        WBUFL (buf, 7) = status;    // status or final date of a banishment
+        charif_sendallwos (-1, buf, 11);
+        for (int j = 0; j < AUTH_FIFO_SIZE; j++)
+            if (auth_fifo[j].account_id == auth_dat[i].account_id)
+                // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
+                auth_fifo[j].login_id1++;
+    }
+    auth_dat[i].state = (enum auth_failure)status;
+    strcpy (auth_dat[i].error_message, error_message);
+}
+
+/// Request for servers list and # of online players
+// uint32_t packet
+void x7938 (int fd)
+{
+    login_log ("'ladmin': Sending of servers list (ip: %s)\n", ip_of (fd));
+    int server_num = 0;
+    for (int i = 0; i < MAX_SERVERS; i++)
+    {
+        if (server_fd[i] < 0)
+            continue;
+        WFIFOL (fd, 4 + server_num * 32) = server[i].ip;
+        WFIFOW (fd, 4 + server_num * 32 + 4) = server[i].port;
+        strcpy ((char *)WFIFOP (fd, 4 + server_num * 32 + 6), server[i].name);
+        WFIFOW (fd, 4 + server_num * 32 + 26) = server[i].users;
+        WFIFOW (fd, 4 + server_num * 32 + 28) = server[i].maintenance;
+        WFIFOW (fd, 4 + server_num * 32 + 30) = server[i].is_new;
+        server_num++;
+    }
+    WFIFOW (fd, 0) = 0x7939;
+    WFIFOW (fd, 2) = 4 + 32 * server_num;
+    WFIFOSET (fd, 4 + 32 * server_num);
+}
+
+/// Request to check password
+// uint16_t packet, char userid[24], char passwd[24]
+void x793a (int fd)
+{
+    WFIFOW (fd, 0) = 0x793b;
+    WFIFOL (fd, 2) = -1;
+    char *account_name = (char *)RFIFOP (fd, 2);
+    account_name[23] = '\0';
+    remove_control_chars (account_name);
+    int i = account_index_by_name (account_name);
+    if (i == -1)
+    {
+        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        login_log ("'ladmin': Attempt to check the password of an unknown account (account: %s, ip: %s)\n",
+                   account_name, ip_of (fd));
+        return;
+    }
+    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    if (pass_ok((char *)RFIFOP (fd, 26), auth_dat[i].pass))
+    {
+        WFIFOL (fd, 2) = auth_dat[i].account_id;
+        login_log ("'ladmin': Check of password OK (account: %s, password: %s, ip: %s)\n",
+                    auth_dat[i].userid, auth_dat[i].pass, ip_of (fd));
+    }
+    else
+    {
+        char pass[24] = {};
+        strncpy (pass, (char *)RFIFOP (fd, 26), 23);
+        remove_control_chars (pass);
+        login_log ("'ladmin': Failure of password check (account: %s, proposed pass: %s, ip: %s)\n",
+                    auth_dat[i].userid, pass, ip_of (fd));
+    }
+}
+
+/// Request to modify sex
+// uint32_t packet, char userid[24], char sex
+void x793c (int fd)
+{
+    WFIFOW (fd, 0) = 0x793d;
+    WFIFOL (fd, 2) = -1;
+    char *account_name = (char *)RFIFOP (fd, 2);
+    account_name[23] = '\0';
+    remove_control_chars (account_name);
+    strcpy ((char *)WFIFOP (fd, 6), account_name);
+    enum gender sex = sex_from_char(RFIFOB (fd, 26));
+    if (sex != SEX_FEMALE && sex != SEX_MALE)
+    {
+        if (RFIFOB (fd, 26) >= 0x20 && RFIFOB (fd, 26) < 0x7f)
+            login_log ("'ladmin': Attempt to give an invalid sex (account: %s, received sex: %c, ip: %s)\n",
+                        account_name, RFIFOB (fd, 26), ip_of (fd));
+        else
+            login_log ("'ladmin': Attempt to give an invalid sex (account: %s, received sex: %02hhx, ip: %s)\n",
+                        account_name, RFIFOB (fd, 26), ip_of (fd));
+        return;
+    }
+    int i = account_index_by_name (account_name);
+    if (i == -1)
+    {
+        login_log ("'ladmin': Attempt to modify the sex of an unknown account (account: %s, received sex: %c, ip: %s)\n",
+                   account_name, sex_to_char (sex), ip_of (fd));
+        return;
+    }
+    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    if (auth_dat[i].sex == sex)
+    {
+        login_log ("'ladmin': Modification of a sex, but the sex is already the requested sex (account: %s, sex: %c, ip: %s)\n",
+                   auth_dat[i].userid, sex_to_char (sex), ip_of (fd));
+        return;
+    }
+    WFIFOL (fd, 2) = auth_dat[i].account_id;
+    for (int j = 0; j < AUTH_FIFO_SIZE; j++)
+        if (auth_fifo[j].account_id == auth_dat[i].account_id)
+            // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
+            auth_fifo[j].login_id1++;
+    auth_dat[i].sex = sex;
+    login_log ("'ladmin': Modification of a sex (account: %s, new sex: %c, ip: %s)\n",
+               auth_dat[i].userid, sex_to_char (sex), ip_of (fd));
+    // send to all char-server the change
+    unsigned char buf[7];
+    WBUFW (buf, 0) = 0x2723;
+    WBUFL (buf, 2) = auth_dat[i].account_id;
+    WBUFB (buf, 6) = (uint8_t)auth_dat[i].sex;
+    charif_sendallwos (-1, buf, 7);
+}
+
+/// Request to modify GM level
+// uint16_t packet, char userid[24], uint8_t new_gm_level
+void x793e (int fd)
+{
+    WFIFOW (fd, 0) = 0x793f;
+    WFIFOL (fd, 2) = -1;
+    char *account_name = (char *)RFIFOP (fd, 2);
+    account_name[23] = '\0';
+    remove_control_chars (account_name);
+    strcpy ((char *)WFIFOP (fd, 6), account_name);
+    gm_level_t new_gm_level = new_gm_level = RFIFOB (fd, 26);
+    if (new_gm_level > 99)
+    {
+        login_log ("'ladmin': Attempt to give an invalid GM level (account: %s, received GM level: %d, ip: %s)\n",
+                   account_name, (int) new_gm_level, ip_of (fd));
+        return;
+    }
+    int i = account_index_by_name (account_name);
+    if (i == -1)
+    {
+        login_log ("'ladmin': Attempt to modify the GM level of an unknown account (account: %s, received GM level: %d, ip: %s)\n",
+                   account_name, (int) new_gm_level, ip_of (fd));
+        return;
+    }
+    account_t acc = auth_dat[i].account_id;
+    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    if (isGM (acc) == new_gm_level)
+    {
+        login_log ("'ladmin': Attempt to modify of a GM level, but the GM level is already the good GM level (account: %s (%u), GM level: %hhu, ip: %s)\n",
+                   auth_dat[i].userid, acc, new_gm_level, ip_of (fd));
+        return;
+    }
+    // modification of the file
+    int  lock;
+    FILE *fp2 = lock_fopen (GM_account_filename, &lock);
+    if (!fp2)
+    {
+        login_log ("'ladmin': Attempt to modify of a GM level - impossible to write GM accounts file (account: %s (%u), received GM level: %hhu, ip: %s)\n",
+                   auth_dat[i].userid, acc, new_gm_level, ip_of (fd));
+        return;
+    }
+    FILE *fp = fopen_ (GM_account_filename, "r");
+    if (!fp)
+    {
+        login_log ("'ladmin': Attempt to modify of a GM level - impossible to read GM accounts file (account: %s (%u), received GM level: %hhu, ip: %s)\n",
+                   auth_dat[i].userid, acc, new_gm_level, ip_of (fd));
+        goto end_x793e_lock;
+    }
+    {
+        struct timeval tv;
+        gettimeofday (&tv, NULL);
+        char tmpstr[DATE_FORMAT_MAX];
+        strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&tv.tv_sec));
+        bool modify_flag = 0;
+        char line[512];
+        // read/write GM file
+        while (fgets (line, sizeof (line), fp))
+        {
+            // strip off both the '\r' and the '\n', if they exist
+            // FIXME - isn't this file opened in text mode?
+            while (line[0] != '\0' && (line[strlen (line) - 1] == '\n' || line[strlen (line) - 1] == '\r'))
+                line[strlen (line) - 1] = '\0';
+            // FIXME: won't this case be caught below, when sscanf fails?
+            if ((line[0] == '/' && line[1] == '/') || line[0] == '\0')
+            {
+                fprintf (fp2, "%s\n", line);
+                continue;
+            }
+            account_t GM_account;
+            gm_level_t GM_level;
+            if (sscanf (line, "%u %hhu", &GM_account, &GM_level) != 2
+                && sscanf (line, "%u: %hhu", &GM_account, &GM_level) != 2)
+            {
+                fprintf (fp2, "%s\n", line);
+                continue;
+            }
+            if (GM_account != acc)
+            {
+                fprintf (fp2, "%s\n", line);
+                continue;
+            }
+            modify_flag = 1;
+            if (!new_gm_level)
+            {
+                fprintf (fp2, "// %s: 'ladmin' remove %u '%s' GM level %hhu\n"
+                                "//%d %d\n",
+                            tmpstr, acc, auth_dat[i].userid, GM_level,
+                            acc, new_gm_level);
+            }
+            else
+            {
+                fprintf (fp2, "// %s: 'ladmin' change %u '%s' from GM level %hhu\n"
+                              "%u %hhu\n",
+                         tmpstr, acc, auth_dat[i].userid, GM_level,
+                         acc, new_gm_level);
+            }
+        }
+        if (!modify_flag)
+            fprintf (fp2, "// %s: 'ladmin' make %d '%s' a new GM\n"
+                          "%d %d\n",
+                     tmpstr, acc, auth_dat[i].userid,
+                     acc, new_gm_level);
+        fclose_ (fp);
+    }
+end_x793e_lock:
+    lock_fclose(fp2, GM_account_filename, &lock);
+    WFIFOL (fd, 2) = acc;
+    login_log ("'ladmin': Modification of a GM level (account: %s (%d), new GM level: %hhu, ip: %s)\n",
+                auth_dat[i].userid, acc, new_gm_level, ip_of (fd));
+    // read and send new GM informations
+    // FIXME: this is stupid
+    read_gm_account ();
+    send_GM_accounts ();
+}
+
+/// Request to modify e-mail
+// uint16_t packet, char userid[24], char email[40]
+void x7940 (int fd)
+{
+    WFIFOW (fd, 0) = 0x7941;
+    WFIFOL (fd, 2) = -1;
+    char *account_name = (char *)RFIFOP (fd, 2);
+    account_name[23] = '\0';
+    remove_control_chars (account_name);
+    strcpy ((char *)WFIFOP (fd, 6), account_name);
+    char email[40] = {};
+    strncpy (email, (char *)RFIFOP (fd, 26), 39);
+    if (!e_mail_check (email))
+    {
+        login_log ("'ladmin': Attempt to give an invalid e-mail (account: %s, ip: %s)\n",
+                   account_name, ip_of (fd));
+        return;
+    }
+    remove_control_chars (email);
+    int i = account_index_by_name (account_name);
+    if (i == -1)
+    {
+        login_log ("'ladmin': Attempt to modify the e-mail of an unknown account (account: %s, received e-mail: %s, ip: %s)\n",
+                   account_name, email, ip_of (fd));
+        return;
+    }
+    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    strcpy (auth_dat[i].email, email);
+    WFIFOL (fd, 2) = auth_dat[i].account_id;
+    login_log ("'ladmin': Modification of an email (account: %s, new e-mail: %s, ip: %s)\n",
+               auth_dat[i].userid, email, ip_of (fd));
+}
+
+/// Request to modify memo field
+// uint16_t packet, char usercount[24], uint16_t msglen, char msg[msglen]
+void x7942 (int fd)
+{
+    WFIFOW (fd, 0) = 0x7943;
+    WFIFOL (fd, 2) = -1;
+    char *account_name = (char *)RFIFOP (fd, 2);
+    account_name[23] = '\0';
+    remove_control_chars (account_name);
+    int i = account_index_by_name (account_name);
+    if (i == -1)
+    {
+        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        login_log ("'ladmin': Attempt to modify the memo field of an unknown account (account: %s, ip: %s)\n",
+                    account_name, ip_of (fd));
+        return;
+    }
+    static const size_t size_of_memo = sizeof (auth_dat[i].memo) - 1;
+    // auth_dat[i].memo[0] must always be '!' or stuff breaks
+    char *memo = auth_dat[i].memo + 1;
+    memcpy (WFIFOP (fd, 6), auth_dat[i].userid, 24);
+    strncpy (memo, (char *)RFIFOP (fd, 28),
+                MIN (size_of_memo, RFIFOW (fd, 26)) - 1);
+    memo[size_of_memo - 1] = '\0';
+    remove_control_chars (memo);
+    WFIFOL (fd, 2) = auth_dat[i].account_id;
+    login_log ("'ladmin': Modification of a memo field (account: %s, new memo: %s, ip: %s)\n",
+                auth_dat[i].userid, memo, ip_of (fd));
+}
+
+/// Find account id from name
+// uint16_t packet, char userid[24]
+void x7944 (int fd)
+{
+    WFIFOW (fd, 0) = 0x7945;
+    WFIFOL (fd, 2) = -1;
+    char *account_name = (char *)RFIFOP (fd, 2);
+    account_name[23] = '\0';
+    remove_control_chars (account_name);
+    int i = account_index_by_name (account_name);
+    if (i == -1)
+    {
+        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        login_log ("'ladmin': ID request (by the name) of an unknown account (account: %s, ip: %s)\n",
+                   account_name, ip_of (fd));
+        return;
+    }
+    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    WFIFOL (fd, 2) = auth_dat[i].account_id;
+    login_log ("'ladmin': Request (by the name) of an account id (account: %s, id: %u, ip: %s)\n",
+               auth_dat[i].userid, auth_dat[i].account_id, ip_of (fd));
+}
+
+/// Find an account name from id
+// uint16_t packet, uint32_t acc
+void x7946 (int fd)
+{
+    WFIFOW (fd, 0) = 0x7947;
+    WFIFOL (fd, 2) = RFIFOL (fd, 2);
+    memset (WFIFOP (fd, 6), '\0', 24);
+    int i = account_index_by_id(RFIFOL (fd, 2));
+    if (i == -1)
+    {
+        login_log ("'ladmin': Name request (by id) of an unknown account (id: %d, ip: %s)\n",
+                   RFIFOL (fd, 2), ip_of (fd));
+        // strcpy (WFIFOP (fd, 6), "");
+        return;
+    }
+    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    login_log ("'ladmin': Request (by id) of an account name (account: %s, id: %d, ip: %s)\n",
+               auth_dat[i].userid, RFIFOL (fd, 2), ip_of (fd));
+}
+
+/// Set the validity timestamp
+// uint16_t packet, char userid[24], uint32_t timestamp
+void x7948 (int fd)
+{
+    WFIFOW (fd, 0) = 0x7949;
+    WFIFOL (fd, 2) = -1;
+    char *account_name = (char *)RFIFOP (fd, 2);
+    account_name[23] = '\0';
+    remove_control_chars (account_name);
+    // time_t might not be 32 bits
+    time_t timestamp = (time_t) RFIFOL (fd, 26);
+    char tmpstr[DATE_FORMAT_MAX] = "unlimited";
+    if (timestamp)
+        strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&timestamp));
+    int i = account_index_by_name (account_name);
+    if (i == -1)
+    {
+        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        login_log ("'ladmin': Attempt to change the validity limit of an unknown account (account: %s, received validity: %ld (%s), ip: %s)\n",
+                   account_name, (long)timestamp, tmpstr, ip_of (fd));
+        return;
+    }
+    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    login_log ("'ladmin': Change of a validity limit (account: %s, new validity: %ld (%s), ip: %s)\n",
+               auth_dat[i].userid, (long)timestamp, tmpstr, ip_of (fd));
+    auth_dat[i].connect_until_time = timestamp;
+    WFIFOL (fd, 2) = auth_dat[i].account_id;
+    WFIFOL (fd, 30) = timestamp;
+}
+
+/// Set the banishment timestamp
+// uint16_t packet, char userid[24], uint32_t timestamp
+void x794a (int fd)
+{
+    WFIFOW (fd, 0) = 0x794b;
+    WFIFOL (fd, 2) = -1;
+    char *account_name = (char *)RFIFOP (fd, 2);
+    account_name[23] = '\0';
+    remove_control_chars (account_name);
+    time_t timestamp = (time_t) RFIFOL (fd, 26);
+    if (timestamp <= time (NULL))
+        timestamp = 0;
+    WFIFOL (fd, 30) = timestamp;
+    char tmpstr[DATE_FORMAT_MAX] = "no banishment";
+    if (timestamp)
+        strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&timestamp));
+
+    int i = account_index_by_name (account_name);
+    if (i == -1)
+    {
+        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        login_log ("'ladmin': Attempt to change the final date of a banishment of an unknown account (account: %s, received final date of banishment: %ld (%s), ip: %s)\n",
+                account_name, (long)timestamp, tmpstr, ip_of (fd));
+        return;
+    }
+
+    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    WFIFOL (fd, 2) = auth_dat[i].account_id;
+    login_log ("'ladmin': Change of the final date of a banishment (account: %s, new final date of banishment: %ld (%s), ip: %s)\n",
+                auth_dat[i].userid, (long)timestamp, tmpstr, ip_of (fd));
+    if (auth_dat[i].ban_until_time == timestamp)
+        return;
+    auth_dat[i].ban_until_time = timestamp;
+    if (!timestamp)
+        return;
+    uint8_t buf[11];
+    WBUFW (buf, 0) = 0x2731;
+    WBUFL (buf, 2) = auth_dat[i].account_id;
+    WBUFB (buf, 6) = 1; // 0: change of status, 1: ban
+    WBUFL (buf, 7) = timestamp; // status or final date of a banishment
+    charif_sendallwos (-1, buf, 11);
+    for (int j = 0; j < AUTH_FIFO_SIZE; j++)
+        if (auth_fifo[j].account_id == auth_dat[i].account_id)
+            // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
+            auth_fifo[j].login_id1++;
+}
+
+/// Adjust the banishment end timestamp
+// uint16_t packet, char userid[24], int16_t year,mon,day,hr,min,sec
+void x794c (int fd)
+{
+    WFIFOW (fd, 0) = 0x794d;
+    WFIFOL (fd, 2) = -1;
+    char *account_name = (char *)RFIFOP (fd, 2);
+    account_name[23] = '\0';
+    remove_control_chars (account_name);
+    int i = account_index_by_name (account_name);
+    if (i == -1)
+    {
+        memcpy (WFIFOP (fd, 6), account_name, 24);
+        login_log ("'ladmin': Attempt to adjust the final date of a banishment of an unknown account (account: %s, ip: %s)\n",
+                   account_name, ip_of (fd));
+        WFIFOL (fd, 30) = 0;
+        return;
+    }
+    WFIFOL (fd, 2) = auth_dat[i].account_id;
+    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+
+    time_t timestamp = time (NULL);
+    if (auth_dat[i].ban_until_time >= timestamp)
+        timestamp = auth_dat[i].ban_until_time;
+
+    // TODO check for overflow
+    // years (365.25 days)
+    timestamp += 31557600 * (short) RFIFOW (fd, 26);
+    // a month isn't well-defined - use 1/12 of a year
+    timestamp += 2629800 * (short) RFIFOW (fd, 28);
+    timestamp += 86400 * (short) RFIFOW (fd, 30);
+    timestamp += 3600 * (short) RFIFOW (fd, 32);
+    timestamp += 60 * (short) RFIFOW (fd, 34);
+    timestamp += (short) RFIFOW (fd, 36);
+    if (timestamp <= time (NULL))
+        timestamp = 0;
+
+    char tmpstr[DATE_FORMAT_MAX] = "no banishment";
+    if (timestamp)
+        strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&timestamp));
+    login_log ("'ladmin': Adjustment of a final date of a banishment (account: %s, (%+d y %+d m %+d d %+d h %+d mn %+d s) -> new validity: %ld (%s), ip: %s)\n",
+               auth_dat[i].userid,
+               (short) RFIFOW (fd, 26), (short) RFIFOW (fd, 28),
+               (short) RFIFOW (fd, 30), (short) RFIFOW (fd, 32),
+               (short) RFIFOW (fd, 34), (short) RFIFOW (fd, 36),
+               (long)timestamp, tmpstr, ip_of (fd));
+    WFIFOL (fd, 30) = timestamp;
+    if (auth_dat[i].ban_until_time == timestamp)
+        return;
+    auth_dat[i].ban_until_time = timestamp;
+    if (!timestamp)
+        return;
+    unsigned char buf[11];
+    WBUFW (buf, 0) = 0x2731;
+    WBUFL (buf, 2) = auth_dat[i].account_id;
+    WBUFB (buf, 6) = 1; // 0: change of status, 1: ban
+    WBUFL (buf, 7) = timestamp; // status or final date of a banishment
+    charif_sendallwos (-1, buf, 11);
+    for (int j = 0; j < AUTH_FIFO_SIZE; j++)
+        if (auth_fifo[j].account_id == auth_dat[i].account_id)
+            // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
+            auth_fifo[j].login_id1++;
+}
+
+/// Broadcast a message
+// uint16_t packet, uint16_t color, uint32_t msglen, char msg[msglen]
+// color is not with TMW client, but eA had yellow == 0, else blue
+void x794e (int fd)
+{
+    WFIFOW (fd, 0) = 0x794f;
+    WFIFOW (fd, 2) = -1;
+    if (!RFIFOL (fd, 4))
+    {
+        login_log ("'ladmin': Receiving a message for broadcast, but message is void (ip: %s)\n",
+                   ip_of (fd));
+        return;
+    }
+    // at least 1 char-server
+    int i;
+    for (i = 0; i < MAX_SERVERS; i++)
+        if (server_fd[i] >= 0)
+            break;
+    if (i == MAX_SERVERS)
+    {
+        login_log ("'ladmin': Receiving a message for broadcast, but no char-server is online (ip: %s)\n",
+                   ip_of (fd));
+        return;
+    }
+    char *message = (char *)RFIFOP (fd, 8);
+    WFIFOW (fd, 2) = 0;
+    // This should already be NUL, but we don't trust anyone
+    message[RFIFOL (fd, 4) - 1] = '\0';
+    // Edit the message in-place
+    remove_control_chars (message);
+    login_log ("'ladmin': Relay broadcast %s (ip: %s)\n",
+               message, ip_of (fd));
+    // forward the same message to all char-servers (no answer)
+    RFIFOW (fd, 0) = 0x2726;
+    charif_sendallwos (-1, RFIFOP (fd, 0), 8 + RFIFOL (fd, 4));
+}
+
+/// Adjust the validity timestamp
+// uint16_t packet, char userid[24], int16_t year,mon,day,hr,min,sec
+void x7950 (int fd)
+{
+    WFIFOW (fd, 0) = 0x7951;
+    WFIFOL (fd, 2) = -1;
+    char *account_name = (char *)RFIFOP (fd, 2);
+    account_name[23] = '\0';
+    remove_control_chars (account_name);
+    int i = account_index_by_name (account_name);
+    if (i != -1)
+    {
+        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        login_log ("'ladmin': Attempt to adjust the validity limit of an unknown account (account: %s, ip: %s)\n",
+                   account_name, ip_of (fd));
+        WFIFOL (fd, 30) = 0;
+        return;
+    }
+    WFIFOL (fd, 2) = auth_dat[i].account_id;
+    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+
+    time_t timestamp = auth_dat[i].connect_until_time;
+    if (!add_to_unlimited_account && !timestamp)
+    {
+        login_log ("'ladmin': Refused to adjust the validity limit of an unlimited account (account: %s, ip: %s)\n",
+                    auth_dat[i].userid, ip_of (fd));
+        WFIFOL (fd, 30) = 0;
+        return;
+    }
+    if (timestamp == 0 || timestamp < time (NULL))
+        timestamp = time (NULL);
+    // TODO check for overflow
+    // years (365.25 days)
+    timestamp += 31557600 * (short) RFIFOW (fd, 26);
+    // a month isn't well-defined - use 1/12 of a year
+    timestamp += 2629800 * (short) RFIFOW (fd, 28);
+    timestamp += 86400 * (short) RFIFOW (fd, 30);
+    timestamp += 3600 * (short) RFIFOW (fd, 32);
+    timestamp += 60 * (short) RFIFOW (fd, 34);
+    timestamp += (short) RFIFOW (fd, 36);
+
+    WFIFOL (fd, 30) = timestamp;
+
+    char tmpstr[DATE_FORMAT_MAX] = "unlimited";
+    if (auth_dat[i].connect_until_time)
+        strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT,
+                  gmtime (&auth_dat[i].connect_until_time));
+
+    if (timestamp == auth_dat[i].connect_until_time)
+    {
+        login_log ("'ladmin': No adjustment of a validity limit (account: %s, %ld (%s), ip: %s)\n",
+                   auth_dat[i].userid,
+                   (long)auth_dat[i].connect_until_time, tmpstr, ip_of (fd));
+        return;
+    }
+
+    char tmpstr2[DATE_FORMAT_MAX] = "unlimited";
+    if (timestamp)
+        strftime (tmpstr2, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&timestamp));
+    login_log ("'ladmin': Adjustment of a validity limit (account: %s, %ld (%s) + (%+d y %+d m %+d d %+d h %+d mn %+d s) -> new validity: %ld (%s), ip: %s)\n",
+               auth_dat[i].userid,
+               (long)auth_dat[i].connect_until_time, tmpstr,
+               (short) RFIFOW (fd, 26), (short) RFIFOW (fd, 28),
+               (short) RFIFOW (fd, 30), (short) RFIFOW (fd, 32),
+               (short) RFIFOW (fd, 34), (short) RFIFOW (fd, 36),
+               (long)timestamp, tmpstr2, ip_of (fd));
+    auth_dat[i].connect_until_time = timestamp;
+}
+
+/// Account information by name
+// uint16_t packet, char userid[24]
+// FIXME reduce duplication
+void x7952 (int fd)
+{
+    WFIFOW (fd, 0) = 0x7953;
+    WFIFOL (fd, 2) = -1;
+    char *account_name = (char *)RFIFOP (fd, 2);
+    account_name[23] = '\0';
+    remove_control_chars (account_name);
+    int i = account_index_by_name (account_name);
+    if (i == -1)
+    {
+        strcpy ((char *)WFIFOP (fd, 7), account_name);
+        WFIFOW (fd, 148) = 0;
+        login_log ("'ladmin': No account information for name: %s (ip: %s)\n",
+                    account_name, ip_of (fd));
+        WFIFOSET (fd, 150);
+        return;
+    }
+    WFIFOL (fd, 2) = auth_dat[i].account_id;
+    WFIFOB (fd, 6) = isGM (auth_dat[i].account_id);
+    strcpy ((char *)WFIFOP (fd, 7), auth_dat[i].userid);
+    WFIFOB (fd, 31) = (uint8_t)auth_dat[i].sex;
+    WFIFOL (fd, 32) = auth_dat[i].logincount;
+    WFIFOL (fd, 36) = auth_dat[i].state;
+    strcpy ((char *)WFIFOP (fd, 40), auth_dat[i].error_message);
+    strcpy ((char *)WFIFOP (fd, 60), auth_dat[i].lastlogin);
+    strcpy ((char *)WFIFOP (fd, 84), auth_dat[i].last_ip);
+    strcpy ((char *)WFIFOP (fd, 100), auth_dat[i].email);
+    WFIFOL (fd, 140) = auth_dat[i].connect_until_time;
+    WFIFOL (fd, 144) = auth_dat[i].ban_until_time;
+    // discard the password magic
+    char *memo = auth_dat[i].memo + 1;
+    WFIFOW (fd, 148) = strlen (memo);
+    strcpy ((char *)WFIFOP (fd, 150), memo);
+    login_log ("'ladmin': Sending information of an account (request by the name; account: %s, id: %d, ip: %s)\n",
+               auth_dat[i].userid, auth_dat[i].account_id, ip_of (fd));
+    WFIFOSET (fd, 150 + strlen (memo));
+}
+
+/// Account information by id
+// uint16_t packet, uint32_t acc
+// FIXME reduce duplication
+void x7954 (int fd)
+{
+    WFIFOW (fd, 0) = 0x7953;
+    WFIFOL (fd, 2) = RFIFOL (fd, 2);
+    int i = account_index_by_id (RFIFOL (fd, 2));
+    if (i == -1)
+    {
+        login_log ("'ladmin': Attempt to obtain information (by the id) of an unknown account (id: %d, ip: %s)\n",
+                   RFIFOL (fd, 2), ip_of (fd));
+        strcpy ((char *)WFIFOP (fd, 7), "");
+        WFIFOW (fd, 148) = 0;
+        WFIFOSET (fd, 150);
+        return;
+    }
+    login_log ("'ladmin': Sending information of an account (request by the id; account: %s, id: %d, ip: %s)\n",
+               auth_dat[i].userid, RFIFOL (fd, 2), ip_of (fd));
+    WFIFOB (fd, 6) = isGM (auth_dat[i].account_id);
+    strcpy ((char *)WFIFOP (fd, 7), auth_dat[i].userid);
+    WFIFOB (fd, 31) = (uint8_t)auth_dat[i].sex;
+    WFIFOL (fd, 32) = auth_dat[i].logincount;
+    WFIFOL (fd, 36) = auth_dat[i].state;
+    strcpy ((char *)WFIFOP (fd, 40), auth_dat[i].error_message);
+    strcpy ((char *)WFIFOP (fd, 60), auth_dat[i].lastlogin);
+    strcpy ((char *)WFIFOP (fd, 84), auth_dat[i].last_ip);
+    strcpy ((char *)WFIFOP (fd, 100), auth_dat[i].email);
+    WFIFOL (fd, 140) = auth_dat[i].connect_until_time;
+    WFIFOL (fd, 144) = auth_dat[i].ban_until_time;
+    // discard the password magic
+    char *memo = auth_dat[i].memo + 1;
+    WFIFOW (fd, 148) = strlen (memo);
+    strcpy ((char *)WFIFOP (fd, 150), memo);
+    WFIFOSET (fd, 150 + strlen (memo));
+}
+
+/// Request to reload GM file (no answer)
+// uint16_t packet
+void x7955 (int fd)
+{
+    login_log ("'ladmin': Request to re-load GM configuration file (ip: %s).\n",
+               ip_of (fd));
+    read_gm_account ();
+    // send GM accounts to all char-servers
+    send_GM_accounts ();
+}
+
+
 /// Parse packets from an administration login
 void parse_admin (int fd)
 {
@@ -1626,67 +2531,23 @@ void parse_admin (int fd)
             /// Request of the server version
             // uint16_t packet
             case 0x7530:
-                login_log ("'ladmin': Request server version (ip: %s)\n", ip);
-                WFIFOW (fd, 0) = 0x7531;
-                WFIFOB (fd, 2) = ATHENA_MAJOR_VERSION;
-                WFIFOB (fd, 3) = ATHENA_MINOR_VERSION;
-                WFIFOB (fd, 4) = ATHENA_REVISION;
-                WFIFOB (fd, 5) = ATHENA_RELEASE_FLAG;
-                WFIFOB (fd, 6) = ATHENA_OFFICIAL_FLAG;
-                WFIFOB (fd, 7) = ATHENA_SERVER_LOGIN;
-                WFIFOW (fd, 8) = ATHENA_MOD_VERSION;
-                WFIFOSET (fd, 10);
+                x7530 (fd);
                 RFIFOSKIP (fd, 2);
                 break;
 
             /// Request of end of connection
             // uint16_t packet
             case 0x7532:
-                login_log ("'ladmin': End of connection (ip: %s)\n", ip);
+                x7532 (fd);
                 RFIFOSKIP (fd, 2);
-                session[fd]->eof = 1;
-                break;
+                return;
 
             /// Request list of accounts
             // uint16_t packet, uint32_t start, uint32_t end
             case 0x7920:
                 if (RFIFOREST (fd) < 10)
                     return;
-            {
-                account_t st = RFIFOL (fd, 2);
-                account_t ed = RFIFOL (fd, 6);
-                WFIFOW (fd, 0) = 0x7921;
-                if (st >= END_ACCOUNT_NUM)
-                    st = 0;
-                if (ed > END_ACCOUNT_NUM || ed < st)
-                    ed = END_ACCOUNT_NUM;
-                login_log ("'ladmin': List accounts from %d to %d (ip: %s)\n",
-                           st, ed, ip);
-                // Note: this is a vla
-                int  id[auth_num];
-                sort_accounts (id);
-                // Sending accounts information
-                uint16_t len = 4;
-                for (int i = 0; i < auth_num && len < 30000; i++)
-                {
-                    account_t account_id = auth_dat[id[i]].account_id;   // use sorted index
-                    if (account_id < st || account_id > ed)
-                        continue;
-                    WFIFOL (fd, len) = account_id;
-                    WFIFOB (fd, len + 4) = isGM (account_id);
-                    strcpy ((char *)WFIFOP (fd, len + 5), auth_dat[id[i]].userid);
-                    WFIFOB (fd, len + 29) = (uint8_t)auth_dat[id[i]].sex;
-                    WFIFOL (fd, len + 30) = auth_dat[id[i]].logincount;
-                    // if no state, but banished - FIXME can this happen?
-                    if (!auth_dat[id[i]].state == 0 && auth_dat[id[i]].ban_until_time)
-                        WFIFOL (fd, len + 34) = 7;
-                    else
-                        WFIFOL (fd, len + 34) = auth_dat[id[i]].state;
-                    len += 38;
-                }
-                WFIFOW (fd, 2) = len;
-                WFIFOSET (fd, len);
-            }
+                x7920 (fd);
                 RFIFOSKIP (fd, 10);
                 break;
 
@@ -1695,9 +2556,7 @@ void parse_admin (int fd)
             case 0x7924:
                 if (RFIFOREST (fd) < 10)
                     return;
-                charif_sendallwos (-1, RFIFOP (fd, 0), 10); // forward package to char servers
-                WFIFOW (fd, 0) = 0x7925;
-                WFIFOSET (fd, 2);
+                x7924 (fd);
                 RFIFOSKIP (fd, 10);
                 break;
 
@@ -1706,53 +2565,7 @@ void parse_admin (int fd)
             case 0x7930:
                 if (RFIFOREST (fd) < 91)
                     return;
-            {
-                struct mmo_account ma;
-                ma.userid = (char *)RFIFOP (fd, 2);
-                ma.passwd = (char *)RFIFOP (fd, 26);
-                strcpy (ma.lastlogin, "-");
-                ma.sex = sex_from_char(RFIFOB (fd, 50));
-                WFIFOW (fd, 0) = 0x7931;
-                WFIFOL (fd, 2) = -1;
-                strcpy ((char *)WFIFOP (fd, 6), ma.userid);
-                if (strlen (ma.userid) < 4 || strlen (ma.passwd) < 4)
-                {
-                    login_log ("'ladmin': Attempt to create an invalid account (account or pass is too short, ip: %s)\n",
-                               ip);
-                    goto end_x7930;
-                }
-                if (ma.sex != SEX_FEMALE && ma.sex != SEX_MALE)
-                {
-                    login_log ("'ladmin': Attempt to create an invalid account (account: %s, invalid sex, ip: %s)\n",
-                               ma.userid, ip);
-                    goto end_x7930;
-                }
-                if (account_id_count > END_ACCOUNT_NUM)
-                {
-                    login_log ("'ladmin': Attempt to create an account, but there is no more available id number (account: %s, sex: %c, ip: %s)\n",
-                               ma.userid, sex_to_char(ma.sex), ip);
-                    goto end_x7930;
-                }
-                remove_control_chars (ma.userid);
-                remove_control_chars (ma.passwd);
-                for (int i = 0; i < auth_num; i++)
-                {
-                    if (strcmp (auth_dat[i].userid, ma.userid) == 0)
-                    {
-                        login_log ("'ladmin': Attempt to create an already existing account (account: %s, ip: %s)\n",
-                                   auth_dat[i].userid, ip);
-                        goto end_x7930;
-                    }
-                }
-                char email[40] = {};
-                strncpy (email, (char *)RFIFOP (fd, 51), 39);
-                remove_control_chars (email);
-                int new_id = mmo_auth_new (&ma, email);
-                login_log ("'ladmin': Account creation (account: %s (id: %d), sex: %c, email: %s, ip: %s)\n",
-                           ma.userid, new_id, sex_to_char(ma.sex), auth_dat[auth_num-1].email, ip);
-                WFIFOL (fd, 2) = new_id;
-            }
-            end_x7930:
+                x7930 (fd);
                 WFIFOSET (fd, 30);
                 RFIFOSKIP (fd, 91);
                 break;
@@ -1762,37 +2575,7 @@ void parse_admin (int fd)
             case 0x7932:
                 if (RFIFOREST (fd) < 26)
                     return;
-            {
-                WFIFOW (fd, 0) = 0x7933;
-                WFIFOL (fd, 2) = -1;
-                char *account_name = (char *)RFIFOP (fd, 2);
-                account_name[23] = '\0';
-                remove_control_chars (account_name);
-                int i = account_index_by_name (account_name);
-                if (i == -1)
-                {
-                    strcpy ((char *)WFIFOP (fd, 6), account_name);
-                    login_log ("'ladmin': Attempt to delete an unknown account (account: %s, ip: %s)\n",
-                               account_name, ip);
-                    goto end_x7932;
-                }
-                // Char-server is notified of deletion (for characters deletion).
-                unsigned char buf[6];
-                WBUFW (buf, 0) = 0x2730;
-                WBUFL (buf, 2) = auth_dat[i].account_id;
-                charif_sendallwos (-1, buf, 6);
-                // send answer
-                memcpy (WFIFOP (fd, 6), auth_dat[i].userid, 24);
-                WFIFOL (fd, 2) = auth_dat[i].account_id;
-                // save deleted account in log file
-                login_log ("'ladmin': Account deletion (account: %s, id: %d, ip: %s) - saved in next line:\n",
-                           auth_dat[i].userid, auth_dat[i].account_id, ip);
-                mmo_auth_to_file (logfp, &auth_dat[i]);
-                // delete account
-                memset (auth_dat[i].userid, '\0', sizeof (auth_dat[i].userid));
-                auth_dat[i].account_id = -1;
-            }
-            end_x7932:
+                x7932 (fd);
                 WFIFOSET (fd, 30);
                 RFIFOSKIP (fd, 26);
                 break;
@@ -1802,27 +2585,7 @@ void parse_admin (int fd)
             case 0x7934:
                 if (RFIFOREST (fd) < 50)
                     return;
-            {
-                WFIFOW (fd, 0) = 0x7935;
-                WFIFOL (fd, 2) = -1;
-                char *account_name = (char *)RFIFOP (fd, 2);
-                account_name[23] = '\0';
-                remove_control_chars (account_name);
-                int i = account_index_by_name (account_name);
-                if (i == -1)
-                {
-                    memcpy (WFIFOP (fd, 6), account_name, 24);
-                    login_log ("'ladmin': Attempt to modify the password of an unknown account (account: %s, ip: %s)\n",
-                               account_name, ip);
-                    goto end_x7934;
-                }
-                strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
-                strcpy (auth_dat[i].pass, MD5_saltcrypt((char *)RFIFOP (fd, 26), make_salt()));
-                WFIFOL (fd, 2) = auth_dat[i].account_id;
-                login_log ("'ladmin': Modification of a password (account: %s, new password: %s, ip: %s)\n",
-                           auth_dat[i].userid, auth_dat[i].pass, ip);
-            }
-            end_x7934:
+                x7934 (fd);
                 WFIFOSET (fd, 30);
                 RFIFOSKIP (fd, 50);
                 break;
@@ -1833,60 +2596,7 @@ void parse_admin (int fd)
             case 0x7936:
                 if (RFIFOREST (fd) < 50)
                     return;
-            {
-                WFIFOW (fd, 0) = 0x7937;
-                WFIFOL (fd, 2) = -1;
-                char *account_name = (char *)RFIFOP (fd, 2);
-                account_name[23] = '\0';
-                remove_control_chars (account_name);
-                uint32_t status = RFIFOL (fd, 26);
-                WFIFOL (fd, 30) = status;
-                char error_message[20] = {};
-                strncpy (error_message, (char *)RFIFOP (fd, 30), 19);
-                remove_control_chars (error_message);
-                if (status != 7 || error_message[0] == '\0')
-                    // 7: // 6 = Your are Prohibited to log in until %s
-                    strcpy (error_message, "-");
-                int i = account_index_by_name (account_name);
-                if (i == -1)
-                {
-                    strcpy ((char *)WFIFOP (fd, 6), account_name);
-                    login_log ("'ladmin': Attempt to modify the state of an unknown account (account: %s, received state: %d, ip: %s)\n",
-                               account_name, status, ip);
-                    goto end_x7936;
-                }
-                strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
-                WFIFOL (fd, 2) = auth_dat[i].account_id;
-                if (auth_dat[i].state == status &&
-                        strcmp (auth_dat[i].error_message, error_message) == 0)
-                {
-                    login_log ("'ladmin': Modification of a state, but the state of the account is already the requested state (account: %s, received state: %d, ip: %s)\n",
-                               account_name, status, ip);
-                    goto end_x7936;
-                }
-                if (status == 7)
-                    login_log ("'ladmin': Modification of a state (account: %s, new state: %d - prohibited to login until '%s', ip: %s)\n",
-                               auth_dat[i].userid, status, error_message, ip);
-                else
-                    login_log ("'ladmin': Modification of a state (account: %s, new state: %d, ip: %s)\n",
-                               auth_dat[i].userid, status, ip);
-                if (auth_dat[i].state == 0)
-                {
-                    unsigned char buf[16];
-                    WBUFW (buf, 0) = 0x2731;
-                    WBUFL (buf, 2) = auth_dat[i].account_id;
-                    WBUFB (buf, 6) = 0; // 0: change of state, 1: ban
-                    WBUFL (buf, 7) = status;    // status or final date of a banishment
-                    charif_sendallwos (-1, buf, 11);
-                    for (int j = 0; j < AUTH_FIFO_SIZE; j++)
-                        if (auth_fifo[j].account_id == auth_dat[i].account_id)
-                            // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
-                            auth_fifo[j].login_id1++;
-                }
-                auth_dat[i].state = (enum auth_failure)status;
-                strcpy (auth_dat[i].error_message, error_message);
-            }
-            end_x7936:
+                x7936 (fd);
                 WFIFOSET (fd, 34);
                 RFIFOSKIP (fd, 50);
                 break;
@@ -1894,25 +2604,7 @@ void parse_admin (int fd)
             /// Request for servers list and # of online players
             // uint32_t packet
             case 0x7938:
-            {
-                login_log ("'ladmin': Sending of servers list (ip: %s)\n", ip);
-                int server_num = 0;
-                for (int i = 0; i < MAX_SERVERS; i++)
-                {
-                    if (server_fd[i] < 0)
-                        continue;
-                    WFIFOL (fd, 4 + server_num * 32) = server[i].ip;
-                    WFIFOW (fd, 4 + server_num * 32 + 4) = server[i].port;
-                    strcpy ((char *)WFIFOP (fd, 4 + server_num * 32 + 6), server[i].name);
-                    WFIFOW (fd, 4 + server_num * 32 + 26) = server[i].users;
-                    WFIFOW (fd, 4 + server_num * 32 + 28) = server[i].maintenance;
-                    WFIFOW (fd, 4 + server_num * 32 + 30) = server[i].is_new;
-                    server_num++;
-                }
-                WFIFOW (fd, 0) = 0x7939;
-                WFIFOW (fd, 2) = 4 + 32 * server_num;
-                WFIFOSET (fd, 4 + 32 * server_num);
-            }
+                x7938 (fd);
                 RFIFOSKIP (fd, 2);
                 break;
 
@@ -1921,37 +2613,7 @@ void parse_admin (int fd)
             case 0x793a:
                 if (RFIFOREST (fd) < 50)
                     return;
-            {
-                WFIFOW (fd, 0) = 0x793b;
-                WFIFOL (fd, 2) = -1;
-                char *account_name = (char *)RFIFOP (fd, 2);
-                account_name[23] = '\0';
-                remove_control_chars (account_name);
-                int i = account_index_by_name (account_name);
-                if (i == -1)
-                {
-                    strcpy ((char *)WFIFOP (fd, 6), account_name);
-                    login_log ("'ladmin': Attempt to check the password of an unknown account (account: %s, ip: %s)\n",
-                               account_name, ip);
-                    goto end_x793a;
-                }
-                strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
-                if (pass_ok((char *)RFIFOP (fd, 26), auth_dat[i].pass))
-                {
-                    WFIFOL (fd, 2) = auth_dat[i].account_id;
-                    login_log ("'ladmin': Check of password OK (account: %s, password: %s, ip: %s)\n",
-                               auth_dat[i].userid, auth_dat[i].pass, ip);
-                }
-                else
-                {
-                    char pass[24] = {};
-                    strncpy (pass, (char *)RFIFOP (fd, 26), 23);
-                    remove_control_chars (pass);
-                    login_log ("'ladmin': Failure of password check (account: %s, proposed pass: %s, ip: %s)\n",
-                               auth_dat[i].userid, pass, ip);
-                }
-            }
-            end_x793a:
+                x793a (fd);
                 WFIFOSET (fd, 30);
                 RFIFOSKIP (fd, 50);
                 break;
@@ -1961,54 +2623,7 @@ void parse_admin (int fd)
             case 0x793c:
                 if (RFIFOREST (fd) < 27)
                     return;
-            {
-                WFIFOW (fd, 0) = 0x793d;
-                WFIFOL (fd, 2) = -1;
-                char *account_name = (char *)RFIFOP (fd, 2);
-                account_name[23] = '\0';
-                remove_control_chars (account_name);
-                strcpy ((char *)WFIFOP (fd, 6), account_name);
-                enum gender sex = sex_from_char(RFIFOB (fd, 26));
-                if (sex != SEX_FEMALE && sex != SEX_MALE)
-                {
-                    if (sex >= 0x20 && sex < 0x7f)
-                        login_log ("'ladmin': Attempt to give an invalid sex (account: %s, received sex: %c, ip: %s)\n",
-                                   account_name, sex_to_char (sex), ip);
-                    else
-                        login_log ("'ladmin': Attempt to give an invalid sex (account: %s, received sex: %02hhx, ip: %s)\n",
-                                   account_name, sex_to_char (sex), ip);
-                    goto end_x793c;
-                }
-                {
-                    int i = account_index_by_name (account_name);
-                    if (i == -1)
-                    {
-                        login_log ("'ladmin': Attempt to modify the sex of an unknown account (account: %s, received sex: %c, ip: %s)\n",
-                                account_name, sex_to_char (sex), ip);
-                        goto end_x793c;
-                    }
-                    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
-                    if (auth_dat[i].sex == sex)
-                    {
-                        login_log ("'ladmin': Modification of a sex, but the sex is already the requested sex (account: %s, sex: %c, ip: %s)\n", auth_dat[i].userid, sex_to_char (sex), ip);
-                    }
-                    WFIFOL (fd, 2) = auth_dat[i].account_id;
-                    for (int j = 0; j < AUTH_FIFO_SIZE; j++)
-                        if (auth_fifo[j].account_id == auth_dat[i].account_id)
-                            // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
-                            auth_fifo[j].login_id1++;
-                    auth_dat[i].sex = sex;
-                    login_log ("'ladmin': Modification of a sex (account: %s, new sex: %c, ip: %s)\n",
-                            auth_dat[i].userid, sex_to_char (sex), ip);
-                    // send to all char-server the change
-                    unsigned char buf[7];
-                    WBUFW (buf, 0) = 0x2723;
-                    WBUFL (buf, 2) = auth_dat[i].account_id;
-                    WBUFB (buf, 6) = (uint8_t)auth_dat[i].sex;
-                    charif_sendallwos (-1, buf, 7);
-                }
-            }
-            end_x793c:
+                x793c (fd);
                 WFIFOSET (fd, 30);
                 RFIFOSKIP (fd, 27);
                 break;
@@ -2018,118 +2633,7 @@ void parse_admin (int fd)
             case 0x793e:
                 if (RFIFOREST (fd) < 27)
                     return;
-            {
-                WFIFOW (fd, 0) = 0x793f;
-                WFIFOL (fd, 2) = -1;
-                char *account_name = (char *)RFIFOP (fd, 2);
-                account_name[23] = '\0';
-                remove_control_chars (account_name);
-                strcpy ((char *)WFIFOP (fd, 6), account_name);
-                gm_level_t new_gm_level = new_gm_level = RFIFOB (fd, 26);
-                if (new_gm_level > 99)
-                {
-                    login_log ("'ladmin': Attempt to give an invalid GM level (account: %s, received GM level: %d, ip: %s)\n",
-                               account_name, (int) new_gm_level, ip);
-                    goto end_x793e;
-                }
-                int i = account_index_by_name (account_name);
-                if (i == -1)
-                {
-                    login_log ("'ladmin': Attempt to modify the GM level of an unknown account (account: %s, received GM level: %d, ip: %s)\n",
-                               account_name, (int) new_gm_level, ip);
-                    goto end_x793e;
-                }
-                account_t acc = auth_dat[i].account_id;
-                strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
-                if (isGM (acc) == new_gm_level)
-                {
-                    login_log ("'ladmin': Attempt to modify of a GM level, but the GM level is already the good GM level (account: %s (%u), GM level: %hhu, ip: %s)\n",
-                               auth_dat[i].userid, acc, new_gm_level, ip);
-                    goto end_x793e;
-                }
-                // modification of the file
-                int  lock;
-                FILE *fp2 = lock_fopen (GM_account_filename, &lock);
-                if (!fp2)
-                {
-                    login_log ("'ladmin': Attempt to modify of a GM level - impossible to write GM accounts file (account: %s (%u), received GM level: %hhu, ip: %s)\n",
-                                auth_dat[i].userid, acc, new_gm_level, ip);
-                    goto end_x793e;
-                }
-                FILE *fp = fopen_ (GM_account_filename, "r");
-                if (!fp)
-                {
-                    login_log ("'ladmin': Attempt to modify of a GM level - impossible to read GM accounts file (account: %s (%u), received GM level: %hhu, ip: %s)\n",
-                                auth_dat[i].userid, acc, new_gm_level, ip);
-                    goto end_x793e_lock;
-                }
-                {
-                    struct timeval tv;
-                    gettimeofday (&tv, NULL);
-                    char tmpstr[DATE_FORMAT_MAX];
-                    strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&tv.tv_sec));
-                    bool modify_flag = 0;
-                    char line[512];
-                    // read/write GM file
-                    while (fgets (line, sizeof (line), fp))
-                    {
-                        // strip off both the '\r' and the '\n', if they exist
-                        // FIXME - isn't this file opened in text mode?
-                        while (line[0] != '\0' && (line[strlen (line) - 1] == '\n' || line[strlen (line) - 1] == '\r'))
-                            line[strlen (line) - 1] = '\0';
-                        // FIXME: won't this case be caught below, when sscanf fails?
-                        if ((line[0] == '/' && line[1] == '/') || line[0] == '\0')
-                        {
-                            fprintf (fp2, "%s\n", line);
-                            continue;
-                        }
-                        account_t GM_account;
-                        gm_level_t GM_level;
-                        if (sscanf (line, "%u %hhu", &GM_account, &GM_level) != 2
-                            && sscanf (line, "%u: %hhu", &GM_account, &GM_level) != 2)
-                        {
-                            fprintf (fp2, "%s\n", line);
-                            continue;
-                        }
-                        if (GM_account != acc)
-                        {
-                            fprintf (fp2, "%s\n", line);
-                            continue;
-                        }
-                        modify_flag = 1;
-                        if (!new_gm_level)
-                        {
-                            fprintf (fp2, "// %s: 'ladmin' remove %u '%s' GM level %hhu\n"
-                                          "//%d %d\n",
-                                     tmpstr, acc, auth_dat[i].userid, GM_level,
-                                     acc, new_gm_level);
-                        }
-                        else
-                        {
-                            fprintf (fp2, "// %s: 'ladmin' change %u '%s' from GM level %hhu\n"
-                                          "%u %hhu\n",
-                                     tmpstr, acc, auth_dat[i].userid, GM_level,
-                                     acc, new_gm_level);
-                        }
-                    }
-                    if (!modify_flag)
-                        fprintf (fp2, "// %s: 'ladmin' make %d '%s' a new GM\n"
-                                      "%d %d\n",
-                                 tmpstr, acc, auth_dat[i].userid,
-                                 acc, new_gm_level);
-                    fclose_ (fp);
-                }
-            end_x793e_lock:
-                lock_fclose(fp2, GM_account_filename, &lock);
-                WFIFOL (fd, 2) = acc;
-                login_log ("'ladmin': Modification of a GM level (account: %s (%d), new GM level: %hhu, ip: %s)\n",
-                            auth_dat[i].userid, acc, new_gm_level, ip);
-                // read and send new GM informations
-                // FIXME: this is stupid
-                read_gm_account ();
-                send_GM_accounts ();
-            }
-            end_x793e:
+                x793e (fd);
                 WFIFOSET (fd, 30);
                 RFIFOSKIP (fd, 27);
                 break;
@@ -2139,36 +2643,7 @@ void parse_admin (int fd)
             case 0x7940:
                 if (RFIFOREST (fd) < 66)
                     return;
-            {
-                WFIFOW (fd, 0) = 0x7941;
-                WFIFOL (fd, 2) = -1;
-                char *account_name = (char *)RFIFOP (fd, 2);
-                account_name[23] = '\0';
-                remove_control_chars (account_name);
-                strcpy ((char *)WFIFOP (fd, 6), account_name);
-                char email[40] = {};
-                strncpy (email, (char *)RFIFOP (fd, 26), 39);
-                if (!e_mail_check (email))
-                {
-                    login_log ("'ladmin': Attempt to give an invalid e-mail (account: %s, ip: %s)\n",
-                               account_name, ip);
-                    goto end_x7940;
-                }
-                remove_control_chars (email);
-                int i = account_index_by_name (account_name);
-                if (i == -1)
-                {
-                    login_log ("'ladmin': Attempt to modify the e-mail of an unknown account (account: %s, received e-mail: %s, ip: %s)\n",
-                               account_name, email, ip);
-                    goto end_x7940;
-                }
-                strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
-                strcpy (auth_dat[i].email, email);
-                WFIFOL (fd, 2) = auth_dat[i].account_id;
-                login_log ("'ladmin': Modification of an email (account: %s, new e-mail: %s, ip: %s)\n",
-                           auth_dat[i].userid, email, ip);
-            }
-            end_x7940:
+                x7940 (fd);
                 WFIFOSET (fd, 30);
                 RFIFOSKIP (fd, 66);
                 break;
@@ -2179,33 +2654,7 @@ void parse_admin (int fd)
                 if (RFIFOREST (fd) < 28
                     || RFIFOREST (fd) < (28 + RFIFOW (fd, 26)))
                     return;
-            {
-                WFIFOW (fd, 0) = 0x7943;
-                WFIFOL (fd, 2) = -1;
-                char *account_name = (char *)RFIFOP (fd, 2);
-                account_name[23] = '\0';
-                remove_control_chars (account_name);
-                int i = account_index_by_name (account_name);
-                if (i == -1)
-                {
-                    strcpy ((char *)WFIFOP (fd, 6), account_name);
-                    login_log ("'ladmin': Attempt to modify the memo field of an unknown account (account: %s, ip: %s)\n",
-                               account_name, ip);
-                    goto end_x7942;
-                }
-                static const size_t size_of_memo = sizeof (auth_dat[i].memo) - 1;
-                // auth_dat[i].memo[0] must always be '!' or stuff breaks
-                char *memo = auth_dat[i].memo + 1;
-                memcpy (WFIFOP (fd, 6), auth_dat[i].userid, 24);
-                strncpy (memo, (char *)RFIFOP (fd, 28),
-                         MIN (size_of_memo, RFIFOW (fd, 26)) - 1);
-                memo[size_of_memo - 1] = '\0';
-                remove_control_chars (memo);
-                WFIFOL (fd, 2) = auth_dat[i].account_id;
-                login_log ("'ladmin': Modification of a memo field (account: %s, new memo: %s, ip: %s)\n",
-                           auth_dat[i].userid, memo, ip);
-            }
-            end_x7942:
+                x7942 (fd);
                 WFIFOSET (fd, 30);
                 RFIFOSKIP (fd, 28 + RFIFOW (fd, 26));
                 break;
@@ -2215,26 +2664,7 @@ void parse_admin (int fd)
             case 0x7944:
                 if (RFIFOREST (fd) < 26)
                     return;
-            {
-                WFIFOW (fd, 0) = 0x7945;
-                WFIFOL (fd, 2) = -1;
-                char *account_name = (char *)RFIFOP (fd, 2);
-                account_name[23] = '\0';
-                remove_control_chars (account_name);
-                int i = account_index_by_name (account_name);
-                if (i == -1)
-                {
-                    strcpy ((char *)WFIFOP (fd, 6), account_name);
-                    login_log ("'ladmin': ID request (by the name) of an unknown account (account: %s, ip: %s)\n",
-                               account_name, ip);
-                    goto end_x7944;
-                }
-                strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
-                WFIFOL (fd, 2) = auth_dat[i].account_id;
-                login_log ("'ladmin': Request (by the name) of an account id (account: %s, id: %u, ip: %s)\n",
-                           auth_dat[i].userid, auth_dat[i].account_id, ip);
-            }
-            end_x7944:
+                x7944 (fd);
                 WFIFOSET (fd, 30);
                 RFIFOSKIP (fd, 26);
                 break;
@@ -2244,23 +2674,7 @@ void parse_admin (int fd)
             case 0x7946:
                 if (RFIFOREST (fd) < 6)
                     return;
-            {
-                WFIFOW (fd, 0) = 0x7947;
-                WFIFOL (fd, 2) = RFIFOL (fd, 2);
-                memset (WFIFOP (fd, 6), '\0', 24);
-                int i = account_index_by_id(RFIFOL (fd, 2));
-                if (i == -1)
-                {
-                    login_log ("'ladmin': Name request (by id) of an unknown account (id: %d, ip: %s)\n",
-                               RFIFOL (fd, 2), ip);
-                    // strcpy (WFIFOP (fd, 6), "");
-                    goto end_x7946;
-                }
-                strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
-                login_log ("'ladmin': Request (by id) of an account name (account: %s, id: %d, ip: %s)\n",
-                           auth_dat[i].userid, RFIFOL (fd, 2), ip);
-            }
-            end_x7946:
+                x7946 (fd);
                 WFIFOSET (fd, 30);
                 RFIFOSKIP (fd, 6);
                 break;
@@ -2270,33 +2684,7 @@ void parse_admin (int fd)
             case 0x7948:
                 if (RFIFOREST (fd) < 30)
                     return;
-            {
-                WFIFOW (fd, 0) = 0x7949;
-                WFIFOL (fd, 2) = -1;
-                char *account_name = (char *)RFIFOP (fd, 2);
-                account_name[23] = '\0';
-                remove_control_chars (account_name);
-                // time_t might not be 32 bits
-                time_t timestamp = (time_t) RFIFOL (fd, 26);
-                char tmpstr[DATE_FORMAT_MAX] = "unlimited";
-                if (timestamp)
-                    strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&timestamp));
-                int i = account_index_by_name (account_name);
-                if (i == -1)
-                {
-                    strcpy ((char *)WFIFOP (fd, 6), account_name);
-                    login_log ("'ladmin': Attempt to change the validity limit of an unknown account (account: %s, received validity: %ld (%s), ip: %s)\n",
-                               account_name, (long)timestamp, tmpstr, ip);
-                    goto end_x7948;
-                }
-                strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
-                login_log ("'ladmin': Change of a validity limit (account: %s, new validity: %ld (%s), ip: %s)\n",
-                           auth_dat[i].userid, (long)timestamp, tmpstr, ip);
-                auth_dat[i].connect_until_time = timestamp;
-                WFIFOL (fd, 2) = auth_dat[i].account_id;
-                WFIFOL (fd, 30) = timestamp;
-            }
-            end_x7948:
+                x7948 (fd);
                 WFIFOSET (fd, 34);
                 RFIFOSKIP (fd, 30);
                 break;
@@ -2306,50 +2694,7 @@ void parse_admin (int fd)
             case 0x794a:
                 if (RFIFOREST (fd) < 30)
                     return;
-            {
-                WFIFOW (fd, 0) = 0x794b;
-                WFIFOL (fd, 2) = -1;
-                char *account_name = (char *)RFIFOP (fd, 2);
-                account_name[23] = '\0';
-                remove_control_chars (account_name);
-                time_t timestamp = (time_t) RFIFOL (fd, 26);
-                if (timestamp <= time (NULL))
-                    timestamp = 0;
-                WFIFOL (fd, 30) = timestamp;
-                char tmpstr[DATE_FORMAT_MAX] = "no banishment";
-                if (timestamp)
-                    strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&timestamp));
-
-                int i = account_index_by_name (account_name);
-                if (i == -1)
-                {
-                    strcpy ((char *)WFIFOP (fd, 6), account_name);
-                    login_log ("'ladmin': Attempt to change the final date of a banishment of an unknown account (account: %s, received final date of banishment: %ld (%s), ip: %s)\n",
-                            account_name, (long)timestamp, tmpstr, ip);
-                    goto end_x794a;
-                }
-
-                strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
-                WFIFOL (fd, 2) = auth_dat[i].account_id;
-                login_log ("'ladmin': Change of the final date of a banishment (account: %s, new final date of banishment: %ld (%s), ip: %s)\n",
-                           auth_dat[i].userid, (long)timestamp, tmpstr, ip);
-                if (auth_dat[i].ban_until_time == timestamp)
-                    goto end_x794a;
-                auth_dat[i].ban_until_time = timestamp;
-                if (!timestamp)
-                    goto end_x794a;
-                uint8_t buf[11];
-                WBUFW (buf, 0) = 0x2731;
-                WBUFL (buf, 2) = auth_dat[i].account_id;
-                WBUFB (buf, 6) = 1; // 0: change of status, 1: ban
-                WBUFL (buf, 7) = timestamp; // status or final date of a banishment
-                charif_sendallwos (-1, buf, 11);
-                for (int j = 0; j < AUTH_FIFO_SIZE; j++)
-                    if (auth_fifo[j].account_id == auth_dat[i].account_id)
-                        // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
-                        auth_fifo[j].login_id1++;
-            }
-            end_x794a:
+                x794a (fd);
                 WFIFOSET (fd, 34);
                 RFIFOSKIP (fd, 30);
                 break;
@@ -2359,67 +2704,7 @@ void parse_admin (int fd)
             case 0x794c:
                 if (RFIFOREST (fd) < 38)
                     return;
-            {
-                WFIFOW (fd, 0) = 0x794d;
-                WFIFOL (fd, 2) = -1;
-                char *account_name = (char *)RFIFOP (fd, 2);
-                account_name[23] = '\0';
-                remove_control_chars (account_name);
-                int i = account_index_by_name (account_name);
-                if (i == -1)
-                {
-                    memcpy (WFIFOP (fd, 6), account_name, 24);
-                    login_log ("'ladmin': Attempt to adjust the final date of a banishment of an unknown account (account: %s, ip: %s)\n",
-                               account_name, ip);
-                    WFIFOL (fd, 30) = 0;
-                    goto end_x794c;
-                }
-                WFIFOL (fd, 2) = auth_dat[i].account_id;
-                strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
-
-                time_t timestamp = time (NULL);
-                if (auth_dat[i].ban_until_time >= timestamp)
-                    timestamp = auth_dat[i].ban_until_time;
-
-                // TODO check for overflow
-                // years (365.25 days)
-                timestamp += 31557600 * (short) RFIFOW (fd, 26);
-                // a month isn't well-defined - use 1/12 of a year
-                timestamp += 2629800 * (short) RFIFOW (fd, 28);
-                timestamp += 86400 * (short) RFIFOW (fd, 30);
-                timestamp += 3600 * (short) RFIFOW (fd, 32);
-                timestamp += 60 * (short) RFIFOW (fd, 34);
-                timestamp += (short) RFIFOW (fd, 36);
-                if (timestamp <= time (NULL))
-                    timestamp = 0;
-
-                char tmpstr[DATE_FORMAT_MAX] = "no banishment";
-                if (timestamp)
-                    strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&timestamp));
-                login_log ("'ladmin': Adjustment of a final date of a banishment (account: %s, (%+d y %+d m %+d d %+d h %+d mn %+d s) -> new validity: %ld (%s), ip: %s)\n",
-                           auth_dat[i].userid,
-                           (short) RFIFOW (fd, 26), (short) RFIFOW (fd, 28),
-                           (short) RFIFOW (fd, 30), (short) RFIFOW (fd, 32),
-                           (short) RFIFOW (fd, 34), (short) RFIFOW (fd, 36),
-                           (long)timestamp, tmpstr, ip);
-                WFIFOL (fd, 30) = timestamp;
-                if (auth_dat[i].ban_until_time == timestamp)
-                    goto end_x794c;
-                auth_dat[i].ban_until_time = timestamp;
-                if (!timestamp)
-                    goto end_x794c;
-                unsigned char buf[11];
-                WBUFW (buf, 0) = 0x2731;
-                WBUFL (buf, 2) = auth_dat[i].account_id;
-                WBUFB (buf, 6) = 1; // 0: change of status, 1: ban
-                WBUFL (buf, 7) = timestamp; // status or final date of a banishment
-                charif_sendallwos (-1, buf, 11);
-                for (int j = 0; j < AUTH_FIFO_SIZE; j++)
-                    if (auth_fifo[j].account_id == auth_dat[i].account_id)
-                        // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
-                        auth_fifo[j].login_id1++;
-            }
-            end_x794c:
+                x794c (fd);
                 WFIFOSET (fd, 34);
                 RFIFOSKIP (fd, 38);
                 break;
@@ -2430,39 +2715,7 @@ void parse_admin (int fd)
             case 0x794e:
                 if (RFIFOREST (fd) < 8 || RFIFOREST (fd) < (8 + RFIFOL (fd, 4)))
                     return;
-            {
-                WFIFOW (fd, 0) = 0x794f;
-                WFIFOW (fd, 2) = -1;
-                if (!RFIFOL (fd, 4))
-                {
-                    login_log ("'ladmin': Receiving a message for broadcast, but message is void (ip: %s)\n",
-                               ip);
-                    goto end_x794e;
-                }
-                // at least 1 char-server
-                int i;
-                for (i = 0; i < MAX_SERVERS; i++)
-                    if (server_fd[i] >= 0)
-                        break;
-                if (i == MAX_SERVERS)
-                {
-                    login_log ("'ladmin': Receiving a message for broadcast, but no char-server is online (ip: %s)\n",
-                               ip);
-                    goto end_x794e;
-                }
-                char *message = (char *)RFIFOP (fd, 8);
-                WFIFOW (fd, 2) = 0;
-                // This should already be NUL, but we don't trust anyone
-                message[RFIFOL (fd, 4) - 1] = '\0';
-                // Edit the message in-place
-                remove_control_chars (message);
-                login_log ("'ladmin': Relay broadcast %s (ip: %s)\n",
-                           message, ip);
-                // forward the same message to all char-servers (no answer)
-                RFIFOW (fd, 0) = 0x2726;
-                charif_sendallwos (-1, RFIFOP (fd, 0), 8 + RFIFOL (fd, 4));
-            }
-            end_x794e:
+                x794e (fd);
                 WFIFOSET (fd, 4);
                 RFIFOSKIP (fd, 8 + RFIFOL (fd, 4));
                 break;
@@ -2472,73 +2725,7 @@ void parse_admin (int fd)
             case 0x7950:
                 if (RFIFOREST (fd) < 38)
                     return;
-            {
-                WFIFOW (fd, 0) = 0x7951;
-                WFIFOL (fd, 2) = -1;
-                char *account_name = (char *)RFIFOP (fd, 2);
-                account_name[23] = '\0';
-                remove_control_chars (account_name);
-                int i = account_index_by_name (account_name);
-                if (i != -1)
-                {
-                    strcpy ((char *)WFIFOP (fd, 6), account_name);
-                    login_log ("'ladmin': Attempt to adjust the validity limit of an unknown account (account: %s, ip: %s)\n",
-                               account_name, ip);
-                    WFIFOL (fd, 30) = 0;
-                    goto end_x7950;
-                }
-                WFIFOL (fd, 2) = auth_dat[i].account_id;
-                strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
-
-                time_t timestamp = auth_dat[i].connect_until_time;
-                if (!add_to_unlimited_account && !timestamp)
-                {
-                    login_log ("'ladmin': Refused to adjust the validity limit of an unlimited account (account: %s, ip: %s)\n",
-                               auth_dat[i].userid, ip);
-                    WFIFOL (fd, 30) = 0;
-                    goto end_x7950;
-                }
-                if (timestamp == 0 || timestamp < time (NULL))
-                    timestamp = time (NULL);
-                // TODO check for overflow
-                // years (365.25 days)
-                timestamp += 31557600 * (short) RFIFOW (fd, 26);
-                // a month isn't well-defined - use 1/12 of a year
-                timestamp += 2629800 * (short) RFIFOW (fd, 28);
-                timestamp += 86400 * (short) RFIFOW (fd, 30);
-                timestamp += 3600 * (short) RFIFOW (fd, 32);
-                timestamp += 60 * (short) RFIFOW (fd, 34);
-                timestamp += (short) RFIFOW (fd, 36);
-
-                WFIFOL (fd, 30) = timestamp;
-
-                char tmpstr[DATE_FORMAT_MAX] = "unlimited";
-                if (auth_dat[i].connect_until_time)
-                    strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT,
-                              gmtime (&auth_dat[i].connect_until_time));
-
-                if (timestamp == auth_dat[i].connect_until_time)
-                {
-                    login_log ("'ladmin': No adjustment of a validity limit (account: %s, %ld (%s), ip: %s)\n",
-                               auth_dat[i].userid,
-                               (long)auth_dat[i].connect_until_time, tmpstr, ip);
-                    goto end_x7950;
-                }
-
-                char tmpstr2[DATE_FORMAT_MAX] = "unlimited";
-                if (timestamp)
-                    strftime (tmpstr2, DATE_FORMAT_MAX, DATE_FORMAT,
-                              gmtime (&timestamp));
-                login_log ("'ladmin': Adjustment of a validity limit (account: %s, %ld (%s) + (%+d y %+d m %+d d %+d h %+d mn %+d s) -> new validity: %ld (%s), ip: %s)\n",
-                           auth_dat[i].userid,
-                           (long)auth_dat[i].connect_until_time, tmpstr,
-                           (short) RFIFOW (fd, 26), (short) RFIFOW (fd, 28),
-                           (short) RFIFOW (fd, 30), (short) RFIFOW (fd, 32),
-                           (short) RFIFOW (fd, 34), (short) RFIFOW (fd, 36),
-                           (long)timestamp, tmpstr2, ip);
-                auth_dat[i].connect_until_time = timestamp;
-            }
-            end_x7950:
+                x7950 (fd);
                 WFIFOSET (fd, 34);
                 RFIFOSKIP (fd, 38);
                 break;
@@ -2549,43 +2736,7 @@ void parse_admin (int fd)
             case 0x7952:
                 if (RFIFOREST (fd) < 26)
                     return;
-            {
-                WFIFOW (fd, 0) = 0x7953;
-                WFIFOL (fd, 2) = -1;
-                char *account_name = (char *)RFIFOP (fd, 2);
-                account_name[23] = '\0';
-                remove_control_chars (account_name);
-                int i = account_index_by_name (account_name);
-                if (i == -1)
-                {
-                    strcpy ((char *)WFIFOP (fd, 7), account_name);
-                    WFIFOW (fd, 148) = 0;
-                    login_log ("'ladmin': No account information for name: %s (ip: %s)\n",
-                               account_name, ip);
-                    WFIFOSET (fd, 150);
-                    goto end_x7952;
-                }
-                WFIFOL (fd, 2) = auth_dat[i].account_id;
-                WFIFOB (fd, 6) = isGM (auth_dat[i].account_id);
-                strcpy ((char *)WFIFOP (fd, 7), auth_dat[i].userid);
-                WFIFOB (fd, 31) = (uint8_t)auth_dat[i].sex;
-                WFIFOL (fd, 32) = auth_dat[i].logincount;
-                WFIFOL (fd, 36) = auth_dat[i].state;
-                strcpy ((char *)WFIFOP (fd, 40), auth_dat[i].error_message);
-                strcpy ((char *)WFIFOP (fd, 60), auth_dat[i].lastlogin);
-                strcpy ((char *)WFIFOP (fd, 84), auth_dat[i].last_ip);
-                strcpy ((char *)WFIFOP (fd, 100), auth_dat[i].email);
-                WFIFOL (fd, 140) = auth_dat[i].connect_until_time;
-                WFIFOL (fd, 144) = auth_dat[i].ban_until_time;
-                // discard the password magic
-                char *memo = auth_dat[i].memo + 1;
-                WFIFOW (fd, 148) = strlen (memo);
-                strcpy ((char *)WFIFOP (fd, 150), memo);
-                login_log ("'ladmin': Sending information of an account (request by the name; account: %s, id: %d, ip: %s)\n",
-                           auth_dat[i].userid, auth_dat[i].account_id, ip);
-                WFIFOSET (fd, 150 + strlen (memo));
-            }
-            end_x7952:
+                x7952 (fd);
                 RFIFOSKIP (fd, 26);
                 break;
 
@@ -2595,52 +2746,14 @@ void parse_admin (int fd)
             case 0x7954:
                 if (RFIFOREST (fd) < 6)
                     return;
-            {
-                WFIFOW (fd, 0) = 0x7953;
-                WFIFOL (fd, 2) = RFIFOL (fd, 2);
-                int i = account_index_by_id (RFIFOL (fd, 2));
-                if (i == -1)
-                {
-                    login_log ("'ladmin': Attempt to obtain information (by the id) of an unknown account (id: %d, ip: %s)\n",
-                               RFIFOL (fd, 2), ip);
-                    strcpy ((char *)WFIFOP (fd, 7), "");
-                    WFIFOW (fd, 148) = 0;
-                    WFIFOSET (fd, 150);
-                    goto end_x7954;
-                }
-                login_log ("'ladmin': Sending information of an account (request by the id; account: %s, id: %d, ip: %s)\n",
-                           auth_dat[i].userid, RFIFOL (fd, 2), ip);
-                WFIFOB (fd, 6) = isGM (auth_dat[i].account_id);
-                strcpy ((char *)WFIFOP (fd, 7), auth_dat[i].userid);
-                WFIFOB (fd, 31) = (uint8_t)auth_dat[i].sex;
-                WFIFOL (fd, 32) = auth_dat[i].logincount;
-                WFIFOL (fd, 36) = auth_dat[i].state;
-                strcpy ((char *)WFIFOP (fd, 40), auth_dat[i].error_message);
-                strcpy ((char *)WFIFOP (fd, 60), auth_dat[i].lastlogin);
-                strcpy ((char *)WFIFOP (fd, 84), auth_dat[i].last_ip);
-                strcpy ((char *)WFIFOP (fd, 100), auth_dat[i].email);
-                WFIFOL (fd, 140) = auth_dat[i].connect_until_time;
-                WFIFOL (fd, 144) = auth_dat[i].ban_until_time;
-                // discard the password magic
-                char *memo = auth_dat[i].memo + 1;
-                WFIFOW (fd, 148) = strlen (memo);
-                strcpy ((char *)WFIFOP (fd, 150), memo);
-                WFIFOSET (fd, 150 + strlen (memo));
-            }
-            end_x7954:
+                x7954 (fd);
                 RFIFOSKIP (fd, 6);
                 break;
 
             /// Request to reload GM file (no answer)
             // uint16_t packet
             case 0x7955:
-            {
-                login_log ("'ladmin': Request to re-load GM configuration file (ip: %s).\n",
-                           ip);
-                read_gm_account ();
-                // send GM accounts to all char-servers
-                send_GM_accounts ();
-            }
+                x7955 (fd);
                 RFIFOSKIP (fd, 2);
                 break;
 
@@ -2670,6 +2783,9 @@ void parse_admin (int fd)
     } // while packet available
     return;
 }
+
+
+
 
 /// Check if IP is LAN instead of WAN
 // (send alternate char IP)

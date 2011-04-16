@@ -1602,27 +1602,39 @@ void parse_fromchar (int fd)
 
 
 
-/// Request of the server version
+/// Server version
 // uint16_t packet
-void x7530 (int fd)
+void x7530 (int fd, bool ladmin)
 {
-    login_log ("'ladmin': Request server version (ip: %s)\n", ip_of (fd));
+    login_log ("%sRequest server version (ip: %s)\n", ladmin ? "'ladmin': " : "", ip_of (fd));
     WFIFOW (fd, 0) = 0x7531;
-    WFIFOB (fd, 2) = ATHENA_MAJOR_VERSION;
-    WFIFOB (fd, 3) = ATHENA_MINOR_VERSION;
-    WFIFOB (fd, 4) = ATHENA_REVISION;
-    WFIFOB (fd, 5) = ATHENA_RELEASE_FLAG;
-    WFIFOB (fd, 6) = ATHENA_OFFICIAL_FLAG;
-    WFIFOB (fd, 7) = ATHENA_SERVER_LOGIN;
-    WFIFOW (fd, 8) = ATHENA_MOD_VERSION;
+    if (ladmin)
+    {
+        WFIFOB (fd, 2) = ATHENA_MAJOR_VERSION;
+        WFIFOB (fd, 3) = ATHENA_MINOR_VERSION;
+        WFIFOB (fd, 4) = ATHENA_REVISION;
+        WFIFOB (fd, 5) = ATHENA_RELEASE_FLAG;
+        WFIFOB (fd, 6) = ATHENA_OFFICIAL_FLAG;
+        WFIFOB (fd, 7) = ATHENA_SERVER_LOGIN;
+        WFIFOW (fd, 8) = ATHENA_MOD_VERSION;
+    }
+    else // normal player
+    {
+        WFIFOB (fd, 2) = -1;
+        WFIFOB (fd, 3) = PUBLIC_VERSION[0];
+        WFIFOB (fd, 4) = PUBLIC_VERSION[1];
+        WFIFOB (fd, 5) = PUBLIC_VERSION[2];
+        // NOTE: this would be a good place to advertise features
+        WFIFOL (fd, 6) = new_account_flag ? 1 : 0;
+    }
     WFIFOSET (fd, 10);
 }
 
 /// Request of end of connection
 // uint16_t packet
-void x7532 (int fd)
+void x7532 (int fd, const char *pfx)
 {
-    login_log ("'ladmin': End of connection (ip: %s)\n", ip_of (fd));
+    login_log ("%sEnd of connection (ip: %s)\n", pfx, ip_of (fd));
     session[fd]->eof = 1;
 }
 
@@ -2531,14 +2543,14 @@ void parse_admin (int fd)
             /// Request of the server version
             // uint16_t packet
             case 0x7530:
-                x7530 (fd);
+                x7530 (fd, true);
                 RFIFOSKIP (fd, 2);
                 break;
 
             /// Request of end of connection
             // uint16_t packet
             case 0x7532:
-                x7532 (fd);
+                x7532 (fd, "'ladmin': ");
                 RFIFOSKIP (fd, 2);
                 return;
 
@@ -2805,6 +2817,353 @@ bool lan_ip_check (uint8_t *p)
     return lancheck;
 }
 
+
+
+
+/// Client is alive
+// uint16_t packet, char userid[24]
+// this packet is not sent by any known TMW server/client
+void x200(int UNUSED)
+{
+}
+
+/// Client is alive
+// uint16_t packet, char crypted_userid[16]
+// (new ragexe from 22 june 2004)
+// this packet is not sent by any known TMW server/client
+void x204 (int UNUSED)
+{
+}
+
+/// Client connect
+// uint16_t packet, uint8_t unk[4], char userid[24], char passwd[24], uint8_t version_2_flags
+void x64 (int fd)
+{
+    struct mmo_account account;
+    account.userid = (char *)RFIFOP (fd, 6);
+    account.userid[23] = '\0';
+    remove_control_chars (account.userid);
+    account.passwd = (char *)RFIFOP (fd, 30);
+    account.passwd[23] = '\0';
+    remove_control_chars (account.passwd);
+
+    login_log ("Request for connection of %s (ip: %s).\n",
+               account.userid, ip_of (fd));
+
+    if (!check_ip (session[fd]->client_addr.sin_addr.s_addr))
+    {
+        login_log ("Connection refused: IP isn't authorised (deny/allow, ip: %s).\n",
+                   ip_of (fd));
+        WFIFOW (fd, 0) = 0x6a;
+        WFIFOB (fd, 2) = 0x03;
+        WFIFOSET (fd, 3);
+        // FIXME: shouldn't this set eof?
+        return;
+    }
+
+    enum auth_failure result = mmo_auth (&account, fd);
+    // putting the version_2_flags here feels hackish
+    // but it makes the code much nicer, especially for future
+    uint8_t version_2_flags = RFIFOB (fd, 54);
+    // As an update_host is required for all known TMW servers,
+    // and all clients since 0.0.25 support it,
+    // I am making it fail if not set
+    if (!(version_2_flags & VERSION_2_UPDATEHOST))
+        result = AUTH_CLIENT_TOO_OLD;
+    if (result != AUTH_OK)
+    {
+        WFIFOW (fd, 0) = 0x6a;
+        WFIFOB (fd, 2) = result - 1;
+        memset (WFIFOP (fd, 3), '\0', 20);
+        int i;
+        if (result != AUTH_BANNED_TEMPORARILY)
+            goto end_x0064_006a;
+        // You are Prohibited to log in until %s
+        i = account_index_by_name (account.userid);
+        // This cannot happen
+        // if (i == -1)
+            // goto end_x0064_006a;
+        if (auth_dat[i].ban_until_time)
+        {
+            // if account is banned, we send ban timestamp
+            char tmpstr[DATE_FORMAT_MAX];
+            strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT,
+                      gmtime (&auth_dat[i].ban_until_time));
+            strcpy ((char *)WFIFOP (fd, 3), tmpstr);
+        }
+        else
+        {
+            // can this happen?
+            // we send error message
+            // hm, it seems there is a ladmin command to set this arbitrarily
+            strcpy ((char *)WFIFOP (fd, 3), auth_dat[i].error_message);
+        }
+    end_x0064_006a:
+        WFIFOSET (fd, 23);
+        return;
+    }
+    gm_level_t gm_level = isGM (account.account_id);
+    if (min_level_to_connect > gm_level)
+    {
+        login_log ("Connection refused: only allowing GMs of level %hhu (account: %s, GM level: %d, ip: %s).\n",
+                   min_level_to_connect, account.userid, gm_level, ip_of (fd));
+        WFIFOW (fd, 0) = 0x81;
+        WFIFOL (fd, 2) = 1; // 01 = Server closed
+        WFIFOSET (fd, 3);
+        return;
+    }
+
+    if (gm_level)
+        login_log ("Connection of the GM (level:%d) account '%s' accepted.\n",
+                   gm_level, account.userid);
+    else
+        login_log ("Connection of the account '%s' accepted.\n",
+                   account.userid);
+
+    /// If there is an update_host, send it
+    // (version_2_flags requires bit 0, above)
+    size_t host_len = strlen (update_host);
+    if (host_len)
+    {
+        WFIFOW (fd, 0) = 0x63;
+        WFIFOW (fd, 2) = 4 + host_len;
+        memcpy (WFIFOP (fd, 4), update_host, host_len);
+        WFIFOSET (fd, 4 + host_len);
+    }
+
+    // Load list of char servers into outbound packet
+    int server_num = 0;
+    // This has been set since 0.0.29
+    // and it will only be an inconvenience for older clients,
+    // so always send in forward-order.
+    // if (version_2_flags & VERSION_2_SERVERORDER)
+    for (int i = 0; i < MAX_SERVERS; i++)
+    {
+        if (server_fd[i] < 0)
+            continue;
+        if (lan_ip_check ((uint8_t *) &session[fd]->client_addr.sin_addr))
+            WFIFOL (fd, 47 + server_num * 32) = inet_addr (lan_char_ip);
+        else
+            WFIFOL (fd, 47 + server_num * 32) = server[i].ip;
+        WFIFOW (fd, 47 + server_num * 32 + 4) = server[i].port;
+        strcpy ((char *)WFIFOP (fd, 47 + server_num * 32 + 6), server[i].name);
+        WFIFOW (fd, 47 + server_num * 32 + 26) = server[i].users;
+        WFIFOW (fd, 47 + server_num * 32 + 28) = server[i].maintenance;
+        WFIFOW (fd, 47 + server_num * 32 + 30) = server[i].is_new;
+        server_num++;
+    }
+    // if no char-server, don't send void list of servers, just disconnect the player with proper message
+    if (!server_num)
+    {
+        login_log ("Connection refused: there is no char-server online (account: %s, ip: %s).\n",
+                   account.userid, ip_of (fd));
+        WFIFOW (fd, 0) = 0x81;
+        WFIFOL (fd, 2) = 1; // 01 = Server closed
+        WFIFOSET (fd, 3);
+        return;
+    }
+    // if at least 1 char-server
+    WFIFOW (fd, 0) = 0x69;
+    WFIFOW (fd, 2) = 47 + 32 * server_num;
+    WFIFOL (fd, 4) = account.login_id1;
+    WFIFOL (fd, 8) = account.account_id;
+    WFIFOL (fd, 12) = account.login_id2;
+    /// in old eAthena, this was for an ip
+    WFIFOL (fd, 16) = 0;
+    /// in old eAthena, this was for a name
+    strcpy ((char *)WFIFOP (fd, 20), account.lastlogin);
+    // nothing is written in the word at 44
+    WFIFOB (fd, 46) = (uint8_t)account.sex;
+    WFIFOSET (fd, 47 + 32 * server_num);
+    if (auth_fifo_pos >= AUTH_FIFO_SIZE)
+        auth_fifo_pos = 0;
+    // wait, is this just blithely wrapping and invalidating old entries?
+    // this could be a cause of DoS attacks
+    auth_fifo[auth_fifo_pos].account_id = account.account_id;
+    auth_fifo[auth_fifo_pos].login_id1 = account.login_id1;
+    auth_fifo[auth_fifo_pos].login_id2 = account.login_id2;
+    auth_fifo[auth_fifo_pos].sex = account.sex;
+    auth_fifo[auth_fifo_pos].delflag = 0;
+    auth_fifo[auth_fifo_pos].ip = session[fd]->client_addr.sin_addr.s_addr;
+    auth_fifo_pos++;
+}
+
+/// Sending request of the coding key (ladmin packet)
+// uint16_t packet
+void x791a (int fd)
+{
+    if (session[fd]->session_data)
+    {
+        login_log ("login: abnormal request of MD5 key (already opened session).\n");
+        session[fd]->eof = 1;
+        return;
+    }
+    struct login_session_data *ld;
+    CREATE (ld, struct login_session_data, 1);
+    session[fd]->session_data = ld;
+    login_log ("'ladmin': Sending request of the coding key (ip: %s)\n",
+               ip_of (fd));
+    // Create coding key of length [12, 16)
+    ld->md5keylen = MPRAND(12, 4);
+    for (int i = 0; i < ld->md5keylen; i++)
+        ld->md5key[i] = MPRAND(1, 255);
+
+    RFIFOSKIP (fd, 2);
+    WFIFOW (fd, 0) = 0x01dc;
+    WFIFOW (fd, 2) = 4 + ld->md5keylen;
+    memcpy (WFIFOP (fd, 4), ld->md5key, ld->md5keylen);
+    WFIFOSET (fd, WFIFOW (fd, 2));
+}
+
+/// char-server connects
+// uint16_t packet, char userid[24], char passwd[24], char unk[4],
+//   uint32_t ip, uint16_t port, char server_name[20],
+//   char unk[2], uint16_t maintenance, uint16_t is_new
+void x2710 (int fd)
+{
+    struct mmo_account account;
+    account.userid = (char *)RFIFOP (fd, 2);
+    account.userid[23] = '\0';
+    remove_control_chars (account.userid);
+    account.passwd = (char *)RFIFOP (fd, 26);
+    account.passwd[23] = '\0';
+    remove_control_chars (account.passwd);
+    char *server_name = (char *)RFIFOP (fd, 60);
+    server_name[19] = '\0';
+    remove_control_chars (server_name);
+    login_log ("Connection request of the char-server '%s' @ %d.%d.%d.%d:%d (ip: %s)\n",
+               server_name, RFIFOB (fd, 54), RFIFOB (fd, 55),
+               RFIFOB (fd, 56), RFIFOB (fd, 57), RFIFOW (fd, 58), ip_of (fd));
+    enum auth_failure result = mmo_auth (&account, fd);
+
+    if (result == AUTH_OK && account.sex == SEX_SERVER)
+    {
+        // If this is the main server, and we don't already have a main server
+        if (server_fd[0] == -1
+            && strcasecmp (server_name, main_server) == 0)
+        {
+            account.account_id = 0;
+            goto char_server_ok;
+        }
+        for (int i = 1; i < MAX_SERVERS; i++)
+        {
+            if (server_fd[i] == -1)
+            {
+                account.account_id = i;
+                goto char_server_ok;
+            }
+        }
+    }
+    login_log ("Connection of the char-server '%s' REFUSED (account: %s, pass: %s, ip: %s)\n",
+               server_name, account.userid,
+               account.passwd, ip_of (fd));
+    WFIFOW (fd, 0) = 0x2711;
+    WFIFOB (fd, 2) = 3;
+    WFIFOSET (fd, 3);
+    return;
+
+char_server_ok:
+    login_log ("Connection of the char-server '%s' accepted (account: %s, pass: %s, ip: %s)\n",
+               server_name, account.userid, account.passwd, ip_of (fd));
+    server[account.account_id].ip = RFIFOL (fd, 54);
+    server[account.account_id].port = RFIFOW (fd, 58);
+    strcpy (server[account.account_id].name, server_name);
+    server[account.account_id].users = 0;
+    server[account.account_id].maintenance = RFIFOW (fd, 82);
+    server[account.account_id].is_new = RFIFOW (fd, 84);
+    server_fd[account.account_id] = fd;
+    if (anti_freeze_enable)
+        // Char-server anti-freeze system. Counter. 5 ok, 4...0 freezed
+        server_freezeflag[account.account_id] = 5;
+    WFIFOW (fd, 0) = 0x2711;
+    WFIFOB (fd, 2) = 0;
+    WFIFOSET (fd, 3);
+    session[fd]->func_parse = parse_fromchar;
+    realloc_fifo (fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
+    // send GM account list to char-server
+    uint16_t len = 4;
+    WFIFOW (fd, 0) = 0x2732;
+    for (int i = 0; i < auth_num; i++)
+    {
+        gm_level_t GM_value = isGM (auth_dat[i].account_id);
+        // send only existing accounts. We can not create a GM account when server is online.
+        if (GM_value)
+        {
+            WFIFOL (fd, len) = auth_dat[i].account_id;
+            WFIFOB (fd, len + 4) = GM_value;
+            len += 5;
+        }
+    }
+    WFIFOW (fd, 2) = len;
+    WFIFOSET (fd, len);
+}
+
+/// Request for administation login
+// uint16_t packet, uint16_t type = {0,1,2}, char passwd[24] (if type 0) or uint8_t hash[16] otherwise
+// ladmin always sends the encrypted form
+void x7918 (int fd)
+{
+    WFIFOW (fd, 0) = 0x7919;
+    WFIFOB (fd, 2) = 1;
+    if (!check_ladminip (session[fd]->client_addr.sin_addr.s_addr))
+    {
+        login_log ("'ladmin'-login: Connection in administration mode refused: IP isn't authorised (ladmin_allow, ip: %s).\n",
+                   ip_of (fd));
+        return;
+    }
+    struct login_session_data *ld = (struct login_session_data *)session[fd]->session_data;
+    if (RFIFOW (fd, 2) == 0)
+    {
+        login_log ("'ladmin'-login: Connection in administration mode refused: not encrypted (ip: %s).\n",
+                   ip_of (fd));
+        return;
+    }
+    if (RFIFOW (fd, 2) > 2)
+    {
+        login_log ("'ladmin'-login: Connection in administration mode refused: unknown encryption (ip: %s).\n",
+                   ip_of (fd));
+        return;
+    }
+    if (!ld)
+    {
+        login_log ("'ladmin'-login: error! MD5 key not created/requested for an administration login.\n");
+        return;
+    }
+    if (!admin_state)
+    {
+        login_log ("'ladmin'-login: Connection in administration mode refused: remote administration is disabled (ip: %s)\n",
+                   ip_of (fd));
+        return;
+    }
+    char md5str[64] = {};
+    uint8_t md5bin[32];
+    if (RFIFOW (fd, 2) == 1)
+    {
+        strncpy (md5str, ld->md5key, sizeof (ld->md5key));  // 20
+        strcat (md5str, admin_pass);    // 24
+    }
+    else if (RFIFOW (fd, 2) == 2)
+    {
+        // This is always sent by ladmin
+        strncpy (md5str, admin_pass, sizeof (admin_pass));  // 24
+        strcat (md5str, ld->md5key);    // 20
+    }
+    MD5_to_bin(MD5_from_cstring(md5str), md5bin);
+    // If password hash sent by client matches hash of password read from login server configuration file
+    if (memcmp (md5bin, RFIFOP (fd, 4), 16) == 0)
+    {
+        login_log ("'ladmin'-login: Connection in administration mode accepted (encrypted password, ip: %s)\n",
+                   ip_of (fd));
+        WFIFOB (fd, 2) = 0;
+        session[fd]->func_parse = parse_admin;
+    }
+    else
+        login_log ("'ladmin'-login: Connection in administration mode REFUSED - invalid password (encrypted password, ip: %s)\n",
+                   ip_of (fd));
+}
+
+
+
 /// Default packet parsing
 // * normal players
 // * administation/char-server before authenticated
@@ -2853,6 +3212,7 @@ void parse_login (int fd)
             case 0x200:
                 if (RFIFOREST (fd) < 26)
                     return;
+                x200 (fd);
                 RFIFOSKIP (fd, 26);
                 break;
 
@@ -2863,202 +3223,24 @@ void parse_login (int fd)
             case 0x204:
                 if (RFIFOREST (fd) < 18)
                     return;
+                x204 (fd);
                 RFIFOSKIP (fd, 18);
                 break;
 
             /// Client connect
             // uint16_t packet, uint8_t unk[4], char userid[24], char passwd[24], uint8_t version_2_flags
             case 0x64:
-            /// Client connect (encryption mode)
-            // this packet is not sent by any known TMW server/client
-            // and is incompatible with the way WE store passwords encrypted
-//            case 0x01dd:
                 if (RFIFOREST (fd) < 55 )
                     return;
-            {
-                struct mmo_account account;
-                account.userid = (char *)RFIFOP (fd, 6);
-                account.userid[23] = '\0';
-                remove_control_chars (account.userid);
-                account.passwd = (char *)RFIFOP (fd, 30);
-                account.passwd[23] = '\0';
-                remove_control_chars (account.passwd);
-
-                login_log ("Request for connection of %s (ip: %s).\n",
-                           account.userid, ip);
-
-                if (!check_ip (session[fd]->client_addr.sin_addr.s_addr))
-                {
-                    login_log ("Connection refused: IP isn't authorised (deny/allow, ip: %s).\n",
-                               ip);
-                    WFIFOW (fd, 0) = 0x6a;
-                    WFIFOB (fd, 2) = 0x03;
-                    WFIFOSET (fd, 3);
-                    RFIFOSKIP (fd, 55);
-                    // shouldn't this set eof?
-                    break;
-                }
-
-                enum auth_failure result = mmo_auth (&account, fd);
-                // putting the version_2_flags here feels hackish
-                // but it makes the code much nicer, especially for future
-                uint8_t version_2_flags = RFIFOB (fd, 54);
-                // As an update_host is required for all known TMW servers,
-                // and all clients since 0.0.25 support it,
-                // I am making it fail if not set
-                if (!(version_2_flags & VERSION_2_UPDATEHOST))
-                    result = AUTH_CLIENT_TOO_OLD;
-                if (result != AUTH_OK)
-                {
-                    WFIFOW (fd, 0) = 0x6a;
-                    WFIFOB (fd, 2) = result - 1;
-                    memset (WFIFOP (fd, 3), '\0', 20);
-                    int i;
-                    if (result != AUTH_BANNED_TEMPORARILY)
-                        goto end_x0064_006a;
-                    // You are Prohibited to log in until %s
-                    i = account_index_by_name (account.userid);
-                    // This cannot happen
-                    // if (i == -1)
-                        // goto end_x0064_006a;
-                    if (auth_dat[i].ban_until_time)
-                    {
-                        // if account is banned, we send ban timestamp
-                        char tmpstr[DATE_FORMAT_MAX];
-                        strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT,
-                                  gmtime (&auth_dat[i].ban_until_time));
-                        strcpy ((char *)WFIFOP (fd, 3), tmpstr);
-                    }
-                    else
-                    {
-                        // can this happen?
-                        // we send error message
-                        // hm, it seems there is a ladmin command to set this arbitrarily
-                        strcpy ((char *)WFIFOP (fd, 3), auth_dat[i].error_message);
-                    }
-                end_x0064_006a:
-                    WFIFOSET (fd, 23);
-                    goto end_x0064;
-                }
-                gm_level_t gm_level = isGM (account.account_id);
-                if (min_level_to_connect > gm_level)
-                {
-                    login_log ("Connection refused: only allowing GMs of level %hhu (account: %s, GM level: %d, ip: %s).\n",
-                               min_level_to_connect, account.userid, gm_level, ip);
-                    WFIFOW (fd, 0) = 0x81;
-                    WFIFOL (fd, 2) = 1; // 01 = Server closed
-                    WFIFOSET (fd, 3);
-                    goto end_x0064;
-                }
-
-                if (gm_level)
-                    login_log ("Connection of the GM (level:%d) account '%s' accepted.\n",
-                                gm_level, account.userid);
-                else
-                    login_log ("Connection of the account '%s' accepted.\n",
-                                account.userid);
-
-                /// If there is an update_host, send it
-                // (version_2_flags requires bit 0, above)
-                size_t host_len = strlen (update_host);
-                if (host_len)
-                {
-                    WFIFOW (fd, 0) = 0x63;
-                    WFIFOW (fd, 2) = 4 + host_len;
-                    memcpy (WFIFOP (fd, 4), update_host, host_len);
-                    WFIFOSET (fd, 4 + host_len);
-                }
-
-                // Load list of char servers into outbound packet
-                int server_num = 0;
-                // This has been set since 0.0.29
-                // and it will only be an inconvenience for older clients,
-                // so always send in forward-order.
-                // if (version_2_flags & VERSION_2_SERVERORDER)
-                for (int i = 0; i < MAX_SERVERS; i++)
-                {
-                    if (server_fd[i] < 0)
-                        continue;
-                    if (lan_ip_check ((uint8_t *) &session[fd]->client_addr.sin_addr))
-                        WFIFOL (fd, 47 + server_num * 32) = inet_addr (lan_char_ip);
-                    else
-                        WFIFOL (fd, 47 + server_num * 32) = server[i].ip;
-                    WFIFOW (fd, 47 + server_num * 32 + 4) = server[i].port;
-                    strcpy ((char *)WFIFOP (fd, 47 + server_num * 32 + 6), server[i].name);
-                    WFIFOW (fd, 47 + server_num * 32 + 26) = server[i].users;
-                    WFIFOW (fd, 47 + server_num * 32 + 28) = server[i].maintenance;
-                    WFIFOW (fd, 47 + server_num * 32 + 30) = server[i].is_new;
-                    server_num++;
-                }
-                // if no char-server, don't send void list of servers, just disconnect the player with proper message
-                if (!server_num)
-                {
-                    login_log ("Connection refused: there is no char-server online (account: %s, ip: %s).\n",
-                               account.userid, ip);
-                    WFIFOW (fd, 0) = 0x81;
-                    WFIFOL (fd, 2) = 1; // 01 = Server closed
-                    WFIFOSET (fd, 3);
-                    goto end_x0064;
-                }
-                // if at least 1 char-server
-                WFIFOW (fd, 0) = 0x69;
-                WFIFOW (fd, 2) = 47 + 32 * server_num;
-                WFIFOL (fd, 4) = account.login_id1;
-                WFIFOL (fd, 8) = account.account_id;
-                WFIFOL (fd, 12) = account.login_id2;
-                /// in old eAthena, this was for an ip
-                WFIFOL (fd, 16) = 0;
-                /// in old eAthena, this was for a name
-                strcpy ((char *)WFIFOP (fd, 20), account.lastlogin);
-                // nothing is written in the word at 44
-                WFIFOB (fd, 46) = (uint8_t)account.sex;
-                WFIFOSET (fd, 47 + 32 * server_num);
-                if (auth_fifo_pos >= AUTH_FIFO_SIZE)
-                    auth_fifo_pos = 0;
-                // wait, is this just blithely wrapping and invalidating old entries?
-                // this could be a cause of DoS attacks
-                auth_fifo[auth_fifo_pos].account_id = account.account_id;
-                auth_fifo[auth_fifo_pos].login_id1 = account.login_id1;
-                auth_fifo[auth_fifo_pos].login_id2 = account.login_id2;
-                auth_fifo[auth_fifo_pos].sex = account.sex;
-                auth_fifo[auth_fifo_pos].delflag = 0;
-                auth_fifo[auth_fifo_pos].ip = session[fd]->client_addr.sin_addr.s_addr;
-                auth_fifo_pos++;
-            }
-            end_x0064:
+                x64 (fd);
                 RFIFOSKIP (fd, 55);
                 break;
 
-            /// Sending request of the coding key
-            // this packet is not sent by any known TMW server/client
-            // it is probably associated with the incompatible encrypted logins.
-//            case 0x01db:
             /// Sending request of the coding key (ladmin packet)
             // uint16_t packet
             case 0x791a:
-            {
-                if (session[fd]->session_data)
-                {
-                    printf ("login: abnormal request of MD5 key (already opened session).\n");
-                    session[fd]->eof = 1;
-                    return;
-                }
-                struct login_session_data *ld;
-                CREATE (ld, struct login_session_data, 1);
-                session[fd]->session_data = ld;
-                login_log ("'ladmin': Sending request of the coding key (ip: %s)\n",
-                           ip);
-                // Create coding key of length [12, 16)
-                ld->md5keylen = MPRAND(12, 4);
-                for (int i = 0; i < ld->md5keylen; i++)
-                    ld->md5key[i] = MPRAND(1, 255);
-
+                x791a (fd);
                 RFIFOSKIP (fd, 2);
-                WFIFOW (fd, 0) = 0x01dc;
-                WFIFOW (fd, 2) = 4 + ld->md5keylen;
-                memcpy (WFIFOP (fd, 4), ld->md5key, ld->md5keylen);
-                WFIFOSET (fd, WFIFOW (fd, 2));
-            }
                 break;
 
             /// char-server connects
@@ -3068,106 +3250,20 @@ void parse_login (int fd)
             case 0x2710:
                 if (RFIFOREST (fd) < 86)
                     return;
-            {
-                struct mmo_account account;
-                account.userid = (char *)RFIFOP (fd, 2);
-                account.userid[23] = '\0';
-                remove_control_chars (account.userid);
-                account.passwd = (char *)RFIFOP (fd, 26);
-                account.passwd[23] = '\0';
-                remove_control_chars (account.passwd);
-                char *server_name = (char *)RFIFOP (fd, 60);
-                server_name[19] = '\0';
-                remove_control_chars (server_name);
-                login_log ("Connection request of the char-server '%s' @ %d.%d.%d.%d:%d (ip: %s)\n",
-                           server_name, RFIFOB (fd, 54), RFIFOB (fd, 55),
-                           RFIFOB (fd, 56), RFIFOB (fd, 57), RFIFOW (fd, 58), ip);
-                enum auth_failure result = mmo_auth (&account, fd);
-
-                if (result == AUTH_OK && account.sex == SEX_SERVER)
-                {
-                    // If this is the main server, and we don't already have a main server
-                    if (server_fd[0] == -1
-                        && strcasecmp (server_name, main_server) == 0)
-                    {
-                        account.account_id = 0;
-                        goto char_server_ok;
-                    }
-                    for (int i = 1; i < MAX_SERVERS; i++)
-                    {
-                        if (server_fd[i] == -1)
-                        {
-                            account.account_id = i;
-                            goto char_server_ok;
-                        }
-                    }
-                }
-                login_log ("Connection of the char-server '%s' REFUSED (account: %s, pass: %s, ip: %s)\n",
-                           server_name, account.userid,
-                           account.passwd, ip);
-                WFIFOW (fd, 0) = 0x2711;
-                WFIFOB (fd, 2) = 3;
-                WFIFOSET (fd, 3);
-                goto end_x2710;
-
-            char_server_ok:
-                login_log ("Connection of the char-server '%s' accepted (account: %s, pass: %s, ip: %s)\n",
-                           server_name, account.userid, account.passwd, ip);
-                server[account.account_id].ip = RFIFOL (fd, 54);
-                server[account.account_id].port = RFIFOW (fd, 58);
-                strcpy (server[account.account_id].name, server_name);
-                server[account.account_id].users = 0;
-                server[account.account_id].maintenance = RFIFOW (fd, 82);
-                server[account.account_id].is_new = RFIFOW (fd, 84);
-                server_fd[account.account_id] = fd;
-                if (anti_freeze_enable)
-                    // Char-server anti-freeze system. Counter. 5 ok, 4...0 freezed
-                    server_freezeflag[account.account_id] = 5;
-                WFIFOW (fd, 0) = 0x2711;
-                WFIFOB (fd, 2) = 0;
-                WFIFOSET (fd, 3);
-                session[fd]->func_parse = parse_fromchar;
-                realloc_fifo (fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
-                // send GM account list to char-server
-                uint16_t len = 4;
-                WFIFOW (fd, 0) = 0x2732;
-                for (int i = 0; i < auth_num; i++)
-                {
-                    gm_level_t GM_value = isGM (auth_dat[i].account_id);
-                    // send only existing accounts. We can not create a GM account when server is online.
-                    if (GM_value)
-                    {
-                        WFIFOL (fd, len) = auth_dat[i].account_id;
-                        WFIFOB (fd, len + 4) = GM_value;
-                        len += 5;
-                    }
-                }
-                WFIFOW (fd, 2) = len;
-                WFIFOSET (fd, len);
-            }
-            end_x2710:
+                x2710 (fd);
                 RFIFOSKIP (fd, 86);
                 return;
 
             /// Server version
             // uint16_t packet
             case 0x7530:
-                login_log ("Sending of the server version (ip: %s)\n", ip);
-                WFIFOW (fd, 0) = 0x7531;
-                WFIFOB (fd, 2) = -1;
-                WFIFOB (fd, 3) = PUBLIC_VERSION[0];
-                WFIFOB (fd, 4) = PUBLIC_VERSION[1];
-                WFIFOB (fd, 5) = PUBLIC_VERSION[2];
-                // NOTE: this would be a good place to advertise features
-                WFIFOL (fd, 6) = new_account_flag ? 1 : 0;
-                WFIFOSET (fd, 10);
+                x7530 (fd, false);
                 RFIFOSKIP (fd, 2);
                 break;
 
             /// End connection
             case 0x7532:
-                login_log ("End of connection (ip: %s)\n", ip);
-                session[fd]->eof = 1;
+                x7532 (fd,"");
                 return;
 
             /// Request for administation login
@@ -3177,66 +3273,7 @@ void parse_login (int fd)
                 if (RFIFOREST (fd) < 4
                     || RFIFOREST (fd) < ((RFIFOW (fd, 2) == 0) ? 28 : 20))
                     return;
-            {
-                WFIFOW (fd, 0) = 0x7919;
-                WFIFOB (fd, 2) = 1;
-                if (!check_ladminip (session[fd]->client_addr.sin_addr.s_addr))
-                {
-                    login_log ("'ladmin'-login: Connection in administration mode refused: IP isn't authorised (ladmin_allow, ip: %s).\n",
-                               ip);
-                    goto end_x7918;
-                }
-                struct login_session_data *ld = (struct login_session_data *)session[fd]->session_data;
-                if (RFIFOW (fd, 2) == 0)
-                {
-                    login_log ("'ladmin'-login: Connection in administration mode refused: not encrypted (ip: %s).\n",
-                               ip);
-                    goto end_x7918;
-                }
-                if (RFIFOW (fd, 2) > 2)
-                {
-                    login_log ("'ladmin'-login: Connection in administration mode refused: unknown encryption (ip: %s).\n",
-                               ip);
-                    goto end_x7918;
-                }
-                if (!ld)
-                {
-                    login_log ("'ladmin'-login: error! MD5 key not created/requested for an administration login.\n");
-                    goto end_x7918;
-                }
-                if (!admin_state)
-                {
-                    login_log ("'ladmin'-login: Connection in administration mode refused: remote administration is disabled (ip: %s)\n",
-                                ip);
-                    goto end_x7918;
-                }
-                char md5str[64] = {};
-                uint8_t md5bin[32];
-                if (RFIFOW (fd, 2) == 1)
-                {
-                    strncpy (md5str, ld->md5key, sizeof (ld->md5key));  // 20
-                    strcat (md5str, admin_pass);    // 24
-                }
-                else if (RFIFOW (fd, 2) == 2)
-                {
-                    // This is always sent by ladmin
-                    strncpy (md5str, admin_pass, sizeof (admin_pass));  // 24
-                    strcat (md5str, ld->md5key);    // 20
-                }
-                MD5_to_bin(MD5_from_cstring(md5str), md5bin);
-                // If password hash sent by client matches hash of password read from login server configuration file
-                if (memcmp (md5bin, RFIFOP (fd, 4), 16) == 0)
-                {
-                    login_log ("'ladmin'-login: Connection in administration mode accepted (encrypted password, ip: %s)\n",
-                               ip);
-                    WFIFOB (fd, 2) = 0;
-                    session[fd]->func_parse = parse_admin;
-                }
-                else
-                    login_log ("'ladmin'-login: Connection in administration mode REFUSED - invalid password (encrypted password, ip: %s)\n",
-                               ip);
-            }
-            end_x7918:
+                x7918 (fd);
                 WFIFOSET (fd, 3);
                 RFIFOSKIP (fd, (RFIFOW (fd, 2) == 0) ? 28 : 20);
                 break;

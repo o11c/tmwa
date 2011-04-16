@@ -165,6 +165,13 @@ pid_t pid = 0; // For forked DB writes
 #define VERSION_2_UPDATEHOST 0x01   // client supports updatehost
 #define VERSION_2_SERVERORDER 0x02  // send servers in forward order
 
+const char *ip_of (int fd)
+{
+    static char out[16];
+    ip_to_str (session[fd]->client_addr.sin_addr.s_addr, out);
+    return out;
+}
+
 /// Sort accounts before saving or sending to ladmin
 // currently uses a bubble-sort - TODO replace with something better
 // FIXME - does this even need to be done at all?
@@ -951,6 +958,467 @@ void char_anti_freeze_system (timer_id UNUSED, tick_t UNUSED,
     }
 }
 
+
+
+/// Reload GM accounts
+/// Forwarded from map-server
+// uint16_t packet
+void x2709(int fd, int id)
+{
+    login_log ("Char-server '%s': Request to re-load GM configuration file (ip: %s).\n",
+               server[id].name, ip_of (fd));
+    read_gm_account ();
+    // send GM accounts to all char-servers
+    send_GM_accounts ();
+}
+
+/// authenticate an account to the char-server
+// uint16_t packet, uint32_t acc, uint32_t login_id[2], char sex, uint32_t ip
+void x2712(int fd, int id)
+{
+    account_t acc = RFIFOL (fd, 2);
+    for (int i = 0; i < AUTH_FIFO_SIZE; i++)
+    {
+        if (auth_fifo[i].account_id != acc ||
+                auth_fifo[i].login_id1 != RFIFOL (fd, 6) ||
+                auth_fifo[i].login_id2 != RFIFOL (fd, 10) ||
+                auth_fifo[i].sex != (enum gender)RFIFOB (fd, 14) ||
+                auth_fifo[i].ip != RFIFOL (fd, 15) ||
+                auth_fifo[i].delflag)
+            continue;
+        auth_fifo[i].delflag = 1;
+        login_log ("Char-server '%s': authenticated %d (ip: %s).\n",
+                   server[id].name, acc, ip_of (fd));
+        for (int k = 0; k < auth_num; k++)
+        {
+            if (auth_dat[k].account_id != acc)
+                continue;
+            // send ## variables
+            WFIFOW (fd, 0) = 0x2729;
+            WFIFOL (fd, 4) = acc;
+            int p = 8;
+            for (int j = 0; j < auth_dat[k].account_reg2_num; j++)
+            {
+                strcpy ((char *)WFIFOP (fd, p),
+                        auth_dat[k].account_reg2[j].str);
+                p += 32;
+                WFIFOL (fd, p) = auth_dat[k].account_reg2[j].value;
+                p += 4;
+            }
+            WFIFOW (fd, 2) = p;
+            WFIFOSET (fd, p);
+            // send player email and expiration
+            WFIFOW (fd, 0) = 0x2713;
+            WFIFOL (fd, 2) = acc;
+            WFIFOB (fd, 6) = 0;
+            strcpy ((char *)WFIFOP (fd, 7), auth_dat[k].email);
+            WFIFOL (fd, 47) = auth_dat[k].connect_until_time;
+            WFIFOSET (fd, 51);
+            return;
+        } // for k in auth_dat
+        return;
+    } // for i in auth_fifo
+    // authentication not found
+    login_log ("Char-server '%s': denied auth %d (ip: %s).\n",
+                server[id].name, acc, ip_of (fd));
+    WFIFOW (fd, 0) = 0x2713;
+    WFIFOL (fd, 2) = acc;
+    WFIFOB (fd, 6) = 1;
+    // It is unnecessary to send email
+    // It is unnecessary to send validity date of the account
+    WFIFOSET (fd, 51);
+}
+
+/// Report of number of users on the server
+// uint16_t packet, uint32_t usercount
+void x2714(int fd, int id)
+{
+    server[id].users = RFIFOL (fd, 2);
+    if (anti_freeze_enable)
+        server_freezeflag[id] = 5;
+}
+
+/// Request initial setting of email (no answer, but may fail)
+// uint16_t packet, uint32_t acc, char email[40]
+void x2715(int fd, int id)
+{
+    account_t acc = RFIFOL (fd, 2);
+    char email[40] = {};
+    strncpy (email, (char *)RFIFOP (fd, 6), 39);
+    remove_control_chars (email);
+    if (!e_mail_check (email))
+    {
+        login_log ("Char-server '%s': refused to init email by %d (ip: %s)\n",
+                    server[id].name, acc, ip_of (fd));
+        return;
+    }
+    int i = account_index_by_id (acc);
+    if (i == -1)
+    {
+        login_log ("Char-server '%s': refused to init email - no such account %d (ip: %s).\n",
+                   server[id].name, acc, ip_of (fd));
+        return;
+    }
+    if (strcmp (auth_dat[i].email, "a@a.com") != 0)
+    {
+        login_log ("Char-server '%s': refused to init email for %d - it is already set (ip: %s).\n",
+                   server[id].name, acc, ip_of (fd));
+        return;
+    }
+    strcpy (auth_dat[i].email, email);
+    login_log ("Char-server '%s': init email (account: %d, e-mail: %s, ip: %s).\n",
+               server[id].name, acc, email, ip_of (fd));
+}
+
+/// Request email and expiration time
+// uint16_t packet, uint32_t account
+void x2716 (int fd, int id)
+{
+    account_t acc = RFIFOL (fd, 2);
+    int i = account_index_by_id (acc);
+    if (i == -1)
+    {
+        login_log ("Char-server '%s': can't send e-mail - no account %d (ip: %s).\n",
+                   server[id].name, RFIFOL (fd, 2), ip_of (fd));
+        return;
+    }
+    login_log ("Char-server '%s': send e-mail of %u (ip: %s).\n",
+               server[id].name, acc, ip_of (fd));
+    WFIFOW (fd, 0) = 0x2717;
+    WFIFOL (fd, 2) = acc;
+    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].email);
+    WFIFOL (fd, 46) = auth_dat[i].connect_until_time;
+    WFIFOSET (fd, 50);
+}
+
+/// Request to become GM
+// uint16_t packet, uint16_t len, char gm_pass[len]
+void x2720 (int fd, int id)
+{
+    unsigned char buf[10];
+    account_t acc = RFIFOL (fd, 4);
+    WBUFW (buf, 0) = 0x2721;
+    WBUFL (buf, 2) = acc;
+    WBUFL (buf, 6) = 0; // level of gm they became
+    if (!level_new_gm)
+    {
+        login_log ("Char-server '%s': request to make %u a GM, but GM creation is disable (ip: %s).\n",
+                   server[id].name, acc, ip_of (fd));
+        return;
+    }
+    if (strcmp ((char *)RFIFOP (fd, 8), gm_pass) != 0)
+    {
+        login_log ("Failed to make %u a GM: incorrect password (ip: %s).\n",
+                   acc, ip_of (fd));
+        return;
+    }
+    if (isGM (acc))
+    {
+        login_log ("Char-server '%s': Error: %d is already a GM (ip: %s).\n",
+                   server[id].name, acc, ip_of (fd));
+        return;
+    }
+    FILE *fp = fopen_ (GM_account_filename, "a");
+    if (!fp)
+    {
+        login_log ("Char-server '%s': %s: %m\n", server[id].name,
+                   GM_account_filename);
+        return;
+    }
+    struct timeval tv;
+    gettimeofday (&tv, NULL);
+    char tmpstr[DATE_FORMAT_MAX];
+    strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&tv.tv_sec));
+    fprintf (fp, "\n// %s: @GM command\n%d %d\n", tmpstr, acc, level_new_gm);
+    fclose_ (fp);
+    WBUFL (buf, 6) = level_new_gm;
+    // FIXME: this is stupid
+    read_gm_account ();
+    send_GM_accounts ();
+    login_log("Char-server '%s': give %d gm level %d (ip: %s).\n",
+              server[id].name, acc, level_new_gm, ip_of (fd));
+    // Note: this used to be sent even if it failed
+    charif_sendallwos (-1, buf, 10);
+}
+
+/// Map server request (via char-server) to change an email
+// uint16_t packet, uint32_t acc, char email[40], char new_email[40]
+void x2722 (int fd, int id)
+{
+    account_t acc = RFIFOL (fd, 2);
+    char actual_email[40] = {};
+    strncpy (actual_email, (char *)RFIFOP (fd, 6), 39);
+    remove_control_chars (actual_email);
+    char new_email[40] = {};
+    strncpy (new_email, (char *)RFIFOP (fd, 46), 39);
+    remove_control_chars (new_email);
+
+    // is this needed?
+    if (!e_mail_check (actual_email))
+    {
+        login_log ("Char-server '%s': actual email is invalid (account: %d, ip: %s)\n",
+                   server[id].name, acc, ip_of (fd));
+        return;
+    }
+    if (!e_mail_check (new_email))
+    {
+        login_log ("Char-server '%s': invalid new e-mail (account: %d, ip: %s)\n",
+                   server[id].name, acc, ip_of (fd));
+        return;
+    }
+    if (strcasecmp (new_email, "a@a.com") == 0)
+    {
+        login_log ("Char-server '%s': setting email to default is not allowed (account: %d, ip: %s)\n",
+                   server[id].name, acc, ip_of (fd));
+        return;
+    }
+    int i = account_index_by_id (acc);
+    if (i == -1)
+    {
+        login_log ("Char-server '%s': Attempt to modify an e-mail on an account (@email GM command), but account doesn't exist (account: %d, ip: %s).\n",
+                   server[id].name, acc, ip_of (fd));
+        return;
+    }
+
+    if (strcasecmp (auth_dat[i].email, actual_email) != 0)
+    {
+        login_log ("Char-server '%s': fail to change email (account: %u (%s), actual e-mail: %s, but given e-mail: %s, ip: %s).\n",
+                   server[id].name, acc, auth_dat[i].userid,
+                   auth_dat[i].email, actual_email, ip_of (fd));
+        return;
+    }
+    strcpy (auth_dat[i].email, new_email);
+    login_log ("Char-server '%s': change e-mail for %d (%s) to %s (ip: %s).\n",
+               server[id].name, acc, auth_dat[i].userid, new_email, ip_of (fd));
+}
+
+/// change state of a player (only used for block/unblock)
+// uint16_t packet, uint32_t acc, uint32_t state (0 or 5)
+void x2724 (int fd, int id)
+{
+    account_t acc = RFIFOL (fd, 2);
+    enum auth_failure state = (enum auth_failure) RFIFOL (fd, 6);
+    int i = account_index_by_id (acc);
+    if (i == -1)
+    {
+        login_log ("Char-server '%s': failed to change state of %d to %d - no such account (ip: %s).\n",
+                   server[id].name, acc, state, ip_of (fd));
+        return;
+    }
+    if (auth_dat[i].state == state)
+    {
+        login_log ("Char-server '%s':  Error: state of %d already %d (ip: %s).\n",
+                   server[id].name, acc, state, ip_of (fd));
+        return;
+    }
+    login_log ("Char-server '%s': change state of %d to %hhu (ip: %s).\n",
+               server[id].name, acc, (uint8_t)state, ip_of (fd));
+    auth_dat[i].state = state;
+    if (!state)
+        return;
+    unsigned char buf[11];
+    WBUFW (buf, 0) = 0x2731;
+    WBUFL (buf, 2) = acc;
+    // 0: change of state, 1: ban
+    WBUFB (buf, 6) = 0;
+    // state (or final date of a banishment)
+    WBUFL (buf, 7) = state;
+    charif_sendallwos (-1, buf, 11);
+    for (int j = 0; j < AUTH_FIFO_SIZE; j++)
+        if (auth_fifo[j].account_id == acc)
+            // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
+            auth_fifo[j].login_id1++;
+}
+
+/// ban request from map-server (via char-server)
+// uint16_t packet, uint32_t acc, uint16_t Y,M,D,h,m,s
+void x2725 (int fd, int id)
+{
+    account_t acc = RFIFOL (fd, 2);
+    int i = account_index_by_id (acc);
+    if (i == -1)
+    {
+        login_log ("Char-server '%s': Error of ban request (account: %d not found, ip: %s).\n",
+                   server[id].name, acc, ip_of (fd));
+        return;
+    }
+    time_t timestamp = time (NULL);
+    if (auth_dat[i].ban_until_time >= timestamp)
+        timestamp = auth_dat[i].ban_until_time;
+    // TODO check for overflow
+    // years (365.25 days)
+    timestamp += 31557600 * (short) RFIFOW (fd, 6);
+    // a month isn't well-defined - use 1/12 of a year
+    timestamp += 2629800 * (short) RFIFOW (fd, 8);
+    timestamp += 86400 * (short) RFIFOW (fd, 10);
+    timestamp += 3600 * (short) RFIFOW (fd, 12);
+    timestamp += 60 * (short) RFIFOW (fd, 14);
+    timestamp += (short) RFIFOW (fd, 16);
+    if (auth_dat[i].ban_until_time == timestamp)
+    {
+        login_log ("Char-server '%s': Error of ban request (account: %d, no change for ban date, ip: %s).\n",
+                   server[id].name, acc, ip_of (fd));
+        return;
+    }
+    if (timestamp <= time (NULL))
+    {
+        login_log ("Char-server '%s': Error of ban request (account: %d, new date unbans the account, ip: %s).\n",
+                   server[id].name, acc, ip_of (fd));
+        return;
+    }
+    char tmpstr[DATE_FORMAT_MAX] = "no banishment";
+    if (timestamp)
+        strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&timestamp));
+    login_log ("Char-server '%s': Ban request (account: %d, new final date of banishment: %ld (%s), ip: %s).\n",
+               server[id].name, acc, (long)timestamp, tmpstr, ip_of (fd));
+    unsigned char buf[11];
+    WBUFW (buf, 0) = 0x2731;
+    WBUFL (buf, 2) = auth_dat[i].account_id;
+    // 0: change of state, 1: ban
+    WBUFB (buf, 6) = 1;
+    // final date of a banishment (or new state)
+    WBUFL (buf, 7) = timestamp;
+    charif_sendallwos (-1, buf, 11);
+    for (int j = 0; j < AUTH_FIFO_SIZE; j++)
+        if (auth_fifo[j].account_id == acc)
+            // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
+            auth_fifo[j].login_id1++;
+    auth_dat[i].ban_until_time = timestamp;
+}
+
+/// Request for sex change
+// uint16_t packet, uint32_t acc
+void x2727 (int fd, int id)
+{
+    account_t acc = RFIFOL (fd, 2);
+    int i = account_index_by_id (acc);
+    if (i == -1)
+    {
+        login_log ("Char-server '%s': Error of sex change (account: %d not found, sex would be reversed, ip: %s).\n",
+                   server[id].name, acc, ip_of (fd));
+        return;
+    }
+    switch (auth_dat[i].sex)
+    {
+    case SEX_FEMALE: auth_dat[i].sex = SEX_MALE; break;
+    case SEX_MALE: auth_dat[i].sex = SEX_FEMALE; break;
+    case SEX_SERVER:
+        login_log ("Char-server '%s': can't change sex of server account %d (ip: %s).\n",
+                   server[id].name, acc, ip_of (fd));
+        return;
+    }
+    unsigned char buf[16];
+    login_log ("Char-server '%s': change sex of %u to %c (ip: %s).\n",
+               server[id].name, acc, sex_to_char(auth_dat[i].sex), ip_of (fd));
+    for (int j = 0; j < AUTH_FIFO_SIZE; j++)
+        if (auth_fifo[j].account_id == acc)
+            // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
+            auth_fifo[j].login_id1++;
+    WBUFW (buf, 0) = 0x2723;
+    WBUFL (buf, 2) = acc;
+    WBUFB (buf, 6) = (uint8_t)auth_dat[i].sex;
+    charif_sendallwos (-1, buf, 7);
+}
+
+/// Receive ## variables a char-server, and forward them to other char-servers
+// uint16_t packet, uint16_t len, {char[32] name, int32_t val}[]
+// note - this code assumes that len is proper, i.e len % 36 == 4
+void x2728 (int fd, int id)
+{
+    account_t acc = RFIFOL (fd, 4);
+    int i = account_index_by_id (acc);
+    if (i == -1)
+    {
+        login_log ("Char-server '%s': receiving (from the char-server) of account_reg2 (account: %d not found, ip: %s).\n",
+                   server[id].name, acc, ip_of (fd));
+        return;
+    }
+
+    login_log ("Char-server '%s': receiving ## variables (account: %d, ip: %s).\n",
+               server[id].name, acc, ip_of (fd));
+    int p = 8;
+    int j;
+    for (j = 0; p < RFIFOW (fd, 2) && j < ACCOUNT_REG2_NUM; j++)
+    {
+        strncpy (auth_dat[i].account_reg2[j].str, (char *)RFIFOP (fd, p), 32);
+        auth_dat[i].account_reg2[j].str[31] = '\0';
+        p += 32;
+        remove_control_chars (auth_dat[i].account_reg2[j].str);
+        auth_dat[i].account_reg2[j].value = RFIFOL (fd, p);
+        p += 4;
+    }
+    auth_dat[i].account_reg2_num = j;
+    // Sending information towards the other char-servers.
+    RFIFOW (fd, 0) = 0x2729;
+    charif_sendallwos (fd, RFIFOP (fd, 0), RFIFOW (fd, 2));
+}
+
+/// unban request
+// uint16_t packet, uint32_t acc
+void x272a (int fd, int id)
+{
+    account_t acc = RFIFOL (fd, 2);
+    int i = account_index_by_id (acc);
+    if (i == -1)
+    {
+        login_log ("Char-server '%s': Error of UnBan request (account: %d not found, ip: %s).\n",
+                   server[id].name, acc, ip_of (fd));
+        return;
+    }
+    if (!auth_dat[i].ban_until_time)
+    {
+        login_log ("Char-server '%s': request to unban account %d, which wasn't banned (ip: %s).\n",
+                   server[id].name, acc, ip_of (fd));
+        return;
+    }
+    auth_dat[i].ban_until_time = 0;
+    login_log ("Char-server '%s': unban account %d (ip: %s).\n",
+               server[id].name, acc, ip_of (fd));
+}
+
+/// request to change account password
+// uint16_t packet, uint32_t acc, char old[24], char new[24]
+void x2740 (int fd, int id)
+{
+    account_t acc = RFIFOL (fd, 2);
+    char actual_pass[24] = {};
+    strncpy (actual_pass, (char *)RFIFOP (fd, 6), 23);
+    remove_control_chars (actual_pass);
+    char new_pass[24] = {};
+    strncpy (new_pass, (char *)RFIFOP (fd, 30), 23);
+    remove_control_chars (new_pass);
+
+    enum passwd_failure status = PASSWD_NO_ACCOUNT;
+    int i = account_index_by_id (acc);
+    if (i == -1)
+        goto send_x272a_reply;
+
+    if (pass_ok (actual_pass, auth_dat[i].pass))
+    {
+        if (strlen (new_pass) < 4)
+            status = PASSWD_TOO_SHORT;
+        else
+        {
+            status = PASSWD_OK;
+            strcpy (auth_dat[i].pass, MD5_saltcrypt(new_pass, make_salt()));
+            login_log ("Char-server '%s': Change pass success (account: %d (%s), ip: %s.\n",
+                       server[id].name, acc, auth_dat[i].userid, ip_of (fd));
+        }
+    }
+    else
+    {
+        status = PASSWD_WRONG_PASSWD;
+        login_log ("Char-server '%s': Attempt to modify a pass failed, wrong password. (account: %d (%s), ip: %s).\n",
+                   server[id].name, acc, auth_dat[i].userid, ip_of (fd));
+    }
+send_x272a_reply:
+    WFIFOW (fd, 0) = 0x2741;
+    WFIFOL (fd, 2) = acc;
+    WFIFOB (fd, 6) = status;
+    WFIFOSET (fd, 7);
+}
+
+
 /// Parse packets from a char server
 void parse_fromchar (int fd)
 {
@@ -992,13 +1460,7 @@ void parse_fromchar (int fd)
             /// Forwarded from map-server
             // uint16_t packet
             case 0x2709:
-            {
-                login_log ("Char-server '%s': Request to re-load GM configuration file (ip: %s).\n",
-                           server[id].name, ip);
-                read_gm_account ();
-                // send GM accounts to all char-servers
-                send_GM_accounts ();
-            }
+                x2709(fd, id);
                 RFIFOSKIP (fd, 2);
                 break;
 
@@ -1007,60 +1469,7 @@ void parse_fromchar (int fd)
             case 0x2712:
                 if (RFIFOREST (fd) < 19)
                     return;
-            {
-                account_t acc = RFIFOL (fd, 2);
-                for (int i = 0; i < AUTH_FIFO_SIZE; i++)
-                {
-                    if (auth_fifo[i].account_id != acc ||
-                            auth_fifo[i].login_id1 != RFIFOL (fd, 6) ||
-                            auth_fifo[i].login_id2 != RFIFOL (fd, 10) ||
-                            auth_fifo[i].sex != (enum gender)RFIFOB (fd, 14) ||
-                            auth_fifo[i].ip != RFIFOL (fd, 15) ||
-                            auth_fifo[i].delflag)
-                        continue;
-                    auth_fifo[i].delflag = 1;
-                    login_log ("Char-server '%s': authenticated %d (ip: %s).\n",
-                                server[id].name, acc, ip);
-                    for (int k = 0; k < auth_num; k++)
-                    {
-                        if (auth_dat[k].account_id != acc)
-                            continue;
-                        // send ## variables
-                        WFIFOW (fd, 0) = 0x2729;
-                        WFIFOL (fd, 4) = acc;
-                        int p = 8;
-                        for (int j = 0; j < auth_dat[k].account_reg2_num; j++)
-                        {
-                            strcpy ((char *)WFIFOP (fd, p),
-                                    auth_dat[k].account_reg2[j].str);
-                            p += 32;
-                            WFIFOL (fd, p) = auth_dat[k].account_reg2[j].value;
-                            p += 4;
-                        }
-                        WFIFOW (fd, 2) = p;
-                        WFIFOSET (fd, p);
-                        // send player email and expiration
-                        WFIFOW (fd, 0) = 0x2713;
-                        WFIFOL (fd, 2) = acc;
-                        WFIFOB (fd, 6) = 0;
-                        strcpy ((char *)WFIFOP (fd, 7), auth_dat[k].email);
-                        WFIFOL (fd, 47) = auth_dat[k].connect_until_time;
-                        WFIFOSET (fd, 51);
-                        goto end_x2712;
-                    } // for k in auth_dat
-                    goto end_x2712;
-                } // for i in auth_fifo
-                // authentication not found
-                login_log ("Char-server '%s': denied auth %d (ip: %s).\n",
-                           server[id].name, acc, ip);
-                WFIFOW (fd, 0) = 0x2713;
-                WFIFOL (fd, 2) = acc;
-                WFIFOB (fd, 6) = 1;
-                // It is unnecessary to send email
-                // It is unnecessary to send validity date of the account
-                WFIFOSET (fd, 51);
-            }
-            end_x2712:
+                x2712 (fd, id);
                 RFIFOSKIP (fd, 19);
                 break;
 
@@ -1069,11 +1478,7 @@ void parse_fromchar (int fd)
             case 0x2714:
                 if (RFIFOREST (fd) < 6)
                     return;
-            {
-                server[id].users = RFIFOL (fd, 2);
-                if (anti_freeze_enable)
-                    server_freezeflag[id] = 5;
-            }
+                x2714 (fd, id);
                 RFIFOSKIP (fd, 6);
                 break;
 
@@ -1082,36 +1487,7 @@ void parse_fromchar (int fd)
             case 0x2715:
                 if (RFIFOREST (fd) < 46)
                     return;
-            {
-                account_t acc = RFIFOL (fd, 2);
-                char email[40] = {};
-                strncpy (email, (char *)RFIFOP (fd, 6), 39);
-                remove_control_chars (email);
-                if (!e_mail_check (email))
-                {
-                    login_log ("Char-server '%s': refused to init email by %d (ip: %s)\n",
-                               server[id].name, acc, ip);
-                    goto end_x2715;
-                }
-                for (int i = 0; i < auth_num; i++)
-                {
-                    if (auth_dat[i].account_id != acc)
-                        continue;
-                    if (strcmp (auth_dat[i].email, "a@a.com") != 0)
-                    {
-                        login_log ("Char-server '%s': refused to init email for %d - it is already set (ip: %s).\n",
-                                   server[id].name, acc, ip);
-                        goto end_x2715;
-                    }
-                    strcpy (auth_dat[i].email, email);
-                    login_log ("Char-server '%s': init email (account: %d, e-mail: %s, ip: %s).\n",
-                               server[id].name, acc, email, ip);
-                    goto end_x2715;
-                } // for i in auth_dat
-                login_log ("Char-server '%s': refused to init email - no such account %d (ip: %s).\n",
-                           server[id].name, acc, ip);
-            }
-            end_x2715:
+                x2715 (fd, id);
                 RFIFOSKIP (fd, 46);
                 break;
 
@@ -1120,25 +1496,7 @@ void parse_fromchar (int fd)
             case 0x2716:
                 if (RFIFOREST (fd) < 6)
                     return;
-            {
-                account_t acc = RFIFOL (fd, 2);
-                for (int i = 0; i < auth_num; i++)
-                {
-                    if (auth_dat[i].account_id != acc)
-                        continue;
-                    login_log ("Char-server '%s': send e-mail of %u (ip: %s).\n",
-                               server[id].name, acc, ip);
-                    WFIFOW (fd, 0) = 0x2717;
-                    WFIFOL (fd, 2) = acc;
-                    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].email);
-                    WFIFOL (fd, 46) = auth_dat[i].connect_until_time;
-                    WFIFOSET (fd, 50);
-                    goto end_x2716;
-                }
-                login_log ("Char-server '%s': can't send e-mail - no account %d (ip: %s).\n",
-                           server[id].name, RFIFOL (fd, 2), ip);
-            }
-            end_x2716:
+                x2716 (fd, id);
                 RFIFOSKIP (fd, 6);
                 break;
 
@@ -1147,55 +1505,7 @@ void parse_fromchar (int fd)
             case 0x2720:
                 if (RFIFOREST (fd) < 4 || RFIFOREST (fd) < RFIFOW (fd, 2))
                     return;
-            {
-                unsigned char buf[10];
-                account_t acc = RFIFOL (fd, 4);
-                WBUFW (buf, 0) = 0x2721;
-                WBUFL (buf, 2) = acc;
-                WBUFL (buf, 6) = 0; // level of gm they became
-                if (!level_new_gm)
-                {
-                    login_log ("Char-server '%s': request to make %u a GM, but GM creation is disable (ip: %s).\n",
-                               server[id].name, acc, ip);
-                    goto end_x2720;
-                }
-                if (strcmp ((char *)RFIFOP (fd, 8), gm_pass) != 0)
-                {
-                    login_log ("Failed to make %u a GM: incorrect password (ip: %s).\n",
-                               acc, ip);
-                    goto end_x2720;
-                }
-                if (isGM (acc))
-                {
-                    login_log ("Char-server '%s': Error: %d is already a GM (ip: %s).\n",
-                               server[id].name, acc, ip);
-                    goto end_x2720;
-                }
-                FILE *fp = fopen_ (GM_account_filename, "a");
-                if (!fp)
-                {
-                    login_log ("Char-server '%s': %s: %m\n", server[id].name,
-                            GM_account_filename);
-                    goto end_x2720;
-                }
-                struct timeval tv;
-                gettimeofday (&tv, NULL);
-                char tmpstr[DATE_FORMAT_MAX];
-                strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT,
-                          gmtime (&(tv.tv_sec)));
-                fprintf (fp, "\n// %s: @GM command\n%d %d\n",
-                         tmpstr, acc, level_new_gm);
-                fclose_ (fp);
-                WBUFL (buf, 6) = level_new_gm;
-                // FIXME: this is stupid
-                read_gm_account ();
-                send_GM_accounts ();
-                login_log("Char-server '%s': give %d gm level %d (ip: %s).\n",
-                          server[id].name, acc, level_new_gm, ip);
-                // Note: this used to be sent even if it failed
-                charif_sendallwos (-1, buf, 10);
-            }
-            end_x2720:
+                x2720 (fd, id);
                 RFIFOSKIP (fd, RFIFOW (fd, 2));
                 return;
 
@@ -1204,55 +1514,7 @@ void parse_fromchar (int fd)
             case 0x2722:
                 if (RFIFOREST (fd) < 86)
                     return;
-            {
-                account_t acc = RFIFOL (fd, 2);
-                char actual_email[40] = {};
-                strncpy (actual_email, (char *)RFIFOP (fd, 6), 39);
-                remove_control_chars (actual_email);
-                char new_email[40] = {};
-                strncpy (new_email, (char *)RFIFOP (fd, 46), 39);
-                remove_control_chars (new_email);
-
-                // is this needed?
-                if (!e_mail_check (actual_email))
-                {
-                    login_log ("Char-server '%s': actual email is invalid (account: %d, ip: %s)\n",
-                               server[id].name, acc, ip);
-                    goto end_x2722;
-                }
-                if (!e_mail_check (new_email))
-                {
-                    login_log ("Char-server '%s': invalid new e-mail (account: %d, ip: %s)\n",
-                               server[id].name, acc, ip);
-                    goto end_x2722;
-                }
-                if (strcasecmp (new_email, "a@a.com") == 0)
-                {
-                    login_log ("Char-server '%s': setting email to default is not allowed (account: %d, ip: %s)\n",
-                               server[id].name, acc, ip);
-                    goto end_x2722;
-                }
-                for (int i = 0; i < auth_num; i++)
-                {
-                    if (auth_dat[i].account_id != acc)
-                        continue;
-                    if (strcasecmp (auth_dat[i].email, actual_email) != 0)
-                    {
-                        login_log ("Char-server '%s': fail to change email (account: %u (%s), actual e-mail: %s, but given e-mail: %s, ip: %s).\n",
-                                   server[id].name, acc, auth_dat[i].userid,
-                                   auth_dat[i].email, actual_email, ip);
-                        goto end_x2722;
-                    }
-                    strcpy (auth_dat[i].email, new_email);
-                    login_log ("Char-server '%s': change e-mail for %d (%s) to %s (ip: %s).\n",
-                               server[id].name, acc, auth_dat[i].userid,
-                               new_email, ip);
-                    goto end_x2722;
-                } // for i in auth_dat
-                login_log ("Char-server '%s': Attempt to modify an e-mail on an account (@email GM command), but account doesn't exist (account: %d, ip: %s).\n",
-                           server[id].name, acc, ip);
-            }
-            end_x2722:
+                x2722 (fd, id);
                 RFIFOSKIP (fd, 86);
                 break;
 
@@ -1261,42 +1523,7 @@ void parse_fromchar (int fd)
             case 0x2724:
                 if (RFIFOREST (fd) < 10)
                     return;
-            {
-                account_t acc = RFIFOL (fd, 2);
-                enum auth_failure state = (enum auth_failure) RFIFOL (fd, 6);
-                for (int i = 0; i < auth_num; i++)
-                {
-                    if (auth_dat[i].account_id != acc)
-                        continue;
-                    if (auth_dat[i].state == state)
-                    {
-                        login_log ("Char-server '%s':  Error: state of %d already %d (ip: %s).\n",
-                                   server[id].name, acc, state, ip);
-                        goto end_x2724;
-                    }
-                    login_log ("Char-server '%s': change state of %d to %hhu (ip: %s).\n",
-                               server[id].name, acc, (uint8_t)state, ip);
-                    auth_dat[i].state = state;
-                    if (!state)
-                        goto end_x2724;
-                    unsigned char buf[11];
-                    WBUFW (buf, 0) = 0x2731;
-                    WBUFL (buf, 2) = acc;
-                    // 0: change of state, 1: ban
-                    WBUFB (buf, 6) = 0;
-                    // state (or final date of a banishment)
-                    WBUFL (buf, 7) = state;
-                    charif_sendallwos (-1, buf, 11);
-                    for (int j = 0; j < AUTH_FIFO_SIZE; j++)
-                        if (auth_fifo[j].account_id == acc)
-                            // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
-                            auth_fifo[j].login_id1++;
-                    goto end_x2724;
-                }
-                login_log ("Char-server '%s': failed to change state of %d to %d - no such account (ip: %s).\n",
-                           server[id].name, acc, state, ip);
-            }
-            end_x2724:
+                x2724 (fd, id);
                 RFIFOSKIP (fd, 10);
                 return;
 
@@ -1305,61 +1532,7 @@ void parse_fromchar (int fd)
             case 0x2725:
                 if (RFIFOREST (fd) < 18)
                     return;
-            {
-                account_t acc = RFIFOL (fd, 2);
-                for (int i = 0; i < auth_num; i++)
-                {
-                    if (auth_dat[i].account_id != acc)
-                        continue;
-                    time_t timestamp = time (NULL);
-                    if (auth_dat[i].ban_until_time >= timestamp)
-                        timestamp = auth_dat[i].ban_until_time;
-                    // TODO check for overflow
-                    // years (365.25 days)
-                    timestamp += 31557600 * (short) RFIFOW (fd, 6);
-                    // a month isn't well-defined - use 1/12 of a year
-                    timestamp += 2629800 * (short) RFIFOW (fd, 8);
-                    timestamp += 86400 * (short) RFIFOW (fd, 10);
-                    timestamp += 3600 * (short) RFIFOW (fd, 12);
-                    timestamp += 60 * (short) RFIFOW (fd, 14);
-                    timestamp += (short) RFIFOW (fd, 16);
-                    if (auth_dat[i].ban_until_time == timestamp)
-                    {
-                        login_log ("Char-server '%s': Error of ban request (account: %d, no change for ban date, ip: %s).\n",
-                                   server[id].name, acc, ip);
-                        goto end_x2725;
-                    }
-                    if (timestamp <= time (NULL))
-                    {
-                        login_log ("Char-server '%s': Error of ban request (account: %d, new date unbans the account, ip: %s).\n",
-                                   server[id].name, acc, ip);
-                        goto end_x2725;
-                    }
-                    char tmpstr[DATE_FORMAT_MAX] = "no banishment";
-                    if (timestamp)
-                        strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&timestamp));
-                    login_log ("Char-server '%s': Ban request (account: %d, new final date of banishment: %ld (%s), ip: %s).\n",
-                               server[id].name, acc, (long)timestamp,
-                               tmpstr, ip);
-                    unsigned char buf[11];
-                    WBUFW (buf, 0) = 0x2731;
-                    WBUFL (buf, 2) = auth_dat[i].account_id;
-                    // 0: change of state, 1: ban
-                    WBUFB (buf, 6) = 1;
-                    // final date of a banishment (or new state)
-                    WBUFL (buf, 7) = timestamp;
-                    charif_sendallwos (-1, buf, 11);
-                    for (int j = 0; j < AUTH_FIFO_SIZE; j++)
-                        if (auth_fifo[j].account_id == acc)
-                            // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
-                            auth_fifo[j].login_id1++;
-                    auth_dat[i].ban_until_time = timestamp;
-                    goto end_x2725;
-                }
-                login_log ("Char-server '%s': Error of ban request (account: %d not found, ip: %s).\n",
-                           server[id].name, acc, ip);
-            }
-            end_x2725:
+                x2725 (fd, id);
                 RFIFOSKIP (fd, 18);
                 return;
 
@@ -1368,38 +1541,7 @@ void parse_fromchar (int fd)
             case 0x2727:
                 if (RFIFOREST (fd) < 6)
                     return;
-            {
-                account_t acc = RFIFOL (fd, 2);
-                for (int i = 0; i < auth_num; i++)
-                {
-                    if (auth_dat[i].account_id != acc)
-                        continue;
-                    switch (auth_dat[i].sex)
-                    {
-                    case SEX_FEMALE: auth_dat[i].sex = SEX_MALE; break;
-                    case SEX_MALE: auth_dat[i].sex = SEX_FEMALE; break;
-                    case SEX_SERVER:
-                        login_log ("Char-server '%s': can't change sex of server account %d (ip: %s).\n",
-                                   server[id].name, acc, ip);
-                        goto end_x2727;
-                    }
-                    unsigned char buf[16];
-                    login_log ("Char-server '%s': change sex of %u to %c (ip: %s).\n",
-                               server[id].name, acc, sex_to_char(auth_dat[i].sex), ip);
-                    for (int j = 0; j < AUTH_FIFO_SIZE; j++)
-                        if (auth_fifo[j].account_id == acc)
-                            // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
-                            auth_fifo[j].login_id1++;
-                    WBUFW (buf, 0) = 0x2723;
-                    WBUFL (buf, 2) = acc;
-                    WBUFB (buf, 6) = (uint8_t)auth_dat[i].sex;
-                    charif_sendallwos (-1, buf, 7);
-                    goto end_x2727;
-                }
-                login_log ("Char-server '%s': Error of sex change (account: %d not found, sex would be reversed, ip: %s).\n",
-                           server[id].name, acc, ip);
-            }
-            end_x2727:
+                x2727 (fd, id);
                 RFIFOSKIP (fd, 6);
                 return;
 
@@ -1409,35 +1551,7 @@ void parse_fromchar (int fd)
             case 0x2728:
                 if (RFIFOREST (fd) < 4 || RFIFOREST (fd) < RFIFOW (fd, 2))
                     return;
-            {
-                account_t acc = RFIFOL (fd, 4);
-                for (int i = 0; i < auth_num; i++)
-                {
-                    if (auth_dat[i].account_id != acc)
-                        continue;
-                    login_log ("Char-server '%s': receiving ## variables (account: %d, ip: %s).\n",
-                               server[id].name, acc, ip);
-                    int p = 8;
-                    int j;
-                    for (j = 0; p < RFIFOW (fd, 2) && j < ACCOUNT_REG2_NUM; j++)
-                    {
-                        strncpy (auth_dat[i].account_reg2[j].str,
-                                 (char *)RFIFOP (fd, p), 32);
-                        auth_dat[i].account_reg2[j].str[31] = '\0';
-                        p += 32;
-                        remove_control_chars (auth_dat[i].account_reg2[j].str);
-                        auth_dat[i].account_reg2[j].value = RFIFOL (fd, p + 32);
-                        p += 4;
-                    }
-                    auth_dat[i].account_reg2_num = j;
-                    // Sending information towards the other char-servers.
-                    RFIFOW (fd, 0) = 0x2729;
-                    charif_sendallwos (fd, RFIFOP (fd, 0), RFIFOW (fd, 2));
-                    break;
-                }
-                login_log ("Char-server '%s': receiving (from the char-server) of account_reg2 (account: %d not found, ip: %s).\n",
-                           server[id].name, acc, ip);
-            }
+                x2728 (fd, id);
                 RFIFOSKIP (fd, RFIFOW (fd, 2));
                 break;
 
@@ -1446,27 +1560,7 @@ void parse_fromchar (int fd)
             case 0x272a:
                 if (RFIFOREST (fd) < 6)
                     return;
-            {
-                account_t acc = RFIFOL (fd, 2);
-                for (int i = 0; i < auth_num; i++)
-                {
-                    if (auth_dat[i].account_id != acc)
-                        continue;
-                    if (!auth_dat[i].ban_until_time)
-                    {
-                        login_log ("Char-server '%s': request to unban account %d, which wasn't banned (ip: %s).\n",
-                                   server[id].name, acc, ip);
-                        goto end_x272a;
-                    }
-                    auth_dat[i].ban_until_time = 0;
-                    login_log ("Char-server '%s': unban account %d (ip: %s).\n",
-                               server[id].name, acc, ip);
-                    goto end_x272a;
-                }
-                login_log ("Char-server '%s': Error of UnBan request (account: %d not found, ip: %s).\n",
-                           server[id].name, acc, ip);
-            }
-            end_x272a:
+                x272a (fd, id);
                 RFIFOSKIP (fd, 6);
                 return;
 
@@ -1475,46 +1569,7 @@ void parse_fromchar (int fd)
             case 0x2740:
                 if (RFIFOREST (fd) < 54)
                     return;
-            {
-                account_t acc = RFIFOL (fd, 2);
-                char actual_pass[24] = {};
-                strncpy (actual_pass, (char *)RFIFOP (fd, 6), 23);
-                remove_control_chars (actual_pass);
-                char new_pass[24] = {};
-                strncpy (new_pass, (char *)RFIFOP (fd, 30), 23);
-                remove_control_chars (new_pass);
-                enum passwd_failure status = PASSWD_NO_ACCOUNT;
-
-                for (int i = 0; i < auth_num; i++)
-                {
-                    if (auth_dat[i].account_id != acc)
-                        continue;
-
-                    if (pass_ok (actual_pass, auth_dat[i].pass))
-                    {
-                        if (strlen (new_pass) < 4)
-                            status = PASSWD_TOO_SHORT;
-                        else
-                        {
-                            status = PASSWD_OK;
-                            strcpy (auth_dat[i].pass, MD5_saltcrypt(new_pass, make_salt()));
-                            login_log ("Char-server '%s': Change pass success (account: %d (%s), ip: %s.\n",
-                                       server[id].name, acc, auth_dat[i].userid, ip);
-                        }
-                    }
-                    else
-                    {
-                        status = PASSWD_WRONG_PASSWD;
-                        login_log ("Char-server '%s': Attempt to modify a pass failed, wrong password. (account: %d (%s), ip: %s).\n",
-                                   server[id].name, acc, auth_dat[i].userid, ip);
-                    }
-                    break;
-                }
-                WFIFOW (fd, 0) = 0x2741;
-                WFIFOL (fd, 2) = acc;
-                WFIFOB (fd, 6) = status;
-                WFIFOSET (fd, 7);
-            }
+                x2740 (fd, id);
                 RFIFOSKIP (fd, 54);
                 break;
 
@@ -1544,6 +1599,7 @@ void parse_fromchar (int fd)
     } // while packets available
     return;
 }
+
 
 /// Parse packets from an administration login
 void parse_admin (int fd)

@@ -2420,26 +2420,8 @@ void x7950 (int fd)
     auth->connect_until_time = timestamp;
 }
 
-/// Account information by name
-// uint16_t packet, char userid[24]
-// FIXME reduce duplication
-void x7952 (int fd)
+void ladmin_reply_account_info (int fd, struct auth_dat *auth)
 {
-    WFIFOW (fd, 0) = 0x7953;
-    WFIFOL (fd, 2) = -1;
-    char *account_name = (char *)RFIFOP (fd, 2);
-    account_name[23] = '\0';
-    remove_control_chars (account_name);
-    struct auth_dat *auth = account_by_name (account_name);
-    if (!auth)
-    {
-        strzcpy ((char *)WFIFOP (fd, 7), account_name, 24);
-        WFIFOW (fd, 148) = 0;
-        login_log ("'ladmin': No account information for name: %s (ip: %s)\n",
-                    account_name, ip_of (fd));
-        WFIFOSET (fd, 150);
-        return;
-    }
     WFIFOL (fd, 2) = auth->account_id;
     WFIFOB (fd, 6) = isGM (auth->account_id);
     STRZCPY2 ((char *)WFIFOP (fd, 7), auth->userid);
@@ -2456,9 +2438,31 @@ void x7952 (int fd)
     char *memo = auth->memo + 1;
     WFIFOW (fd, 148) = strlen (memo);
     strzcpy ((char *)WFIFOP (fd, 150), memo, sizeof(auth->memo)-1);
+    WFIFOSET (fd, 150 + strlen (memo));
+}
+/// Account information by name
+// uint16_t packet, char userid[24]
+// FIXME reduce duplication
+void x7952 (int fd)
+{
+    WFIFOW (fd, 0) = 0x7953;
+    WFIFOL (fd, 2) = -1;
+    char *account_name = (char *)RFIFOP (fd, 2);
+    account_name[23] = '\0';
+    remove_control_chars (account_name);
+    struct auth_dat *auth = account_by_name (account_name);
+    if (!auth)
+    {
+        strzcpy ((char *)WFIFOP (fd, 7), account_name, 24);
+        WFIFOW (fd, 148) = 0;
+        login_log ("'ladmin': No account information for name: %s (ip: %s)\n",
+                   account_name, ip_of (fd));
+        WFIFOSET (fd, 150);
+        return;
+    }
     login_log ("'ladmin': Sending information of an account (request by the name; account: %s, id: %d, ip: %s)\n",
                auth->userid, auth->account_id, ip_of (fd));
-    WFIFOSET (fd, 150 + strlen (memo));
+    ladmin_reply_account_info (fd, auth);
 }
 
 /// Account information by id
@@ -2480,22 +2484,7 @@ void x7954 (int fd)
     }
     login_log ("'ladmin': Sending information of an account (request by the id; account: %s, id: %d, ip: %s)\n",
                auth->userid, RFIFOL (fd, 2), ip_of (fd));
-    WFIFOB (fd, 6) = isGM (auth->account_id);
-    STRZCPY2 ((char *)WFIFOP (fd, 7), auth->userid);
-    WFIFOB (fd, 31) = (uint8_t)auth->sex;
-    WFIFOL (fd, 32) = auth->logincount;
-    WFIFOL (fd, 36) = auth->state;
-    STRZCPY2 ((char *)WFIFOP (fd, 40), auth->error_message);
-    STRZCPY2 ((char *)WFIFOP (fd, 60), auth->lastlogin);
-    STRZCPY2 ((char *)WFIFOP (fd, 84), auth->last_ip);
-    STRZCPY2 ((char *)WFIFOP (fd, 100), auth->email);
-    WFIFOL (fd, 140) = auth->connect_until_time;
-    WFIFOL (fd, 144) = auth->ban_until_time;
-    // discard the password magic
-    char *memo = auth->memo + 1;
-    WFIFOW (fd, 148) = strlen (memo);
-    strzcpy ((char *)WFIFOP (fd, 150), memo, sizeof (auth->memo)-1);
-    WFIFOSET (fd, 150 + strlen (memo));
+    ladmin_reply_account_info (fd, auth);
 }
 
 /// Request to reload GM file (no answer)

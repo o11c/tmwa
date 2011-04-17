@@ -37,6 +37,8 @@
 
 #include "../common/md5calc.h"
 
+#define STRZCPY2(dst,src) strzcpy (dst, src, ARRAY_SIZEOF(src))
+
 account_t account_id_count = START_ACCOUNT_NUM;
 int  new_account_flag = 0;
 in_port_t login_port = 6900;
@@ -568,7 +570,7 @@ void mmo_auth_init (void)
         // If a password is not encrypted, we encrypt it now.
         // A password beginning with ! and - in the memo field is our magic
         if (tmp.pass[0] != '!' && tmp.memo[0] == '-') {
-            strcpy(tmp.pass, MD5_saltcrypt(tmp.pass, make_salt()));
+            STRZCPY(tmp.pass, MD5_saltcrypt(tmp.pass, make_salt()));
             tmp.memo[0] = '!';
         }
 
@@ -578,14 +580,14 @@ void mmo_auth_init (void)
         tmp.state = (enum auth_failure)state;
 
         if (!e_mail_check (tmp.email))
-            strcpy (tmp.email, "a@a.com");
+            STRZCPY (tmp.email, "a@a.com");
         else
             remove_control_chars (tmp.email);
 
         remove_control_chars (tmp.error_message);
         if (tmp.error_message[0] == '\0' ||
             tmp.state != AUTH_BANNED_TEMPORARILY)
-            strcpy (tmp.error_message, "-");
+            STRZCPY (tmp.error_message, "-");
 
         if (i != 13)
             tmp.ban_until_time = 0;
@@ -790,23 +792,20 @@ account_t mmo_auth_new (struct mmo_account *account, const char *email)
 
     auth_dat[i].account_id = account_id_count++;
 
-    strncpy (auth_dat[i].userid, account->userid, 23);
-
-    strcpy(auth_dat[i].pass, MD5_saltcrypt(account->passwd, make_salt()));
-    auth_dat[i].pass[39] = '\0';
-
-    strcpy (auth_dat[i].lastlogin, "-");
+    STRZCPY (auth_dat[i].userid, account->userid);
+    STRZCPY (auth_dat[i].pass, MD5_saltcrypt(account->passwd, make_salt()));
+    STRZCPY (auth_dat[i].lastlogin, "-");
 
     auth_dat[i].sex = account->sex;
     auth_dat[i].logincount = 0;
     auth_dat[i].state = AUTH_OK;
 
     if (!e_mail_check (email))
-        strcpy (auth_dat[i].email, "a@a.com");
+        STRZCPY (auth_dat[i].email, "a@a.com");
     else
-        strncpy (auth_dat[i].email, email, 39);
+        STRZCPY (auth_dat[i].email, email);
 
-    strcpy (auth_dat[i].error_message, "-");
+    STRZCPY (auth_dat[i].error_message, "-");
     auth_dat[i].ban_until_time = 0;
 
     if (start_limited_time < 0)
@@ -814,8 +813,8 @@ account_t mmo_auth_new (struct mmo_account *account, const char *email)
     else
         auth_dat[i].connect_until_time = time (NULL) + start_limited_time;
 
-    strcpy (auth_dat[i].last_ip, "-");
-    strcpy (auth_dat[i].memo, "!");
+    STRZCPY (auth_dat[i].last_ip, "-");
+    STRZCPY (auth_dat[i].memo, "!");
 
     auth_dat[i].account_reg2_num = 0;
 
@@ -852,7 +851,8 @@ enum auth_failure mmo_auth (struct mmo_account *account, int fd)
         i = auth_num;
     else
         // for the possible tests/checks afterwards (copy correct case).
-        memcpy (account->userid, auth_dat[i].userid, 24);
+        // Note: this copies back into the rfifo
+        STRZCPY2 (account->userid, auth_dat[i].userid);
 
     if (i != auth_num)
     {
@@ -932,10 +932,10 @@ enum auth_failure mmo_auth (struct mmo_account *account, int fd)
     account->account_id = auth_dat[i].account_id;
     account->login_id1 = mt_random ();
     account->login_id2 = mt_random ();
-    strcpy (account->lastlogin, auth_dat[i].lastlogin);
-    strcpy (auth_dat[i].lastlogin, tmpstr);
+    STRZCPY (account->lastlogin, auth_dat[i].lastlogin);
+    STRZCPY (auth_dat[i].lastlogin, tmpstr);
     account->sex = auth_dat[i].sex;
-    strcpy (auth_dat[i].last_ip, ip);
+    STRZCPY (auth_dat[i].last_ip, ip);
     auth_dat[i].logincount++;
 
     return AUTH_OK;
@@ -999,8 +999,8 @@ void x2712(int fd, int id)
             int p = 8;
             for (int j = 0; j < auth_dat[k].account_reg2_num; j++)
             {
-                strcpy ((char *)WFIFOP (fd, p),
-                        auth_dat[k].account_reg2[j].str);
+                STRZCPY2 ((char *)WFIFOP (fd, p),
+                          auth_dat[k].account_reg2[j].str);
                 p += 32;
                 WFIFOL (fd, p) = auth_dat[k].account_reg2[j].value;
                 p += 4;
@@ -1011,7 +1011,7 @@ void x2712(int fd, int id)
             WFIFOW (fd, 0) = 0x2713;
             WFIFOL (fd, 2) = acc;
             WFIFOB (fd, 6) = 0;
-            strcpy ((char *)WFIFOP (fd, 7), auth_dat[k].email);
+            STRZCPY2 ((char *)WFIFOP (fd, 7), auth_dat[k].email);
             WFIFOL (fd, 47) = auth_dat[k].connect_until_time;
             WFIFOSET (fd, 51);
             return;
@@ -1043,8 +1043,8 @@ void x2714(int fd, int id)
 void x2715(int fd, int id)
 {
     account_t acc = RFIFOL (fd, 2);
-    char email[40] = {};
-    strncpy (email, (char *)RFIFOP (fd, 6), 39);
+    char email[40];
+    STRZCPY (email, (char *)RFIFOP (fd, 6));
     remove_control_chars (email);
     if (!e_mail_check (email))
     {
@@ -1065,7 +1065,7 @@ void x2715(int fd, int id)
                    server[id].name, acc, ip_of (fd));
         return;
     }
-    strcpy (auth_dat[i].email, email);
+    STRZCPY (auth_dat[i].email, email);
     login_log ("Char-server '%s': init email (account: %d, e-mail: %s, ip: %s).\n",
                server[id].name, acc, email, ip_of (fd));
 }
@@ -1086,7 +1086,7 @@ void x2716 (int fd, int id)
                server[id].name, acc, ip_of (fd));
     WFIFOW (fd, 0) = 0x2717;
     WFIFOL (fd, 2) = acc;
-    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].email);
+    STRZCPY2 ((char *)WFIFOP (fd, 6), auth_dat[i].email);
     WFIFOL (fd, 46) = auth_dat[i].connect_until_time;
     WFIFOSET (fd, 50);
 }
@@ -1146,11 +1146,11 @@ void x2720 (int fd, int id)
 void x2722 (int fd, int id)
 {
     account_t acc = RFIFOL (fd, 2);
-    char actual_email[40] = {};
-    strncpy (actual_email, (char *)RFIFOP (fd, 6), 39);
+    char actual_email[40];
+    STRZCPY (actual_email, (char *)RFIFOP (fd, 6));
     remove_control_chars (actual_email);
-    char new_email[40] = {};
-    strncpy (new_email, (char *)RFIFOP (fd, 46), 39);
+    char new_email[40];
+    STRZCPY (new_email, (char *)RFIFOP (fd, 46));
     remove_control_chars (new_email);
 
     // is this needed?
@@ -1187,7 +1187,7 @@ void x2722 (int fd, int id)
                    auth_dat[i].email, actual_email, ip_of (fd));
         return;
     }
-    strcpy (auth_dat[i].email, new_email);
+    STRZCPY (auth_dat[i].email, new_email);
     login_log ("Char-server '%s': change e-mail for %d (%s) to %s (ip: %s).\n",
                server[id].name, acc, auth_dat[i].userid, new_email, ip_of (fd));
 }
@@ -1340,8 +1340,7 @@ void x2728 (int fd, int id)
     int j;
     for (j = 0; p < RFIFOW (fd, 2) && j < ACCOUNT_REG2_NUM; j++)
     {
-        strncpy (auth_dat[i].account_reg2[j].str, (char *)RFIFOP (fd, p), 32);
-        auth_dat[i].account_reg2[j].str[31] = '\0';
+        STRZCPY (auth_dat[i].account_reg2[j].str, (char *)RFIFOP (fd, p));
         p += 32;
         remove_control_chars (auth_dat[i].account_reg2[j].str);
         auth_dat[i].account_reg2[j].value = RFIFOL (fd, p);
@@ -1381,11 +1380,11 @@ void x272a (int fd, int id)
 void x2740 (int fd, int id)
 {
     account_t acc = RFIFOL (fd, 2);
-    char actual_pass[24] = {};
-    strncpy (actual_pass, (char *)RFIFOP (fd, 6), 23);
+    char actual_pass[24];
+    STRZCPY (actual_pass, (char *)RFIFOP (fd, 6));
     remove_control_chars (actual_pass);
-    char new_pass[24] = {};
-    strncpy (new_pass, (char *)RFIFOP (fd, 30), 23);
+    char new_pass[24];
+    STRZCPY (new_pass, (char *)RFIFOP (fd, 30));
     remove_control_chars (new_pass);
 
     enum passwd_failure status = PASSWD_NO_ACCOUNT;
@@ -1400,7 +1399,7 @@ void x2740 (int fd, int id)
         else
         {
             status = PASSWD_OK;
-            strcpy (auth_dat[i].pass, MD5_saltcrypt(new_pass, make_salt()));
+            STRZCPY (auth_dat[i].pass, MD5_saltcrypt(new_pass, make_salt()));
             login_log ("Char-server '%s': Change pass success (account: %d (%s), ip: %s.\n",
                        server[id].name, acc, auth_dat[i].userid, ip_of (fd));
         }
@@ -1663,7 +1662,7 @@ void x7920 (int fd)
             continue;
         WFIFOL (fd, len) = account_id;
         WFIFOB (fd, len + 4) = isGM (account_id);
-        strcpy ((char *)WFIFOP (fd, len + 5), auth_dat[id[i]].userid);
+        STRZCPY2 ((char *)WFIFOP (fd, len + 5), auth_dat[id[i]].userid);
         WFIFOB (fd, len + 29) = (uint8_t)auth_dat[id[i]].sex;
         WFIFOL (fd, len + 30) = auth_dat[id[i]].logincount;
         // if no state, but banished - FIXME can this happen?
@@ -1693,11 +1692,11 @@ void x7930 (int fd)
     struct mmo_account ma;
     ma.userid = (char *)RFIFOP (fd, 2);
     ma.passwd = (char *)RFIFOP (fd, 26);
-    strcpy (ma.lastlogin, "-");
+    STRZCPY (ma.lastlogin, "-");
     ma.sex = sex_from_char(RFIFOB (fd, 50));
     WFIFOW (fd, 0) = 0x7931;
     WFIFOL (fd, 2) = -1;
-    strcpy ((char *)WFIFOP (fd, 6), ma.userid);
+    strzcpy ((char *)WFIFOP (fd, 6), ma.userid, 24);
     if (strlen (ma.userid) < 4 || strlen (ma.passwd) < 4)
     {
         login_log ("'ladmin': Attempt to create an invalid account (account or pass is too short, ip: %s)\n",
@@ -1728,7 +1727,7 @@ void x7930 (int fd)
         }
     }
     char email[40] = {};
-    strncpy (email, (char *)RFIFOP (fd, 51), 39);
+    STRZCPY (email, (char *)RFIFOP (fd, 51));
     remove_control_chars (email);
     int new_id = mmo_auth_new (&ma, email);
     login_log ("'ladmin': Account creation (account: %s (id: %d), sex: %c, email: %s, ip: %s)\n",
@@ -1748,7 +1747,7 @@ void x7932 (int fd)
     int i = account_index_by_name (account_name);
     if (i == -1)
     {
-        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        strzcpy ((char *)WFIFOP (fd, 6), account_name, 24);
         login_log ("'ladmin': Attempt to delete an unknown account (account: %s, ip: %s)\n",
                     account_name, ip_of (fd));
         return;
@@ -1759,7 +1758,7 @@ void x7932 (int fd)
     WBUFL (buf, 2) = auth_dat[i].account_id;
     charif_sendallwos (-1, buf, 6);
     // send answer
-    memcpy (WFIFOP (fd, 6), auth_dat[i].userid, 24);
+    STRZCPY2 ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
     WFIFOL (fd, 2) = auth_dat[i].account_id;
     // save deleted account in log file
     login_log ("'ladmin': Account deletion (account: %s, id: %d, ip: %s) - saved in next line:\n",
@@ -1782,13 +1781,13 @@ void x7934 (int fd)
     int i = account_index_by_name (account_name);
     if (i == -1)
     {
-        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        strzcpy ((char *)WFIFOP (fd, 6), account_name, 24);
         login_log ("'ladmin': Attempt to modify the password of an unknown account (account: %s, ip: %s)\n",
                    account_name, ip_of (fd));
         return;
     }
-    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
-    strcpy (auth_dat[i].pass, MD5_saltcrypt((char *)RFIFOP (fd, 26), make_salt()));
+    STRZCPY2 ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    STRZCPY (auth_dat[i].pass, MD5_saltcrypt((char *)RFIFOP (fd, 26), make_salt()));
     WFIFOL (fd, 2) = auth_dat[i].account_id;
     login_log ("'ladmin': Modification of a password (account: %s, new password: %s, ip: %s)\n",
                auth_dat[i].userid, auth_dat[i].pass, ip_of (fd));
@@ -1806,21 +1805,21 @@ void x7936 (int fd)
     remove_control_chars (account_name);
     uint32_t status = RFIFOL (fd, 26);
     WFIFOL (fd, 30) = status;
-    char error_message[20] = {};
-    strncpy (error_message, (char *)RFIFOP (fd, 30), 19);
+    char error_message[20];
+    STRZCPY (error_message, (char *)RFIFOP (fd, 30));
     remove_control_chars (error_message);
     if (status != 7 || error_message[0] == '\0')
         // 7: // 6 = Your are Prohibited to log in until %s
-        strcpy (error_message, "-");
+        STRZCPY (error_message, "-");
     int i = account_index_by_name (account_name);
     if (i == -1)
     {
-        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        strzcpy ((char *)WFIFOP (fd, 6), account_name, 24);
         login_log ("'ladmin': Attempt to modify the state of an unknown account (account: %s, received state: %d, ip: %s)\n",
                     account_name, status, ip_of (fd));
         return;
     }
-    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    STRZCPY2 ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
     WFIFOL (fd, 2) = auth_dat[i].account_id;
     if (auth_dat[i].state == status &&
             strcmp (auth_dat[i].error_message, error_message) == 0)
@@ -1849,7 +1848,7 @@ void x7936 (int fd)
                 auth_fifo[j].login_id1++;
     }
     auth_dat[i].state = (enum auth_failure)status;
-    strcpy (auth_dat[i].error_message, error_message);
+    STRZCPY (auth_dat[i].error_message, error_message);
 }
 
 /// Request for servers list and # of online players
@@ -1864,7 +1863,7 @@ void x7938 (int fd)
             continue;
         WFIFOL (fd, 4 + server_num * 32) = server[i].ip;
         WFIFOW (fd, 4 + server_num * 32 + 4) = server[i].port;
-        strcpy ((char *)WFIFOP (fd, 4 + server_num * 32 + 6), server[i].name);
+        STRZCPY2 ((char *)WFIFOP (fd, 4 + server_num * 32 + 6), server[i].name);
         WFIFOW (fd, 4 + server_num * 32 + 26) = server[i].users;
         WFIFOW (fd, 4 + server_num * 32 + 28) = server[i].maintenance;
         WFIFOW (fd, 4 + server_num * 32 + 30) = server[i].is_new;
@@ -1887,12 +1886,12 @@ void x793a (int fd)
     int i = account_index_by_name (account_name);
     if (i == -1)
     {
-        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        strzcpy ((char *)WFIFOP (fd, 6), account_name, 24);
         login_log ("'ladmin': Attempt to check the password of an unknown account (account: %s, ip: %s)\n",
                    account_name, ip_of (fd));
         return;
     }
-    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    STRZCPY2 ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
     if (pass_ok((char *)RFIFOP (fd, 26), auth_dat[i].pass))
     {
         WFIFOL (fd, 2) = auth_dat[i].account_id;
@@ -1901,8 +1900,8 @@ void x793a (int fd)
     }
     else
     {
-        char pass[24] = {};
-        strncpy (pass, (char *)RFIFOP (fd, 26), 23);
+        char pass[24];
+        STRZCPY (pass, (char *)RFIFOP (fd, 26));
         remove_control_chars (pass);
         login_log ("'ladmin': Failure of password check (account: %s, proposed pass: %s, ip: %s)\n",
                     auth_dat[i].userid, pass, ip_of (fd));
@@ -1918,7 +1917,7 @@ void x793c (int fd)
     char *account_name = (char *)RFIFOP (fd, 2);
     account_name[23] = '\0';
     remove_control_chars (account_name);
-    strcpy ((char *)WFIFOP (fd, 6), account_name);
+    strzcpy ((char *)WFIFOP (fd, 6), account_name, 24);
     enum gender sex = sex_from_char(RFIFOB (fd, 26));
     if (sex != SEX_FEMALE && sex != SEX_MALE)
     {
@@ -1937,7 +1936,7 @@ void x793c (int fd)
                    account_name, sex_to_char (sex), ip_of (fd));
         return;
     }
-    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    STRZCPY2 ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
     if (auth_dat[i].sex == sex)
     {
         login_log ("'ladmin': Modification of a sex, but the sex is already the requested sex (account: %s, sex: %c, ip: %s)\n",
@@ -1969,7 +1968,7 @@ void x793e (int fd)
     char *account_name = (char *)RFIFOP (fd, 2);
     account_name[23] = '\0';
     remove_control_chars (account_name);
-    strcpy ((char *)WFIFOP (fd, 6), account_name);
+    strzcpy ((char *)WFIFOP (fd, 6), account_name, 24);
     gm_level_t new_gm_level = new_gm_level = RFIFOB (fd, 26);
     if (new_gm_level > 99)
     {
@@ -1985,7 +1984,7 @@ void x793e (int fd)
         return;
     }
     account_t acc = auth_dat[i].account_id;
-    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    STRZCPY2 ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
     if (isGM (acc) == new_gm_level)
     {
         login_log ("'ladmin': Attempt to modify of a GM level, but the GM level is already the good GM level (account: %s (%u), GM level: %hhu, ip: %s)\n",
@@ -2084,9 +2083,9 @@ void x7940 (int fd)
     char *account_name = (char *)RFIFOP (fd, 2);
     account_name[23] = '\0';
     remove_control_chars (account_name);
-    strcpy ((char *)WFIFOP (fd, 6), account_name);
+    strzcpy ((char *)WFIFOP (fd, 6), account_name, 24);
     char email[40] = {};
-    strncpy (email, (char *)RFIFOP (fd, 26), 39);
+    STRZCPY (email, (char *)RFIFOP (fd, 26));
     if (!e_mail_check (email))
     {
         login_log ("'ladmin': Attempt to give an invalid e-mail (account: %s, ip: %s)\n",
@@ -2101,8 +2100,8 @@ void x7940 (int fd)
                    account_name, email, ip_of (fd));
         return;
     }
-    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
-    strcpy (auth_dat[i].email, email);
+    STRZCPY2 ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    STRZCPY (auth_dat[i].email, email);
     WFIFOL (fd, 2) = auth_dat[i].account_id;
     login_log ("'ladmin': Modification of an email (account: %s, new e-mail: %s, ip: %s)\n",
                auth_dat[i].userid, email, ip_of (fd));
@@ -2120,18 +2119,16 @@ void x7942 (int fd)
     int i = account_index_by_name (account_name);
     if (i == -1)
     {
-        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        strzcpy ((char *)WFIFOP (fd, 6), account_name, 24);
         login_log ("'ladmin': Attempt to modify the memo field of an unknown account (account: %s, ip: %s)\n",
-                    account_name, ip_of (fd));
+                   account_name, ip_of (fd));
         return;
     }
     static const size_t size_of_memo = sizeof (auth_dat[i].memo) - 1;
     // auth_dat[i].memo[0] must always be '!' or stuff breaks
     char *memo = auth_dat[i].memo + 1;
-    memcpy (WFIFOP (fd, 6), auth_dat[i].userid, 24);
-    strncpy (memo, (char *)RFIFOP (fd, 28),
-                MIN (size_of_memo, RFIFOW (fd, 26)) - 1);
-    memo[size_of_memo - 1] = '\0';
+    STRZCPY2 ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    strzcpy (memo, (char *)RFIFOP (fd, 28), MIN (size_of_memo, RFIFOW (fd, 26)));
     remove_control_chars (memo);
     WFIFOL (fd, 2) = auth_dat[i].account_id;
     login_log ("'ladmin': Modification of a memo field (account: %s, new memo: %s, ip: %s)\n",
@@ -2150,12 +2147,12 @@ void x7944 (int fd)
     int i = account_index_by_name (account_name);
     if (i == -1)
     {
-        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        strzcpy ((char *)WFIFOP (fd, 6), account_name, 24);
         login_log ("'ladmin': ID request (by the name) of an unknown account (account: %s, ip: %s)\n",
                    account_name, ip_of (fd));
         return;
     }
-    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    STRZCPY2 ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
     WFIFOL (fd, 2) = auth_dat[i].account_id;
     login_log ("'ladmin': Request (by the name) of an account id (account: %s, id: %u, ip: %s)\n",
                auth_dat[i].userid, auth_dat[i].account_id, ip_of (fd));
@@ -2176,7 +2173,7 @@ void x7946 (int fd)
         // strcpy (WFIFOP (fd, 6), "");
         return;
     }
-    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    STRZCPY2 ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
     login_log ("'ladmin': Request (by id) of an account name (account: %s, id: %d, ip: %s)\n",
                auth_dat[i].userid, RFIFOL (fd, 2), ip_of (fd));
 }
@@ -2198,12 +2195,12 @@ void x7948 (int fd)
     int i = account_index_by_name (account_name);
     if (i == -1)
     {
-        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        strzcpy ((char *)WFIFOP (fd, 6), account_name, 24);
         login_log ("'ladmin': Attempt to change the validity limit of an unknown account (account: %s, received validity: %ld (%s), ip: %s)\n",
                    account_name, (long)timestamp, tmpstr, ip_of (fd));
         return;
     }
-    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    STRZCPY2 ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
     login_log ("'ladmin': Change of a validity limit (account: %s, new validity: %ld (%s), ip: %s)\n",
                auth_dat[i].userid, (long)timestamp, tmpstr, ip_of (fd));
     auth_dat[i].connect_until_time = timestamp;
@@ -2231,16 +2228,16 @@ void x794a (int fd)
     int i = account_index_by_name (account_name);
     if (i == -1)
     {
-        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        strzcpy ((char *)WFIFOP (fd, 6), account_name, 24);
         login_log ("'ladmin': Attempt to change the final date of a banishment of an unknown account (account: %s, received final date of banishment: %ld (%s), ip: %s)\n",
-                account_name, (long)timestamp, tmpstr, ip_of (fd));
+                   account_name, (long)timestamp, tmpstr, ip_of (fd));
         return;
     }
 
-    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    STRZCPY2 ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
     WFIFOL (fd, 2) = auth_dat[i].account_id;
     login_log ("'ladmin': Change of the final date of a banishment (account: %s, new final date of banishment: %ld (%s), ip: %s)\n",
-                auth_dat[i].userid, (long)timestamp, tmpstr, ip_of (fd));
+               auth_dat[i].userid, (long)timestamp, tmpstr, ip_of (fd));
     if (auth_dat[i].ban_until_time == timestamp)
         return;
     auth_dat[i].ban_until_time = timestamp;
@@ -2270,14 +2267,14 @@ void x794c (int fd)
     int i = account_index_by_name (account_name);
     if (i == -1)
     {
-        memcpy (WFIFOP (fd, 6), account_name, 24);
+        strzcpy ((char *)WFIFOP (fd, 6), account_name, 24);
         login_log ("'ladmin': Attempt to adjust the final date of a banishment of an unknown account (account: %s, ip: %s)\n",
                    account_name, ip_of (fd));
         WFIFOL (fd, 30) = 0;
         return;
     }
     WFIFOL (fd, 2) = auth_dat[i].account_id;
-    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    STRZCPY2 ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
 
     time_t timestamp = time (NULL);
     if (auth_dat[i].ban_until_time >= timestamp)
@@ -2371,14 +2368,14 @@ void x7950 (int fd)
     int i = account_index_by_name (account_name);
     if (i != -1)
     {
-        strcpy ((char *)WFIFOP (fd, 6), account_name);
+        strzcpy ((char *)WFIFOP (fd, 6), account_name, 24);
         login_log ("'ladmin': Attempt to adjust the validity limit of an unknown account (account: %s, ip: %s)\n",
                    account_name, ip_of (fd));
         WFIFOL (fd, 30) = 0;
         return;
     }
     WFIFOL (fd, 2) = auth_dat[i].account_id;
-    strcpy ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
+    STRZCPY2 ((char *)WFIFOP (fd, 6), auth_dat[i].userid);
 
     time_t timestamp = auth_dat[i].connect_until_time;
     if (!add_to_unlimited_account && !timestamp)
@@ -2441,7 +2438,7 @@ void x7952 (int fd)
     int i = account_index_by_name (account_name);
     if (i == -1)
     {
-        strcpy ((char *)WFIFOP (fd, 7), account_name);
+        strzcpy ((char *)WFIFOP (fd, 7), account_name, 24);
         WFIFOW (fd, 148) = 0;
         login_log ("'ladmin': No account information for name: %s (ip: %s)\n",
                     account_name, ip_of (fd));
@@ -2450,20 +2447,20 @@ void x7952 (int fd)
     }
     WFIFOL (fd, 2) = auth_dat[i].account_id;
     WFIFOB (fd, 6) = isGM (auth_dat[i].account_id);
-    strcpy ((char *)WFIFOP (fd, 7), auth_dat[i].userid);
+    STRZCPY2 ((char *)WFIFOP (fd, 7), auth_dat[i].userid);
     WFIFOB (fd, 31) = (uint8_t)auth_dat[i].sex;
     WFIFOL (fd, 32) = auth_dat[i].logincount;
     WFIFOL (fd, 36) = auth_dat[i].state;
-    strcpy ((char *)WFIFOP (fd, 40), auth_dat[i].error_message);
-    strcpy ((char *)WFIFOP (fd, 60), auth_dat[i].lastlogin);
-    strcpy ((char *)WFIFOP (fd, 84), auth_dat[i].last_ip);
-    strcpy ((char *)WFIFOP (fd, 100), auth_dat[i].email);
+    STRZCPY2 ((char *)WFIFOP (fd, 40), auth_dat[i].error_message);
+    STRZCPY2 ((char *)WFIFOP (fd, 60), auth_dat[i].lastlogin);
+    STRZCPY2 ((char *)WFIFOP (fd, 84), auth_dat[i].last_ip);
+    STRZCPY2 ((char *)WFIFOP (fd, 100), auth_dat[i].email);
     WFIFOL (fd, 140) = auth_dat[i].connect_until_time;
     WFIFOL (fd, 144) = auth_dat[i].ban_until_time;
     // discard the password magic
     char *memo = auth_dat[i].memo + 1;
     WFIFOW (fd, 148) = strlen (memo);
-    strcpy ((char *)WFIFOP (fd, 150), memo);
+    strzcpy ((char *)WFIFOP (fd, 150), memo, sizeof(auth_dat[i].memo)-1);
     login_log ("'ladmin': Sending information of an account (request by the name; account: %s, id: %d, ip: %s)\n",
                auth_dat[i].userid, auth_dat[i].account_id, ip_of (fd));
     WFIFOSET (fd, 150 + strlen (memo));
@@ -2481,7 +2478,7 @@ void x7954 (int fd)
     {
         login_log ("'ladmin': Attempt to obtain information (by the id) of an unknown account (id: %d, ip: %s)\n",
                    RFIFOL (fd, 2), ip_of (fd));
-        strcpy ((char *)WFIFOP (fd, 7), "");
+        memset (WFIFOP (fd, 7), 0, 24);
         WFIFOW (fd, 148) = 0;
         WFIFOSET (fd, 150);
         return;
@@ -2489,20 +2486,20 @@ void x7954 (int fd)
     login_log ("'ladmin': Sending information of an account (request by the id; account: %s, id: %d, ip: %s)\n",
                auth_dat[i].userid, RFIFOL (fd, 2), ip_of (fd));
     WFIFOB (fd, 6) = isGM (auth_dat[i].account_id);
-    strcpy ((char *)WFIFOP (fd, 7), auth_dat[i].userid);
+    STRZCPY2 ((char *)WFIFOP (fd, 7), auth_dat[i].userid);
     WFIFOB (fd, 31) = (uint8_t)auth_dat[i].sex;
     WFIFOL (fd, 32) = auth_dat[i].logincount;
     WFIFOL (fd, 36) = auth_dat[i].state;
-    strcpy ((char *)WFIFOP (fd, 40), auth_dat[i].error_message);
-    strcpy ((char *)WFIFOP (fd, 60), auth_dat[i].lastlogin);
-    strcpy ((char *)WFIFOP (fd, 84), auth_dat[i].last_ip);
-    strcpy ((char *)WFIFOP (fd, 100), auth_dat[i].email);
+    STRZCPY2 ((char *)WFIFOP (fd, 40), auth_dat[i].error_message);
+    STRZCPY2 ((char *)WFIFOP (fd, 60), auth_dat[i].lastlogin);
+    STRZCPY2 ((char *)WFIFOP (fd, 84), auth_dat[i].last_ip);
+    STRZCPY2 ((char *)WFIFOP (fd, 100), auth_dat[i].email);
     WFIFOL (fd, 140) = auth_dat[i].connect_until_time;
     WFIFOL (fd, 144) = auth_dat[i].ban_until_time;
     // discard the password magic
     char *memo = auth_dat[i].memo + 1;
     WFIFOW (fd, 148) = strlen (memo);
-    strcpy ((char *)WFIFOP (fd, 150), memo);
+    strzcpy ((char *)WFIFOP (fd, 150), memo, sizeof (auth_dat[i].memo)-1);
     WFIFOSET (fd, 150 + strlen (memo));
 }
 
@@ -2889,14 +2886,14 @@ void x64 (int fd)
             char tmpstr[DATE_FORMAT_MAX];
             strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT,
                       gmtime (&auth_dat[i].ban_until_time));
-            strcpy ((char *)WFIFOP (fd, 3), tmpstr);
+            STRZCPY2 ((char *)WFIFOP (fd, 3), tmpstr);
         }
         else
         {
             // can this happen?
             // we send error message
             // hm, it seems there is a ladmin command to set this arbitrarily
-            strcpy ((char *)WFIFOP (fd, 3), auth_dat[i].error_message);
+            STRZCPY2 ((char *)WFIFOP (fd, 3), auth_dat[i].error_message);
         }
     end_x0064_006a:
         WFIFOSET (fd, 23);
@@ -2946,7 +2943,7 @@ void x64 (int fd)
         else
             WFIFOL (fd, 47 + server_num * 32) = server[i].ip;
         WFIFOW (fd, 47 + server_num * 32 + 4) = server[i].port;
-        strcpy ((char *)WFIFOP (fd, 47 + server_num * 32 + 6), server[i].name);
+        STRZCPY2 ((char *)WFIFOP (fd, 47 + server_num * 32 + 6), server[i].name);
         WFIFOW (fd, 47 + server_num * 32 + 26) = server[i].users;
         WFIFOW (fd, 47 + server_num * 32 + 28) = server[i].maintenance;
         WFIFOW (fd, 47 + server_num * 32 + 30) = server[i].is_new;
@@ -2971,7 +2968,7 @@ void x64 (int fd)
     /// in old eAthena, this was for an ip
     WFIFOL (fd, 16) = 0;
     /// in old eAthena, this was for a name
-    strcpy ((char *)WFIFOP (fd, 20), account.lastlogin);
+    STRZCPY2 ((char *)WFIFOP (fd, 20), account.lastlogin);
     // nothing is written in the word at 44
     WFIFOB (fd, 46) = (uint8_t)account.sex;
     WFIFOSET (fd, 47 + 32 * server_num);
@@ -3067,7 +3064,7 @@ char_server_ok:
                server_name, account.userid, account.passwd, ip_of (fd));
     server[account.account_id].ip = RFIFOL (fd, 54);
     server[account.account_id].port = RFIFOW (fd, 58);
-    strcpy (server[account.account_id].name, server_name);
+    STRZCPY (server[account.account_id].name, server_name);
     server[account.account_id].users = 0;
     server[account.account_id].maintenance = RFIFOW (fd, 82);
     server[account.account_id].is_new = RFIFOW (fd, 84);
@@ -3333,7 +3330,7 @@ int config_switch (const char *str)
 void login_lan_config_read (const char *lancfgName)
 {
     // set default configuration
-    strcpy (lan_char_ip, "127.0.0.1");
+    STRZCPY (lan_char_ip, "127.0.0.1");
     subneti[0] = 127;
     subneti[1] = 0;
     subneti[2] = 0;
@@ -3345,7 +3342,7 @@ void login_lan_config_read (const char *lancfgName)
     if (!fp)
     {
         printf ("***WARNING: LAN Support configuration file is not found: %s\n",
-                   lancfgName);
+                lancfgName);
         return;
     }
 
@@ -3374,8 +3371,7 @@ void login_lan_config_read (const char *lancfgName)
             }
             else
             {
-                strncpy (lan_char_ip, w2, sizeof (lan_char_ip));
-                lan_char_ip[sizeof (lan_char_ip) - 1] = '\0';
+                STRZCPY (lan_char_ip, w2);
             }
             printf ("LAN IP of char-server: %s.\n", lan_char_ip);
         }
@@ -3473,8 +3469,7 @@ void login_config_read (const char *cfgName)
         }
         if (strcasecmp (w1, "admin_pass") == 0)
         {
-            strncpy (admin_pass, w2, sizeof (admin_pass));
-            admin_pass[sizeof (admin_pass) - 1] = '\0';
+            STRZCPY (admin_pass, w2);
             continue;
         }
         if (strcasecmp (w1, "ladminallowip") == 0)
@@ -3503,16 +3498,13 @@ void login_config_read (const char *cfgName)
                 continue;
 
             RECREATE (access_ladmin_allow, access_entry, access_ladmin_allownum + 1);
-            strncpy (access_ladmin_allow[access_ladmin_allownum], w2,
-                     sizeof (access_entry));
-            access_ladmin_allow[access_ladmin_allownum][sizeof (access_entry)-1] = '\0';
+            STRZCPY (access_ladmin_allow[access_ladmin_allownum], w2);
             access_ladmin_allownum++;
             continue;
         }
         if (strcasecmp (w1, "gm_pass") == 0)
         {
-            strncpy (gm_pass, w2, sizeof (gm_pass));
-            gm_pass[sizeof (gm_pass) - 1] = '\0';
+            STRZCPY (gm_pass, w2);
             continue;
         }
         if (strcasecmp (w1, "level_new_gm") == 0)
@@ -3532,14 +3524,12 @@ void login_config_read (const char *cfgName)
         }
         if (strcasecmp (w1, "account_filename") == 0)
         {
-            strncpy (account_filename, w2, sizeof (account_filename));
-            account_filename[sizeof (account_filename) - 1] = '\0';
+            STRZCPY (account_filename, w2);
             continue;
         }
         if (strcasecmp (w1, "gm_account_filename") == 0)
         {
-            strncpy (GM_account_filename, w2, sizeof (GM_account_filename));
-            GM_account_filename[sizeof (GM_account_filename) - 1] = '\0';
+            STRZCPY (GM_account_filename, w2);
             continue;
         }
         if (strcasecmp (w1, "gm_account_filename_check_timer") == 0)
@@ -3549,15 +3539,12 @@ void login_config_read (const char *cfgName)
         }
         if (strcasecmp (w1, "login_log_filename") == 0)
         {
-            strncpy (login_log_filename, w2, sizeof (login_log_filename));
-            login_log_filename[sizeof (login_log_filename) - 1] = '\0';
+            STRZCPY (login_log_filename, w2);
             continue;
         }
         if (strcasecmp (w1, "login_log_unknown_packets_filename") == 0)
         {
-            strncpy (login_log_unknown_packets_filename, w2,
-                     sizeof (login_log_unknown_packets_filename));
-            login_log_unknown_packets_filename[sizeof (login_log_unknown_packets_filename) - 1] = '\0';
+            STRZCPY (login_log_unknown_packets_filename, w2);
             continue;
         }
         if (strcasecmp (w1, "save_unknown_packets") == 0)
@@ -3639,8 +3626,7 @@ void login_config_read (const char *cfgName)
             if (access_allownum == 1 && access_allow[0] == '\0')
                 continue;
             RECREATE (access_allow, access_entry, access_allownum + 1);
-            strncpy (access_allow[access_allownum], w2, sizeof (access_entry));
-            access_allow[access_allownum][sizeof (access_entry) - 1] = '\0';
+            STRZCPY (access_allow[access_allownum], w2);
             access_allownum++;
             continue;
         }
@@ -3668,8 +3654,7 @@ void login_config_read (const char *cfgName)
             if (access_denynum == 1 && access_deny[0] == '\0')
                 continue;
             RECREATE (access_deny, access_entry, access_denynum + 1);
-            strncpy (access_deny[access_denynum], w2, sizeof (access_entry));
-            access_deny[access_denynum][sizeof (access_entry) - 1] = '\0';
+            STRZCPY (access_deny[access_denynum], w2);
             access_denynum++;
             continue;
         }
@@ -3693,14 +3678,12 @@ void login_config_read (const char *cfgName)
         }
         if (strcasecmp (w1, "update_host") == 0)
         {
-            strncpy (update_host, w2, sizeof (update_host));
-            update_host[sizeof (update_host) - 1] = '\0';
+            STRZCPY (update_host, w2);
             continue;
         }
         if (strcasecmp (w1, "main_server") == 0)
         {
-            strncpy (main_server, w2, sizeof (main_server));
-            main_server[sizeof (main_server) - 1] = '\0';
+            STRZCPY (main_server, w2);
             continue;
         }
         printf ("%s: unknown option: %s\n", __func__, line);

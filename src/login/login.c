@@ -8,6 +8,7 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <string.h>
+#include <errno.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -3567,7 +3568,10 @@ void login_config_read (const char *cfgName)
         }
         if (strcasecmp (w1, "order") == 0)
         {
-            int i = atoi (w2);
+            errno = 0;
+            int i = strtol (w2, NULL, 0);
+            if (errno)
+                i = -1;
             if (i == 0 || strcasecmp (w2, "deny,allow") == 0 ||
                 strcasecmp (w2, "deny, allow") == 0)
                 access_order = ACO_DENY_ALLOW;

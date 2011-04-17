@@ -47,12 +47,12 @@ static uint8_t filehash (const char *fname)
 /// Find the filelist entry for the given filename, or NULL if it is not
 FILELIST *filelist_find (const char *fname)
 {
-    int16_t index = filelist_hash[filehash (fname)];
-    while (index >= 0)
+    int16_t idx = filelist_hash[filehash (fname)];
+    while (idx >= 0)
     {
-        if (strcmp (filelist[index].fn, fname) == 0)
-            return &filelist[index];
-        index = filelist[index].next;
+        if (strcmp (filelist[idx].fn, fname) == 0)
+            return &filelist[idx];
+        idx = filelist[idx].next;
     }
     return NULL;
 }

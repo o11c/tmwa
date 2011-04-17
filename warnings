@@ -1,6 +1,5 @@
 -Werror
 -Wno-error=deprecated-declarations
--Wno-error=shadow
 -Wno-error=missing-field-initializers
 -Wno-error=vla
 -Wno-error=stack-protector

@@ -46,7 +46,7 @@ uint32_t gettick (void)
     return gettick_nocache ();
 }
 
-static void push_timer_heap (timer_id index)
+static void push_timer_heap (timer_id idx)
 {
     if (timer_heap == NULL || timer_heap[0] + 1 >= timer_heap_max)
     {
@@ -61,14 +61,14 @@ static void push_timer_heap (timer_id index)
     while (h)
     {
         // avoid wraparound problems, it really means this:
-        //   timer_data[index].tick >= timer_data[timer_heap[i+1]].tick
-        if ( DIFF_TICK(timer_data[index].tick, timer_data[timer_heap[i+1]].tick) >= 0)
+        //   timer_data[idx].tick >= timer_data[timer_heap[i+1]].tick
+        if ( DIFF_TICK(timer_data[idx].tick, timer_data[timer_heap[i+1]].tick) >= 0)
             break;
         timer_heap[h + 1] = timer_heap[i + 1];
         h = i;
         i = (h - 1) / 2;
     }
-    timer_heap[h + 1] = index;
+    timer_heap[h + 1] = idx;
 }
 
 static timer_id top_timer_heap (void)

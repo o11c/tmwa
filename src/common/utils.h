@@ -45,4 +45,12 @@ static inline bool strzcpy (char *dst, const char *src, size_t n)
     dst[n-1] = '\0';
     return strnlen (src, n) != n;
 }
+
+int _ptr_used_(void) __attribute__((error("Pointer used in place of array") ));
+#define ARRAY_SIZEOF(arr) ( \
+__builtin_types_compatible_p(typeof(arr), typeof((arr)[0])*) \
+? _ptr_used_() \
+: sizeof(arr)/sizeof((arr)[0]) \
+)
+#define STRZCPY(dst, src) strzcpy (dst, src, ARRAY_SIZEOF(dst))
 #endif //UTILS_H

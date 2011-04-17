@@ -1416,8 +1416,6 @@ send_x272a_reply:
 /// Parse packets from a char server
 void parse_fromchar (int fd)
 {
-    char ip[16];
-    ip_to_str (session[fd]->client_addr.sin_addr.s_addr, ip);
     int id;
     for (id = 0; id < MAX_SERVERS; id++)
         if (server_fd[id] == fd)
@@ -1427,13 +1425,13 @@ void parse_fromchar (int fd)
         if (id < MAX_SERVERS)
         {
             login_log ("Char-server '%s' has disconnected (ip: %s).\n",
-                       server[id].name, ip);
+                       server[id].name, ip_of (fd));
             server_fd[id] = -1;
             memset (&server[id], 0, sizeof (struct mmo_char_server));
         }
         else
         {
-            login_log ("Invalid char server (ip: %s)\n", ip);
+            login_log ("Invalid char server (ip: %s)\n", ip_of (fd));
         }
         close (fd);
         delete_session (fd);
@@ -1580,7 +1578,7 @@ void parse_fromchar (int fd)
                              "%s.%03d: receiving of an unknown packet -> disconnection\n",
                              tmpstr, (int) tv.tv_usec / 1000);
                     fprintf (unk_packets, "parse_fromchar: connection #%d (ip: %s), packet: 0x%hu (with %u bytes available).\n",
-                             fd, ip, RFIFOW (fd, 0), RFIFOREST (fd));
+                             fd, ip_of (fd), RFIFOW (fd, 0), RFIFOREST (fd));
                     hexdump (unk_packets, RFIFOP (fd, 0), RFIFOREST (fd));
                     fputc ('\n', unk_packets);
                 }
@@ -2502,9 +2500,6 @@ void x7955 (int fd)
 /// Parse packets from an administration login
 void parse_admin (int fd)
 {
-    char ip[16];
-    ip_to_str (session[fd]->client_addr.sin_addr.s_addr, ip);
-
     if (session[fd]->eof)
     {
         close (fd);
@@ -2764,12 +2759,12 @@ void parse_admin (int fd)
                              tmpstr, (int) tv.tv_usec / 1000);
                     fprintf (unk_packets,
                              "parse_admin: connection #%d (ip: %s), packet: 0x%x (with %u bytes available).\n",
-                             fd, ip, RFIFOW (fd, 0), RFIFOREST (fd));
+                             fd, ip_of (fd), RFIFOW (fd, 0), RFIFOREST (fd));
                     hexdump (unk_packets, RFIFOP (fd, 0), RFIFOREST (fd));
                     fputc ('\n', unk_packets);
                 }
                 login_log ("'ladmin': End of connection, unknown packet (ip: %s)\n",
-                           ip);
+                           ip_of (fd));
                 session[fd]->eof = 1;
                 return;
         } // switch packet
@@ -3150,9 +3145,6 @@ void x7918 (int fd)
 // * administation/char-server before authenticated
 void parse_login (int fd)
 {
-    char ip[16];
-    ip_to_str (session[fd]->client_addr.sin_addr.s_addr, ip);
-
     if (session[fd]->eof)
     {
         close (fd);
@@ -3275,13 +3267,14 @@ void parse_login (int fd)
                         tmpstr, (int) tv.tv_usec / 1000);
                 fprintf (unk_packets,
                         "parse_login: connection #%d (ip: %s), packet: 0x%x (with being read: %d).\n",
-                        fd, ip, RFIFOW (fd, 0),
+                        fd, ip_of (fd), RFIFOW (fd, 0),
                         RFIFOREST (fd));
 
                 hexdump (unk_packets, RFIFOP (fd, 0), RFIFOREST (fd));
                 fputc ('\n', unk_packets);
             end_default:
-                login_log ("End of connection, unknown packet (ip: %s)\n", ip);
+                login_log ("End of connection, unknown packet (ip: %s)\n",
+                           ip_of (fd));
                 session[fd]->eof = 1;
                 return;
         }

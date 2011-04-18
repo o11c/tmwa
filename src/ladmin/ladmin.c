@@ -1,4 +1,3 @@
-// $Id: ladmin.c,v 1.1.1.1 2004/09/10 17:26:52 MagicalTux Exp $
 ///////////////////////////////////////////////////////////////////////////
 // EAthena login-server remote administration tool
 // Ladamin in C by [Yor]
@@ -24,19 +23,19 @@
 
 #include "../common/core.h"
 #include "../common/socket.h"
-#include "ladmin.h"
 #include "../common/version.h"
 #include "../common/mmo.h"
-
-#ifdef PASSWORDENC
 #include "../common/md5calc.h"
-#endif
 
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
-int eathena_interactive_session; // from core.c
+/// config file
+// TODO make this not required, instead prompt
+#define LADMIN_CONF_NAME "conf/ladmin_athena.conf"
+
+/// True if stdin is a tty, false if we are scripting
+// TODO replace this mechanism with a "/dev/null" FILE ?
+// (but with the glibc extension of custom FILE* ?)
+bool eathena_interactive_session;
 #define Iprintf if (eathena_interactive_session) printf
 
 //-------------------------------INSTRUCTIONS------------------------------
@@ -52,11 +51,7 @@ int eathena_interactive_session; // from core.c
 char loginserverip[16] = "127.0.0.1";   // IP of login-server
 int  loginserverport = 6900;    // Port of login-server
 char loginserveradminpassword[24] = "admin";    // Administration password
-#ifdef PASSWORDENC
 int  passenc = 2;               // Encoding type of the password
-#else
-int  passenc = 0;               // Encoding type of the password
-#endif
 char defaultlanguage = 'E';     // Default language (F: Français/E: English)
                                              // (if it's not 'F', default is English)
 char ladmin_log_filename[1024] = "log/ladmin.log";
@@ -4676,7 +4671,6 @@ void parse_fromlogin (int fd)
                 RFIFOSKIP (fd, 3);
                 break;
 
-#ifdef PASSWORDENC
             case 0x01dc:       // answer of a coding key request
                 if (RFIFOREST (fd) < 4 || RFIFOREST (fd) < RFIFOW (fd, 2))
                     return;
@@ -4719,7 +4713,6 @@ void parse_fromlogin (int fd)
                 bytes_to_read = 1;
                 RFIFOSKIP (fd, RFIFOW (fd, 2));
                 break;
-#endif
 
             case 0x7531:       // Displaying of the version of the login-server
                 if (RFIFOREST (fd) < 10)
@@ -6186,10 +6179,8 @@ int Connect_login_server (void)
     if ((login_fd = make_connection (login_ip, loginserverport)) < 0)
         return 0;
 
-#ifdef PASSWORDENC
     if (passenc == 0)
     {
-#endif
         WFIFOW (login_fd, 0) = 0x7918;  // Request for administation login
         WFIFOW (login_fd, 2) = 0;   // no encrypted
         memcpy (WFIFOP (login_fd, 4), loginserveradminpassword, 24);
@@ -6206,7 +6197,6 @@ int Connect_login_server (void)
             Iprintf ("Sending of the password...\n");
             ladmin_log ("Sending of the password...\n");
         }
-#ifdef PASSWORDENC
     }
     else
     {
@@ -6224,7 +6214,6 @@ int Connect_login_server (void)
             ladmin_log ("Request about the MD5 key...\n");
         }
     }
-#endif
 
     return 0;
 }
@@ -6334,14 +6323,12 @@ int ladmin_config_read (const char *cfgName)
                          sizeof (loginserveradminpassword));
                 loginserveradminpassword[sizeof (loginserveradminpassword) -
                                          1] = '\0';
-#ifdef PASSWORDENC
             }
             else if (strcasecmp (w1, "passenc") == 0)
             {
                 passenc = atoi (w2);
                 if (passenc < 0 || passenc > 2)
                     passenc = 0;
-#endif
             }
             else if (strcasecmp (w1, "defaultlanguage") == 0)
             {

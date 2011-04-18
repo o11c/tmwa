@@ -577,48 +577,6 @@ char *msg_txt (int msg_number)
     return "??";
 }
 
-//------------------------------------------------------------
-// E-mail check: return 0 (not correct) or 1 (valid). by [Yor]
-//------------------------------------------------------------
-int e_mail_check (unsigned char *email)
-{
-    char ch;
-    unsigned char *last_arobas;
-
-    // athena limits
-    if (strlen (email) < 3 || strlen (email) > 39)
-        return 0;
-
-    // part of RFC limits (official reference of e-mail description)
-    if (strchr (email, '@') == NULL || email[strlen (email) - 1] == '@')
-        return 0;
-
-    if (email[strlen (email) - 1] == '.')
-        return 0;
-
-    last_arobas = strrchr (email, '@');
-
-    if (strstr (last_arobas, "@.") != NULL ||
-        strstr (last_arobas, "..") != NULL)
-        return 0;
-
-    for (ch = 1; ch < 32; ch++)
-    {
-        if (strchr (last_arobas, ch) != NULL)
-        {
-            return 0;
-            break;
-        }
-    }
-
-    if (strchr (last_arobas, ' ') != NULL ||
-        strchr (last_arobas, ';') != NULL)
-        return 0;
-
-    // all correct
-    return 1;
-}
-
 /*==========================================
  * get_atcommand_level @コマンドの必要レベルを取得
  *------------------------------------------

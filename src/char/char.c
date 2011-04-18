@@ -148,26 +148,6 @@ int char_log (char *fmt, ...)
     return 0;
 }
 
-//-----------------------------------------------------
-// Function to suppress control characters in a string.
-//-----------------------------------------------------
-int remove_control_chars (unsigned char *str)
-{
-    int  i;
-    int  change = 0;
-
-    for (i = 0; str[i]; i++)
-    {
-        if (str[i] < 32)
-        {
-            str[i] = '_';
-            change = 1;
-        }
-    }
-
-    return change;
-}
-
 //----------------------------------------------------------------------
 // Determine if an account (id) is a GM account
 // and returns its level (or 0 if it isn't a GM account or if not found)
@@ -852,7 +832,7 @@ int make_new_char (int fd, unsigned char *dat)
 
     // remove control characters from the name
     dat[23] = '\0';
-    if (remove_control_chars (dat))
+    if (has_control_chars (dat))
     {
         char_log
             ("Make new char error (control char received in the name): (connection #%d, account: %d).\n",
@@ -1724,48 +1704,6 @@ int char_divorce (struct mmo_charstatus *cs)
     mapif_sendall (buf, 10);
 
     return 0;
-}
-
-//------------------------------------------------------------
-// E-mail check: return 0 (not correct) or 1 (valid). by [Yor]
-//------------------------------------------------------------
-int e_mail_check (unsigned char *email)
-{
-    char ch;
-    unsigned char *last_arobas;
-
-    // athena limits
-    if (strlen (email) < 3 || strlen (email) > 39)
-        return 0;
-
-    // part of RFC limits (official reference of e-mail description)
-    if (strchr (email, '@') == NULL || email[strlen (email) - 1] == '@')
-        return 0;
-
-    if (email[strlen (email) - 1] == '.')
-        return 0;
-
-    last_arobas = strrchr (email, '@');
-
-    if (strstr (last_arobas, "@.") != NULL ||
-        strstr (last_arobas, "..") != NULL)
-        return 0;
-
-    for (ch = 1; ch < 32; ch++)
-    {
-        if (strchr (last_arobas, ch) != NULL)
-        {
-            return 0;
-            break;
-        }
-    }
-
-    if (strchr (last_arobas, ' ') != NULL ||
-        strchr (last_arobas, ';') != NULL)
-        return 0;
-
-    // all correct
-    return 1;
 }
 
 //----------------------------------------------------------------------
@@ -3622,23 +3560,6 @@ void check_connect_login_server (timer_id tid, tick_t tick, custom_id_t id, cust
         WFIFOW (login_fd, 84) = char_new;
         WFIFOSET (login_fd, 86);
     }
-}
-
-//----------------------------------------------------------
-// Return numerical value of a switch configuration by [Yor]
-// on/off, english, français, deutsch, español
-//----------------------------------------------------------
-int config_switch (const char *str)
-{
-    if (strcasecmp (str, "on") == 0 || strcasecmp (str, "yes") == 0
-        || strcasecmp (str, "oui") == 0 || strcasecmp (str, "ja") == 0
-        || strcasecmp (str, "si") == 0)
-        return 1;
-    if (strcasecmp (str, "off") == 0 || strcasecmp (str, "no") == 0
-        || strcasecmp (str, "non") == 0 || strcasecmp (str, "nein") == 0)
-        return 0;
-
-    return atoi (str);
 }
 
 //-------------------------------------------

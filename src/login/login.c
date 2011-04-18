@@ -382,52 +382,6 @@ bool check_ladminip (in_addr_t ip)
     return 0;
 }
 
-/// Make a string safe by replacing control characters with _
-// What about higher characters?
-void remove_control_chars (char *str)
-{
-    for (int i = 0; str[i]; i++)
-        // This behaves differently depending on whether char is signed or not
-        if (str[i] < 32)
-            str[i] = '_';
-}
-
-/// Check whether it looks like a valid email
-bool e_mail_check (const char *email)
-{
-    if (email[0] == '.' || email[0] == '@')
-        return 0;
-
-    size_t len = strlen(email);
-    if (len < 3 || len > 39)
-        return 0;
-
-    if (email[len - 1] == '@' || email[len - 1] == '.')
-        return 0;
-
-    const char *at = strchr (email, '@');
-    if (!at)
-        return 0;
-    if (at[1] == '.' || at[-1] == '.')
-        return 0;
-    if (strchr (at + 1, '@'))
-        return 0;
-
-    if (strstr (email, ".."))
-        return 0;
-
-    do
-    {
-        // Note: this doesn't support quoted local parts - nobody uses them.
-        // Note: this doesn't support UTF-8 addresses - it's not allowed yet.
-        // Note: this doesn't support user@[ip.add.r.ess].
-        if (*email < 0x20 || *email >= 0x7f || strchr(" \",:;<>[\\]", *email))
-            return 0;
-    } while (*++email);
-
-    return 1;
-}
-
 //-----------------------------------------------
 // Search an account id
 //   (return account index or -1 (if not found))
@@ -3280,24 +3234,6 @@ void parse_login (int fd)
         }
     }
     return;
-}
-
-/// Convert string to number
-// Parses booleans: on/off and yes/no in english, français, deutsch, español
-// Then falls back to atoi (which means non-integers are parsed as 0)
-// TODO move this to common, as it is used by other servers/ladmin
-// TODO replace by config_parse_bool and config_parse_int?
-int config_switch (const char *str)
-{
-    if (strcasecmp (str, "on") == 0 || strcasecmp (str, "yes") == 0
-        || strcasecmp (str, "oui") == 0 || strcasecmp (str, "ja") == 0
-        || strcasecmp (str, "si") == 0)
-        return 1;
-    if (strcasecmp (str, "off") == 0 || strcasecmp (str, "no") == 0
-        || strcasecmp (str, "non") == 0 || strcasecmp (str, "nein") == 0)
-        return 0;
-
-    return atoi (str);
 }
 
 /// read conf/lan_support.conf

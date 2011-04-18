@@ -53,4 +53,19 @@ __builtin_types_compatible_p(typeof(arr), typeof((arr)[0])*) \
 : sizeof(arr)/sizeof((arr)[0]) \
 )
 #define STRZCPY(dst, src) strzcpy (dst, src, ARRAY_SIZEOF(dst))
+
+/// Make a string safe by replacing control characters with _
+void remove_control_chars (char *str);
+/// Check if there are any control chars
+bool has_control_chars (char *str);
+
+
+/// Check whether it looks like a valid email
+bool e_mail_check (const char *email);
+
+/// Convert string to number
+// Parses booleans: on/off and yes/no in english, français, deutsch, español
+// Then falls back to atoi (which means non-integers are parsed as 0)
+// TODO replace by config_parse_bool and config_parse_int?
+int config_switch (const char *str);
 #endif //UTILS_H

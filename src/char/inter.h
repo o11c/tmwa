@@ -1,6 +1,5 @@
-// $Id: inter.h,v 1.1.1.1 2004/09/10 17:26:51 MagicalTux Exp $
-#ifndef _INTER_H_
-#define _INTER_H_
+#ifndef INTER_H
+#define INTER_H
 
 int  inter_init (const char *file);
 int  inter_save (void);
@@ -9,7 +8,7 @@ int  inter_mapif_init (int fd);
 
 int  inter_check_length (int fd, int length);
 
-int  inter_log (char *fmt, ...);
+int  inter_log (const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 #define inter_cfgName "conf/inter_athena.conf"
 

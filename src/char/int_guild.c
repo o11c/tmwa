@@ -1,6 +1,6 @@
-// $Id: int_guild.c,v 1.2 2004/09/25 19:36:53 Akitasha Exp $
-#include "inter.h"
 #include "int_guild.h"
+
+#include "inter.h"
 #include "int_storage.h"
 #include "../common/mmo.h"
 #include "char.h"

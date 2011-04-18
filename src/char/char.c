@@ -1,5 +1,4 @@
-// $Id: char.c,v 1.3 2004/09/13 16:52:16 Yor Exp $
-// original : char2.c 2003/03/14 11:58:35 Rev.1.5
+#include "char.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -13,7 +12,6 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <string.h>
-#include <arpa/inet.h>
 #include <netdb.h>
 #include <stdarg.h>
 #include <sys/wait.h>
@@ -24,7 +22,6 @@
 #include "../common/mmo.h"
 #include "../common/version.h"
 #include "../common/lock.h"
-#include "char.h"
 
 #include "inter.h"
 #include "int_guild.h"
@@ -120,7 +117,7 @@ pid_t pid = 0;                  // For forked DB writes
 //------------------------------
 // Writing function of logs file
 //------------------------------
-int char_log (char *fmt, ...)
+int char_log (const char *fmt, ...)
 {
     FILE *logfp;
     va_list ap;
@@ -170,7 +167,7 @@ int isGM (int account_id)
 //   and returns index if only 1 character is found
 //   and similar to the searched name.
 //----------------------------------------------
-int search_character_index (char *character_name)
+int search_character_index (const char *character_name)
 {
     int  i, quantity, index;
 
@@ -200,7 +197,7 @@ int search_character_index (char *character_name)
 //-------------------------------------
 // Return character name with the index
 //-------------------------------------
-char *search_character_name (int index)
+const char *search_character_name (int index)
 {
 
     if (index >= 0 && index < char_num)
@@ -3457,35 +3454,14 @@ void parse_char (int fd)
     }
 }
 
-// 全てのMAPサーバーにデータ送信（送信したmap鯖の数を返す）
-int mapif_sendall (char *buf, unsigned int len)
+/// Send a packet to all map servers, possibly excluding 1
+void mapif_sendallwos (int sfd, const uint8_t *buf, unsigned int len)
 {
-    int  i, c;
-
-    c = 0;
-    for (i = 0; i < MAX_MAP_SERVERS; i++)
+    int c = 0;
+    for (int i = 0; i < MAX_MAP_SERVERS; i++)
     {
-        int  fd;
-        if ((fd = server_fd[i]) >= 0)
-        {
-            memcpy (WFIFOP (fd, 0), buf, len);
-            WFIFOSET (fd, len);
-            c++;
-        }
-    }
-    return c;
-}
-
-// 自分以外の全てのMAPサーバーにデータ送信（送信したmap鯖の数を返す）
-int mapif_sendallwos (int sfd, unsigned char *buf, unsigned int len)
-{
-    int  i, c;
-
-    c = 0;
-    for (i = 0; i < MAX_MAP_SERVERS; i++)
-    {
-        int  fd;
-        if ((fd = server_fd[i]) >= 0 && fd != sfd)
+        int  fd = server_fd[i];
+        if (fd >= 0 && fd != sfd)
         {
             memcpy (WFIFOP (fd, 0), buf, len);
             WFIFOSET (fd, len);
@@ -3496,7 +3472,7 @@ int mapif_sendallwos (int sfd, unsigned char *buf, unsigned int len)
 }
 
 // MAPサーバーにデータ送信（map鯖生存確認有り）
-int mapif_send (int fd, unsigned char *buf, unsigned int len)
+void mapif_send (int fd, const uint8_t *buf, unsigned int len)
 {
     int  i;
 

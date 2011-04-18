@@ -1,6 +1,6 @@
-// $Id: int_party.c,v 1.1.1.1 2004/09/10 17:26:51 MagicalTux Exp $
-#include "inter.h"
 #include "int_party.h"
+
+#include "inter.h"
 #include "../common/mmo.h"
 #include "char.h"
 #include "../common/socket.h"

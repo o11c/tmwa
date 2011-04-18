@@ -1,4 +1,4 @@
-// $Id: int_storage.c,v 1.1.1.1 2004/09/10 17:26:51 MagicalTux Exp $
+#include "int_storage.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -9,7 +9,6 @@
 #include "../common/lock.h"
 #include "char.h"
 #include "inter.h"
-#include "int_storage.h"
 #include "int_guild.h"
 
 // ファイル名のデフォルト

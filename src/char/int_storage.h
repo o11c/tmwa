@@ -1,6 +1,5 @@
-// $Id: int_storage.h,v 1.1.1.1 2004/09/10 17:26:51 MagicalTux Exp $
-#ifndef _INT_STORAGE_H_
-#define _INT_STORAGE_H_
+#ifndef INT_STORAGE_H
+#define INT_STORAGE_H
 
 int  inter_storage_init (void);
 void inter_storage_final (void);

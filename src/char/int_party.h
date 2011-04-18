@@ -1,6 +1,5 @@
-// $Id: int_party.h,v 1.1.1.1 2004/09/10 17:26:51 MagicalTux Exp $
-#ifndef _INT_PARTY_H_
-#define _INT_PARTY_H_
+#ifndef INT_PARTY_H
+#define INT_PARTY_H
 
 int  inter_party_init (void);
 int  inter_party_save (void);

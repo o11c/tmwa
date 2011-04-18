@@ -1,4 +1,5 @@
-// $Id: inter.c,v 1.1.1.1 2004/09/10 17:26:51 MagicalTux Exp $
+#include "inter.h"
+
 #include "../common/mmo.h"
 #include "char.h"
 #include "../common/socket.h"
@@ -7,7 +8,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "inter.h"
 #include "int_party.h"
 #include "int_guild.h"
 #include "int_storage.h"
@@ -244,7 +244,7 @@ int inter_config_read (const char *cfgName)
 }
 
 // ログ書き出し
-int inter_log (char *fmt, ...)
+int inter_log (const char *fmt, ...)
 {
     FILE *logfp;
     va_list ap;
@@ -324,7 +324,14 @@ int mapif_wis_message (struct WisData *wd)
     memcpy (WBUFP (buf, 8), wd->src, 24);
     memcpy (WBUFP (buf, 32), wd->dst, 24);
     memcpy (WBUFP (buf, 56), wd->msg, wd->len);
-    wd->count = mapif_sendall (buf, WBUFW (buf, 2));
+    // This was the only case where the return value of mapif_sendall was used
+    mapif_sendall (buf, WBUFW (buf, 2));
+    wd->count = 0;
+    // This feels hackish but it eliminates the return value check
+    extern int server_fd[];
+    for (int i = 0; i < MAX_MAP_SERVERS; i++)
+        if (server_fd[i] >= 0)
+            wd->count++;
 
     return 0;
 }
@@ -504,7 +511,11 @@ int mapif_parse_WisReply (int fd)
     if (wd == NULL)
         return 0;               // This wisp was probably suppress before, because it was timeout of because of target was found on another map-server
 
-    if ((--wd->count) <= 0 || flag != 1)
+    // fails if sent to more servers (still awaiting reply)
+    // and error is "target is not logged in"
+    // this is to prevent spurious "failed to send whisper" messages
+    wd->count--;
+    if (wd->count <= 0 || flag != 1)
     {
         mapif_wis_end (wd, flag);   // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
         numdb_erase (wis_db, id);

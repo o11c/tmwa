@@ -1,6 +1,5 @@
-// $Id: int_guild.h,v 1.1.1.1 2004/09/10 17:26:51 MagicalTux Exp $
-#ifndef _INT_GUILD_H_
-#define _INT_GUILD_H_
+#ifndef INT_GUILD_H
+#define INT_GUILD_H
 
 int  inter_guild_init (void);
 int  inter_guild_save (void);

@@ -46,17 +46,15 @@ char passwd[24];
 char server_name[20];
 char wisp_server_name[24] = "Server";
 char login_ip_str[16];
-int  login_ip;
-int  login_port = 6900;
+in_addr_t login_ip;
+in_port_t login_port = 6900;
 char char_ip_str[16];
-int  char_ip;
-int  char_port = 6121;
+in_addr_t char_ip;
+in_port_t char_port = 6121;
 int  char_maintenance;
 int  char_new;
 int  email_creation = 0;        // disabled by default
 char char_txt[1024];
-char backup_txt[1024];          //By zanetheinsane
-char backup_txt_flag = 0;       // The backup_txt file was created because char deletion bug existed. Now it's finish and that take a lot of time to create a second file when there are a lot of characters. => option By [Yor]
 char unknown_char_name[1024] = "Unknown";
 const char char_log_filename[] = "log/char.log";
 const char char_log_unknown_packets_filename[] = "log/char_unknown_packets.log";
@@ -708,27 +706,6 @@ void mmo_char_sync (void)
         fprintf (fp, "%d\t%%newid%%\n", char_id_count);
         lock_fclose (fp, char_txt, &lock);
     }
-
-    // Data save (backup)
-    if (backup_txt_flag)
-    {                           // The backup_txt file was created because char deletion bug existed. Now it's finish and that take a lot of time to create a second file when there are a lot of characters. => option By [Yor]
-        fp = lock_fopen (backup_txt, &lock);
-        if (fp == NULL)
-        {
-            char_log ("WARNING: Server can't not create backup of characters file.\n");
-            return;
-        }
-        for (i = 0; i < char_num; i++)
-        {
-            // create only once the line, and save it in the 2 files (it's speeder than repeat twice the loop and create twice the line)
-            mmo_char_tostr (line, &char_dat[id[i]]);    // use of sorted index
-            fprintf (fp, "%s\n", line);
-        }
-        fprintf (fp, "%d\t%%newid%%\n", char_id_count);
-        lock_fclose (fp, backup_txt, &lock);
-    }
-
-    return;
 }
 
 //----------------------------------------------------
@@ -3655,14 +3632,6 @@ int char_config_read (const char *cfgName)
         else if (strcasecmp (w1, "char_txt") == 0)
         {
             strcpy (char_txt, w2);
-        }
-        else if (strcasecmp (w1, "backup_txt") == 0)
-        {                       //By zanetheinsane
-            strcpy (backup_txt, w2);
-        }
-        else if (strcasecmp (w1, "backup_txt_flag") == 0)
-        {                       // The backup_txt file was created because char deletion bug existed. Now it's finish and that take a lot of time to create a second file when there are a lot of characters. By [Yor]
-            backup_txt_flag = config_switch (w2);
         }
         else if (strcasecmp (w1, "max_connect_user") == 0)
         {

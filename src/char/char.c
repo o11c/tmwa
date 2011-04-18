@@ -28,11 +28,6 @@
 #include "int_party.h"
 #include "int_storage.h"
 
-/// TODO: instead of using this manually, create a stamp_time() function
-// maybe also a stamp_time_milli()
-#define DATE_FORMAT "%Y-%m-%d %H:%M:%S"
-// 4+1+2+1+2 + 1 + 2+1+2+1+2 = 10 + 1 + 8 = 19, plus the NUL-terminator
-#define DATE_FORMAT_MAX 20
 
 struct mmo_map_server server[MAX_MAP_SERVERS];
 int  server_fd[MAX_MAP_SERVERS];
@@ -129,12 +124,7 @@ void char_log (const char *fmt, ...)
     va_list ap;
     va_start (ap, fmt);
 
-    struct timeval tv;
-    gettimeofday (&tv, NULL);
-    char tmpstr[DATE_FORMAT_MAX];
-    strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&tv.tv_sec));
-    fputs(tmpstr, logfp);
-    fprintf(logfp, ".%03d: ", (int) tv.tv_usec / 1000);
+    log_time (logfp);
 
     vfprintf (logfp, fmt, ap);
     vfprintf (stderr, fmt, ap);
@@ -1106,8 +1096,6 @@ void create_online_files (void)
     FILE *fp;                   // for the txt file
     FILE *fp2;                  // for the html file
     char temp[256];             // to prepare what we must display
-    time_t time_server;         // for number of seconds
-    struct tm *datetime;        // variable for time in structure ->tm_mday, ->tm_sec, ...
     int  id[char_num];
 
     if (online_display_option == 0) // we display nothing, so return
@@ -1223,10 +1211,7 @@ void create_online_files (void)
         fp2 = fopen_ (online_html_filename, "w");
         if (fp2 != NULL)
         {
-            // get time
-            time (&time_server);    // get time in seconds since 1/1/1970
-            datetime = localtime (&time_server);    // convert seconds in structure
-            strftime (temp, sizeof (temp), "%d %b %Y %X", datetime);    // like sprintf, but only for date/time (05 dec 2003 15:12:52)
+            const char *timestr = stamp_now (false);
             // write heading
             fprintf (fp2, "<HTML>\n");
             fprintf (fp2, "  <META http-equiv=\"Refresh\" content=\"%d\">\n", online_refresh_html); // update on client explorer every x seconds
@@ -1236,8 +1221,8 @@ void create_online_files (void)
             fprintf (fp2, "  </HEAD>\n");
             fprintf (fp2, "  <BODY>\n");
             fprintf (fp2, "    <H3>Online Players on %s (%s):</H3>\n",
-                     server_name, temp);
-            fprintf (fp, "Online Players on %s (%s):\n", server_name, temp);
+                     server_name, timestr);
+            fprintf (fp, "Online Players on %s (%s):\n", server_name, timestr);
             fprintf (fp, "\n");
 
             // If we display at least 1 player
@@ -3767,19 +3752,6 @@ void term_func (void)
     delete_session (char_fd);
 
     char_log ("----End of char-server (normal end with closing of all files).\n");
-}
-
-FILE *create_or_fake_or_die (const char *filename)
-{
-    FILE *out = fopen_ (filename, "a");
-    if (out)
-        return out;
-    fprintf (stderr, "Unable to open file: %s: %m\n", filename);
-    out = create_null_stream ("w");
-    if (out)
-        return out;
-    fprintf (stderr, "Could not create a fake log: %m\n");
-    abort ();
 }
 
 void do_init (int argc, char **argv)

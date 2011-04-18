@@ -55,11 +55,6 @@ char GM_account_filename[1024] = "conf/GM_account.txt";
 const char login_log_filename[] = "log/login.log";
 const char login_log_unknown_packets_filename[] = "log/login_unknown_packets.log";
 
-/// TODO: instead of using this manually, create a stamp_time() function
-// maybe also a stamp_time_milli()
-#define DATE_FORMAT "%Y-%m-%d %H:%M:%S"
-// 4+1+2+1+2 + 1 + 2+1+2+1+2 = 10 + 1 + 8 = 19, plus the NUL-terminator
-#define DATE_FORMAT_MAX 20
 /// log unknown packets from the initial login
 // unknown ladmin and char-server packets are always logged
 bool save_unknown_packets = 0;
@@ -219,12 +214,7 @@ void login_log (const char *fmt, ...)
     va_list ap;
     va_start (ap, fmt);
 
-    struct timeval tv;
-    gettimeofday (&tv, NULL);
-    char tmpstr[DATE_FORMAT_MAX];
-    strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&tv.tv_sec));
-    fputs(tmpstr, logfp);
-    fprintf(logfp, ".%03d: ", (int) tv.tv_usec / 1000);
+    log_time (logfp);
 
     vfprintf (logfp, fmt, ap);
     vfprintf (stderr, fmt, ap);
@@ -776,7 +766,6 @@ account_t mmo_auth_new (struct mmo_account *account, const char *email)
 /// Try to authenticate a connection
 enum auth_failure mmo_auth (struct mmo_account *account, int fd)
 {
-    struct timeval tv;
     char ip[16];
     ip_to_str (session[fd]->client_addr.sin_addr.s_addr, ip);
 
@@ -841,9 +830,7 @@ enum auth_failure mmo_auth (struct mmo_account *account, int fd)
         // can this even happen?
         if (auth->ban_until_time)
         {
-            char tmpstr[DATE_FORMAT_MAX];
-            strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT,
-                      gmtime (&auth->ban_until_time));
+            const char *tmpstr = stamp_time (auth->ban_until_time, NULL);
             if (auth->ban_until_time > time (NULL))
             {
                 login_log ("%s: refuse %s - banned until %s (ip: %s)\n",
@@ -870,16 +857,11 @@ enum auth_failure mmo_auth (struct mmo_account *account, int fd)
                    account->userid, auth->account_id, ip);
     }
 
-    gettimeofday (&tv, NULL);
-    char tmpstr[DATE_FORMAT_MAX + 4];
-    strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&tv.tv_sec));
-    sprintf (tmpstr + strlen (tmpstr), ".%03d", (int) tv.tv_usec / 1000);
-
     account->account_id = auth->account_id;
     account->login_id1 = mt_random ();
     account->login_id2 = mt_random ();
     STRZCPY (account->lastlogin, auth->lastlogin);
-    STRZCPY (auth->lastlogin, tmpstr);
+    STRZCPY (auth->lastlogin, stamp_now(true));
     account->sex = auth->sex;
     STRZCPY (auth->last_ip, ip);
     auth->logincount++;
@@ -1071,11 +1053,7 @@ void x2720 (int fd, int id)
                    GM_account_filename);
         return;
     }
-    struct timeval tv;
-    gettimeofday (&tv, NULL);
-    char tmpstr[DATE_FORMAT_MAX];
-    strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&tv.tv_sec));
-    fprintf (fp, "\n// %s: @GM command\n%d %d\n", tmpstr, acc, level_new_gm);
+    fprintf (fp, "\n// %s: @GM command\n%d %d\n", stamp_now (false), acc, level_new_gm);
     fclose_ (fp);
     WBUFL (buf, 6) = level_new_gm;
     // FIXME: this is stupid
@@ -1212,11 +1190,8 @@ void x2725 (int fd, int id)
                    server[id].name, acc, ip_of (fd));
         return;
     }
-    char tmpstr[DATE_FORMAT_MAX] = "no banishment";
-    if (timestamp)
-        strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&timestamp));
     login_log ("Char-server '%s': Ban request (account: %d, new final date of banishment: %ld (%s), ip: %s).\n",
-               server[id].name, acc, (long)timestamp, tmpstr, ip_of (fd));
+               server[id].name, acc, (long)timestamp, stamp_time (timestamp, "no banishment"), ip_of (fd));
     unsigned char buf[11];
     WBUFW (buf, 0) = 0x2731;
     WBUFL (buf, 2) = auth->account_id;
@@ -1517,19 +1492,13 @@ void parse_fromchar (int fd)
                 break;
 
             default:
-                {
-                    struct timeval tv;
-                    gettimeofday (&tv, NULL);
-                    char tmpstr[DATE_FORMAT_MAX];
-                    strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&(tv.tv_sec)));
-                    fprintf (unk_packets,
-                             "%s.%03d: receiving of an unknown packet -> disconnection\n",
-                             tmpstr, (int) tv.tv_usec / 1000);
-                    fprintf (unk_packets, "parse_fromchar: connection #%d (ip: %s), packet: 0x%hu (with %u bytes available).\n",
-                             fd, ip_of (fd), RFIFOW (fd, 0), RFIFOREST (fd));
-                    hexdump (unk_packets, RFIFOP (fd, 0), RFIFOREST (fd));
-                    fputc ('\n', unk_packets);
-                }
+                log_time (unk_packets);
+                fprintf (unk_packets,
+                         "receiving of an unknown packet -> disconnection\n");
+                fprintf (unk_packets, "parse_fromchar: connection #%d (ip: %s), packet: 0x%hu (with %u bytes available).\n",
+                         fd, ip_of (fd), RFIFOW (fd, 0), RFIFOREST (fd));
+                hexdump (unk_packets, RFIFOP (fd, 0), RFIFOREST (fd));
+                fputc ('\n', unk_packets);
                 login_log ("parse_fromchar: Unknown packet 0x%hu (from a char-server)! -> disconnection.\n",
                            RFIFOW (fd, 0));
                 session[fd]->eof = 1;
@@ -1949,10 +1918,7 @@ void x793e (int fd)
         goto end_x793e_lock;
     }
     {
-        struct timeval tv;
-        gettimeofday (&tv, NULL);
-        char tmpstr[DATE_FORMAT_MAX];
-        strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&tv.tv_sec));
+        const char *tmpstr = stamp_now (false);
         bool modify_flag = 0;
         char line[512];
         // read/write GM file
@@ -2130,9 +2096,7 @@ void x7948 (int fd)
     remove_control_chars (account_name);
     // time_t might not be 32 bits
     time_t timestamp = (time_t) RFIFOL (fd, 26);
-    char tmpstr[DATE_FORMAT_MAX] = "unlimited";
-    if (timestamp)
-        strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&timestamp));
+    const char *tmpstr = stamp_time (timestamp, "unlimited");
     struct auth_dat *auth = account_by_name (account_name);
     if (!auth)
     {
@@ -2162,9 +2126,7 @@ void x794a (int fd)
     if (timestamp <= time (NULL))
         timestamp = 0;
     WFIFOL (fd, 30) = timestamp;
-    char tmpstr[DATE_FORMAT_MAX] = "no banishment";
-    if (timestamp)
-        strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&timestamp));
+    const char *tmpstr = stamp_time (timestamp, "no banishment");
 
     struct auth_dat *auth = account_by_name (account_name);
     if (!auth)
@@ -2233,9 +2195,7 @@ void x794c (int fd)
     if (timestamp <= time (NULL))
         timestamp = 0;
 
-    char tmpstr[DATE_FORMAT_MAX] = "no banishment";
-    if (timestamp)
-        strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&timestamp));
+    const char *tmpstr = stamp_time (timestamp, "no banishment");
     login_log ("'ladmin': Adjustment of a final date of a banishment (account: %s, (%+d y %+d m %+d d %+d h %+d mn %+d s) -> new validity: %ld (%s), ip: %s)\n",
                auth->userid,
                (short) RFIFOW (fd, 26), (short) RFIFOW (fd, 28),
@@ -2340,10 +2300,7 @@ void x7950 (int fd)
 
     WFIFOL (fd, 30) = timestamp;
 
-    char tmpstr[DATE_FORMAT_MAX] = "unlimited";
-    if (auth->connect_until_time)
-        strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT,
-                  gmtime (&auth->connect_until_time));
+    const char *tmpstr = stamp_time (auth->connect_until_time, "unlimited");
 
     if (timestamp == auth->connect_until_time)
     {
@@ -2353,9 +2310,7 @@ void x7950 (int fd)
         return;
     }
 
-    char tmpstr2[DATE_FORMAT_MAX] = "unlimited";
-    if (timestamp)
-        strftime (tmpstr2, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&timestamp));
+    const char *tmpstr2 = stamp_time (timestamp, "unlimited");
     login_log ("'ladmin': Adjustment of a validity limit (account: %s, %ld (%s) + (%+d y %+d m %+d d %+d h %+d mn %+d s) -> new validity: %ld (%s), ip: %s)\n",
                auth->userid,
                (long)auth->connect_until_time, tmpstr,
@@ -2694,20 +2649,14 @@ void parse_admin (int fd)
                 break;
 
             default:
-                {
-                    struct timeval tv;
-                    gettimeofday (&tv, NULL);
-                    char tmpstr[DATE_FORMAT_MAX];
-                    strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&tv.tv_sec));
-                    fprintf (unk_packets,
-                             "%s.%03d: receiving of an unknown packet -> disconnection\n",
-                             tmpstr, (int) tv.tv_usec / 1000);
-                    fprintf (unk_packets,
-                             "parse_admin: connection #%d (ip: %s), packet: 0x%x (with %u bytes available).\n",
-                             fd, ip_of (fd), RFIFOW (fd, 0), RFIFOREST (fd));
-                    hexdump (unk_packets, RFIFOP (fd, 0), RFIFOREST (fd));
-                    fputc ('\n', unk_packets);
-                }
+                log_time (unk_packets);
+                fprintf (unk_packets,
+                         "receiving of an unknown packet -> disconnection\n");
+                fprintf (unk_packets,
+                         "parse_admin: connection #%d (ip: %s), packet: 0x%x (with %u bytes available).\n",
+                         fd, ip_of (fd), RFIFOW (fd, 0), RFIFOREST (fd));
+                hexdump (unk_packets, RFIFOP (fd, 0), RFIFOREST (fd));
+                fputc ('\n', unk_packets);
                 login_log ("'ladmin': End of connection, unknown packet (ip: %s)\n",
                            ip_of (fd));
                 session[fd]->eof = 1;
@@ -2807,10 +2756,8 @@ void x64 (int fd)
         if (auth->ban_until_time)
         {
             // if account is banned, we send ban timestamp
-            char tmpstr[DATE_FORMAT_MAX];
-            strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT,
-                      gmtime (&auth->ban_until_time));
-            STRZCPY2 ((char *)WFIFOP (fd, 3), tmpstr);
+            strzcpy ((char *)WFIFOP (fd, 3),
+                     stamp_time (auth->ban_until_time, NULL), 20);
         }
         else
         {
@@ -3198,17 +3145,9 @@ void parse_login (int fd)
             default:
                 if (!save_unknown_packets)
                     goto end_default;
-                if (!unk_packets)
-                    unk_packets = fopen_ (login_log_unknown_packets_filename, "a");
-                if (!unk_packets)
-                    goto end_default;
-                struct timeval tv;
-                gettimeofday (&tv, NULL);
-                char tmpstr[DATE_FORMAT_MAX];
-                strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&tv.tv_sec));
+                log_time (unk_packets);
                 fprintf (unk_packets,
-                        "%s.%03d: receiving of an unknown packet -> disconnection\n",
-                        tmpstr, (int) tv.tv_usec / 1000);
+                        "receiving of an unknown packet -> disconnection\n");
                 fprintf (unk_packets,
                         "parse_login: connection #%d (ip: %s), packet: 0x%x (with being read: %d).\n",
                         fd, ip_of (fd), RFIFOW (fd, 0),
@@ -3867,19 +3806,6 @@ void do_final (void)
     delete_session (login_fd);
 
     login_log ("----End of login-server (normal end with closing of all files).\n");
-}
-
-FILE *create_or_fake_or_die (const char *filename)
-{
-    FILE *out = fopen_ (filename, "a");
-    if (out)
-        return out;
-    fprintf (stderr, "Unable to open file: %s: %m\n", filename);
-    out = create_null_stream ("w");
-    if (out)
-        return out;
-    fprintf (stderr, "Could not create a fake log: %m\n");
-    abort ();
 }
 
 /// Main function of login-server (read conf and set up parsers)

@@ -2,6 +2,13 @@
 // we don't want/need to enable this globally
 #define _GNU_SOURCE
 #include "utils.h"
+
+#include <time.h>
+#include <sys/time.h>
+
+// for fopen_
+#include "socket.h"
+
 static const char hex[] = "0123456789abcdef";
 
 void hexdump (FILE *fp, uint8_t *data, size_t len)
@@ -129,4 +136,39 @@ FILE *create_null_stream(const char *mode)
 {
     cookie_io_functions_t null_stream = {NULL, NULL, NULL, NULL};
     return fopencookie (NULL, mode, null_stream);
+}
+
+#define DATE_FORMAT "%Y-%m-%d %H:%M:%S"
+#define DATE_FORMAT_MAX 20
+const char *stamp_now (bool millis)
+{
+    struct timeval tv;
+    gettimeofday (&tv, NULL);
+    static char tmpstr[DATE_FORMAT_MAX + 4];
+    strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&tv.tv_sec));
+    if (millis)
+        sprintf (tmpstr + DATE_FORMAT_MAX, ".%03u", (unsigned) (tv.tv_usec / 1000));
+    return tmpstr;
+}
+
+const char *stamp_time (time_t when, const char *def)
+{
+    if (def && !when)
+        return def;
+    static char tmpstr[DATE_FORMAT_MAX];
+    strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&when));
+    return tmpstr;
+}
+
+FILE *create_or_fake_or_die (const char *filename)
+{
+    FILE *out = fopen_ (filename, "a");
+    if (out)
+        return out;
+    fprintf (stderr, "Unable to open file: %s: %m\n", filename);
+    out = create_null_stream ("w");
+    if (out)
+        return out;
+    fprintf (stderr, "Could not create a fake log: %m\n");
+    abort ();
 }

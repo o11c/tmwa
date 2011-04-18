@@ -28,9 +28,11 @@
 #include "int_party.h"
 #include "int_storage.h"
 
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
+/// TODO: instead of using this manually, create a stamp_time() function
+// maybe also a stamp_time_milli()
+#define DATE_FORMAT "%Y-%m-%d %H:%M:%S"
+// 4+1+2+1+2 + 1 + 2+1+2+1+2 = 10 + 1 + 8 = 19, plus the NUL-terminator
+#define DATE_FORMAT_MAX 20
 
 struct mmo_map_server server[MAX_MAP_SERVERS];
 int  server_fd[MAX_MAP_SERVERS];
@@ -56,7 +58,8 @@ char char_txt[1024];
 char backup_txt[1024];          //By zanetheinsane
 char backup_txt_flag = 0;       // The backup_txt file was created because char deletion bug existed. Now it's finish and that take a lot of time to create a second file when there are a lot of characters. => option By [Yor]
 char unknown_char_name[1024] = "Unknown";
-char char_log_filename[1024] = "log/char.log";
+const char char_log_filename[] = "log/char.log";
+const char char_log_unknown_packets_filename[] = "log/char_unknown_packets.log";
 //Added for lan support
 char lan_map_ip[128];
 int  subneti[4];
@@ -114,35 +117,31 @@ time_t update_online;           // to update online files when we receiving info
 
 pid_t pid = 0;                  // For forked DB writes
 
-//------------------------------
-// Writing function of logs file
-//------------------------------
-int char_log (const char *fmt, ...)
-{
-    FILE *logfp;
-    va_list ap;
-    struct timeval tv;
-    char tmpstr[2048];
+static FILE *logfp;
+static FILE *unk_packets;
 
+/// Writing something to log file (with timestamp) and to stderr (without)
+void char_log (const char *fmt, ...)
+{
+    if (!fmt || !fmt[0])
+    {
+        fputc ('\n', logfp);
+        return;
+    }
+    va_list ap;
     va_start (ap, fmt);
 
-    logfp = fopen_ (char_log_filename, "a");
-    if (logfp)
-    {
-        if (fmt[0] == '\0')     // jump a line if no message
-            fprintf (logfp, "\n");
-        else
-        {
-            gettimeofday (&tv, NULL);
-            strftime (tmpstr, 24, "%d-%m-%Y %H:%M:%S", gmtime (&(tv.tv_sec)));
-            sprintf (tmpstr + 19, ".%03d: %s", (int) tv.tv_usec / 1000, fmt);
-            vfprintf (logfp, tmpstr, ap);
-        }
-        fclose_ (logfp);
-    }
+    struct timeval tv;
+    gettimeofday (&tv, NULL);
+    char tmpstr[DATE_FORMAT_MAX];
+    strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime (&tv.tv_sec));
+    fputs(tmpstr, logfp);
+    fprintf(logfp, ".%03d: ", (int) tv.tv_usec / 1000);
 
+    vfprintf (logfp, fmt, ap);
+    vfprintf (stderr, fmt, ap);
+    fflush (logfp);
     va_end (ap);
-    return 0;
 }
 
 //----------------------------------------------------------------------
@@ -402,12 +401,10 @@ int mmo_char_fromstr (char *str, struct mmo_charstatus *p)
 
     if (strcasecmp (wisp_server_name, p->name) == 0)
     {
-        printf ("mmo_auth_init: ******WARNING: character name has wisp server name.\n");
-        printf ("               Character name '%s' = wisp server name '%s'.\n",
-                p->name, wisp_server_name);
-        printf ("               Character readed. Suggestion: change the wisp server name.\n");
-        char_log ("mmo_auth_init: ******WARNING: character name has wisp server name: Character name '%s' = wisp server name '%s'.\n",
+        char_log ("mmo_auth_init: ******WARNING: character name has wisp server name:\n"
+                  "Character name '%s' = wisp server name '%s'.\n",
                   p->name, wisp_server_name);
+        char_log ("               Character readed. Suggestion: change the wisp server name.\n");
     }
 
     if (str[next] == '\n' || str[next] == '\r')
@@ -568,7 +565,6 @@ int mmo_char_init (void)
     fp = fopen_ (char_txt, "r");
     if (fp == NULL)
     {
-        printf ("Characters file not found: %s.\n", char_txt);
         char_log ("Characters file not found: %s.\n", char_txt);
         char_log ("Id for the next created character: %d.\n",
                   char_id_count);
@@ -648,25 +644,19 @@ int mmo_char_init (void)
 
     if (char_num == 0)
     {
-        printf ("mmo_char_init: No character found in %s.\n", char_txt);
-        char_log ("mmo_char_init: No character found in %s.\n",
-                  char_txt);
+        char_log ("mmo_char_init: No character found in %s.\n", char_txt);
     }
     else if (char_num == 1)
     {
-        printf ("mmo_char_init: 1 character read in %s.\n", char_txt);
         char_log ("mmo_char_init: 1 character read in %s.\n", char_txt);
     }
     else
     {
-        printf ("mmo_char_init: %d characters read in %s.\n", char_num,
-                char_txt);
         char_log ("mmo_char_init: %d characters read in %s.\n",
                   char_num, char_txt);
     }
 
-    char_log ("Id for the next created character: %d.\n",
-              char_id_count);
+    char_log ("Id for the next created character: %d.\n", char_id_count);
 
     return 0;
 }
@@ -705,8 +695,7 @@ void mmo_char_sync (void)
     fp = lock_fopen (char_txt, &lock);
     if (fp == NULL)
     {
-        printf ("WARNING: Server can't not save characters.\n");
-        char_log ("WARNING: Server can't not save characters.\n");
+        char_log ("WARNING: Server can't save characters.\n");
     }
     else
     {
@@ -726,7 +715,6 @@ void mmo_char_sync (void)
         fp = lock_fopen (backup_txt, &lock);
         if (fp == NULL)
         {
-            printf ("WARNING: Server can't not create backup of characters file.\n");
             char_log ("WARNING: Server can't not create backup of characters file.\n");
             return;
         }
@@ -866,7 +854,7 @@ int make_new_char (int fd, unsigned char *dat)
     {
         if (dat[i] < 1 || dat[i] > 9)
         {
-            char_log ("Make new char error (invalid stat value: not between 1 to 9): (connection #%d, account: %d) slot %d, name: %s, stats: %d+%d+%d+%d+%d+%d=%d, hair: %d, hair color: %d\n",
+            char_log ("Make new char error (invalid stat value: not between 1 to 9): (connection #%d, account: %d) slot %hhu, name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu\n",
                  fd, sd->account_id, dat[30], dat, dat[24], dat[25],
                  dat[26], dat[27], dat[28], dat[29],
                  dat[24] + dat[25] + dat[26] + dat[27] + dat[28] + dat[29],
@@ -2161,8 +2149,6 @@ void parse_tologin (int fd)
                         //printf("GM account: %d -> level %d\n", gm_account[GM_num].account_id, gm_account[GM_num].level);
                         GM_num++;
                     }
-                    printf ("From login-server: receiving of %d GM accounts information.\n",
-                            GM_num);
                     char_log ("From login-server: receiving of %d GM accounts information.\n",
                               GM_num);
                     create_online_files (); // update online players files (perhaps some online players change of GM level)
@@ -2220,8 +2206,6 @@ void map_anti_freeze_system (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED,
             //printf("map_anti_freeze_system: server #%d, flag: %d.\n", i, server_freezeflag[i]);
             if (server_freezeflag[i]-- < 1)
             {                   // Map-server anti-freeze system. Counter. 5 ok, 4...0 freezed
-                printf ("Map-server anti-freeze system: char-server #%d is freezed -> disconnection.\n",
-                        i);
                 char_log ("Map-server anti-freeze system: char-server #%d is freezed -> disconnection.\n",
                           i);
                 session[server_fd[i]]->eof = 1;
@@ -2285,12 +2269,10 @@ void parse_frommap (int fd)
 //              printf("set map %d.%d : %s\n", id, j, server[id].map[j]);
                     j++;
                 }
+                // in a block for switch jump rules
                 {
                     unsigned char *p = (unsigned char *) &server[id].ip;
-                    printf ("Map-Server %d connected: %d maps, from IP %d.%d.%d.%d port %d.\n",
-                            id, j, p[0], p[1], p[2], p[3], server[id].port);
-                    printf ("Map-server %d loading complete.\n", id);
-                    char_log ("Map-Server %d connected: %d maps, from IP %d.%d.%d.%d port %d. Map-server %d loading complete.\n",
+                    char_log ("Map-Server %d connected: %d maps, from IP %hhu.%hhu.%hhu.%hhuport %d.\n Map-server %d loading complete.\n",
                               id, j, p[0], p[1], p[2], p[3],
                               server[id].port, id);
                 }
@@ -2303,9 +2285,7 @@ void parse_frommap (int fd)
                     int  x;
                     if (j == 0)
                     {
-                        printf ("WARNING: Map-Server %d have NO map.\n", id);
-                        char_log ("WARNING: Map-Server %d have NO map.\n",
-                                  id);
+                        char_log ("WARNING: Map-Server %d has NO maps.\n", id);
                         // Transmitting maps information to the other map-servers
                     }
                     else
@@ -3736,10 +3716,6 @@ int char_config_read (const char *cfgName)
             strcpy (unknown_char_name, w2);
             unknown_char_name[24] = 0;
         }
-        else if (strcasecmp (w1, "char_log_filename") == 0)
-        {
-            strcpy (char_log_filename, w2);
-        }
         else if (strcasecmp (w1, "name_ignoring_case") == 0)
         {
             name_ignoring_case = config_switch (w2);
@@ -3824,20 +3800,33 @@ void term_func (void)
     char_log ("----End of char-server (normal end with closing of all files).\n");
 }
 
+FILE *create_or_fake_or_die (const char *filename)
+{
+    FILE *out = fopen_ (filename, "a");
+    if (out)
+        return out;
+    fprintf (stderr, "Unable to open file: %s: %m\n", filename);
+    out = create_null_stream ("w");
+    if (out)
+        return out;
+    fprintf (stderr, "Could not create a fake log: %m\n");
+    abort ();
+}
+
 void do_init (int argc, char **argv)
 {
-    int  i;
+    logfp = create_or_fake_or_die (char_log_filename);
+    unk_packets = create_or_fake_or_die (char_log_unknown_packets_filename);
 
-    // a newline in the log...
     char_log ("\nThe char-server starting...\n");
 
-    char_config_read ((argc < 2) ? CHAR_CONF_NAME : argv[1]);
-    lan_config_read ((argc > 1) ? argv[1] : LOGIN_LAN_CONF_NAME);
+    char_config_read ((argc > 1) ? argv[1] : CHAR_CONF_NAME);
+    lan_config_read ((argc > 2) ? argv[2] : LOGIN_LAN_CONF_NAME);
 
     login_ip = inet_addr (login_ip_str);
     char_ip = inet_addr (char_ip_str);
 
-    for (i = 0; i < MAX_MAP_SERVERS; i++)
+    for (int i = 0; i < MAX_MAP_SERVERS; i++)
     {
         memset (&server[i], 0, sizeof (struct mmo_map_server));
         server_fd[i] = -1;
@@ -3859,22 +3848,18 @@ void do_init (int argc, char **argv)
 //    add_timer_func_list (send_users_tologin, "send_users_tologin");
 //    add_timer_func_list (mmo_char_sync_timer, "mmo_char_sync_timer");
 
-    i = add_timer_interval (gettick () + 1000, check_connect_login_server, 0,
-                            0, 10 * 1000);
-    i = add_timer_interval (gettick () + 1000, send_users_tologin, 0, 0,
-                            5 * 1000);
-    i = add_timer_interval (gettick () + autosave_interval,
-                            mmo_char_sync_timer, 0, 0, autosave_interval);
+    add_timer_interval (gettick () + 1000, check_connect_login_server, 0,
+                        0, 10 * 1000);
+    add_timer_interval (gettick () + 1000, send_users_tologin, 0, 0,
+                        5 * 1000);
+    add_timer_interval (gettick () + autosave_interval,
+                        mmo_char_sync_timer, 0, 0, autosave_interval);
 
     if (anti_freeze_enable > 0)
     {
-//        add_timer_func_list (map_anti_freeze_system, "map_anti_freeze_system");
-        i = add_timer_interval (gettick () + 1000, map_anti_freeze_system, 0, 0, ANTI_FREEZE_INTERVAL * 1000);  // checks every X seconds user specifies
+        add_timer_interval (gettick () + 1000, map_anti_freeze_system, 0, 0, ANTI_FREEZE_INTERVAL * 1000);  // checks every X seconds user specifies
     }
 
     char_log ("The char-server is ready (Server is listening on the port %d).\n",
               char_port);
-
-    printf ("The char-server is \033[1;32mready\033[0m (Server is listening on the port %d).\n\n",
-            char_port);
 }

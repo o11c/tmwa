@@ -52,8 +52,8 @@ char main_server[20] = "";
 
 char account_filename[1024] = "save/account.txt";
 char GM_account_filename[1024] = "conf/GM_account.txt";
-char login_log_filename[1024] = "log/login.log";
-char login_log_unknown_packets_filename[1024] = "log/login_unknown_packets.log";
+const char login_log_filename[] = "log/login.log";
+const char login_log_unknown_packets_filename[] = "log/login_unknown_packets.log";
 
 /// TODO: instead of using this manually, create a stamp_time() function
 // maybe also a stamp_time_milli()
@@ -3438,16 +3438,6 @@ void login_config_read (const char *cfgName)
         if (strcasecmp (w1, "gm_account_filename_check_timer") == 0)
         {
             gm_account_filename_check_timer = atoi (w2);
-            continue;
-        }
-        if (strcasecmp (w1, "login_log_filename") == 0)
-        {
-            STRZCPY (login_log_filename, w2);
-            continue;
-        }
-        if (strcasecmp (w1, "login_log_unknown_packets_filename") == 0)
-        {
-            STRZCPY (login_log_unknown_packets_filename, w2);
             continue;
         }
         if (strcasecmp (w1, "save_unknown_packets") == 0)

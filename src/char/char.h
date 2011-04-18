@@ -29,7 +29,7 @@ const char *search_character_name (int index);
 void mapif_sendallwos (int fd, const uint8_t *buf, unsigned int len);
 void mapif_send (int fd, const uint8_t *buf, unsigned int len);
 
-int  char_log (const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+void char_log (const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 extern int autosave_interval;
 

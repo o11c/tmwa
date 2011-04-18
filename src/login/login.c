@@ -211,10 +211,6 @@ void login_log (const char *fmt, ...) __attribute__((format(printf, 1, 2)));
     login_log(fmt ,##__VA_ARGS__)
 void login_log (const char *fmt, ...)
 {
-    if (!logfp)
-        logfp = fopen_ (login_log_filename, "a");
-    if (!logfp)
-        return;
     if (!fmt || !fmt[0])
     {
         fputc ('\n', logfp);
@@ -1521,9 +1517,6 @@ void parse_fromchar (int fd)
                 break;
 
             default:
-                if (!unk_packets)
-                    unk_packets = fopen_ (login_log_unknown_packets_filename, "a");
-                if (unk_packets)
                 {
                     struct timeval tv;
                     gettimeofday (&tv, NULL);
@@ -2701,9 +2694,6 @@ void parse_admin (int fd)
                 break;
 
             default:
-                if (!unk_packets)
-                    unk_packets = fopen_ (login_log_unknown_packets_filename, "a");
-                if (unk_packets)
                 {
                     struct timeval tv;
                     gettimeofday (&tv, NULL);
@@ -3889,11 +3879,28 @@ void do_final (void)
     login_log ("----End of login-server (normal end with closing of all files).\n");
 }
 
+FILE *create_or_fake_or_die (const char *filename)
+{
+    FILE *out = fopen_ (filename, "a");
+    if (out)
+        return out;
+    fprintf (stderr, "Unable to open file: %s: %m\n", filename);
+    out = create_null_stream ("w");
+    if (out)
+        return out;
+    fprintf (stderr, "Could not create a fake log: %m\n");
+    abort ();
+}
+
 /// Main function of login-server (read conf and set up parsers)
 void do_init (int argc, char **argv)
 {
+    // I am unconvinced of the usefulness of reading the config before
+    // starting the log (i.e. being able to change the log name)
     // read login-server configuration
     login_config_read ((argc > 1) ? argv[1] : LOGIN_CONF_NAME);
+    logfp = create_or_fake_or_die (login_log_filename);
+    unk_packets = create_or_fake_or_die (login_log_unknown_packets_filename);
     // not in login_config_read, because we can use 'import' option, and display same message twice or more
     // TODO - shouldn't the warnings display anytime an invalid option is set?
     display_conf_warnings ();
@@ -3914,7 +3921,7 @@ void do_init (int argc, char **argv)
     set_defaultparse (parse_login);
     login_fd = make_listen_port (login_port);
 
-    // Trigger auth sync every 5 minutes
+    // save account information every 5 minutes
     add_timer_interval (gettick () + 300000, check_auth_sync, 0, 0, 300000);
 
     if (anti_freeze_enable)
@@ -3922,6 +3929,7 @@ void do_init (int argc, char **argv)
                             0, ANTI_FREEZE_INTERVAL * 1000);
 
     // add timer to check GM accounts file modification
+    // this shouldn't be needed
     int j = gm_account_filename_check_timer;
     if (j)
         add_timer_interval (gettick () + j * 1000, check_GM_file, 0, 0, j * 1000);

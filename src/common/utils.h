@@ -38,13 +38,7 @@ static inline void ip_to_str (in_addr_t ip, char out[16])
 
 /// Like strncpy but ensures a NUL-terminator
 // return true if there already was one, false if we had to add it
-static inline bool strzcpy (char *dst, const char *src, size_t n)
-{
-    if (!n) abort();
-    strncpy (dst, src, n);
-    dst[n-1] = '\0';
-    return strnlen (src, n) != n;
-}
+bool strzcpy (char *dst, const char *src, size_t n);
 
 int _ptr_used_(void) __attribute__((error("Pointer used in place of array") ));
 #define ARRAY_SIZEOF(arr) ( \

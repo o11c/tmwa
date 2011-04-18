@@ -41,6 +41,17 @@ void hexdump (FILE *fp, uint8_t *data, size_t len)
     }
 }
 
+// This would be in the header so it could be inlined, but
+// on old systems it requires _GNU_SOURCE and
+// I don't want to apply that globally
+bool strzcpy (char *dst, const char *src, size_t n)
+{
+    if (!n) abort();
+    strncpy (dst, src, n);
+    dst[n-1] = '\0';
+    return strnlen (src, n) != n;
+}
+
 /// Make a string safe by replacing control characters with _
 void remove_control_chars (char *str)
 {

@@ -68,4 +68,7 @@ bool e_mail_check (const char *email);
 // Then falls back to atoi (which means non-integers are parsed as 0)
 // TODO replace by config_parse_bool and config_parse_int?
 int config_switch (const char *str);
+
+/// Create a stream that discards all output and/or returns EOF for all input
+FILE *create_null_stream(const char *mode);
 #endif //UTILS_H

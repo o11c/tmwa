@@ -40,7 +40,7 @@ PROGS = login-server char-server map-server ladmin eathena-monitor webserver
 all: ${PROGS}
 clean:
 	rm -rf ${PROGS} ${BUILD_DIR}/
-common: ${BUILD_DIR}/common/core.o ${BUILD_DIR}/common/db.o ${BUILD_DIR}/common/grfio.o ${BUILD_DIR}/common/lock.o ${BUILD_DIR}/common/md5calc.o ${BUILD_DIR}/common/mt_rand.o ${BUILD_DIR}/common/nullpo.o ${BUILD_DIR}/common/socket.o ${BUILD_DIR}/common/timer.o
+common: ${BUILD_DIR}/common/core.o ${BUILD_DIR}/common/db.o ${BUILD_DIR}/common/grfio.o ${BUILD_DIR}/common/lock.o ${BUILD_DIR}/common/md5calc.o ${BUILD_DIR}/common/mt_rand.o ${BUILD_DIR}/common/nullpo.o ${BUILD_DIR}/common/socket.o ${BUILD_DIR}/common/timer.o ${BUILD_DIR}/common/utils.o
 
 # Top level programs
 login-server: ${BUILD_DIR}/login/login

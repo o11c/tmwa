@@ -1,3 +1,6 @@
+// for fopencookie()
+// we don't want/need to enable this globally
+#define _GNU_SOURCE
 #include "utils.h"
 static const char hex[] = "0123456789abcdef";
 
@@ -107,4 +110,12 @@ int config_switch (const char *str)
         return 0;
 
     return atoi (str);
+}
+
+// this is lower overhead than opening /dev/null
+// and much simpler to code than if we had to check for NULL FILE *
+FILE *create_null_stream(const char *mode)
+{
+    cookie_io_functions_t null_stream = {NULL, NULL, NULL, NULL};
+    return fopencookie (NULL, mode, null_stream);
 }

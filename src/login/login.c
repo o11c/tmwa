@@ -2985,7 +2985,6 @@ void x791a (int fd)
     for (int i = 0; i < ld->md5keylen; i++)
         ld->md5key[i] = MPRAND(1, 255);
 
-    RFIFOSKIP (fd, 2);
     WFIFOW (fd, 0) = 0x01dc;
     WFIFOW (fd, 2) = 4 + ld->md5keylen;
     memcpy (WFIFOP (fd, 4), ld->md5key, ld->md5keylen);

@@ -70,7 +70,7 @@ ${BUILD_DIR}/tool/marriage-info: ${BUILD_DIR}/tool/marriage-info.o ${BUILD_DIR}/
 ${BUILD_DIR}/webserver/main: ${BUILD_DIR}/webserver/main.o ${BUILD_DIR}/webserver/parse.o ${BUILD_DIR}/webserver/generate.o ${BUILD_DIR}/webserver/htmlstyle.o ${BUILD_DIR}/webserver/logs.o ${BUILD_DIR}/webserver/pages/about.o ${BUILD_DIR}/webserver/pages/sample.o ${BUILD_DIR}/webserver/pages/notdone.o
 
 deps.make:
-	for F in `find src/ -name '*.c'`; do \
+	for F in `find src/ -name '*.c' | sort`; do \
 	    gcc -m32 -std=c99 -MM "$$F" -MT "$$(sed 's/src/$${BUILD_DIR}/;s/\.c/.o/' <<< "$$F")"; \
 	done > deps.make
 

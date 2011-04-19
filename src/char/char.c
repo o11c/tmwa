@@ -48,39 +48,52 @@ in_addr_t char_ip;
 in_port_t char_port = 6121;
 int  char_maintenance;
 int  char_new;
-int  email_creation = 0;        // disabled by default
+// disabled by default
+bool email_creation = 0;
 char char_txt[1024];
 char unknown_char_name[1024] = "Unknown";
 const char char_log_filename[] = "log/char.log";
 const char char_log_unknown_packets_filename[] = "log/char_unknown_packets.log";
 //Added for lan support
 char lan_map_ip[128];
-int  subneti[4];
-int  subnetmaski[4];
-int  name_ignoring_case = 0;    // Allow or not identical name for characters but with a different case by [Yor]
-int  char_name_option = 0;      // Option to know which letters/symbols are authorised in the name of a character (0: all, 1: only those in char_name_letters, 2: all EXCEPT those in char_name_letters) by [Yor]
-char char_name_letters[1024] = "";  // list of letters/symbols authorised (or not) in a character name. by [Yor]
+uint8_t subneti[4];
+uint8_t subnetmaski[4];
+/// Allow characters with same name but different case?
+// This option is misleading, true means case-sensitive, false means insensitive
+bool name_ignoring_case = 0;
+// Option to know which letters/symbols are authorised in the name of a character (0: all, 1: only those in char_name_letters, 2: all EXCEPT those in char_name_letters) by [Yor]
+enum NameLetterControl
+{
+    ALL, ONLY, EXCLUDE
+} char_name_option = ALL;
+// list of letters/symbols authorised (or not) in a character name. by [Yor]
+char char_name_letters[255] = "";
 
 struct char_session_data
 {
-    int  account_id, login_id1, login_id2, sex;
+    account_t account_id;
+    uint32_t login_id1, login_id2;
+    enum gender sex;
     unsigned short packet_tmw_version;
-    int  found_char[9];
-    char email[40];             // e-mail (default: a@a.com) by [Yor]
-    time_t connect_until_time;  // # of seconds 1/1/1970 (timestamp): Validity limit of the account (0 = unlimited)
+    character_t found_char[MAX_CHARS_PER_ACCOUNT];
+    char email[40];
+    time_t connect_until_time;
 };
 
 #define AUTH_FIFO_SIZE 256
 struct
 {
-    int  account_id, char_id, login_id1, login_id2, ip, char_pos, delflag,
-        sex;
+    account_t account_id;
+    character_t char_id;
+    uint32_t login_id1, login_id2;
+    in_addr_t ip;
+    int char_pos;
+    int delflag;
+    enum gender sex;
     unsigned short packet_tmw_version;
     time_t connect_until_time;  // # of seconds 1/1/1970 (timestamp): Validity limit of the account (0 = unlimited)
 } auth_fifo[AUTH_FIFO_SIZE];
-int  auth_fifo_pos = 0;
-
-int  check_ip_flag = 1;         // It's to check IP of a player between char-server and other servers (part of anti-hacking system)
+unsigned auth_fifo_pos = 0;
 
 int  char_id_count = 150000;
 struct mmo_charstatus *char_dat;
@@ -100,15 +113,23 @@ int  GM_num = 0;
 // online players by [Yor]
 char online_txt_filename[1024] = "online.txt";
 char online_html_filename[1024] = "online.html";
-int  online_sorting_option = 0; // sorting option to display online players in online files
-int  online_display_option = 1; // display options: to know which columns must be displayed
-int  online_refresh_html = 20;  // refresh time (in sec) of the html file in the explorer
-int  online_gm_display_min_level = 20;  // minimum GM level to display 'GM' when we want to display it
+/// How to sort players
+int  online_sorting_option = 0;
+/// Which columns to display
+int  online_display_option = 1;
+/// Requested browser refresh time
+int  online_refresh_html = 20;
+/// Display 'GM' only if GM level is at least this
+// excludes bots and possibly devs
+gm_level_t online_gm_display_min_level = 20;
 
-int *online_chars;              // same size of char_dat, and id value of current server (or -1)
-time_t update_online;           // to update online files when we receiving information from a server (not less than 8 seconds)
+// same size of char_dat, and id value of current server (or -1)
+int *online_chars;
+/// When next to update online files when we receiving information from a server (not less than 8 seconds)
+time_t update_online;
 
-pid_t pid = 0;                  // For forked DB writes
+/// For forked DB writes
+pid_t pid = 0;
 
 static FILE *logfp;
 static FILE *unk_packets;
@@ -132,15 +153,10 @@ void char_log (const char *fmt, ...)
     va_end (ap);
 }
 
-//----------------------------------------------------------------------
-// Determine if an account (id) is a GM account
-// and returns its level (or 0 if it isn't a GM account or if not found)
-//----------------------------------------------------------------------
-int isGM (int account_id)
+///Return level of a GM (0 if not a GM)
+gm_level_t isGM (int account_id)
 {
-    int  i;
-
-    for (i = 0; i < GM_num; i++)
+    for (int i = 0; i < GM_num; i++)
         if (gm_account[i].account_id == account_id)
             return gm_account[i].level;
     return 0;
@@ -154,123 +170,109 @@ int isGM (int account_id)
 //   and returns index if only 1 character is found
 //   and similar to the searched name.
 //----------------------------------------------
-int search_character_index (const char *character_name)
+struct mmo_charstatus *character_by_name (const char *character_name)
 {
-    int  i, quantity, idx;
-
-    quantity = 0;
-    idx = -1;
-    for (i = 0; i < char_num; i++)
+    int quantity = 0;
+    struct mmo_charstatus *loose = NULL;
+    for (int i = 0; i < char_num; i++)
     {
-        // Without case sensitive check (increase the number of similar character names found)
+        if (strcmp (char_dat[i].name, character_name) == 0)
+            return &char_dat[i];
         if (strcasecmp (char_dat[i].name, character_name) == 0)
         {
-            // Strict comparison (if found, we finish the function immediatly with correct value)
-            if (strcmp (char_dat[i].name, character_name) == 0)
-                return i;
             quantity++;
-            idx = i;
+            loose = &char_dat[i];
         }
     }
-    // Here, the exact character name is not found
-    // We return the found index of a similar account ONLY if there is 1 similar character
-    if (quantity == 1)
-        return idx;
-
-    // Exact character name is not found and 0 or more than 1 similar characters have been found ==> we say not found
-    return -1;
+    return quantity == 1 ? loose : NULL;
 }
 
-//-------------------------------------
-// Return character name with the index
-//-------------------------------------
-const char *search_character_name (int idx)
+/// Return name of character by index, or "Unknown"
+const char *get_character_name (int idx)
 {
-
     if (idx >= 0 && idx < char_num)
         return char_dat[idx].name;
-
     return unknown_char_name;
 }
 
-//-------------------------------------------------
-// Function to create the character line (for save)
-//-------------------------------------------------
-int mmo_char_tostr (char *str, struct mmo_charstatus *p)
+/// Write a line of character data
+void mmo_char_tofile (FILE *fp, struct mmo_charstatus *p)
 {
-    int  i;
-    char *str_p = str;
-
-    // on multi-map server, sometimes it's posssible that last_point become void. (reason???) We check that to not lost character at restart.
+    // on multi-map server, sometimes it's posssible that last_point become void. (reason???)
+    // We check that to not lost character at restart.
     if (p->last_point.map[0] == '\0')
-    {
-        memcpy (p->last_point.map, "prontera.gat", 16);
-        p->last_point.x = 273;
-        p->last_point.y = 354;
-    }
+            p->last_point = start_point;
 
-    str_p += sprintf (str_p, "%d\t%d,%d\t%s\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d\t%d,%d,%d,%d,%d,%d\t%d,%d" "\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d\t%d,%d,%d,%d,%d" "\t%s,%d,%d\t%s,%d,%d,%d\t", p->char_id, p->account_id, p->char_num, p->name,  //
-                      p->pc_class, p->base_level, p->job_level, p->base_exp, p->job_exp, p->zeny, p->hp, p->max_hp, p->sp, p->max_sp, p->str, p->agi, p->vit, p->int_, p->dex, p->luk, p->status_point, p->skill_point, p->option, p->karma, p->manner,    //
-                      p->party_id, p->guild_id, 0, p->hair, p->hair_color, p->clothes_color, p->weapon, p->shield, p->head_top, p->head_mid, p->head_bottom, p->last_point.map, p->last_point.x, p->last_point.y,   //
-                      p->save_point.map, p->save_point.x, p->save_point.y,
-                      p->partner_id);
-    for (i = 0; i < 10; i++)
+    fprintf (fp,
+             "%d\t"              "%d,%d\t"
+             "%s\t"             "%d,%d,%d\t"
+             "%d,%d,%d\t"       "%d,%d,%d,%d\t"
+             "%d,%d,%d,%d,%d,%d\t"
+             "%d,%d\t"          "%d,%d,%d\t"
+             "%d,%d,%d\t"       "%d,%d,%d\t"
+             "%d,%d,%d,%d,%d\t"
+             "%s,%d,%d\t"
+             "%s,%d,%d,%d\t",
+             p->char_id,        p->account_id, p->char_num,
+             p->name,           p->pc_class, p->base_level, p->job_level,
+             p->base_exp, p->job_exp, p->zeny,  p->hp, p->max_hp, p->sp, p->max_sp,
+             p->str, p->agi, p->vit, p->int_, p->dex, p->luk,
+             p->status_point, p->skill_point,   p->option, p->karma, p->manner,
+             p->party_id, p->guild_id, 0,       p->hair, p->hair_color, p->clothes_color,
+             p->weapon, p->shield, p->head_top, p->head_mid, p->head_bottom,
+             p->last_point.map, p->last_point.x, p->last_point.y,
+             p->save_point.map, p->save_point.x, p->save_point.y, p->partner_id);
+    for (int i = 0; i < 10; i++)
         if (p->memo_point[i].map[0])
         {
-            str_p +=
-                sprintf (str_p, "%s,%d,%d", p->memo_point[i].map,
-                         p->memo_point[i].x, p->memo_point[i].y);
+            fprintf (fp, "%s,%d,%d ", p->memo_point[i].map,
+                     p->memo_point[i].x, p->memo_point[i].y);
         }
-    *(str_p++) = '\t';
+    fprintf (fp, "\t");
 
-    for (i = 0; i < MAX_INVENTORY; i++)
+    for (int i = 0; i < MAX_INVENTORY; i++)
         if (p->inventory[i].nameid)
         {
-            str_p += sprintf (str_p, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d ",
-                              p->inventory[i].id, p->inventory[i].nameid,
-                              p->inventory[i].amount, p->inventory[i].equip,
-                              p->inventory[i].identify,
-                              p->inventory[i].refine,
-                              p->inventory[i].attribute,
-                              p->inventory[i].card[0],
-                              p->inventory[i].card[1],
-                              p->inventory[i].card[2],
-                              p->inventory[i].card[3],
-                              p->inventory[i].broken);
-        }
-    *(str_p++) = '\t';
+            fprintf (fp, "%d,%d,%d,%d," "%d,%d,%d," "%d,%d,%d,%d,%d ",
+                     p->inventory[i].id, p->inventory[i].nameid,
+                     p->inventory[i].amount, p->inventory[i].equip,
 
-    for (i = 0; i < MAX_CART; i++)
+                     p->inventory[i].identify, p->inventory[i].refine,
+                     p->inventory[i].attribute,
+
+                     p->inventory[i].card[0], p->inventory[i].card[1],
+                     p->inventory[i].card[2], p->inventory[i].card[3],
+                     p->inventory[i].broken);
+        }
+    fprintf (fp, "\t");
+
+    for (int i = 0; i < MAX_CART; i++)
         if (p->cart[i].nameid)
         {
-            str_p += sprintf (str_p, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d ",
-                              p->cart[i].id, p->cart[i].nameid,
-                              p->cart[i].amount, p->cart[i].equip,
-                              p->cart[i].identify, p->cart[i].refine,
-                              p->cart[i].attribute, p->cart[i].card[0],
-                              p->cart[i].card[1], p->cart[i].card[2],
-                              p->cart[i].card[3], p->cart[i].broken);
-        }
-    *(str_p++) = '\t';
+            fprintf (fp, "%d,%d,%d,%d," "%d,%d,%d," "%d,%d,%d,%d,%d ",
+                     p->cart[i].id, p->cart[i].nameid,
+                     p->cart[i].amount, p->cart[i].equip,
 
-    for (i = 0; i < MAX_SKILL; i++)
+                     p->cart[i].identify, p->cart[i].refine,
+                     p->cart[i].attribute,
+
+                     p->cart[i].card[0], p->cart[i].card[1],
+                     p->cart[i].card[2], p->cart[i].card[3], p->cart[i].broken);
+        }
+    fprintf (fp, "\t");
+
+    for (int i = 0; i < MAX_SKILL; i++)
         if (p->skill[i].id)
         {
-            str_p +=
-                sprintf (str_p, "%d,%d ", p->skill[i].id,
-                         p->skill[i].lv | (p->skill[i].flags << 16));
+            fprintf (fp, "%d,%d ", p->skill[i].id,
+                     p->skill[i].lv | (p->skill[i].flags << 16));
         }
-    *(str_p++) = '\t';
+    fprintf (fp, "\t");
 
-    for (i = 0; i < p->global_reg_num; i++)
+    for (int i = 0; i < p->global_reg_num; i++)
         if (p->global_reg[i].str[0])
-            str_p +=
-                sprintf (str_p, "%s,%d ", p->global_reg[i].str,
-                         p->global_reg[i].value);
-    *(str_p++) = '\t';
-
-    *str_p = '\0';
-    return 0;
+            fprintf (fp, "%s,%d ", p->global_reg[i].str, p->global_reg[i].value);
+    fprintf (fp, "\t\n");
 }
 
 //-------------------------------------------------------------------------
@@ -654,7 +656,6 @@ int mmo_char_init (void)
 //---------------------------------------------------------
 void mmo_char_sync (void)
 {
-    char line[65536];
     int  i, j, k;
     int  lock;
     FILE *fp;
@@ -688,11 +689,7 @@ void mmo_char_sync (void)
     else
     {
         for (i = 0; i < char_num; i++)
-        {
-            // create only once the line, and save it in the 2 files (it's speeder than repeat twice the loop and create twice the line)
-            mmo_char_tostr (line, &char_dat[id[i]]);    // use of sorted index
-            fprintf (fp, "%s\n", line);
-        }
+            mmo_char_tofile (fp, &char_dat[id[i]]);
         fprintf (fp, "%d\t%%newid%%\n", char_id_count);
         lock_fclose (fp, char_txt, &lock);
     }
@@ -1255,11 +1252,11 @@ int mmo_char_send006b (int fd, struct char_session_data *sd)
         {
             sd->found_char[found_num] = i;
             found_num++;
-            if (found_num == 9)
+            if (found_num == MAX_CHARS_PER_ACCOUNT)
                 break;
         }
     }
-    for (i = found_num; i < 9; i++)
+    for (i = found_num; i < MAX_CHARS_PER_ACCOUNT; i++)
         sd->found_char[i] = -1;
 
     memset (WFIFOP (fd, 0), 0, offset + found_num * 106);
@@ -1818,7 +1815,7 @@ void parse_tologin (int fd)
                                         && sd2->account_id ==
                                         char_dat[char_num - 1].account_id)
                                     {
-                                        for (k = 0; k < 9; k++)
+                                        for (k = 0; k < MAX_CHARS_PER_ACCOUNT; k++)
                                         {
                                             if (sd2->found_char[k] ==
                                                 char_num - 1)
@@ -2007,7 +2004,7 @@ void parse_frommap (int fd)
                 // in a block for switch jump rules
                 {
                     unsigned char *p = (unsigned char *) &server[id].ip;
-                    char_log ("Map-Server %d connected: %d maps, from IP %hhu.%hhu.%hhu.%hhuport %d.\n Map-server %d loading complete.\n",
+                    char_log ("Map-Server %d connected: %d maps, from IP %hhu.%hhu.%hhu.%hhu port %d.\n Map-server %d loading complete.\n",
                               id, j, p[0], p[1], p[2], p[3],
                               server[id].port, id);
                 }
@@ -2070,7 +2067,7 @@ void parse_frommap (int fd)
                         // here, it's the only area where it's possible that we doesn't know login_id2 (map-server asks just after 0x72 packet, that doesn't given the value)
                         (auth_fifo[i].login_id2 == RFIFOL (fd, 14) || RFIFOL (fd, 14) == 0) &&  // relate to the versions higher than 18
 #endif
-                        (!check_ip_flag || auth_fifo[i].ip == RFIFOL (fd, 18))
+                        (auth_fifo[i].ip == RFIFOL (fd, 18))
                         && !auth_fifo[i].delflag)
                     {
                         auth_fifo[i].delflag = 1;
@@ -2190,7 +2187,7 @@ void parse_frommap (int fd)
                 auth_fifo[auth_fifo_pos].login_id1 = RFIFOL (fd, 6);
                 auth_fifo[auth_fifo_pos].login_id2 = RFIFOL (fd, 10);
                 auth_fifo[auth_fifo_pos].delflag = 0;
-                auth_fifo[auth_fifo_pos].sex = RFIFOB (fd, 44);
+                auth_fifo[auth_fifo_pos].sex = (enum gender)RFIFOB (fd, 44);
                 auth_fifo[auth_fifo_pos].connect_until_time = 0;    // unlimited/unknown time by default (not display in map-server)
                 auth_fifo[auth_fifo_pos].ip = RFIFOL (fd, 45);
                 for (i = 0; i < char_num; i++)
@@ -2262,142 +2259,139 @@ void parse_frommap (int fd)
                 RFIFOSKIP (fd, 86);
                 break;
 
-                // Map server ask char-server about a character name to do some operations (all operations are transmitted to login-server)
+            /// Map server ask char-server about a character name to do some operations (all operations are transmitted to login-server)
             case 0x2b0e:
                 if (RFIFOREST (fd) < 44)
                     return;
+            {
+                char character_name[24];
+                account_t acc = RFIFOL (fd, 2);  // account_id of who ask (-1 if nobody)
+                memcpy (character_name, RFIFOP (fd, 6), 24);
+                character_name[sizeof (character_name) - 1] = '\0';
+                // prepare answer
+                WFIFOW (fd, 0) = 0x2b0f;    // answer
+                WFIFOL (fd, 2) = acc;   // who want do operation
+                WFIFOW (fd, 30) = RFIFOW (fd, 30);  // type of operation: 1-block, 2-ban, 3-unblock, 4-unban, 5-changesex
+                // search character
+                struct mmo_charstatus *character = character_by_name (character_name);
+                if (character)
                 {
-                    char character_name[24];
-                    int  acc = RFIFOL (fd, 2);  // account_id of who ask (-1 if nobody)
-                    memcpy (character_name, RFIFOP (fd, 6), 24);
-                    character_name[sizeof (character_name) - 1] = '\0';
-                    // prepare answer
-                    WFIFOW (fd, 0) = 0x2b0f;    // answer
-                    WFIFOL (fd, 2) = acc;   // who want do operation
-                    WFIFOW (fd, 30) = RFIFOW (fd, 30);  // type of operation: 1-block, 2-ban, 3-unblock, 4-unban, 5-changesex
-                    // search character
-                    i = search_character_index (character_name);
-                    if (i >= 0)
+                    memcpy (WFIFOP (fd, 6), character->name, 24); // put correct name if found
+                    // answer: 0-login-server request done, 1-player not found, 2-gm level too low, 3-login-server offline
+                    WFIFOW (fd, 32) = 0;
+                    switch (RFIFOW (fd, 30))
                     {
-                        memcpy (WFIFOP (fd, 6), search_character_name (i), 24); // put correct name if found
-                        WFIFOW (fd, 32) = 0;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                        switch (RFIFOW (fd, 30))
+                    case 1:    // block
+                        if (acc == -1 || isGM (acc) >= isGM (char_dat[i].account_id))
                         {
-                            case 1:    // block
-                                if (acc == -1
-                                    || isGM (acc) >=
-                                    isGM (char_dat[i].account_id))
-                                {
-                                    if (login_fd > 0)
-                                    {   // don't send request if no login-server
-                                        WFIFOW (login_fd, 0) = 0x2724;
-                                        WFIFOL (login_fd, 2) = char_dat[i].account_id;  // account value
-                                        WFIFOL (login_fd, 6) = 5;   // status of the account
-                                        WFIFOSET (login_fd, 10);
+                            if (login_fd >= 0)
+                            {   // don't send request if no login-server
+                                WFIFOW (login_fd, 0) = 0x2724;
+                                WFIFOL (login_fd, 2) = char_dat[i].account_id;  // account value
+                                WFIFOL (login_fd, 6) = 5;   // status of the account
+                                WFIFOSET (login_fd, 10);
 //                          printf("char : status -> login: account %d, status: %d \n", char_dat[i].account_id, 5);
-                                    }
-                                    else
-                                        WFIFOW (fd, 32) = 3;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                                }
-                                else
-                                    WFIFOW (fd, 32) = 2;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                                break;
-                            case 2:    // ban
-                                if (acc == -1
-                                    || isGM (acc) >=
-                                    isGM (char_dat[i].account_id))
-                                {
-                                    if (login_fd > 0)
-                                    {   // don't send request if no login-server
-                                        WFIFOW (login_fd, 0) = 0x2725;
-                                        WFIFOL (login_fd, 2) = char_dat[i].account_id;  // account value
-                                        WFIFOW (login_fd, 6) = RFIFOW (fd, 32); // year
-                                        WFIFOW (login_fd, 8) = RFIFOW (fd, 34); // month
-                                        WFIFOW (login_fd, 10) = RFIFOW (fd, 36);    // day
-                                        WFIFOW (login_fd, 12) = RFIFOW (fd, 38);    // hour
-                                        WFIFOW (login_fd, 14) = RFIFOW (fd, 40);    // minute
-                                        WFIFOW (login_fd, 16) = RFIFOW (fd, 42);    // second
-                                        WFIFOSET (login_fd, 18);
+                            }
+                            else
+                                WFIFOW (fd, 32) = 3;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
+                        }
+                        else
+                            WFIFOW (fd, 32) = 2;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
+                        break;
+                    case 2:    // ban
+                        if (acc == -1
+                            || isGM (acc) >=
+                            isGM (char_dat[i].account_id))
+                        {
+                            if (login_fd > 0)
+                            {   // don't send request if no login-server
+                                WFIFOW (login_fd, 0) = 0x2725;
+                                WFIFOL (login_fd, 2) = char_dat[i].account_id;  // account value
+                                WFIFOW (login_fd, 6) = RFIFOW (fd, 32); // year
+                                WFIFOW (login_fd, 8) = RFIFOW (fd, 34); // month
+                                WFIFOW (login_fd, 10) = RFIFOW (fd, 36);    // day
+                                WFIFOW (login_fd, 12) = RFIFOW (fd, 38);    // hour
+                                WFIFOW (login_fd, 14) = RFIFOW (fd, 40);    // minute
+                                WFIFOW (login_fd, 16) = RFIFOW (fd, 42);    // second
+                                WFIFOSET (login_fd, 18);
 //                          printf("char : status -> login: account %d, ban: %dy %dm %dd %dh %dmn %ds\n",
 //                                 char_dat[i].account_id, (short)RFIFOW(fd,32), (short)RFIFOW(fd,34), (short)RFIFOW(fd,36), (short)RFIFOW(fd,38), (short)RFIFOW(fd,40), (short)RFIFOW(fd,42));
-                                    }
-                                    else
-                                        WFIFOW (fd, 32) = 3;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                                }
-                                else
-                                    WFIFOW (fd, 32) = 2;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                                break;
-                            case 3:    // unblock
-                                if (acc == -1
-                                    || isGM (acc) >=
-                                    isGM (char_dat[i].account_id))
-                                {
-                                    if (login_fd > 0)
-                                    {   // don't send request if no login-server
-                                        WFIFOW (login_fd, 0) = 0x2724;
-                                        WFIFOL (login_fd, 2) = char_dat[i].account_id;  // account value
-                                        WFIFOL (login_fd, 6) = 0;   // status of the account
-                                        WFIFOSET (login_fd, 10);
-//                          printf("char : status -> login: account %d, status: %d \n", char_dat[i].account_id, 0);
-                                    }
-                                    else
-                                        WFIFOW (fd, 32) = 3;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                                }
-                                else
-                                    WFIFOW (fd, 32) = 2;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                                break;
-                            case 4:    // unban
-                                if (acc == -1
-                                    || isGM (acc) >=
-                                    isGM (char_dat[i].account_id))
-                                {
-                                    if (login_fd > 0)
-                                    {   // don't send request if no login-server
-                                        WFIFOW (login_fd, 0) = 0x272a;
-                                        WFIFOL (login_fd, 2) = char_dat[i].account_id;  // account value
-                                        WFIFOSET (login_fd, 6);
-//                          printf("char : status -> login: account %d, unban request\n", char_dat[i].account_id);
-                                    }
-                                    else
-                                        WFIFOW (fd, 32) = 3;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                                }
-                                else
-                                    WFIFOW (fd, 32) = 2;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                                break;
-                            case 5:    // changesex
-                                if (acc == -1
-                                    || isGM (acc) >=
-                                    isGM (char_dat[i].account_id))
-                                {
-                                    if (login_fd > 0)
-                                    {   // don't send request if no login-server
-                                        WFIFOW (login_fd, 0) = 0x2727;
-                                        WFIFOL (login_fd, 2) = char_dat[i].account_id;  // account value
-                                        WFIFOSET (login_fd, 6);
-//                          printf("char : status -> login: account %d, change sex request\n", char_dat[i].account_id);
-                                    }
-                                    else
-                                        WFIFOW (fd, 32) = 3;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                                }
-                                else
-                                    WFIFOW (fd, 32) = 2;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                                break;
+                            }
+                            else
+                                WFIFOW (fd, 32) = 3;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
                         }
+                        else
+                            WFIFOW (fd, 32) = 2;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
+                        break;
+                    case 3:    // unblock
+                        if (acc == -1
+                            || isGM (acc) >=
+                            isGM (char_dat[i].account_id))
+                        {
+                            if (login_fd > 0)
+                            {   // don't send request if no login-server
+                                WFIFOW (login_fd, 0) = 0x2724;
+                                WFIFOL (login_fd, 2) = char_dat[i].account_id;  // account value
+                                WFIFOL (login_fd, 6) = 0;   // status of the account
+                                WFIFOSET (login_fd, 10);
+//                          printf("char : status -> login: account %d, status: %d \n", char_dat[i].account_id, 0);
+                            }
+                            else
+                                WFIFOW (fd, 32) = 3;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
+                        }
+                        else
+                            WFIFOW (fd, 32) = 2;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
+                        break;
+                    case 4:    // unban
+                        if (acc == -1
+                            || isGM (acc) >=
+                            isGM (char_dat[i].account_id))
+                        {
+                            if (login_fd > 0)
+                            {   // don't send request if no login-server
+                                WFIFOW (login_fd, 0) = 0x272a;
+                                WFIFOL (login_fd, 2) = char_dat[i].account_id;  // account value
+                                WFIFOSET (login_fd, 6);
+//                          printf("char : status -> login: account %d, unban request\n", char_dat[i].account_id);
+                            }
+                            else
+                                WFIFOW (fd, 32) = 3;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
+                        }
+                        else
+                            WFIFOW (fd, 32) = 2;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
+                        break;
+                    case 5:    // changesex
+                        if (acc == -1 || isGM (acc) >= isGM (char_dat[i].account_id))
+                        {
+                            if (login_fd > 0)
+                            {   // don't send request if no login-server
+                                WFIFOW (login_fd, 0) = 0x2727;
+                                WFIFOL (login_fd, 2) = char_dat[i].account_id;  // account value
+                                WFIFOSET (login_fd, 6);
+//                          printf("char : status -> login: account %d, change sex request\n", char_dat[i].account_id);
+                            }
+                            else
+                                WFIFOW (fd, 32) = 3;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
+                        }
+                        else
+                            WFIFOW (fd, 32) = 2;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
+                        break;
                     }
-                    else
-                    {
-                        // character name not found
-                        memcpy (WFIFOP (fd, 6), character_name, 24);
-                        WFIFOW (fd, 32) = 1;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                    }
-                    // send answer if a player ask, not if the server ask
-                    if (acc != -1)
-                    {
-                        WFIFOSET (fd, 34);
-                    }
-                    RFIFOSKIP (fd, 44);
-                    break;
                 }
+                else
+                {
+                    // character name not found
+                    memcpy (WFIFOP (fd, 6), character_name, 24);
+                    WFIFOW (fd, 32) = 1;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
+                }
+                // send answer if a player ask, not if the server ask
+                if (acc != -1)
+                {
+                    WFIFOSET (fd, 34);
+                }
+            }
+                RFIFOSKIP (fd, 44);
+                break;
 
 //      case 0x2b0f: not more used (available for futur usage)
 
@@ -2592,7 +2586,7 @@ void parse_char (int fd)
                     sd->login_id1 = RFIFOL (fd, 6);
                     sd->login_id2 = RFIFOL (fd, 10);
                     sd->packet_tmw_version = RFIFOW (fd, 14);
-                    sd->sex = RFIFOB (fd, 16);
+                    sd->sex = (enum gender)RFIFOB (fd, 16);
                     // send back account_id
                     WFIFOL (fd, 0) = RFIFOL (fd, 2);
                     WFIFOSET (fd, 4);
@@ -2601,12 +2595,8 @@ void parse_char (int fd)
                     {
                         if (auth_fifo[i].account_id == sd->account_id &&
                             auth_fifo[i].login_id1 == sd->login_id1 &&
-#if CMP_AUTHFIFO_LOGIN2 != 0
                             auth_fifo[i].login_id2 == sd->login_id2 &&  // relate to the versions higher than 18
-#endif
-                            (!check_ip_flag
-                             || auth_fifo[i].ip ==
-                             session[fd]->client_addr.sin_addr.s_addr)
+                            auth_fifo[i].ip == session[fd]->client_addr.sin_addr.s_addr
                             && auth_fifo[i].delflag == 2)
                         {
                             auth_fifo[i].delflag = 1;
@@ -2684,12 +2674,12 @@ void parse_char (int fd)
                 else
                 {
                     int ch;
-                    for (ch = 0; ch < 9; ch++)
-                        if (sd->found_char[ch] >= 0
+                    for (ch = 0; ch < MAX_CHARS_PER_ACCOUNT; ch++)
+                        if (sd->found_char[ch] != -1
                             && char_dat[sd->found_char[ch]].char_num ==
                             RFIFOB (fd, 2))
                             break;
-                    if (ch != 9)
+                    if (ch != MAX_CHARS_PER_ACCOUNT)
                     {
                         char_log ("Character Selected, Account ID: %d, Character Slot: %d, Character Name: %s [%s]\n",
                                   sd->account_id, RFIFOB (fd, 2),
@@ -2871,7 +2861,7 @@ void parse_char (int fd)
 
                 WFIFOSET (fd, 108);
                 RFIFOSKIP (fd, 37);
-                for (int ch = 0; ch < 9; ch++)
+                for (int ch = 0; ch < MAX_CHARS_PER_ACCOUNT; ch++)
                 {
                     if (sd->found_char[ch] == -1)
                     {
@@ -2904,7 +2894,7 @@ void parse_char (int fd)
                     else
                     {
                         // we change the packet to set it like selection.
-                        for (int i = 0; i < 9; i++)
+                        for (int i = 0; i < MAX_CHARS_PER_ACCOUNT; i++)
                             if (char_dat[sd->found_char[i]].char_id ==
                                 RFIFOL (fd, 2))
                             {
@@ -2942,12 +2932,11 @@ void parse_char (int fd)
                      * WFIFOSET(fd, 3);
                      * // if mail is correct
                      * } else { */
-                    for (int i = 0; i < 9; i++)
+                    for (int i = 0; i < MAX_CHARS_PER_ACCOUNT; i++)
                     {
                         struct mmo_charstatus *cs = NULL;
-                        if (sd->found_char[i] >= 0
-                            && (cs =
-                                &char_dat[sd->found_char[i]])->char_id ==
+                        if (sd->found_char[i] != -1
+                            && (cs = &char_dat[sd->found_char[i]])->char_id ==
                             RFIFOL (fd, 2))
                         {
                             char_delete (cs);   // deletion process
@@ -2968,7 +2957,7 @@ void parse_char (int fd)
                                             && sd2->account_id ==
                                             char_dat[char_num - 1].account_id)
                                         {
-                                            for (int k = 0; k < 9; k++)
+                                            for (int k = 0; k < MAX_CHARS_PER_ACCOUNT; k++)
                                             {
                                                 if (sd2->found_char[k] ==
                                                     char_num - 1)
@@ -2987,7 +2976,7 @@ void parse_char (int fd)
                             }
 
                             char_num--;
-                            for (int ch = i; ch < 9 - 1; ch++)
+                            for (int ch = i; ch < MAX_CHARS_PER_ACCOUNT - 1; ch++)
                                 sd->found_char[ch] = sd->found_char[ch + 1];
                             sd->found_char[8] = -1;
                             WFIFOW (fd, 0) = 0x6f;
@@ -3235,10 +3224,10 @@ int lan_config_read (const char *lancfgName)
             }
             else
             {
-                sscanf (w2, "%d.%d.%d.%d", &subneti[0], &subneti[1],
+                sscanf (w2, "%hhu.%hhu.%hhu.%hhu", &subneti[0], &subneti[1],
                         &subneti[2], &subneti[3]);
             }
-            printf ("Sub-network of the map-server: %d.%d.%d.%d.\n",
+            printf ("Sub-network of the map-server: %hhu.%hhu.%hhu.%hhu.\n",
                     subneti[0], subneti[1], subneti[2], subneti[3]);
         }
         else if (strcasecmp (w1, "subnetmask") == 0)
@@ -3253,10 +3242,10 @@ int lan_config_read (const char *lancfgName)
             }
             else
             {
-                sscanf (w2, "%d.%d.%d.%d", &subnetmaski[0], &subnetmaski[1],
+                sscanf (w2, "%hhu.%hhu.%hhu.%hhu", &subnetmaski[0], &subnetmaski[1],
                         &subnetmaski[2], &subnetmaski[3]);
             }
-            printf ("Sub-network mask of the map-server: %d.%d.%d.%d.\n",
+            printf ("Sub-network mask of the map-server: %hhu.%hhu.%hhu.%hhu.\n",
                     subnetmaski[0], subnetmaski[1], subnetmaski[2],
                     subnetmaski[3]);
         }
@@ -3397,10 +3386,6 @@ int char_config_read (const char *cfgName)
             if (max_connect_user < 0)
                 max_connect_user = 0;   // unlimited online players
         }
-        else if (strcasecmp (w1, "check_ip_flag") == 0)
-        {
-            check_ip_flag = config_switch (w2);
-        }
         else if (strcasecmp (w1, "autosave_time") == 0)
         {
             autosave_interval = atoi (w2) * 1000;
@@ -3449,7 +3434,13 @@ int char_config_read (const char *cfgName)
         }
         else if (strcasecmp (w1, "char_name_option") == 0)
         {
-            char_name_option = atoi (w2);
+            switch (atoi (w2))
+            {
+            case 0: char_name_option = ALL;
+            case 1: char_name_option = ONLY;
+            case 2: char_name_option = EXCLUDE;
+            default: ;// TODO log something
+            }
         }
         else if (strcasecmp (w1, "char_name_letters") == 0)
         {

@@ -1,17 +1,22 @@
 #ifndef CHAR_H
 #define CHAR_H
-#include <arpa/inet.h>
+# include <arpa/inet.h>
 
-#include "../common/mmo.h"
-#include "../common/sanity.h"
+# include "../common/mmo.h"
+# include "../common/sanity.h"
 
-#define MAX_MAP_SERVERS 30
+# define CHAR_CONF_NAME "conf/char_athena.conf"
+# define LOGIN_LAN_CONF_NAME "conf/lan_support.conf"
 
-#define CHAR_CONF_NAME "conf/char_athena.conf"
+# define MAX_MAP_SERVERS 30
+# define DEFAULT_AUTOSAVE_INTERVAL 300*1000
+# define MAX_CHARS_PER_ACCOUNT 9
 
-#define LOGIN_LAN_CONF_NAME "conf/lan_support.conf"
-
-#define DEFAULT_AUTOSAVE_INTERVAL 300*1000
+enum gender
+{
+    MALE,
+    FEMALE
+};
 
 struct mmo_map_server
 {
@@ -22,10 +27,10 @@ struct mmo_map_server
     char map[MAX_MAP_PER_SERVER][16];
 };
 
-int  search_character_index (const char *character_name);
-const char *search_character_name (int index);
+struct mmo_charstatus *character_by_name (const char *character_name);
+const char *get_character_name (int index) __attribute__((deprecated));
 
-#define mapif_sendall(buf, len) mapif_sendallwos (-1, buf, len)
+# define mapif_sendall(buf, len) mapif_sendallwos (-1, buf, len)
 void mapif_sendallwos (int fd, const uint8_t *buf, unsigned int len);
 void mapif_send (int fd, const uint8_t *buf, unsigned int len);
 

@@ -60,6 +60,7 @@
 
 typedef uint32_t account_t;
 typedef uint8_t gm_level_t;
+typedef uint32_t character_t;
 
 struct item
 {
@@ -93,9 +94,9 @@ struct global_reg
 
 struct mmo_charstatus
 {
-    int  char_id;
-    int  account_id;
-    int  partner_id;
+    character_t char_id;
+    account_t account_id;
+    character_t partner_id;
 
     int  base_exp, job_exp, zeny;
 

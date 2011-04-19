@@ -443,7 +443,6 @@ int mapif_parse_WisRequest (int fd)
 {
     struct WisData *wd;
     static int wisid = 0;
-    int  index;
 
     if (RFIFOW (fd, 2) - 52 >= sizeof (wd->msg))
     {
@@ -457,7 +456,8 @@ int mapif_parse_WisRequest (int fd)
     }
 
     // search if character exists before to ask all map-servers
-    if ((index = search_character_index (RFIFOP (fd, 28))) == -1)
+    struct mmo_charstatus *character = character_by_name (RFIFOP (fd, 28));
+    if (!character)
     {
         unsigned char buf[27];
         WBUFW (buf, 0) = 0x3802;
@@ -470,14 +470,15 @@ int mapif_parse_WisRequest (int fd)
     {
         // to be sure of the correct name, rewrite it
         memset (RFIFOP (fd, 28), 0, 24);
-        strncpy (RFIFOP (fd, 28), search_character_name (index), 24);
+        strncpy (RFIFOP (fd, 28), character->name, 24);
         // if source is destination, don't ask other servers.
         if (strcmp (RFIFOP (fd, 4), RFIFOP (fd, 28)) == 0)
         {
             unsigned char buf[27];
             WBUFW (buf, 0) = 0x3802;
             memcpy (WBUFP (buf, 2), RFIFOP (fd, 4), 24);
-            WBUFB (buf, 26) = 1;    // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
+            // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
+            WBUFB (buf, 26) = 1;
             mapif_send (fd, buf, 27);
         }
         else

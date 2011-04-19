@@ -4,7 +4,9 @@
 #define MMO_H
 
 # include <time.h>
-# include "utils.h"              // LCCWIN32
+# include <arpa/inet.h>
+
+# include "utils.h"
 
 # define FIFOSIZE_SERVERLINK    256*1024
 
@@ -97,7 +99,7 @@ struct mmo_charstatus
 
     int  base_exp, job_exp, zeny;
 
-    short pc_class;
+    short pc_class __attribute__((deprecated));
     short status_point, skill_point;
     int  hp, max_hp, sp, max_sp;
     short option, karma, manner;
@@ -112,8 +114,8 @@ struct mmo_charstatus
     short str, agi, vit, int_, dex, luk;
     unsigned char char_num, sex;
 
-    unsigned long mapip;
-    unsigned int mapport;
+    in_addr_t mapip;
+    in_port_t mapport;
 
     struct point last_point, save_point, memo_point[10];
     struct item inventory[MAX_INVENTORY], cart[MAX_CART];

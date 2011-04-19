@@ -510,7 +510,7 @@ int mmo_char_fromstr (char *str, struct mmo_charstatus *p)
     for (i = 0;
          str[next] && str[next] != '\t' && str[next] != '\n'
          && str[next] != '\r'; i++)
-    {                           // global_reg実装以前のathena.txt互換のため一応'\n'チェック
+    {                           // global_reg実装以前のathena.txt 互換のため一応'\n'チェック
         if (sscanf (str + next, "%[^,],%d%n", p->global_reg[i].str,
                     &p->global_reg[i].value, &len) != 2)
         {
@@ -936,506 +936,279 @@ int make_new_char (int fd, unsigned char *dat)
     return char_num - 1;
 }
 
-//----------------------------------------------------
-// This function return the name of the job (by [Yor])
-//----------------------------------------------------
-const char *job_name (int pc_class) __attribute__((deprecated));
-const char *job_name (int pc_class)
-{
-    switch (pc_class)
-    {
-        case 0:
-            return "Novice";
-        case 1:
-            return "Swordsman";
-        case 2:
-            return "Mage";
-        case 3:
-            return "Archer";
-        case 4:
-            return "Acolyte";
-        case 5:
-            return "Merchant";
-        case 6:
-            return "Thief";
-        case 7:
-            return "Knight";
-        case 8:
-            return "Priest";
-        case 9:
-            return "Wizard";
-        case 10:
-            return "Blacksmith";
-        case 11:
-            return "Hunter";
-        case 12:
-            return "Assassin";
-        case 13:
-            return "Knight 2";
-        case 14:
-            return "Crusader";
-        case 15:
-            return "Monk";
-        case 16:
-            return "Sage";
-        case 17:
-            return "Rogue";
-        case 18:
-            return "Alchemist";
-        case 19:
-            return "Bard";
-        case 20:
-            return "Dancer";
-        case 21:
-            return "Crusader 2";
-        case 22:
-            return "Wedding";
-        case 23:
-            return "Super Novice";
-        case 4001:
-            return "Novice High";
-        case 4002:
-            return "Swordsman High";
-        case 4003:
-            return "Mage High";
-        case 4004:
-            return "Archer High";
-        case 4005:
-            return "Acolyte High";
-        case 4006:
-            return "Merchant High";
-        case 4007:
-            return "Thief High";
-        case 4008:
-            return "Lord Knight";
-        case 4009:
-            return "High Priest";
-        case 4010:
-            return "High Wizard";
-        case 4011:
-            return "Whitesmith";
-        case 4012:
-            return "Sniper";
-        case 4013:
-            return "Assassin Cross";
-        case 4014:
-            return "Peko Knight";
-        case 4015:
-            return "Paladin";
-        case 4016:
-            return "Champion";
-        case 4017:
-            return "Professor";
-        case 4018:
-            return "Stalker";
-        case 4019:
-            return "Creator";
-        case 4020:
-            return "Clown";
-        case 4021:
-            return "Gypsy";
-        case 4022:
-            return "Peko Paladin";
-        case 4023:
-            return "Baby Novice";
-        case 4024:
-            return "Baby Swordsman";
-        case 4025:
-            return "Baby Mage";
-        case 4026:
-            return "Baby Archer";
-        case 4027:
-            return "Baby Acolyte";
-        case 4028:
-            return "Baby Merchant";
-        case 4029:
-            return "Baby Thief";
-        case 4030:
-            return "Baby Knight";
-        case 4031:
-            return "Baby Priest";
-        case 4032:
-            return "Baby Wizard";
-        case 4033:
-            return "Baby Blacksmith";
-        case 4034:
-            return "Baby Hunter";
-        case 4035:
-            return "Baby Assassin";
-        case 4036:
-            return "Baby Peco Knight";
-        case 4037:
-            return "Baby Crusader";
-        case 4038:
-            return "Baby Monk";
-        case 4039:
-            return "Baby Sage";
-        case 4040:
-            return "Baby Rogue";
-        case 4041:
-            return "Baby Alchemist";
-        case 4042:
-            return "Baby Bard";
-        case 4043:
-            return "Baby Dancer";
-        case 4044:
-            return "Baby Peco Crusader";
-        case 4045:
-            return "Super Baby";
-    }
-    return "Unknown Job";
-}
-
-//-------------------------------------------------------------
-// Function to create the online files (txt and html). by [Yor]
-//-------------------------------------------------------------
+/// Generate online.txt and online.html
+// These files should be served in the root of the domain.
 void create_online_files (void)
 {
-    int  i, j, k, l;            // for loops
-    int  players;               // count the number of players
-    FILE *fp;                   // for the txt file
-    FILE *fp2;                  // for the html file
-    char temp[256];             // to prepare what we must display
-    int  id[char_num];
-
-    if (online_display_option == 0) // we display nothing, so return
+    if (!online_display_option)
         return;
 
-    //char_log("Creation of online players files.\n");
-
-    // Get number of online players, id of each online players
-    players = 0;
+    unsigned players = 0;
+    int  id[char_num];
     // sort online characters.
-    for (i = 0; i < char_num; i++)
+    for (int i = 0; i < char_num; i++)
     {
-        if (online_chars[i] != -1)
+        if (online_chars[i] == -1)
+            continue;
+        id[players] = i;
+        // TODO: put the for i loop inside the switch (maybe put switch cases in new func?)
+        switch (online_sorting_option)
         {
-            id[players] = i;
-            // use sorting option
-            switch (online_sorting_option)
+        /// by name (case insensitive)
+        case 1:
+            for (int j = 0; j < players; j++)
             {
-                case 1:        // by name (without case sensitive)
-                {
-                    char *p_name = char_dat[i].name;    //speed up sorting when there are a lot of players. But very rarely players have same name.
-                    for (j = 0; j < players; j++)
-                        if (strcasecmp (p_name, char_dat[id[j]].name) < 0 ||
-                            // if same name, we sort with case sensitive.
-                            (strcasecmp (p_name, char_dat[id[j]].name) == 0 &&
-                             strcmp (p_name, char_dat[id[j]].name) < 0))
-                        {
-                            for (k = players; k > j; k--)
-                                id[k] = id[k - 1];
-                            id[j] = i;  // id[players]
-                            break;
-                        }
-                }
-                    break;
-                case 2:        // by zeny
-                    for (j = 0; j < players; j++)
-                        if (char_dat[i].zeny < char_dat[id[j]].zeny ||
-                            // if same number of zenys, we sort by name.
-                            (char_dat[i].zeny == char_dat[id[j]].zeny &&
-                             strcasecmp (char_dat[i].name,
-                                      char_dat[id[j]].name) < 0))
-                        {
-                            for (k = players; k > j; k--)
-                                id[k] = id[k - 1];
-                            id[j] = i;  // id[players]
-                            break;
-                        }
-                    break;
-                case 3:        // by base level
-                    for (j = 0; j < players; j++)
-                        if (char_dat[i].base_level <
-                            char_dat[id[j]].base_level ||
-                            // if same base level, we sort by base exp.
-                            (char_dat[i].base_level ==
-                             char_dat[id[j]].base_level
-                             && char_dat[i].base_exp <
-                             char_dat[id[j]].base_exp))
-                        {
-                            for (k = players; k > j; k--)
-                                id[k] = id[k - 1];
-                            id[j] = i;  // id[players]
-                            break;
-                        }
-                    break;
-                case 4:        // by job (and job level)
-                    for (j = 0; j < players; j++)
-                        if (char_dat[i].pc_class < char_dat[id[j]].pc_class ||
-                            // if same job, we sort by job level.
-                            (char_dat[i].pc_class == char_dat[id[j]].pc_class &&
-                             char_dat[i].job_level <
-                             char_dat[id[j]].job_level) ||
-                            // if same job and job level, we sort by job exp.
-                            (char_dat[i].pc_class == char_dat[id[j]].pc_class &&
-                             char_dat[i].job_level ==
-                             char_dat[id[j]].job_level
-                             && char_dat[i].job_exp <
-                             char_dat[id[j]].job_exp))
-                        {
-                            for (k = players; k > j; k--)
-                                id[k] = id[k - 1];
-                            id[j] = i;  // id[players]
-                            break;
-                        }
-                    break;
-                case 5:        // by location map name
-                {
-                    int  cpm_result;    // A lot of player maps are identical. So, test if done often twice.
-                    for (j = 0; j < players; j++)
-                        if ((cpm_result = strcmp (char_dat[i].last_point.map, char_dat[id[j]].last_point.map)) < 0 ||   // no map are identical and with upper cases (not use strcasecmp)
-                            // if same map name, we sort by name.
-                            (cpm_result == 0 &&
-                             strcasecmp (char_dat[i].name,
-                                         char_dat[id[j]].name) < 0))
-                        {
-                            for (k = players; k > j; k--)
-                                id[k] = id[k - 1];
-                            id[j] = i;  // id[players]
-                            break;
-                        }
-                }
-                    break;
-                default:       // 0 or invalid value: no sorting
-                    break;
+                int casecmp = strcasecmp (char_dat[i].name, char_dat[id[j]].name);
+                if (casecmp > 0)
+                    continue;
+                if (casecmp == 0 && strcmp (char_dat[i].name, char_dat[id[j]].name) > 0)
+                    continue;
+                for (int k = players; k > j; k--)
+                    id[k] = id[k - 1];
+                id[j] = i;  // id[players]
+                break;
             }
-            players++;
+            break;
+        /// by zeny
+        case 2:
+            for (int j = 0; j < players; j++)
+            {
+                if (char_dat[i].zeny > char_dat[id[j]].zeny)
+                    continue;
+                // if same number of zenys, we sort by name.
+                if (char_dat[i].zeny == char_dat[id[j]].zeny &&
+                    strcasecmp (char_dat[i].name, char_dat[id[j]].name) > 0)
+                    continue;
+                for (int k = players; k > j; k--)
+                    id[k] = id[k - 1];
+                id[j] = i;  // id[players]
+                break;
+            }
+            break;
+        // by experience
+        case 3:
+            for (int j = 0; j < players; j++)
+            {
+                if (char_dat[i].base_level > char_dat[id[j]].base_level)
+                    continue;
+                if (char_dat[i].base_level == char_dat[id[j]].base_level
+                        && char_dat[i].base_exp > char_dat[id[j]].base_exp)
+                    continue;
+                for (int k = players; k > j; k--)
+                    id[k] = id[k - 1];
+                id[j] = i;  // id[players]
+                break;
+            }
+            break;
+        // /// by job (and job level)
+        // case 4: (deleted)
+        /// by map, then name
+        case 5:
+            for (int j = 0; j < players; j++)
+            {
+                /// Don't use strcasecmp as maps can't be the same except case
+                int cpm_result = strcmp (char_dat[i].last_point.map, char_dat[id[j]].last_point.map);
+                if (cpm_result > 0)
+                    continue;
+                if (cpm_result == 0 && strcasecmp (char_dat[i].name, char_dat[id[j]].name) > 0)
+                    continue;
+                for (int k = players; k > j; k--)
+                    id[k] = id[k - 1];
+                id[j] = i;  // id[players]
+                break;
+            }
+            break;
+        default:
+            break;
         }
+        players++;
     }
 
     // write files
-    fp = fopen_ (online_txt_filename, "w");
-    if (fp != NULL)
+    FILE *txt = fopen_ (online_txt_filename, "w");
+    if (!txt)
+        return;
+    FILE *html = fopen_ (online_html_filename, "w");
+    if (!html)
     {
-        fp2 = fopen_ (online_html_filename, "w");
-        if (fp2 != NULL)
+        fclose_(txt);
+        return;
+    }
+    const char *timestr = stamp_now (false);
+
+    // write heading
+    fprintf (html, "<HTML>\n");
+    fprintf (html, "  <META http-equiv=\"Refresh\" content=\"%d\">\n", online_refresh_html);
+    fprintf (html, "  <HEAD>\n");
+    fprintf (html, "    <TITLE>%u player%s on %s</TITLE>\n", players,
+             players == 1 ? "" : "s", server_name);
+    fprintf (html, "  </HEAD>\n");
+    fprintf (html, "  <BODY>\n");
+    fprintf (html, "    <H3>%u player%s on %s (%s):</H3>\n", players,
+             players == 1 ? "" : "s", server_name, timestr);
+
+    fprintf (html, "    <H3>%u player%s on %s (%s):</H3>\n", players,
+             players == 1 ? "" : "s", server_name, timestr);
+    fprintf (txt, "%u player%s on %s (%s):\n", players, players == 1 ? "" : "s",
+             server_name, timestr);
+    fprintf (txt, "\n");
+
+    int j = 0;
+    if (!players)
+        goto end_online_files;
+    // count the number of characters in text line
+    // the sole purpose of this is to put dashes in the second line
+    fprintf (html, "    <table border=\"1\" cellspacing=\"1\">\n");
+    fprintf (html, "      <tr>\n");
+    if (online_display_option & 65)
+        fprintf (html, "        <td><b>Name</b></td>\n");
+    if (online_display_option & 64)
+    {
+        fprintf (txt, "Name                      GM? ");
+        j += 30;
+    }
+    else if (online_display_option & 1)
+    {
+        fprintf (txt, "Name                     ");
+        j += 25;
+    }
+    if (online_display_option & 4)
+    {
+        fprintf (html, "        <td><b>Levels</b></td>\n");
+        fprintf (txt, " Levels ");
+        j += 8;
+    }
+    if (online_display_option & 24)
+    {
+        fprintf (html, "        <td><b>Location</b></td>\n");
+        if (online_display_option & 16)
         {
-            const char *timestr = stamp_now (false);
-            // write heading
-            fprintf (fp2, "<HTML>\n");
-            fprintf (fp2, "  <META http-equiv=\"Refresh\" content=\"%d\">\n", online_refresh_html); // update on client explorer every x seconds
-            fprintf (fp2, "  <HEAD>\n");
-            fprintf (fp2, "    <TITLE>Online Players on %s</TITLE>\n",
-                     server_name);
-            fprintf (fp2, "  </HEAD>\n");
-            fprintf (fp2, "  <BODY>\n");
-            fprintf (fp2, "    <H3>Online Players on %s (%s):</H3>\n",
-                     server_name, timestr);
-            fprintf (fp, "Online Players on %s (%s):\n", server_name, timestr);
-            fprintf (fp, "\n");
+            fprintf (txt, "Location     ( x , y ) ");
+            j += 23;
+        }
+        else
+        {
+            fprintf (txt, "Location     ");
+            j += 13;
+        }
+    }
+    if (online_display_option & 32)
+    {
+        fprintf (html, "        <td ALIGN=CENTER><b>zenys</b></td>\n");
+        fprintf (txt, "          Zenys ");
+        j += 16;
+    }
+    fprintf (html, "      </tr>\n");
+    fprintf (txt, "\n");
+    for (int k = 0; k < j; k++)
+        fprintf (txt, "-");
+    fprintf (txt, "\n");
 
-            // If we display at least 1 player
-            if (players > 0)
+    // display each player.
+    for (int i = 0; i < players; i++)
+    {
+        struct mmo_charstatus *chardat = &char_dat[id[i]];
+        // get id of the character (more speed)
+        fprintf (html, "      <tr>\n");
+        // displaying the character name
+        if (online_display_option & 65)
+        {
+            // without/with 'GM' display
+            gm_level_t l = isGM (char_dat[j].account_id);
+            if (online_display_option & 64)
             {
-                j = 0;          // count the number of characters for the txt version and to set the separate line
-                fprintf (fp2, "    <table border=\"1\" cellspacing=\"1\">\n");
-                fprintf (fp2, "      <tr>\n");
-                if ((online_display_option & 1)
-                    || (online_display_option & 64))
-                {
-                    fprintf (fp2, "        <td><b>Name</b></td>\n");
-                    if (online_display_option & 64)
-                    {
-                        fprintf (fp, "Name                          "); // 30
-                        j += 30;
-                    }
-                    else
-                    {
-                        fprintf (fp, "Name                     ");  // 25
-                        j += 25;
-                    }
-                }
-                if ((online_display_option & 6) == 6)
-                {
-                    fprintf (fp2, "        <td><b>Job (levels)</b></td>\n");
-                    fprintf (fp, "Job                 Levels ");    // 27
-                    j += 27;
-                }
-                else if (online_display_option & 2)
-                {
-                    fprintf (fp2, "        <td><b>Job</b></td>\n");
-                    fprintf (fp, "Job                ");    // 19
-                    j += 19;
-                }
-                else if (online_display_option & 4)
-                {
-                    fprintf (fp2, "        <td><b>Levels</b></td>\n");
-                    fprintf (fp, " Levels ");   // 8
-                    j += 8;
-                }
-                if (online_display_option & 24)
-                {               // 8 or 16
-                    fprintf (fp2, "        <td><b>Location</b></td>\n");
-                    if (online_display_option & 16)
-                    {
-                        fprintf (fp, "Location     ( x , y ) ");    // 23
-                        j += 23;
-                    }
-                    else
-                    {
-                        fprintf (fp, "Location     ");  // 13
-                        j += 13;
-                    }
-                }
-                if (online_display_option & 32)
-                {
-                    fprintf (fp2,
-                             "        <td ALIGN=CENTER><b>zenys</b></td>\n");
-                    fprintf (fp, "          Zenys ");   // 16
-                    j += 16;
-                }
-                fprintf (fp2, "      </tr>\n");
-                fprintf (fp, "\n");
-                for (k = 0; k < j; k++)
-                    fprintf (fp, "-");
-                fprintf (fp, "\n");
-
-                // display each player.
-                for (i = 0; i < players; i++)
-                {
-                    // get id of the character (more speed)
-                    j = id[i];
-                    fprintf (fp2, "      <tr>\n");
-                    // displaying the character name
-                    if ((online_display_option & 1)
-                        || (online_display_option & 64))
-                    {           // without/with 'GM' display
-                        strcpy (temp, char_dat[j].name);
-                        l = isGM (char_dat[j].account_id);
-                        if (online_display_option & 64)
-                        {
-                            if (l >= online_gm_display_min_level)
-                                fprintf (fp, "%-24s (GM) ", temp);
-                            else
-                                fprintf (fp, "%-24s      ", temp);
-                        }
-                        else
-                            fprintf (fp, "%-24s ", temp);
-                        // name of the character in the html (no < >, because that create problem in html code)
-                        fprintf (fp2, "        <td>");
-                        if ((online_display_option & 64)
-                            && l >= online_gm_display_min_level)
-                            fprintf (fp2, "<b>");
-                        for (k = 0; temp[k]; k++)
-                        {
-                            switch (temp[k])
-                            {
-                                case '<':  // <
-                                    fprintf (fp2, "&lt;");
-                                    break;
-                                case '>':  // >
-                                    fprintf (fp2, "&gt;");
-                                    break;
-                                default:
-                                    fprintf (fp2, "%c", temp[k]);
-                                    break;
-                            };
-                        }
-                        if ((online_display_option & 64)
-                            && l >= online_gm_display_min_level)
-                            fprintf (fp2, "</b> (GM)");
-                        fprintf (fp2, "</td>\n");
-                    }
-                    // displaying of the job
-                    if (online_display_option & 6)
-                    {
-                        const char *jobname = job_name (char_dat[j].pc_class);
-                        if ((online_display_option & 6) == 6)
-                        {
-                            fprintf (fp2, "        <td>%s %d/%d</td>\n",
-                                     jobname, char_dat[j].base_level,
-                                     char_dat[j].job_level);
-                            fprintf (fp, "%-18s %3d/%3d ", jobname,
-                                     char_dat[j].base_level,
-                                     char_dat[j].job_level);
-                        }
-                        else if (online_display_option & 2)
-                        {
-                            fprintf (fp2, "        <td>%s</td>\n", jobname);
-                            fprintf (fp, "%-18s ", jobname);
-                        }
-                        else if (online_display_option & 4)
-                        {
-                            fprintf (fp2, "        <td>%d/%d</td>\n",
-                                     char_dat[j].base_level,
-                                     char_dat[j].job_level);
-                            fprintf (fp, "%3d/%3d ", char_dat[j].base_level,
-                                     char_dat[j].job_level);
-                        }
-                    }
-                    // displaying of the map
-                    if (online_display_option & 24)
-                    {           // 8 or 16
-                        // prepare map name
-                        memset (temp, 0, sizeof (temp));
-                        strncpy (temp, char_dat[j].last_point.map, 16);
-                        if (strchr (temp, '.') != NULL)
-                            temp[strchr (temp, '.') - temp] = '\0'; // suppress the '.gat'
-                        // write map name
-                        if (online_display_option & 16)
-                        {       // map-name AND coordonates
-                            fprintf (fp2, "        <td>%s (%d, %d)</td>\n",
-                                     temp, char_dat[j].last_point.x,
-                                     char_dat[j].last_point.y);
-                            fprintf (fp, "%-12s (%3d,%3d) ", temp,
-                                     char_dat[j].last_point.x,
-                                     char_dat[j].last_point.y);
-                        }
-                        else
-                        {
-                            fprintf (fp2, "        <td>%s</td>\n", temp);
-                            fprintf (fp, "%-12s ", temp);
-                        }
-                    }
-                    // displaying number of zenys
-                    if (online_display_option & 32)
-                    {
-                        // write number of zenys
-                        if (char_dat[j].zeny == 0)
-                        {       // if no zeny
-                            fprintf (fp2,
-                                     "        <td ALIGN=RIGHT>no zeny</td>\n");
-                            fprintf (fp, "        no zeny ");
-                        }
-                        else
-                        {
-                            fprintf (fp2,
-                                     "        <td ALIGN=RIGHT>%d z</td>\n",
-                                     char_dat[j].zeny);
-                            fprintf (fp, "%13d z ", char_dat[j].zeny);
-                        }
-                    }
-                    fprintf (fp, "\n");
-                    fprintf (fp2, "      </tr>\n");
-                }
-                fprintf (fp2, "    </table>\n");
-                fprintf (fp, "\n");
+                if (l >= online_gm_display_min_level)
+                    fprintf (txt, "%-24s (GM) ", chardat->name);
+                else
+                    fprintf (txt, "%-24s      ", chardat->name);
             }
-
-            // Displaying number of online players
-            if (players == 0)
+            else
+                fprintf (txt, "%-24s ", chardat->name);
+            // name of the character in the html (no < >, because that create problem in html code)
+            fprintf (html, "        <td>");
+            if ((online_display_option & 64) && l >= online_gm_display_min_level)
+                fprintf (html, "<b>");
+            for (int k = 0; chardat->name[k]; k++)
             {
-                fprintf (fp2, "    <p>No user is online.</p>\n");
-                fprintf (fp, "No user is online.\n");
-                // no display if only 1 player
+                switch (chardat->name[k])
+                {
+                case '<':
+                    fprintf (html, "&lt;");
+                    break;
+                case '>':
+                    fprintf (html, "&gt;");
+                    break;
+                case '&':
+                    fprintf (html, "&amp;");
+                    break;
+                default:
+                    fprintf (html, "%c", chardat->name[k]);
+                        break;
+                };
             }
-            else if (players == 1)
+            if ((online_display_option & 64) && l >= online_gm_display_min_level)
+                fprintf (html, "</b> (GM)");
+            fprintf (html, "</td>\n");
+        }
+        // displaying of the job
+        if (online_display_option & 4)
+        {
+            fprintf (html, "        <td>%d/%d</td>\n", chardat->base_level, chardat->job_level);
+            fprintf (txt, "%3d/%3d ", chardat->base_level, chardat->job_level);
+        }
+        // displaying of the map
+        if (online_display_option & 24)
+        {
+            // 8 or 16
+            // prepare map name
+            char temp[16];
+            STRZCPY (temp, chardat->last_point.map);
+            if (strchr (temp, '.') != NULL)
+                *strchr (temp, '.') = '\0';
+            // write map name
+            if (online_display_option & 16)
             {
+                // map-name AND coordinates
+                fprintf (html, "        <td>%s (%d, %d)</td>\n",
+                         temp, chardat->last_point.x,
+                         chardat->last_point.y);
+                fprintf (txt, "%-12s (%3d,%3d) ", temp,
+                         chardat->last_point.x,
+                         chardat->last_point.y);
             }
             else
             {
-                fprintf (fp2, "    <p>%d users are online.</p>\n", players);
-                fprintf (fp, "%d users are online.\n", players);
+                fprintf (html, "        <td>%s</td>\n", temp);
+                fprintf (txt, "%-12s ", temp);
             }
-            fprintf (fp2, "  </BODY>\n");
-            fprintf (fp2, "</HTML>\n");
-            fclose_ (fp2);
         }
-        fclose_ (fp);
+        // displaying number of zenys
+        if (online_display_option & 32)
+        {
+            // write number of zenys
+            if (chardat->zeny == 0)
+            {
+                // if no zeny
+                fprintf (html, "        <td ALIGN=RIGHT>no zeny</td>\n");
+                fprintf (txt, "        no zeny ");
+            }
+            else
+            {
+                fprintf (html, "        <td ALIGN=RIGHT>%d z</td>\n", chardat->zeny);
+                fprintf (txt, "%13d z ", chardat->zeny);
+            }
+        }
+        fprintf (txt, "\n");
+        fprintf (html, "      </tr>\n");
     }
+    fprintf (html, "    </table>\n");
+    fprintf (txt, "\n");
 
-    return;
+end_online_files:
+    fprintf (html, "  </BODY>\n");
+    fprintf (html, "</HTML>\n");
+    fclose_ (html);
+    fclose_ (txt);
 }
 
 //---------------------------------------------------------------------

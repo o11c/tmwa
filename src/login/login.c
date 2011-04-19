@@ -480,26 +480,29 @@ void mmo_auth_init (void)
         }
         remove_control_chars (tmp.userid);
 
-        int j;
-        for (j = 0; j < auth_num; j++)
+        for (int j = 0; j < auth_num; j++)
         {
             if (auth_dat[j].account_id == tmp.account_id)
             {
                 login_log ("%s: duplicate account %d.\n%s", __func__,
                            tmp.account_id, line);
-                break;
+                goto continue_outer;
             }
             else if (strcmp (auth_dat[j].userid, tmp.userid) == 0)
             {
                 login_log ("%s: duplicate account name %s (%d, %d).\n%s",
                            __func__, tmp.userid, auth_dat[j].account_id,
                            tmp.account_id, line);
-                break;
+                goto continue_outer;
             }
         }
-        if (j != auth_num)
+        // This is ugly but needed for -Wjump-misses-init
+        // TODO refactor into separate function
+        if (false)
+        {
+        continue_outer:
             continue;
-
+        }
         if (auth_num >= auth_max)
         {
             auth_max += 256;
@@ -536,24 +539,16 @@ void mmo_auth_init (void)
         remove_control_chars (tmp.last_ip);
 
         char *p = line;
-//        int j;
-        for (j = 0; j < ACCOUNT_REG2_NUM; j++)
+        for (int j = 0; j < ACCOUNT_REG2_NUM; j++, tmp.account_reg2_num++)
         {
             p += n;
             if (sscanf (p, "%31[^\t,],%d %n", tmp.account_reg2[j].str,
                         &tmp.account_reg2[j].value, &n) != 2)
-            {
-                int v;
-                if (p[0] == ',' && sscanf (p, ",%d %n", &v, &n) == 1)
-                {
-                    j--;
-                    continue;
-                }
+                // There used to be a check to allow and discard empty string
+                // Note - this just discards trailing garbage!
                 break;
-            }
             remove_control_chars (tmp.account_reg2[j].str);
         }
-        tmp.account_reg2_num = j;
 
         if (isGM (tmp.account_id) > 0)
             GM_count++;

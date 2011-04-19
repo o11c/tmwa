@@ -153,7 +153,7 @@ int storage_storageopen (struct map_session_data *sd)
 
     if ((stor =
          (struct storage *) numdb_search (storage_db,
-                                          sd->status.account_id)) == NULL)
+                                          (numdb_key_t)sd->status.account_id)) == NULL)
     {                           //Request storage.
         intif_request_storage (sd->status.account_id);
         return 1;

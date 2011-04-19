@@ -1084,7 +1084,7 @@ int guild_payexp (struct map_session_data *sd, int exp)
     if ((exp2 = exp * per / 100) <= 0)
         return 0;
 
-    if ((c = (struct guild_expcache *)numdb_search (guild_expcache_db, sd->status.account_id /*char_id*/)) == NULL)
+    if ((c = (struct guild_expcache *)numdb_search (guild_expcache_db, (numdb_key_t)sd->status.account_id /*char_id*/)) == NULL)
     {
         CREATE (c, struct guild_expcache, 1);
         c->guild_id = sd->status.guild_id;

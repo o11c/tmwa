@@ -2495,15 +2495,15 @@ int atcommand_model (const int fd, struct map_session_data *sd,
     {
         sprintf (output,
                  "Please, enter at least a value (usage: @model <hair ID: %d-%d> <hair color: %d-%d> <clothes color: %d-%d>).",
-                 MIN_HAIR_STYLE, MAX_HAIR_STYLE, MIN_HAIR_COLOR,
-                 MAX_HAIR_COLOR, MIN_CLOTH_COLOR, MAX_CLOTH_COLOR);
+                 0, NUM_HAIR_STYLES-1, 0,
+                 NUM_HAIR_COLORS-1, 0, NUM_CLOTHES_COLORS-1);
         clif_displaymessage (fd, output);
         return -1;
     }
 
-    if (hair_style >= MIN_HAIR_STYLE && hair_style <= MAX_HAIR_STYLE &&
-        hair_color >= MIN_HAIR_COLOR && hair_color <= MAX_HAIR_COLOR &&
-        cloth_color >= MIN_CLOTH_COLOR && cloth_color <= MAX_CLOTH_COLOR)
+    if (hair_style >= 0 && hair_style < NUM_HAIR_STYLES &&
+        hair_color >= 0 && hair_color < NUM_HAIR_COLORS &&
+        cloth_color >= 0 && cloth_color < NUM_CLOTHES_COLORS)
     {
         //服の色変更
         if (cloth_color != 0 && sd->status.sex == 1
@@ -2546,12 +2546,12 @@ int atcommand_dye (const int fd, struct map_session_data *sd,
     {
         sprintf (output,
                  "Please, enter a clothes color (usage: @dye/@ccolor <clothes color: %d-%d>).",
-                 MIN_CLOTH_COLOR, MAX_CLOTH_COLOR);
+                 0, NUM_CLOTHES_COLORS);
         clif_displaymessage (fd, output);
         return -1;
     }
 
-    if (cloth_color >= MIN_CLOTH_COLOR && cloth_color <= MAX_CLOTH_COLOR)
+    if (cloth_color >= 0 && cloth_color <= NUM_CLOTHES_COLORS)
     {
         if (cloth_color != 0 && sd->status.sex == 1
             && (sd->status.pc_class == 12 || sd->status.pc_class == 17))
@@ -2601,12 +2601,12 @@ int atcommand_hair_style (const int fd, struct map_session_data *sd,
     {
         sprintf (output,
                  "Please, enter a hair style (usage: @hairstyle/@hstyle <hair ID: %d-%d>).",
-                 MIN_HAIR_STYLE, MAX_HAIR_STYLE);
+                 0, NUM_HAIR_STYLES-1);
         clif_displaymessage (fd, output);
         return -1;
     }
 
-    if (hair_style >= MIN_HAIR_STYLE && hair_style <= MAX_HAIR_STYLE)
+    if (hair_style >= 0 && hair_style < NUM_HAIR_STYLES)
     {
         if (hair_style != 0 && sd->status.sex == 1
             && (sd->status.pc_class == 12 || sd->status.pc_class == 17))
@@ -2656,12 +2656,12 @@ int atcommand_hair_color (const int fd, struct map_session_data *sd,
     {
         sprintf (output,
                  "Please, enter a hair color (usage: @haircolor/@hcolor <hair color: %d-%d>).",
-                 MIN_HAIR_COLOR, MAX_HAIR_COLOR);
+                 0, NUM_HAIR_COLORS-1);
         clif_displaymessage (fd, output);
         return -1;
     }
 
-    if (hair_color >= MIN_HAIR_COLOR && hair_color <= MAX_HAIR_COLOR)
+    if (hair_color >= 0 && hair_color < NUM_HAIR_COLORS)
     {
         if (hair_color != 0 && sd->status.sex == 1
             && (sd->status.pc_class == 12 || sd->status.pc_class == 17))
@@ -5323,17 +5323,17 @@ int atcommand_charmodel (const int fd, struct map_session_data *sd,
     {
         sprintf (output,
                  "Please, enter a valid model and a player name (usage: @charmodel <hair ID: %d-%d> <hair color: %d-%d> <clothes color: %d-%d> <name>).",
-                 MIN_HAIR_STYLE, MAX_HAIR_STYLE, MIN_HAIR_COLOR,
-                 MAX_HAIR_COLOR, MIN_CLOTH_COLOR, MAX_CLOTH_COLOR);
+                 0, NUM_HAIR_STYLES-1, 0,
+                 NUM_HAIR_COLORS-1, 0, NUM_CLOTHES_COLORS-1);
         clif_displaymessage (fd, output);
         return -1;
     }
 
     if ((pl_sd = map_nick2sd (character)) != NULL)
     {
-        if (hair_style >= MIN_HAIR_STYLE && hair_style <= MAX_HAIR_STYLE &&
-            hair_color >= MIN_HAIR_COLOR && hair_color <= MAX_HAIR_COLOR &&
-            cloth_color >= MIN_CLOTH_COLOR && cloth_color <= MAX_CLOTH_COLOR)
+        if (hair_style >= 0 && hair_style <= NUM_HAIR_STYLES &&
+            hair_color >= 0 && hair_color <= NUM_HAIR_COLORS &&
+            cloth_color >= 0 && cloth_color <= NUM_CLOTHES_COLORS)
         {
 
             if (cloth_color != 0 &&

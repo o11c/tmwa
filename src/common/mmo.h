@@ -37,12 +37,15 @@
 # define MAX_GUILDCASTLE 24      // increased to include novice castles [Valaris]
 # define MAX_GUILDLEVEL 50
 
-# define MIN_HAIR_STYLE battle_config.min_hair_style
-# define MAX_HAIR_STYLE battle_config.max_hair_style
-# define MIN_HAIR_COLOR battle_config.min_hair_color
-# define MAX_HAIR_COLOR battle_config.max_hair_color
-# define MIN_CLOTH_COLOR battle_config.min_cloth_color
-# define MAX_CLOTH_COLOR battle_config.max_cloth_color
+/// These were incorrect and generally not respected, so I am changing them
+/// Back to hard-coded values for the places there were magic numbers
+// # define MAX_HAIR_STYLE battle_config.max_hair_style
+// # define MAX_HAIR_COLOR battle_config.max_hair_color
+// # define MAX_CLOTH_COLOR battle_config.max_cloth_color
+# define NUM_HAIR_STYLES 20
+# define NUM_HAIR_COLORS 12
+// unused
+# define NUM_CLOTHES_COLORS 5
 
 // for produce
 # define MIN_ATTRIBUTE 0

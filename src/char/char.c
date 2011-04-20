@@ -75,7 +75,7 @@ struct char_session_data
     uint32_t login_id1, login_id2;
     enum gender sex;
     unsigned short packet_tmw_version;
-    charid_t found_char[MAX_CHARS_PER_ACCOUNT];
+    struct mmo_charstatus *found_char[MAX_CHARS_PER_ACCOUNT];
     char email[40];
     time_t connect_until_time;
 };
@@ -87,7 +87,7 @@ struct
     charid_t char_id;
     uint32_t login_id1, login_id2;
     in_addr_t ip;
-    int char_pos;
+    struct mmo_charstatus *char_pos;
     int delflag;
     enum gender sex;
     unsigned short packet_tmw_version;
@@ -455,8 +455,8 @@ void mmo_char_init (void)
         int got_end = 0;
         if (sscanf (line, "%d\t%%newid%%%n", &id, &got_end) == 1 && got_end)
         {
-            if (char_id_count < i)
-                char_id_count = i;
+            if (char_id_count < id)
+                char_id_count = id;
             continue;
         }
 
@@ -593,99 +593,97 @@ void mmo_char_sync_timer (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, cu
 static void remove_trailing_blanks (char *name)
 {
     char *tail = name + strlen (name) - 1;
-
     while (tail > name && *tail == ' ')
         *tail-- = 0;
 }
 
-//----------------------------------------------------
-// Remove prefix whitespace from a name
-//----------------------------------------------------
-static void remove_prefix_blanks (char *name)
-{
-    char *dst = name;
-    char *src = name;
 
-    while (*src == ' ')         // find first nonblank
-        ++src;
-    while ((*dst++ = *src++));  // `strmove'
-}
-
-//-----------------------------------
-// Function to create a new character
-//-----------------------------------
-int make_new_char (int fd, unsigned char *dat)
+struct new_char_dat
 {
+    char name[24];
+    uint8_t stats[6];
+    uint8_t slot;
+    // Note: the mana client says these are 16-bit ints
+    // but no color or style is ever likely to be that high
+    // this is a prime location for additions. Race? Clothes color?
+    uint8_t hair_color, hair_color_high;
+    uint8_t hair_style, hair_style_high;
+};
+
+/// Create a new character, from
+struct mmo_charstatus *make_new_char (int fd, uint8_t *raw_dat)
+{
+    struct new_char_dat dat = *(struct new_char_dat *) raw_dat;
     struct char_session_data *sd = (struct char_session_data *)session[fd]->session_data;
 
     // remove control characters from the name
-    char *name = (char *)dat;
+    char *name = dat.name;
     name[23] = '\0';
     if (has_control_chars (name))
     {
         char_log ("Make new char error (control char received in the name): (connection #%d, account: %d).\n",
                   fd, sd->account_id);
-        return -1;
+        return NULL;
     }
 
-    // Eliminate whitespace
+    // Eliminate surrounding whitespace
+    while (*name == ' ')
+        name++;
     remove_trailing_blanks (name);
-    remove_prefix_blanks (name);
 
-    // check lenght of character name
+    // check length of character name
     if (strlen (name) < 4)
     {
         char_log ("Make new char error (character name too small): (connection #%d, account: %d, name: '%s').\n",
                   fd, sd->account_id, name);
-        return -1;
+        return NULL;
     }
 
-    // Check Authorised letters/symbols in the name of the character
-    if (char_name_option == 1)
-    {                           // only letters/symbols in char_name_letters are authorised
+    switch (char_name_option)
+    {
+    case ONLY:
         for (int i = 0; name[i]; i++)
             if (strchr (char_name_letters, name[i]) == NULL)
             {
                 char_log ("Make new char error (invalid letter in the name): (connection #%d, account: %d), name: %s, invalid letter: %c.\n",
                           fd, sd->account_id, name, name[i]);
-                return -1;
+                return NULL;
             }
-    }
-    else if (char_name_option == 2)
-    {                           // letters/symbols in char_name_letters are forbidden
+    case EXCLUDE:
         for (int i = 0; name[i]; i++)
-            if (strchr (char_name_letters, dat[i]) != NULL)
+            if (strchr (char_name_letters, name[i]) != NULL)
             {
                 char_log ("Make new char error (invalid letter in the name): (connection #%d, account: %d), name: %s, invalid letter: %c.\n",
-                          fd, sd->account_id, dat, dat[i]);
-                return -1;
+                          fd, sd->account_id, name, name[i]);
+                    return NULL;
             }
-    }                           // else, all letters/symbols are authorised (except control char removed before)
-
-    if (dat[24] + dat[25] + dat[26] + dat[27] + dat[28] + dat[29] != 5 * 6 ||   // stats
-        dat[30] >= 9 ||         // slots (dat[30] can not be negativ)
-        dat[33] >= 20 || // hair style
-        dat[31] >= 12)
+    }
+    if (dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5] != 5 * 6 ||
+        dat.slot >= MAX_CHARS_PER_ACCOUNT ||
+        dat.hair_style_high || dat.hair_style >= NUM_HAIR_STYLES ||
+        dat.hair_color_high || dat.hair_color >= NUM_HAIR_COLORS)
     {
-        char_log ("Make new char error (invalid values): (connection #%d, account: %d) slot %d, name: %s, stats: %d+%d+%d+%d+%d+%d=%d, hair: %d, hair color: %d\n",
-             fd, sd->account_id, dat[30], dat, dat[24], dat[25],
-             dat[26], dat[27], dat[28], dat[29],
-             dat[24] + dat[25] + dat[26] + dat[27] + dat[28] + dat[29],
-             dat[33], dat[31]);
-        return -1;
+        char_log ("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu\n",
+                  "invalid values",
+                  fd, sd->account_id, dat.slot, name,
+                  dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
+                  dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+                  dat.hair_style, dat.hair_color);
+        return NULL;
     }
 
     // check individual stat value
-    for (int i = 24; i <= 29; i++)
+    for (int i = 0; i < 6; i++)
     {
-        if (dat[i] < 1 || dat[i] > 9)
+        if (dat.stats[i] < 1 || dat.stats[i] > 9)
         {
-            char_log ("Make new char error (invalid stat value: not between 1 to 9): (connection #%d, account: %d) slot %hhu, name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu\n",
-                 fd, sd->account_id, dat[30], dat, dat[24], dat[25],
-                 dat[26], dat[27], dat[28], dat[29],
-                 dat[24] + dat[25] + dat[26] + dat[27] + dat[28] + dat[29],
-                 dat[33], dat[31]);
-            return -1;
+            char_log ("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu\n",
+                      "invalid stat value: not between 1 to 9",
+                      fd, sd->account_id, dat.slot, name,
+                      dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
+                      dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+                      dat.hair_style, dat.hair_color);
+            return NULL;
         }
     }
 
@@ -693,33 +691,36 @@ int make_new_char (int fd, unsigned char *dat)
     {
         if (name_ignoring_case ? (strcmp (char_dat[i].name, name) == 0) : (strcasecmp (char_dat[i].name, name) == 0))
         {
-            char_log ("Make new char error (name already exists): (connection #%d, account: %d) slot %hhu, name: %s (actual name of other char: %s), stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu.\n",
-                      fd, sd->account_id, dat[30], dat, char_dat[i].name,
-                      dat[24], dat[25], dat[26], dat[27], dat[28], dat[29],
-                      dat[24] + dat[25] + dat[26] + dat[27] + dat[28] + dat[29],
-                      dat[33], dat[31]);
-            return -1;
+            char_log ("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s (actual name of other char: %s), stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu.\n",
+                      "name already exists",
+                      fd, sd->account_id, dat.slot, name, char_dat[i].name,
+                      dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
+                      dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+                      dat.hair_style, dat.hair_color);
+            return NULL;
         }
         if (char_dat[i].account_id == sd->account_id
-            && char_dat[i].char_num == dat[30])
+            && char_dat[i].char_num == dat.slot)
         {
-            char_log ("Make new char error (slot already used): (connection #%d, account: %d) slot %hhu, name: %s (actual name of other char: %s), stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu.\n",
-                      fd, sd->account_id, dat[30], dat, char_dat[i].name,
-                      dat[24], dat[25], dat[26], dat[27], dat[28], dat[29],
-                      dat[24] + dat[25] + dat[26] + dat[27] + dat[28] + dat[29],
-                      dat[33], dat[31]);
-            return -1;
+            char_log ("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s (name of other char: %s), stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu.\n",
+                      "slot already used",
+                      fd, sd->account_id, dat.slot, name, char_dat[i].name,
+                      dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
+                      dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+                      dat.hair_style, dat.hair_color);
+            return NULL;
         }
     }
 
     if (strcmp (wisp_server_name, name) == 0)
     {
-        char_log ("Make new char error (name used is wisp name for server): (connection #%d, account: %d) slot %hhu, name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu.\n",
-                  fd, sd->account_id, dat[30], name,
-                  dat[24], dat[25], dat[26], dat[27], dat[28], dat[29],
-                  dat[24] + dat[25] + dat[26] + dat[27] + dat[28] + dat[29],
-                  dat[33], dat[31]);
-        return -1;
+        char_log ("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu.\n",
+                  "name used is wisp name for server",
+                  fd, sd->account_id, dat.slot, name,
+                  dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
+                  dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+                  dat.hair_style, dat.hair_color);
+        return NULL;
     }
 
     if (char_num >= char_max)
@@ -735,34 +736,34 @@ int make_new_char (int fd, unsigned char *dat)
     ip_to_str (session[fd]->client_addr.sin_addr.s_addr, ip);
 
     char_log ("Creation of New Character: (connection #%d, account: %d) slot %hhu, character Name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu. [%s]\n",
-              fd, sd->account_id, dat[30], dat, dat[24], dat[25], dat[26],
-              dat[27], dat[28], dat[29],
-              dat[24] + dat[25] + dat[26] + dat[27] + dat[28] + dat[29],
-              dat[33], dat[31], ip);
+              fd, sd->account_id, dat.slot, name,
+              dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
+              dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+              dat.hair_style, dat.hair_color, ip);
 
     struct mmo_charstatus *chardat = &char_dat[char_num];
     memset (chardat, 0, sizeof (struct mmo_charstatus));
 
     chardat->char_id = char_id_count++;
     chardat->account_id = sd->account_id;
-    chardat->char_num = dat[30];
-    strcpy (chardat->name, name);
-    chardat->pc_class = 0;
+    chardat->char_num = dat.slot;
+    STRZCPY (chardat->name, name);
+//     chardat->pc_class = 0;
     chardat->base_level = 1;
     chardat->job_level = 1;
     chardat->base_exp = 0;
     chardat->job_exp = 0;
     chardat->zeny = start_zeny;
-    chardat->str = dat[24];
-    chardat->agi = dat[25];
-    chardat->vit = dat[26];
-    chardat->int_ = dat[27];
-    chardat->dex = dat[28];
-    chardat->luk = dat[29];
-    chardat->max_hp = 40 * (100 + char_dat->vit) / 100;
-    chardat->max_sp = 11 * (100 + char_dat->int_) / 100;
-    chardat->hp = char_dat->max_hp;
-    chardat->sp = char_dat->max_sp;
+    chardat->str = dat.stats[0];
+    chardat->agi = dat.stats[1];
+    chardat->vit = dat.stats[2];
+    chardat->int_ = dat.stats[3];
+    chardat->dex = dat.stats[4];
+    chardat->luk = dat.stats[5];
+    chardat->max_hp = 40 * (100 + chardat->vit) / 100;
+    chardat->max_sp = 11 * (100 + chardat->int_) / 100;
+    chardat->hp = chardat->max_hp;
+    chardat->sp = chardat->max_sp;
     chardat->status_point = 0;
     chardat->skill_point = 0;
     chardat->option = 0;
@@ -770,15 +771,17 @@ int make_new_char (int fd, unsigned char *dat)
     chardat->manner = 0;
     chardat->party_id = 0;
     chardat->guild_id = 0;
-    chardat->hair = dat[33];
-    chardat->hair_color = dat[31];
+    chardat->hair = dat.hair_style;
+    chardat->hair_color = dat.hair_color;
     chardat->clothes_color = 0;
-    chardat->inventory[0].nameid = start_weapon; // Knife
+    // Knife
+    chardat->inventory[0].nameid = start_weapon;
     chardat->inventory[0].amount = 1;
     chardat->inventory[0].equip = 0x02;
     chardat->inventory[0].identify = 1;
     chardat->inventory[0].broken = 0;
-    chardat->inventory[1].nameid = start_armor;  // Cotton Shirt
+    // Cotton Shirt
+    chardat->inventory[1].nameid = start_armor;
     chardat->inventory[1].amount = 1;
     chardat->inventory[1].equip = 0x10;
     chardat->inventory[1].identify = 1;
@@ -788,11 +791,11 @@ int make_new_char (int fd, unsigned char *dat)
     chardat->head_top = 0;
     chardat->head_mid = 0;
     chardat->head_bottom = 0;
-    memcpy (&chardat->last_point, &start_point, sizeof (start_point));
-    memcpy (&chardat->save_point, &start_point, sizeof (start_point));
+    chardat->last_point = start_point;
+    chardat->save_point = start_point;
     char_num++;
 
-    return char_num - 1;
+    return chardat;
 }
 
 /// Generate online.txt and online.html
@@ -1112,14 +1115,14 @@ int mmo_char_send006b (int fd, struct char_session_data *sd)
     {
         if (char_dat[i].account_id == sd->account_id)
         {
-            sd->found_char[found_num] = i;
+            sd->found_char[found_num] = &char_dat[i];
             found_num++;
             if (found_num == MAX_CHARS_PER_ACCOUNT)
                 break;
         }
     }
     for (i = found_num; i < MAX_CHARS_PER_ACCOUNT; i++)
-        sd->found_char[i] = -1;
+        sd->found_char[i] = NULL;
 
     memset (WFIFOP (fd, 0), 0, offset + found_num * 106);
     WFIFOW (fd, 0) = 0x6b;
@@ -1127,7 +1130,7 @@ int mmo_char_send006b (int fd, struct char_session_data *sd)
 
     for (i = 0; i < found_num; i++)
     {
-        p = &char_dat[sd->found_char[i]];
+        p = sd->found_char[i];
         j = offset + (i * 106); // increase speed of code
 
         WFIFOL (fd, j) = p->char_id;
@@ -1680,9 +1683,9 @@ void parse_tologin (int fd)
                                         for (k = 0; k < MAX_CHARS_PER_ACCOUNT; k++)
                                         {
                                             if (sd2->found_char[k] ==
-                                                char_num - 1)
+                                                &char_dat[char_num - 1])
                                             {
-                                                sd2->found_char[k] = i;
+                                                sd2->found_char[k] = &char_dat[i];
                                                 break;
                                             }
                                         }
@@ -1939,14 +1942,13 @@ void parse_frommap (int fd)
                         WFIFOL (fd, 8) = auth_fifo[i].login_id2;
                         WFIFOL (fd, 12) =
                             (unsigned long) auth_fifo[i].connect_until_time;
-                        char_dat[auth_fifo[i].char_pos].sex =
-                            auth_fifo[i].sex;
+                        auth_fifo[i].char_pos->sex = auth_fifo[i].sex;
                         WFIFOW (fd, 16) = auth_fifo[i].packet_tmw_version;
                         fprintf (stderr,
                                  "From queue index %d: recalling packet version %d\n",
                                  i, auth_fifo[i].packet_tmw_version);
                         memcpy (WFIFOP (fd, 18),
-                                &char_dat[auth_fifo[i].char_pos],
+                                auth_fifo[i].char_pos,
                                 sizeof (struct mmo_charstatus));
                         WFIFOSET (fd, WFIFOW (fd, 2));
                         //printf("auth_fifo search success (auth #%d, account %d, character: %d).\n", i, RFIFOL(fd,2), RFIFOL(fd,6));
@@ -2056,7 +2058,7 @@ void parse_frommap (int fd)
                     if (char_dat[i].account_id == RFIFOL (fd, 2) &&
                         char_dat[i].char_id == RFIFOL (fd, 14))
                     {
-                        auth_fifo[auth_fifo_pos].char_pos = i;
+                        auth_fifo[auth_fifo_pos].char_pos = &char_dat[i];
                         auth_fifo_pos++;
                         WFIFOL (fd, 6) = 0;
                         break;
@@ -2537,61 +2539,61 @@ void parse_char (int fd)
                 {
                     int ch;
                     for (ch = 0; ch < MAX_CHARS_PER_ACCOUNT; ch++)
-                        if (sd->found_char[ch] != -1
-                            && char_dat[sd->found_char[ch]].char_num ==
+                        if (sd->found_char[ch]
+                            && sd->found_char[ch]->char_num ==
                             RFIFOB (fd, 2))
                             break;
                     if (ch != MAX_CHARS_PER_ACCOUNT)
                     {
                         char_log ("Character Selected, Account ID: %d, Character Slot: %d, Character Name: %s [%s]\n",
                                   sd->account_id, RFIFOB (fd, 2),
-                                  char_dat[sd->found_char[ch]].name, ip);
+                                  sd->found_char[ch]->name, ip);
                         // searching map server
-                        int i = search_mapserver (char_dat[sd->found_char[ch]].last_point. map);
+                        int i = search_mapserver (sd->found_char[ch]->last_point. map);
                         // if map is not found, we check major cities
                         if (i < 0)
                         {
                             if ((i = search_mapserver ("prontera.gat")) >= 0)
                             {   // check is done without 'gat'.
-                                memcpy (char_dat[sd->found_char[ch]].last_point.map,
+                                memcpy (sd->found_char[ch]->last_point.map,
                                         "prontera.gat", 16);
-                                char_dat[sd->found_char[ch]].last_point.x = 273;    // savepoint coordonates
-                                char_dat[sd->found_char[ch]].last_point.y = 354;
+                                sd->found_char[ch]->last_point.x = 273;    // savepoint coordonates
+                                sd->found_char[ch]->last_point.y = 354;
                             }
                             else if ((i = search_mapserver ("geffen.gat")) >= 0)
                             {   // check is done without 'gat'.
-                                memcpy (char_dat[sd->found_char[ch]].last_point.map,
+                                memcpy (sd->found_char[ch]->last_point.map,
                                         "geffen.gat", 16);
-                                char_dat[sd->found_char[ch]].last_point.x = 120;    // savepoint coordonates
-                                char_dat[sd->found_char[ch]].last_point.y = 100;
+                                sd->found_char[ch]->last_point.x = 120;    // savepoint coordonates
+                                sd->found_char[ch]->last_point.y = 100;
                             }
                             else if ((i = search_mapserver ("morocc.gat")) >= 0)
                             {   // check is done without 'gat'.
-                                memcpy (char_dat[sd->found_char[ch]].last_point.map,
+                                memcpy (sd->found_char[ch]->last_point.map,
                                         "morocc.gat", 16);
-                                char_dat[sd->found_char[ch]].last_point.x = 160;    // savepoint coordonates
-                                char_dat[sd->found_char[ch]].last_point.y = 94;
+                                sd->found_char[ch]->last_point.x = 160;    // savepoint coordonates
+                                sd->found_char[ch]->last_point.y = 94;
                             }
                             else if ((i = search_mapserver ("alberta.gat")) >= 0)
                             {   // check is done without 'gat'.
-                                memcpy (char_dat[sd->found_char[ch]].last_point.map,
+                                memcpy (sd->found_char[ch]->last_point.map,
                                         "alberta.gat", 16);
-                                char_dat[sd->found_char[ch]].last_point.x = 116;    // savepoint coordonates
-                                char_dat[sd->found_char[ch]].last_point.y = 57;
+                                sd->found_char[ch]->last_point.x = 116;    // savepoint coordonates
+                                sd->found_char[ch]->last_point.y = 57;
                             }
                             else if ((i = search_mapserver ("payon.gat")) >= 0)
                             {   // check is done without 'gat'.
-                                memcpy (char_dat[sd->found_char[ch]].last_point.map,
+                                memcpy (sd->found_char[ch]->last_point.map,
                                         "payon.gat", 16);
-                                char_dat[sd->found_char[ch]].last_point.x = 87; // savepoint coordonates
-                                char_dat[sd->found_char[ch]].last_point.y = 117;
+                                sd->found_char[ch]->last_point.x = 87; // savepoint coordonates
+                                sd->found_char[ch]->last_point.y = 117;
                             }
                             else if ((i = search_mapserver ("izlude.gat")) >= 0)
                             {   // check is done without 'gat'.
-                                memcpy (char_dat[sd->found_char[ch]].last_point.map,
+                                memcpy (sd->found_char[ch]->last_point.map,
                                         "izlude.gat", 16);
-                                char_dat[sd->found_char[ch]].last_point.x = 94; // savepoint coordonates
-                                char_dat[sd->found_char[ch]].last_point.y = 103;
+                                sd->found_char[ch]->last_point.x = 94; // savepoint coordonates
+                                sd->found_char[ch]->last_point.y = 103;
                             }
                             else
                             {
@@ -2600,7 +2602,7 @@ void parse_char (int fd)
                                     if (server_fd[j] >= 0 && server[j].map[0][0])
                                     {   // change save point to one of map found on the server (the first)
                                         i = j;
-                                        memcpy (char_dat[sd->found_char[ch]].last_point.
+                                        memcpy (sd->found_char[ch]->last_point.
                                                 map, server[j].map[0], 16);
                                         printf ("Map-server #%d found with a map: '%s'.\n",
                                                 j, server[j].map[0]);
@@ -2617,12 +2619,12 @@ void parse_char (int fd)
                         }
                     map_x66:
                         WFIFOW (fd, 0) = 0x71;
-                        WFIFOL (fd, 2) = char_dat[sd->found_char[ch]].char_id;
+                        WFIFOL (fd, 2) = sd->found_char[ch]->char_id;
                         memcpy (WFIFOP (fd, 6),
-                                char_dat[sd->found_char[ch]].last_point.map,
+                                sd->found_char[ch]->last_point.map,
                                 16);
                         printf ("Character selection '%s' (account: %d, slot: %d) [%s]\n",
-                                char_dat[sd->found_char[ch]].name,
+                                sd->found_char[ch]->name,
                                 sd->account_id, ch, ip);
                         printf ("--Send IP of map-server. ");
                         if (lan_ip_check (p))
@@ -2633,10 +2635,10 @@ void parse_char (int fd)
                         WFIFOSET (fd, 28);
                         if (auth_fifo_pos >= AUTH_FIFO_SIZE)
                             auth_fifo_pos = 0;
-                        //printf("auth_fifo set #%d - account %d, char: %d, secure: %08x-%08x\n", auth_fifo_pos, sd->account_id, char_dat[sd->found_char[ch]].char_id, sd->login_id1, sd->login_id2);
+                        //printf("auth_fifo set #%d - account %d, char: %d, secure: %08x-%08x\n", auth_fifo_pos, sd->account_id, sd->found_char[ch]->char_id, sd->login_id1, sd->login_id2);
                         auth_fifo[auth_fifo_pos].account_id = sd->account_id;
                         auth_fifo[auth_fifo_pos].char_id =
-                            char_dat[sd->found_char[ch]].char_id;
+                            sd->found_char[ch]->char_id;
                         auth_fifo[auth_fifo_pos].login_id1 = sd->login_id1;
                         auth_fifo[auth_fifo_pos].login_id2 = sd->login_id2;
                         auth_fifo[auth_fifo_pos].delflag = 0;
@@ -2660,8 +2662,8 @@ void parse_char (int fd)
                 if (!sd || RFIFOREST (fd) < 37)
                     return;
             {
-                int i = make_new_char (fd, RFIFOP (fd, 2));
-                if (i < 0)
+                struct mmo_charstatus *chardat = make_new_char (fd, RFIFOP (fd, 2));
+                if (!chardat)
                 {
                     WFIFOW (fd, 0) = 0x6e;
                     WFIFOB (fd, 2) = 0x00;
@@ -2673,61 +2675,61 @@ void parse_char (int fd)
                 WFIFOW (fd, 0) = 0x6d;
                 memset (WFIFOP (fd, 2), 0, 106);
 
-                WFIFOL (fd, 2) = char_dat[i].char_id;
-                WFIFOL (fd, 2 + 4) = char_dat[i].base_exp;
-                WFIFOL (fd, 2 + 8) = char_dat[i].zeny;
-                WFIFOL (fd, 2 + 12) = char_dat[i].job_exp;
-                WFIFOL (fd, 2 + 16) = char_dat[i].job_level;
+                WFIFOL (fd, 2) = chardat->char_id;
+                WFIFOL (fd, 2 + 4) = chardat->base_exp;
+                WFIFOL (fd, 2 + 8) = chardat->zeny;
+                WFIFOL (fd, 2 + 12) = chardat->job_exp;
+                WFIFOL (fd, 2 + 16) = chardat->job_level;
 
-                WFIFOL (fd, 2 + 28) = char_dat[i].karma;
-                WFIFOL (fd, 2 + 32) = char_dat[i].manner;
+                WFIFOL (fd, 2 + 28) = chardat->karma;
+                WFIFOL (fd, 2 + 32) = chardat->manner;
 
                 WFIFOW (fd, 2 + 40) = 0x30;
                 WFIFOW (fd, 2 + 42) =
-                    (char_dat[i].hp > 0x7fff) ? 0x7fff : char_dat[i].hp;
+                    (chardat->hp > 0x7fff) ? 0x7fff : chardat->hp;
                 WFIFOW (fd, 2 + 44) =
-                    (char_dat[i].max_hp >
-                     0x7fff) ? 0x7fff : char_dat[i].max_hp;
+                    (chardat->max_hp >
+                     0x7fff) ? 0x7fff : chardat->max_hp;
                 WFIFOW (fd, 2 + 46) =
-                    (char_dat[i].sp > 0x7fff) ? 0x7fff : char_dat[i].sp;
+                    (chardat->sp > 0x7fff) ? 0x7fff : chardat->sp;
                 WFIFOW (fd, 2 + 48) =
-                    (char_dat[i].max_sp >
-                     0x7fff) ? 0x7fff : char_dat[i].max_sp;
-                WFIFOW (fd, 2 + 50) = DEFAULT_WALK_SPEED;   // char_dat[i].speed;
-                WFIFOW (fd, 2 + 52) = char_dat[i].pc_class;
-                WFIFOW (fd, 2 + 54) = char_dat[i].hair;
+                    (chardat->max_sp >
+                     0x7fff) ? 0x7fff : chardat->max_sp;
+                WFIFOW (fd, 2 + 50) = DEFAULT_WALK_SPEED;   // chardat->speed;
+                WFIFOW (fd, 2 + 52) = chardat->pc_class;
+                WFIFOW (fd, 2 + 54) = chardat->hair;
 
-                WFIFOW (fd, 2 + 58) = char_dat[i].base_level;
-                WFIFOW (fd, 2 + 60) = char_dat[i].skill_point;
+                WFIFOW (fd, 2 + 58) = chardat->base_level;
+                WFIFOW (fd, 2 + 60) = chardat->skill_point;
 
-                WFIFOW (fd, 2 + 64) = char_dat[i].shield;
-                WFIFOW (fd, 2 + 66) = char_dat[i].head_top;
-                WFIFOW (fd, 2 + 68) = char_dat[i].head_mid;
-                WFIFOW (fd, 2 + 70) = char_dat[i].hair_color;
+                WFIFOW (fd, 2 + 64) = chardat->shield;
+                WFIFOW (fd, 2 + 66) = chardat->head_top;
+                WFIFOW (fd, 2 + 68) = chardat->head_mid;
+                WFIFOW (fd, 2 + 70) = chardat->hair_color;
 
-                memcpy (WFIFOP (fd, 2 + 74), char_dat[i].name, 24);
+                memcpy (WFIFOP (fd, 2 + 74), chardat->name, 24);
 
                 WFIFOB (fd, 2 + 98) =
-                    (char_dat[i].str > 255) ? 255 : char_dat[i].str;
+                    (chardat->str > 255) ? 255 : chardat->str;
                 WFIFOB (fd, 2 + 99) =
-                    (char_dat[i].agi > 255) ? 255 : char_dat[i].agi;
+                    (chardat->agi > 255) ? 255 : chardat->agi;
                 WFIFOB (fd, 2 + 100) =
-                    (char_dat[i].vit > 255) ? 255 : char_dat[i].vit;
+                    (chardat->vit > 255) ? 255 : chardat->vit;
                 WFIFOB (fd, 2 + 101) =
-                    (char_dat[i].int_ > 255) ? 255 : char_dat[i].int_;
+                    (chardat->int_ > 255) ? 255 : chardat->int_;
                 WFIFOB (fd, 2 + 102) =
-                    (char_dat[i].dex > 255) ? 255 : char_dat[i].dex;
+                    (chardat->dex > 255) ? 255 : chardat->dex;
                 WFIFOB (fd, 2 + 103) =
-                    (char_dat[i].luk > 255) ? 255 : char_dat[i].luk;
-                WFIFOB (fd, 2 + 104) = char_dat[i].char_num;
+                    (chardat->luk > 255) ? 255 : chardat->luk;
+                WFIFOB (fd, 2 + 104) = chardat->char_num;
 
                 WFIFOSET (fd, 108);
                 RFIFOSKIP (fd, 37);
                 for (int ch = 0; ch < MAX_CHARS_PER_ACCOUNT; ch++)
                 {
-                    if (sd->found_char[ch] == -1)
+                    if (!sd->found_char[ch])
                     {
-                        sd->found_char[ch] = i;
+                        sd->found_char[ch] = chardat;
                         break;
                     }
                 }
@@ -2757,8 +2759,7 @@ void parse_char (int fd)
                     {
                         // we change the packet to set it like selection.
                         for (int i = 0; i < MAX_CHARS_PER_ACCOUNT; i++)
-                            if (char_dat[sd->found_char[i]].char_id ==
-                                RFIFOL (fd, 2))
+                            if (sd->found_char[i] && sd->found_char[i]->char_id == RFIFOL (fd, 2))
                             {
                                 // we save new e-mail
                                 memcpy (sd->email, email, 40);
@@ -2771,8 +2772,7 @@ void parse_char (int fd)
                                 RFIFOSKIP (fd, 43);
                                 // change value to put new packet (char selection)
                                 RFIFOW (fd, 0) = 0x66;
-                                RFIFOB (fd, 2) =
-                                    char_dat[sd->found_char[i]].char_num;
+                                RFIFOB (fd, 2) = sd->found_char[i]->char_num;
                                 // not send packet, it's modify of actual packet
                                 goto maybe_end_x68;
                             }
@@ -2796,16 +2796,14 @@ void parse_char (int fd)
                      * } else { */
                     for (int i = 0; i < MAX_CHARS_PER_ACCOUNT; i++)
                     {
-                        struct mmo_charstatus *cs = NULL;
-                        if (sd->found_char[i] != -1
-                            && (cs = &char_dat[sd->found_char[i]])->char_id ==
-                            RFIFOL (fd, 2))
+                        struct mmo_charstatus *cs = sd->found_char[i];
+                        if (cs && cs->char_id == RFIFOL (fd, 2))
                         {
                             char_delete (cs);   // deletion process
-
-                            if (sd->found_char[i] != char_num - 1)
+                            // I'm not sure what this is doing
+                            if (sd->found_char[i] != &char_dat[char_num - 1])
                             {
-                                memcpy (&char_dat[sd->found_char[i]],
+                                memcpy (sd->found_char[i],
                                         &char_dat[char_num - 1],
                                         sizeof (struct mmo_charstatus));
                                 // Correct moved character reference in the character's owner
@@ -2822,7 +2820,7 @@ void parse_char (int fd)
                                             for (int k = 0; k < MAX_CHARS_PER_ACCOUNT; k++)
                                             {
                                                 if (sd2->found_char[k] ==
-                                                    char_num - 1)
+                                                    &char_dat[char_num - 1])
                                                 {
                                                     sd2->found_char[k] =
                                                         sd->found_char[i];
@@ -2840,7 +2838,7 @@ void parse_char (int fd)
                             char_num--;
                             for (int ch = i; ch < MAX_CHARS_PER_ACCOUNT - 1; ch++)
                                 sd->found_char[ch] = sd->found_char[ch + 1];
-                            sd->found_char[8] = -1;
+                            sd->found_char[8] = NULL;
                             WFIFOW (fd, 0) = 0x6f;
                             WFIFOSET (fd, 2);
                             goto maybe3_end_x68;

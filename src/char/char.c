@@ -1073,45 +1073,32 @@ end_online_files:
     fclose_ (txt);
 }
 
-//---------------------------------------------------------------------
-// This function return the number of online players in all map-servers
-//---------------------------------------------------------------------
-int count_users (void)
+/// Calculate the total number of users on all map-servers
+unsigned count_users (void)
 {
-    int  i, users;
-
-    users = 0;
-    for (i = 0; i < MAX_MAP_SERVERS; i++)
+    unsigned users = 0;
+    for (int i = 0; i < MAX_MAP_SERVERS; i++)
         if (server_fd[i] >= 0)
             users += server[i].users;
 
     return users;
 }
 
-//----------------------------------------
-// [Fate] Find inventory item based on equipment mask, return view.  ID must match view ID (!).
-//----------------------------------------
+/// Return item type that is equipped in the given slot
 static int find_equip_view (struct mmo_charstatus *p, unsigned int equipmask)
 {
-    int  i;
-    for (i = 0; i < MAX_INVENTORY; i++)
+    for (int i = 0; i < MAX_INVENTORY; i++)
         if (p->inventory[i].nameid && p->inventory[i].amount
             && p->inventory[i].equip & equipmask)
             return p->inventory[i].nameid;
     return 0;
 }
 
-//----------------------------------------
-// Function to send characters to a player
-//----------------------------------------
-int mmo_char_send006b (int fd, struct char_session_data *sd)
+/// List slots
+void mmo_char_send006b (int fd, struct char_session_data *sd)
 {
-    int  i, j, found_num;
-    struct mmo_charstatus *p;
-    const int offset = 24;
-
-    found_num = 0;
-    for (i = 0; i < char_num; i++)
+    int found_num = 0;
+    for (int i = 0; i < char_num; i++)
     {
         if (char_dat[i].account_id == sd->account_id)
         {
@@ -1121,23 +1108,26 @@ int mmo_char_send006b (int fd, struct char_session_data *sd)
                 break;
         }
     }
-    for (i = found_num; i < MAX_CHARS_PER_ACCOUNT; i++)
+    for (int i = found_num; i < MAX_CHARS_PER_ACCOUNT; i++)
         sd->found_char[i] = NULL;
+
+    const int offset = 24;
 
     memset (WFIFOP (fd, 0), 0, offset + found_num * 106);
     WFIFOW (fd, 0) = 0x6b;
     WFIFOW (fd, 2) = offset + found_num * 106;
 
-    for (i = 0; i < found_num; i++)
+    for (int i = 0; i < found_num; i++)
     {
-        p = sd->found_char[i];
-        j = offset + (i * 106); // increase speed of code
+        struct mmo_charstatus *p = sd->found_char[i];
+        int j = offset + (i * 106);
 
         WFIFOL (fd, j) = p->char_id;
         WFIFOL (fd, j + 4) = p->base_exp;
         WFIFOL (fd, j + 8) = p->zeny;
         WFIFOL (fd, j + 12) = p->job_exp;
-        WFIFOL (fd, j + 16) = 0;    //p->job_level; // [Fate] We no longer reveal this to the player, as its meaning is weird.
+        // [Fate] We no longer reveal this to the player, as its meaning is weird.
+        WFIFOL (fd, j + 16) = 0;    //p->job_level;
 
         WFIFOW (fd, j + 20) = find_equip_view (p, 0x0040);  // 9: shoes
         WFIFOW (fd, j + 22) = find_equip_view (p, 0x0004);  // 10: gloves
@@ -1149,15 +1139,15 @@ int mmo_char_send006b (int fd, struct char_session_data *sd)
         WFIFOL (fd, j + 36) = p->manner;
 
         WFIFOW (fd, j + 40) = p->status_point;
-        WFIFOW (fd, j + 42) = (p->hp > 0x7fff) ? 0x7fff : p->hp;
-        WFIFOW (fd, j + 44) = (p->max_hp > 0x7fff) ? 0x7fff : p->max_hp;
-        WFIFOW (fd, j + 46) = (p->sp > 0x7fff) ? 0x7fff : p->sp;
-        WFIFOW (fd, j + 48) = (p->max_sp > 0x7fff) ? 0x7fff : p->max_sp;
+        WFIFOW (fd, j + 42) = MIN(p->hp, 0x7fff);
+        WFIFOW (fd, j + 44) = MIN(p->max_hp, 0x7fff);
+        WFIFOW (fd, j + 46) = MIN(p->sp, 0x7fff);
+        WFIFOW (fd, j + 48) = MIN(p->max_sp, 0x7fff);
         WFIFOW (fd, j + 50) = DEFAULT_WALK_SPEED;   // p->speed;
         WFIFOW (fd, j + 52) = p->pc_class;
         WFIFOW (fd, j + 54) = p->hair;
-//      WFIFOW(fd,j+56) = p->weapon; // dont send weapon since TMW does not support it
-        WFIFOW (fd, j + 56) = 0;
+        // don't send weapon since TMW does not support it
+        WFIFOW (fd, j + 56) = 0;    //p->weapon
         WFIFOW (fd, j + 58) = p->base_level;
         WFIFOW (fd, j + 60) = p->skill_point;
         WFIFOW (fd, j + 62) = p->head_bottom;
@@ -1170,18 +1160,16 @@ int mmo_char_send006b (int fd, struct char_session_data *sd)
 
         memcpy (WFIFOP (fd, j + 74), p->name, 24);
 
-        WFIFOB (fd, j + 98) = (p->str > 255) ? 255 : p->str;
-        WFIFOB (fd, j + 99) = (p->agi > 255) ? 255 : p->agi;
-        WFIFOB (fd, j + 100) = (p->vit > 255) ? 255 : p->vit;
-        WFIFOB (fd, j + 101) = (p->int_ > 255) ? 255 : p->int_;
-        WFIFOB (fd, j + 102) = (p->dex > 255) ? 255 : p->dex;
-        WFIFOB (fd, j + 103) = (p->luk > 255) ? 255 : p->luk;
+        WFIFOB (fd, j + 98) = MIN(p->str, 255);
+        WFIFOB (fd, j + 99) = MIN(p->agi, 255);
+        WFIFOB (fd, j + 100) = MIN(p->vit, 255);
+        WFIFOB (fd, j + 101) = MIN(p->int_, 255);
+        WFIFOB (fd, j + 102) = MIN(p->dex, 255);
+        WFIFOB (fd, j + 103) = MIN(p->luk, 255);
         WFIFOB (fd, j + 104) = p->char_num;
     }
 
     WFIFOSET (fd, WFIFOW (fd, 2));
-
-    return 0;
 }
 
 int set_account_reg2 (int acc, int num, struct global_reg *reg)

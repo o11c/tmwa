@@ -311,7 +311,7 @@ int mmo_char_fromstr (char *str, struct mmo_charstatus *p)
         if (char_dat[i].char_id == p->char_id)
         {
             printf ("\033[1;31mmmo_auth_init: ******Error: a character has an identical id to another.\n");
-            printf ("               character id #%d -> new character not readed.\n",
+            printf ("               character id #%d -> new character not read.\n",
                     p->char_id);
             printf ("               Character saved in log file.\033[0m\n");
             return -1;
@@ -319,7 +319,7 @@ int mmo_char_fromstr (char *str, struct mmo_charstatus *p)
         else if (strcmp (char_dat[i].name, p->name) == 0)
         {
             printf ("\033[1;31mmmo_auth_init: ******Error: character name already exists.\n");
-            printf ("               character name '%s' -> new character not readed.\n",
+            printf ("               character name '%s' -> new character not read.\n",
                     p->name);
             printf ("               Character saved in log file.\033[0m\n");
             return -2;
@@ -424,44 +424,36 @@ int mmo_char_fromstr (char *str, struct mmo_charstatus *p)
     return 1;
 }
 
-//---------------------------------
-// Function to read characters file
-//---------------------------------
-int mmo_char_init (void)
+/// Read and parse the characters file (athena.txt)
+void mmo_char_init (void)
 {
-    char line[65536];
-    int  ret, line_count;
-    FILE *fp;
-
     char_max = 256;
     CREATE (char_dat, struct mmo_charstatus, 256);
     CREATE (online_chars, int, 256);
     for (int i = 0; i < char_max; i++)
         online_chars[i] = -1;
-
     char_num = 0;
 
-    fp = fopen_ (char_txt, "r");
-    if (fp == NULL)
+    FILE *fp = fopen_ (char_txt, "r");
+    if (!fp)
     {
         char_log ("Characters file not found: %s.\n", char_txt);
-        char_log ("Id for the next created character: %d.\n",
-                  char_id_count);
-        return 0;
+        char_log ("Id for the next created character: %d.\n", char_id_count);
     }
 
-    line_count = 0;
-    while (fgets (line, sizeof (line) - 1, fp))
+    char line[65536];
+    int line_count = 0;
+    while (fgets (line, sizeof (line), fp))
     {
-        int  i, j;
         line_count++;
 
         if (line[0] == '/' && line[1] == '/')
             continue;
-        line[sizeof (line) - 1] = '\0';
 
-        j = 0;
-        if (sscanf (line, "%d\t%%newid%%%n", &i, &j) == 1 && j > 0)
+        int id;
+        // needed to confirm that %newid% was found
+        int got_end = 0;
+        if (sscanf (line, "%d\t%%newid%%%n", &id, &got_end) == 1 && got_end)
         {
             if (char_id_count < i)
                 char_id_count = i;
@@ -473,51 +465,50 @@ int mmo_char_init (void)
             char_max += 256;
             RECREATE (char_dat, struct mmo_charstatus, char_max);
             RECREATE (online_chars, int, char_max);
-            for (i = char_max - 256; i < char_max; i++)
+            for (int i = char_max - 256; i < char_max; i++)
                 online_chars[i] = -1;
         }
 
-        ret = mmo_char_fromstr (line, &char_dat[char_num]);
+        int ret = mmo_char_fromstr (line, &char_dat[char_num]);
         if (ret > 0)
-        {                       // negative value or zero for errors
+        {
+            // negative value or zero for errors
             if (char_dat[char_num].char_id >= char_id_count)
                 char_id_count = char_dat[char_num].char_id + 1;
             char_num++;
+            continue;
         }
-        else
+        printf ("mmo_char_init: in characters file, unable to read the line #%d.\n",
+                line_count);
+        printf ("               -> Character saved in log file.\n");
+        switch (ret)
         {
-            printf ("mmo_char_init: in characters file, unable to read the line #%d.\n",
-                    line_count);
-            printf ("               -> Character saved in log file.\n");
-            switch (ret)
-            {
-                case -1:
-                    char_log ("Duplicate character id in the next character line (character not readed):\n");
-                    break;
-                case -2:
-                    char_log ("Duplicate character name in the next character line (character not readed):\n");
-                    break;
-                case -3:
-                    char_log ("Invalid memo point structure in the next character line (character not readed):\n");
-                    break;
-                case -4:
-                    char_log ("Invalid inventory item structure in the next character line (character not readed):\n");
-                    break;
-                case -5:
-                    char_log ("Invalid cart item structure in the next character line (character not readed):\n");
-                    break;
-                case -6:
-                    char_log ("Invalid skill structure in the next character line (character not readed):\n");
-                    break;
-                case -7:
-                    char_log ("Invalid register structure in the next character line (character not readed):\n");
-                    break;
-                default:       // 0
-                    char_log ("Unabled to get a character in the next line - Basic structure of line (before inventory) is incorrect (character not readed):\n");
-                    break;
-            }
-            char_log ("%s", line);
+        case -1:
+            char_log ("Duplicate character id in the next character line (character not read):\n");
+            break;
+        case -2:
+            char_log ("Duplicate character name in the next character line (character not read):\n");
+            break;
+        case -3:
+            char_log ("Invalid memo point structure in the next character line (character not read):\n");
+            break;
+        case -4:
+            char_log ("Invalid inventory item structure in the next character line (character not read):\n");
+            break;
+        case -5:
+            char_log ("Invalid cart item structure in the next character line (character not read):\n");
+            break;
+        case -6:
+            char_log ("Invalid skill structure in the next character line (character not read):\n");
+            break;
+        case -7:
+            char_log ("Invalid register structure in the next character line (character not read):\n");
+            break;
+        default:       // 0
+            char_log ("Unabled to get a character in the next line - Basic structure of line (before inventory) is incorrect (character not read):\n");
+            break;
         }
+        char_log ("%s", line);
     }
     fclose_ (fp);
 
@@ -531,13 +522,10 @@ int mmo_char_init (void)
     }
     else
     {
-        char_log ("mmo_char_init: %d characters read in %s.\n",
-                  char_num, char_txt);
+        char_log ("mmo_char_init: %d characters read in %s.\n", char_num, char_txt);
     }
 
     char_log ("Id for the next created character: %d.\n", char_id_count);
-
-    return 0;
 }
 
 //---------------------------------------------------------

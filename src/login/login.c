@@ -649,6 +649,7 @@ void check_auth_sync (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom
     // If we're a child we should suicide now.
     if (pid == 0)
         _exit (0);
+    pid = 0;
 }
 
 /// Send a packet to all char servers, excluding sfd

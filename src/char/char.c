@@ -528,48 +528,41 @@ void mmo_char_init (void)
     char_log ("Id for the next created character: %d.\n", char_id_count);
 }
 
-//---------------------------------------------------------
-// Function to save characters in files (speed up by [Yor])
-//---------------------------------------------------------
+/// Save characters in athena.txt
 void mmo_char_sync (void)
 {
-    int  i, j, k;
-    int  lock;
-    FILE *fp;
     int  id[char_num];
-
-    // Sorting before save (by [Yor])
-    for (i = 0; i < char_num; i++)
+    /// Sort before save
+    // FIXME is this necessary or useful?
+    // Note that this sorts by account id and slot, not by character id
+    for (int i = 0; i < char_num; i++)
     {
         id[i] = i;
-        for (j = 0; j < i; j++)
+        for (int j = 0; j < i; j++)
         {
             if ((char_dat[i].account_id < char_dat[id[j]].account_id) ||
                 // if same account id, we sort by slot.
                 (char_dat[i].account_id == char_dat[id[j]].account_id &&
                  char_dat[i].char_num < char_dat[id[j]].char_num))
             {
-                for (k = i; k > j; k--)
+                for (int k = i; k > j; k--)
                     id[k] = id[k - 1];
                 id[j] = i;      // id[i]
                 break;
             }
         }
     }
-
-    // Data save
-    fp = lock_fopen (char_txt, &lock);
-    if (fp == NULL)
+    int  lock;
+    FILE *fp = lock_fopen (char_txt, &lock);
+    if (!fp)
     {
         char_log ("WARNING: Server can't save characters.\n");
+        return;
     }
-    else
-    {
-        for (i = 0; i < char_num; i++)
-            mmo_char_tofile (fp, &char_dat[id[i]]);
-        fprintf (fp, "%d\t%%newid%%\n", char_id_count);
-        lock_fclose (fp, char_txt, &lock);
-    }
+    for (int i = 0; i < char_num; i++)
+        mmo_char_tofile (fp, &char_dat[id[i]]);
+    fprintf (fp, "%d\t%%newid%%\n", char_id_count);
+    lock_fclose (fp, char_txt, &lock);
 }
 
 //----------------------------------------------------
@@ -577,29 +570,21 @@ void mmo_char_sync (void)
 //----------------------------------------------------
 void mmo_char_sync_timer (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
 {
-    if (pid != 0)
-    {
-        int  status;
-        pid_t temp = waitpid (pid, &status, WNOHANG);
-
-        // Need to check status too?
-        if (temp == 0)
-        {
-            return;
-        }
-    }
-
-    // This can take a lot of time. Fork a child to handle the work and return at once
-    // If we're unable to fork just continue running the function normally
-    if ((pid = fork ()) > 0)
+    if (pid && !waitpid (pid, NULL, WNOHANG))
+        // still running
         return;
 
+    pid = fork ();
+    if (pid > 0)
+        return;
+    // either we are the child, or fork() failed
     mmo_char_sync ();
     inter_save ();
 
     // If we're a child we should suicide now.
     if (pid == 0)
         _exit (0);
+    pid = 0;
 }
 
 //----------------------------------------------------

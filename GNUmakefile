@@ -16,6 +16,8 @@ include make.defs
 %.c %.h: %.y
 	$(BISON) -d -o $*.c $<
 
+tags:
+	ctags -R src/
 
 # All this duplication is required because make handles pattern rules specially
 ${BUILD_DIR}/char/%.o: src/char/%.c | ${BUILD_DIR}/char/

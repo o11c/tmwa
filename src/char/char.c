@@ -91,11 +91,13 @@ struct
     int delflag;
     enum gender sex;
     unsigned short packet_tmw_version;
-    time_t connect_until_time;  // # of seconds 1/1/1970 (timestamp): Validity limit of the account (0 = unlimited)
+    time_t connect_until_time;
 } auth_fifo[AUTH_FIFO_SIZE];
 unsigned auth_fifo_pos = 0;
 
 int  char_id_count = 150000;
+// TODO: it is very inefficient to store this this way
+// instead, have the outer struct be by account, and that store characters
 struct mmo_charstatus *char_dat;
 int  char_num, char_max;
 int  max_connect_user = 0;
@@ -1172,39 +1174,37 @@ void mmo_char_send006b (int fd, struct char_session_data *sd)
     WFIFOSET (fd, WFIFOW (fd, 2));
 }
 
-int set_account_reg2 (int acc, int num, struct global_reg *reg)
+/// Set a permanent variable on an account, rather than on a character
+// TODO inline this ?
+void set_account_reg2 (account_t acc, size_t regnum, struct global_reg *reg)
 {
-    int  i, c;
-
-    c = 0;
-    for (i = 0; i < char_num; i++)
+    for (int i = 0; i < char_num; i++)
     {
+        // This happens more than once!
         if (char_dat[i].account_id == acc)
         {
             memcpy (char_dat[i].account_reg2, reg,
-                    sizeof (char_dat[i].account_reg2));
+                    ACCOUNT_REG2_NUM * sizeof (struct global_reg));
             char_dat[i].account_reg2_num = num;
-            c++;
         }
     }
-    return c;
 }
 
-// Divorce a character from it's partner and let the map server know
-int char_divorce (struct mmo_charstatus *cs)
+/// Divorce a character from it's partner and let the map server know
+void char_divorce (struct mmo_charstatus *cs)
 {
-    uint8_t buf[10];
-
-    if (cs == NULL)
+    if (!cs)
         return 0;
 
+    uint8_t buf[10];
     if (cs->partner_id <= 0)
     {
         WBUFW (buf, 0) = 0x2b12;
         WBUFL (buf, 2) = cs->char_id;
-        WBUFL (buf, 6) = 0;     // partner id 0 means failure
+        // partner id 0 means failure
+        WBUFL (buf, 6) = 0;
         mapif_sendall (buf, 10);
-        return 0;
+        return;
     }
 
     WBUFW (buf, 0) = 0x2b12;
@@ -1212,56 +1212,50 @@ int char_divorce (struct mmo_charstatus *cs)
 
     for (int i = 0; i < char_num; i++)
     {
-        if (char_dat[i].char_id == cs->partner_id
-            && char_dat[i].partner_id == cs->char_id)
+        if (char_dat[i].char_id != cs->partner_id)
+            continue;
+        // Normal case
+        if (char_dat[i].partner_id == cs->char_id)
         {
             WBUFL (buf, 6) = cs->partner_id;
             mapif_sendall (buf, 10);
             cs->partner_id = 0;
             char_dat[i].partner_id = 0;
-            return 0;
+            return;
         }
         // The other char doesn't have us as their partner, so just clear our partner
-        // Don't worry about this, as the map server should verify itself that the other doesn't have us as a partner, and so won't mess with their marriage
-        else if (char_dat[i].char_id == cs->partner_id)
-        {
-            WBUFL (buf, 6) = cs->partner_id;
-            mapif_sendall (buf, 10);
-            cs->partner_id = 0;
-            return 0;
-        }
+        // Don't worry about this, as the map server should verify itself that
+        // the other doesn't have us as a partner, and so won't mess with their marriage
+        WBUFL (buf, 6) = cs->partner_id;
+        mapif_sendall (buf, 10);
+        cs->partner_id = 0;
+        return;
     }
 
     // Our partner wasn't found, so just clear our marriage
     WBUFL (buf, 6) = cs->partner_id;
     cs->partner_id = 0;
     mapif_sendall (buf, 10);
-
-    return 0;
 }
 
-//----------------------------------------------------------------------
-// Force disconnection of an online player (with account value) by [Yor]
-//----------------------------------------------------------------------
-int disconnect_player (int accound_id)
+/// Forcibly disconnect an online player, by account (from login server)
+// called when sex changed, account deleted, or banished
+void disconnect_player (account_t account_id)
 {
-    int  i;
-    struct char_session_data *sd;
-
     // disconnect player if online on char-server
-    for (i = 0; i < fd_max; i++)
+    for (int i = 0; i < fd_max; i++)
     {
-        if (session[i] && (sd = (struct char_session_data*)session[i]->session_data))
+        if (!session[i])
+            continue;
+        struct char_session_data *sd = (struct char_session_data*)session[i]->session_data;
+        if (!sd)
+            continue;
+        if (sd->account_id == account_id)
         {
-            if (sd->account_id == accound_id)
-            {
-                session[i]->eof = 1;
-                return 1;
-            }
+            session[i]->eof = 1;
+            return;
         }
     }
-
-    return 0;
 }
 
 // キャラ削除に伴うデータ削除

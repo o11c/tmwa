@@ -1076,13 +1076,13 @@ end_online_files:
 }
 
 /// Calculate the total number of users on all map-servers
-unsigned count_users (void)
+static unsigned count_users (void) __attribute__((pure));
+static unsigned count_users (void)
 {
     unsigned users = 0;
     for (int i = 0; i < MAX_MAP_SERVERS; i++)
         if (server_fd[i] >= 0)
             users += server[i].users;
-
     return users;
 }
 
@@ -1176,7 +1176,7 @@ void mmo_char_send006b (int fd, struct char_session_data *sd)
 
 /// Set a permanent variable on an account, rather than on a character
 // TODO inline this ?
-void set_account_reg2 (account_t acc, size_t regnum, struct global_reg *reg)
+void set_account_reg2 (account_t acc, size_t num, struct global_reg *reg)
 {
     for (int i = 0; i < char_num; i++)
     {
@@ -1194,21 +1194,18 @@ void set_account_reg2 (account_t acc, size_t regnum, struct global_reg *reg)
 void char_divorce (struct mmo_charstatus *cs)
 {
     if (!cs)
-        return 0;
+        return;
 
     uint8_t buf[10];
+    WBUFW (buf, 0) = 0x2b12;
+    WBUFL (buf, 2) = cs->char_id;
     if (cs->partner_id <= 0)
     {
-        WBUFW (buf, 0) = 0x2b12;
-        WBUFL (buf, 2) = cs->char_id;
         // partner id 0 means failure
         WBUFL (buf, 6) = 0;
         mapif_sendall (buf, 10);
         return;
     }
-
-    WBUFW (buf, 0) = 0x2b12;
-    WBUFL (buf, 2) = cs->char_id;
 
     for (int i = 0; i < char_num; i++)
     {
@@ -1258,518 +1255,441 @@ void disconnect_player (account_t account_id)
     }
 }
 
-// キャラ削除に伴うデータ削除
-static int char_delete (struct mmo_charstatus *cs)
+/// Delete a character safely, removing references
+static void char_delete (struct mmo_charstatus *cs)
 {
-
-    // ギルド脱退
     if (cs->guild_id)
         inter_guild_leave (cs->guild_id, cs->account_id, cs->char_id);
-    // パーティー脱退
     if (cs->party_id)
         inter_party_leave (cs->party_id, cs->account_id);
-    // 離婚
     if (cs->partner_id)
         char_divorce (cs);
 
-    // Force the character (and all on the same account) to leave all map servers
-    {
-        unsigned char buf[6];
-        WBUFW (buf, 0) = 0x2afe;
-        WBUFL (buf, 2) = cs->account_id;
-        mapif_sendall (buf, 6);
-    }
-
-    return 0;
+    /// Force the character to leave all map servers
+    // BUG: it shouldn't have to kick another character of the same account
+    unsigned char buf[6];
+    WBUFW (buf, 0) = 0x2afe;
+    WBUFL (buf, 2) = cs->account_id;
+    mapif_sendall (buf, 6);
 }
 
 void parse_tologin (int fd)
 {
-    struct char_session_data *sd;
-
-    // only login-server can have an access to here.
-    // so, if it isn't the login-server, we disconnect the session (fd != login_fd).
-    if (fd != login_fd || session[fd]->eof)
+    if (fd != login_fd)
     {
-        if (fd == login_fd)
-        {
-            printf ("Char-server can't connect to login-server (connection #%d).\n",
-                    fd);
-            login_fd = -1;
-        }
+        char_log ("Error: %s called but isn't the login-server\n", __func__);
+        abort();
+    }
+
+    if (session[fd]->eof)
+    {
+        printf ("Char-server can't connect to login-server (connection #%d).\n",
+                fd);
+        login_fd = -1;
         close (fd);
         delete_session (fd);
         return;
     }
 
-    sd = (struct char_session_data*)session[fd]->session_data;
-
     while (RFIFOREST (fd) >= 2)
     {
-//      printf("parse_tologin: connection #%d, packet: 0x%x (with being read: %d bytes).\n", fd, RFIFOW(fd,0), RFIFOREST(fd));
-
         switch (RFIFOW (fd, 0))
         {
-            case 0x2711:
-                if (RFIFOREST (fd) < 3)
-                    return;
-                if (RFIFOB (fd, 2))
-                {
-//              printf("connect login server error : %d\n", RFIFOB(fd,2));
-                    printf ("Can not connect to login-server.\n");
-                    printf ("The server communication passwords (default s1/p1) is probably invalid.\n");
-                    printf ("Also, please make sure your accounts file (default: accounts.txt) has those values present.\n");
-                    printf ("If you changed the communication passwords, change them back at map_athena.conf and char_athena.conf\n");
-                    exit (1);
-                }
-                else
-                {
-                    printf ("Connected to login-server (connection #%d).\n",
-                            fd);
-                    // if no map-server already connected, display a message...
-                    for (int i = 0; i < MAX_MAP_SERVERS; i++)
-                        if (server_fd[i] >= 0 && server[i].map[0][0])   // if map-server online and at least 1 map
-                            goto end_x7211;
-                    printf ("Awaiting maps from map-server.\n");
-                }
-            end_x7211:
-                RFIFOSKIP (fd, 3);
-                break;
+        case 0x2711:
+            if (RFIFOREST (fd) < 3)
+                return;
+        {
+            if (RFIFOB (fd, 2))
+            {
+                printf ("Can not connect to login-server.\n");
+                printf ("The server communication passwords (default s1/p1) is probably invalid.\n");
+                printf ("Also, please make sure your accounts file (default: accounts.txt) has those values present.\n");
+                printf ("If you changed the communication passwords, change them back at map_athena.conf and char_athena.conf\n");
+                exit (1);
+            }
+            printf ("Connected to login-server (connection #%d).\n", fd);
+            // if no map-server already connected, display a message...
+            for (int i = 0; i < MAX_MAP_SERVERS; i++)
+                // if map-server online and at least 1 map
+                if (server_fd[i] >= 0 && server[i].map[0][0])
+                    goto end_x7211;
+            printf ("Awaiting maps from map-server.\n");
+        }
+        end_x7211:
+            RFIFOSKIP (fd, 3);
+            break;
 
-            case 0x2713:
-                if (RFIFOREST (fd) < 51)
-                    return;
-//          printf("parse_tologin 2713 : %d\n", RFIFOB(fd,6));
-                for (int i = 0; i < fd_max; i++)
+        /// Login server auth result
+        // uint16_t packet, uint32_t acc, uint8_t failed, char email[40], uint32_t time limit
+        case 0x2713:
+            if (RFIFOREST (fd) < 51)
+                return;
+        {
+            for (int i = 0; i < fd_max; i++)
+            {
+                if (!session[i])
+                    continue;
+                struct char_session_data *sd = (struct char_session_data*)session[i]->session_data;
+                if (!sd || sd->account_id != RFIFOL (fd, 2))
+                    continue;
+                if (RFIFOB (fd, 6))
                 {
-                    if (session[i] && (sd = (struct char_session_data*)session[i]->session_data)
-                        && sd->account_id == RFIFOL (fd, 2))
-                    {
-                        if (RFIFOB (fd, 6) != 0)
-                        {
-                            WFIFOW (i, 0) = 0x6c;
-                            WFIFOB (i, 2) = 0x42;
-                            WFIFOSET (i, 3);
-                        }
-                        else if (max_connect_user == 0
-                                 || count_users () < max_connect_user)
-                        {
-//                      if (max_connect_user == 0)
-//                          printf("max_connect_user (unlimited) -> accepted.\n");
-//                      else
-//                          printf("count_users(): %d < max_connect_user (%d) -> accepted.\n", count_users(), max_connect_user);
-                            memcpy (sd->email, RFIFOP (fd, 7), 40);
-                            if (e_mail_check (sd->email) == 0)
-                                strncpy (sd->email, "a@a.com", 40); // default e-mail
-                            sd->connect_until_time = (time_t) RFIFOL (fd, 47);
-                            // send characters to player
-                            mmo_char_send006b (i, sd);
-                        }
-                        else
-                        {
-                            // refuse connection: too much online players
-//                      printf("count_users(): %d < max_connect_use (%d) -> fail...\n", count_users(), max_connect_user);
-                            WFIFOW (i, 0) = 0x6c;
-                            WFIFOW (i, 2) = 0;
-                            WFIFOSET (i, 3);
-                        }
-                        break;
-                    }
+                    // login server denied the auth
+                    WFIFOW (i, 0) = 0x6c;
+                    WFIFOB (i, 2) = 0x42;
+                    WFIFOSET (i, 3);
+                    goto end_x2713;
                 }
-                RFIFOSKIP (fd, 51);
-                break;
-
-                // Receiving of an e-mail/time limit from the login-server (answer of a request because a player comes back from map-server to char-server) by [Yor]
-            case 0x2717:
-                if (RFIFOREST (fd) < 50)
-                    return;
-                for (int i = 0; i < fd_max; i++)
+                if (max_connect_user && count_users() >= max_connect_user)
                 {
-                    if (session[i] && (sd = (struct char_session_data*)session[i]->session_data))
+                    // refuse connection: too many online players
+                    WFIFOW (i, 0) = 0x6c;
+                    WFIFOW (i, 2) = 0;
+                    WFIFOSET (i, 3);
+                    goto end_x2713;
+                }
+                // connection ok
+                STRZCPY (sd->email, (char *)RFIFOP (fd, 7));
+                if (!e_mail_check (sd->email))
+                    STRZCPY (sd->email, "a@a.com");
+                sd->connect_until_time = (time_t) RFIFOL (fd, 47);
+                // send characters to player
+                mmo_char_send006b (i, sd);
+                goto end_x2713;
+            } // for i in fds
+        }
+        end_x2713:
+            RFIFOSKIP (fd, 51);
+            break;
+
+        /// Receiving of an e-mail/time limit from the login-server
+        // (answer of a request because a player comes back from map-server to char-server) by [Yor]
+        // uint16_t packet, uint32_t acc, char email[40], uint32_t time limit
+        case 0x2717:
+            if (RFIFOREST (fd) < 50)
+                return;
+        {
+            for (int i = 0; i < fd_max; i++)
+            {
+                if (!session[i])
+                    continue;
+                struct char_session_data *sd = (struct char_session_data *)session[i]->session_data;
+                if (!sd || sd->account_id != RFIFOL (fd, 2))
+                    continue;
+                STRZCPY (sd->email, (char *) RFIFOP (fd, 6));
+                if (!e_mail_check (sd->email))
+                    STRZCPY (sd->email, "a@a.com");
+                sd->connect_until_time = (time_t) RFIFOL (fd, 46);
+                goto end_x2717;
+            }
+        }
+        end_x2717:
+            RFIFOSKIP (fd, 50);
+            break;
+
+        /// gm reply
+        // uint16_t packet, uint32_t acc, uint32_t gm_level
+        case 0x2721:
+            if (RFIFOREST (fd) < 10)
+                return;
+        {
+            RFIFOW (fd, 1) = 0x2b0b;
+            mapif_sendall (RFIFOP (fd, 0), 10);
+        }
+            RFIFOSKIP (fd, 10);
+            break;
+
+        /// sex changed
+        // uint16_t packet, uint32_t acc, uint8_t sex
+        case 0x2723:
+            if (RFIFOREST (fd) < 7)
+                return;
+        {
+            account_t acc = RFIFOL (fd, 2);
+            enum gender sex = (enum gender)RFIFOB (fd, 6);
+            if (!acc)
+                // ?
+                goto reply_x2323_x2b0d;
+            for (int i = 0; i < char_num; i++)
+            {
+                if (char_dat[i].account_id != acc)
+                    continue;
+                // Note: the loop body may be executed more than once
+                char_dat[i].sex = sex;
+                // to avoid any problem with equipment and invalid sex, equipment is unequiped.
+                for (int j = 0; j < MAX_INVENTORY; j++)
+                    char_dat[i].inventory[j].equip = 0;
+                char_dat[i].weapon = 0;
+                char_dat[i].shield = 0;
+                char_dat[i].head_top = 0;
+                char_dat[i].head_mid = 0;
+                char_dat[i].head_bottom = 0;
+            }
+            // disconnect player if online on char-server
+            disconnect_player (acc);
+        reply_x2323_x2b0d:
+            RFIFOW (fd, 0) = 0x2b0d;
+            mapif_sendall (RFIFOP (fd, 0), 7);
+        }
+            RFIFOSKIP (fd, 7);
+            break;
+
+        /// broadcast message (no answer)
+        // uint16_t packet, uint16_t blue, uint32_t msglen, char msg[msglen]
+        case 0x2726:
+            if (RFIFOREST (fd) < 8 || RFIFOREST (fd) < (8 + RFIFOL (fd, 4)))
+                return;
+        {
+            if (RFIFOL (fd, 4) < 1)
+            {
+                char_log ("Receiving a message for broadcast, but message is void.\n");
+                goto end_x2726;
+            }
+            // at least 1 map-server
+            for (int i = 0; i < MAX_MAP_SERVERS; i++)
+                if (server_fd[i] >= 0)
+                    goto tmp_x2726;
+            char_log ("'ladmin': Receiving a message for broadcast, but no map-server is online.\n");
+            goto end_x2726;
+        tmp_x2726: ;
+            char message[RFIFOL (fd, 4) + 1];
+            STRZCPY (message, (char *)RFIFOP (fd, 8));
+            remove_control_chars (message);
+            // remove all first spaces
+            char *p = message;
+            while (p[0] == ' ')
+                p++;
+            // if message is only composed of spaces
+            if (p[0] == '\0')
+            {
+                char_log ("Receiving a message for broadcast, but message is only a lot of spaces.\n");
+                goto end_x2726;
+            }
+            char_log ("'ladmin': Receiving a message for broadcast: %s\n",
+                      message);
+            // split message to max 80 char
+            size_t len = strlen (p);
+            while (p[0])
+            {
+                while (p[0] == ' ')
+                    p++;
+                if (!p[0])
+                    break;
+                char *last_space = p + MIN (len, 80);
+                while (last_space != p && *last_space != ' ')
+                    last_space--;
+                if (last_space == p)
+                    last_space = p + MIN (len, 80);
+
+                // send broadcast to all map-servers
+                uint8_t buf[84] = {};
+                WBUFW (buf, 0) = 0x3800;
+                WBUFW (buf, 2) = 4 + (last_space - p) + 1;
+                memcpy (WBUFP (buf, 4), p, last_space - p);
+                mapif_sendall (buf, WBUFW (buf, 2));
+                p = last_space;
+            } // while p
+        }
+        end_x2726:
+            RFIFOSKIP (fd, 8 + RFIFOL (fd, 4));
+            break;
+
+        /// set account_reg2
+        // uint16_t packet, uint16_t packetlen, uint32_t acc, {char varname[32], int32_t val}[]
+        case 0x2729:
+            if (RFIFOREST (fd) < 4 || RFIFOREST (fd) < RFIFOW (fd, 2))
+                return;
+        {
+            struct global_reg reg[ACCOUNT_REG2_NUM];
+            account_t acc = RFIFOL (fd, 4);
+            int p = 8;
+            int j = 0;
+            for (j = 0; p < RFIFOW (fd, 2) && j < ACCOUNT_REG2_NUM; j++)
+            {
+                memcpy (reg[j].str, RFIFOP (fd, p), 32);
+                p += 32;
+                reg[j].value = RFIFOL (fd, p);
+                p += 4;
+            }
+            set_account_reg2 (acc, j, reg);
+            // ?? need to send a ban if something about a dirty login ?
+            RFIFOW (fd, 0) = 0x2b11;
+            mapif_sendall (RFIFOP (fd, 0), RFIFOW (fd, 2));
+            RFIFOSKIP (fd, RFIFOW (fd, 2));
+        }
+            break;
+
+        /// [Fate] Itemfrob package: forwarded from login-server
+        // uint16_t packet, uint32_t srcid, uint32_t dstid
+        case 0x7924:
+            if (RFIFOREST (fd) < 10)
+                return;
+        {
+            int  source_id = RFIFOL (fd, 2);
+            int  dest_id = RFIFOL (fd, 6);
+            RFIFOW (fd, 0) = 0x2afa;
+            mapif_sendall (RFIFOP (fd, 0), 10);
+            for (int i = 0; i < char_num; i++)
+            {
+                struct mmo_charstatus *c = &char_dat[i];
+                int  changes = 0;
+#define FIX(v) if (v == source_id) {v = dest_id; ++changes; }
+                for (int j = 0; j < MAX_INVENTORY; j++)
+                    FIX (c->inventory[j].nameid);
+                for (int j = 0; j < MAX_CART; j++)
+                    FIX (c->cart[j].nameid);
+                FIX (c->weapon);
+                FIX (c->shield);
+                FIX (c->head_top);
+                FIX (c->head_mid);
+                FIX (c->head_bottom);
+
+                struct storage *s = account2storage (c->account_id);
+                if (s)
+                    for (int j = 0; j < s->storage_amount; j++)
+                        FIX (s->storage_[j].nameid);
+#undef FIX
+                if (changes)
+                    char_log ("itemfrob(%d -> %d):  `%s'(%d, account %d): changed %d times\n",
+                              source_id, dest_id, c->name, c->char_id,
+                              c->account_id, changes);
+            }
+            mmo_char_sync ();
+            inter_storage_save ();
+        }
+            RFIFOSKIP (fd, 10);
+            break;
+
+        /// Account deletion notification (from login-server)
+        // uint16_t packet, uint32_t acc
+        case 0x2730:
+            if (RFIFOREST (fd) < 6)
+                return;
+        {
+            account_t acc = RFIFOL (fd, 2);
+            // Deletion of all characters of the account
+            for (int i = 0; i < char_num; i++)
+            {
+                if (char_dat[i].account_id != acc)
+                    continue;
+                char_delete (&char_dat[i]);
+                char_num--;
+                if (i == char_num)
+                    break;
+                // remove blank in table
+                char_dat[i] = char_dat[char_num];
+                if (char_dat[i].account_id == acc)
+                {
+                    // if the tail character was also to be deleted,
+                    // we don't have to clear any references to it,
+                    // just feed it (in the new location) to the loop again
+                    i--;
+                    continue;
+                }
+                // fix any references to the moved character
+                for (int j = 0; j < fd_max; j++)
+                {
+                    if (!session[j])
+                        continue;
+                    struct char_session_data *sd2 = (struct char_session_data*)session[j]->session_data;
+                    if (!sd2 || sd2->account_id != char_dat[char_num].account_id)
+                        continue;
+                    for (int k = 0; k < MAX_CHARS_PER_ACCOUNT; k++)
                     {
-                        if (sd->account_id == RFIFOL (fd, 2))
+                        if (sd2->found_char[k] == &char_dat[char_num])
                         {
-                            memcpy (sd->email, RFIFOP (fd, 6), 40);
-                            if (e_mail_check (sd->email) == 0)
-                                strncpy (sd->email, "a@a.com", 40); // default e-mail
-                            sd->connect_until_time = (time_t) RFIFOL (fd, 46);
+                            sd2->found_char[k] = &char_dat[i];
                             break;
                         }
                     }
-                }
-                RFIFOSKIP (fd, 50);
-                break;
+                    break;
+                } // for j up to fd_max
+            } // for i up to char_num
+            // Deletion of the storage
+            inter_storage_delete (acc);
+            // send to all map-servers to disconnect the player
+            RFIFOW (fd, 0) = 0x2b13;
+            mapif_sendall (WFIFOP (fd, 0), 6);
+            // disconnect player if online on char-server
+            disconnect_player (RFIFOL (fd, 2));
+        }
+            RFIFOSKIP (fd, 6);
+            break;
 
-            case 0x2721:       // gm reply
-                if (RFIFOREST (fd) < 10)
-                    return;
-                {
-                    unsigned char buf[10];
-                    WBUFW (buf, 0) = 0x2b0b;
-                    WBUFL (buf, 2) = RFIFOL (fd, 2);    // account
-                    WBUFL (buf, 6) = RFIFOL (fd, 6);    // GM level
-                    mapif_sendall (buf, 10);
-//          printf("parse_tologin: To become GM answer: char -> map.\n");
-                }
-                RFIFOSKIP (fd, 10);
-                break;
-
-            case 0x2723:       // changesex reply (modified by [Yor])
-                if (RFIFOREST (fd) < 7)
-                    return;
-                {
-                    int  acc, sex, i, j;
-                    unsigned char buf[7];
-                    acc = RFIFOL (fd, 2);
-                    sex = RFIFOB (fd, 6);
-                    RFIFOSKIP (fd, 7);
-                    if (acc > 0)
-                    {
-                        for (i = 0; i < char_num; i++)
-                        {
-                            if (char_dat[i].account_id == acc)
-                            {
-                                int  jobclass = char_dat[i].pc_class;
-                                char_dat[i].sex = sex;
-//                      auth_fifo[i].sex = sex;
-                                if (jobclass == 19 || jobclass == 20 ||
-                                    jobclass == 4020 || jobclass == 4021 ||
-                                    jobclass == 4042 || jobclass == 4043)
-                                {
-                                    // job modification
-                                    if (jobclass == 19 || jobclass == 20)
-                                    {
-                                        char_dat[i].pc_class = (sex) ? 19 : 20;
-                                    }
-                                    else if (jobclass == 4020
-                                             || jobclass == 4021)
-                                    {
-                                        char_dat[i].pc_class =
-                                            sex ? 4020 : 4021;
-                                    }
-                                    else if (jobclass == 4042
-                                             || jobclass == 4043)
-                                    {
-                                        char_dat[i].pc_class =
-                                            sex ? 4042 : 4043;
-                                    }
-                                }
-                                // to avoid any problem with equipment and invalid sex, equipment is unequiped.
-                                for (j = 0; j < MAX_INVENTORY; j++)
-                                {
-                                    if (char_dat[i].inventory[j].nameid
-                                        && char_dat[i].inventory[j].equip)
-                                        char_dat[i].inventory[j].equip = 0;
-                                }
-                                char_dat[i].weapon = 0;
-                                char_dat[i].shield = 0;
-                                char_dat[i].head_top = 0;
-                                char_dat[i].head_mid = 0;
-                                char_dat[i].head_bottom = 0;
-                            }
-                        }
-                        // disconnect player if online on char-server
-                        disconnect_player (acc);
-                    }
-                    WBUFW (buf, 0) = 0x2b0d;
-                    WBUFL (buf, 2) = acc;
-                    WBUFB (buf, 6) = sex;
-                    mapif_sendall (buf, 7);
-                }
-                break;
-
-            case 0x2726:       // Request to send a broadcast message (no answer)
-                if (RFIFOREST (fd) < 8
-                    || RFIFOREST (fd) < (8 + RFIFOL (fd, 4)))
-                    return;
-                if (RFIFOL (fd, 4) < 1)
-                    char_log ("Receiving a message for broadcast, but message is void.\n");
-                else
-                {
-                    // at least 1 map-server
-                    for (int i = 0; i < MAX_MAP_SERVERS; i++)
-                        if (server_fd[i] >= 0)
-                            goto tmp_x2726;
-                    char_log ("'ladmin': Receiving a message for broadcast, but no map-server is online.\n");
-                    goto end_x2726;
-                tmp_x2726:
-                    {
-                        uint8_t buf[128];
-                        char message[RFIFOL (fd, 4) + 1];   // +1 to add a null terminated if not exist in the packet
-                        int  lp;
-                        char *p;
-                        memset (message, '\0', sizeof (message));
-                        memcpy (message, RFIFOP (fd, 8), RFIFOL (fd, 4));
-                        message[sizeof (message) - 1] = '\0';
-                        remove_control_chars (message);
-                        // remove all first spaces
-                        p = message;
-                        while (p[0] == ' ')
-                            p++;
-                        // if message is only composed of spaces
-                        if (p[0] == '\0')
-                            char_log ("Receiving a message for broadcast, but message is only a lot of spaces.\n");
-                        // else send message to all map-servers
-                        else
-                        {
-                            if (RFIFOW (fd, 2) == 0)
-                            {
-                                char_log ("'ladmin': Receiving a message for broadcast (message (in yellow): %s)\n",
-                                          message);
-                                lp = 4;
-                            }
-                            else
-                            {
-                                char_log ("'ladmin': Receiving a message for broadcast (message (in blue): %s)\n",
-                                          message);
-                                lp = 8;
-                            }
-                            // split message to max 80 char
-                            while (p[0] != '\0')
-                            {   // if not finish
-                                if (p[0] == ' ')    // jump if first char is a space
-                                    p++;
-                                else
-                                {
-                                    char split[80];
-                                    char *last_space;
-                                    sscanf (p, "%79[^\t]", split);  // max 79 char, any char (\t is control char and control char was removed before)
-                                    split[sizeof (split) - 1] = '\0';   // last char always \0
-                                    if ((last_space =
-                                         strrchr (split, ' ')) != NULL)
-                                    {   // searching space from end of the string
-                                        last_space[0] = '\0';   // replace it by NULL to have correct length of split
-                                        p++;    // to jump the new NULL
-                                    }
-                                    p += strlen (split);
-                                    // send broadcast to all map-servers
-                                    WBUFW (buf, 0) = 0x3800;
-                                    WBUFW (buf, 2) = lp + strlen (split) + 1;
-                                    WBUFL (buf, 4) = 0x65756c62;    // only write if in blue (lp = 8)
-                                    memcpy (WBUFP (buf, lp), split,
-                                            strlen (split) + 1);
-                                    mapif_sendall (buf, WBUFW (buf, 2));
-                                }
-                            }
-                        }
-                    }
-                }
-            end_x2726:
-                RFIFOSKIP (fd, 8 + RFIFOL (fd, 4));
-                break;
-
-                // account_reg2変更通知
-            case 0x2729:
-                if (RFIFOREST (fd) < 4 || RFIFOREST (fd) < RFIFOW (fd, 2))
-                    return;
-                {
-                    struct global_reg reg[ACCOUNT_REG2_NUM];
-                    unsigned char buf[4096];
-                    int  j, p, acc;
-                    acc = RFIFOL (fd, 4);
-                    for (p = 8, j = 0;
-                         p < RFIFOW (fd, 2) && j < ACCOUNT_REG2_NUM;
-                         p += 36, j++)
-                    {
-                        memcpy (reg[j].str, RFIFOP (fd, p), 32);
-                        reg[j].value = RFIFOL (fd, p + 32);
-                    }
-                    set_account_reg2 (acc, j, reg);
-                    // 同垢ログインを禁止していれば送る必要は無い
-                    memcpy (buf, RFIFOP (fd, 0), RFIFOW (fd, 2));
-                    WBUFW (buf, 0) = 0x2b11;
-                    mapif_sendall (buf, WBUFW (buf, 2));
-                    RFIFOSKIP (fd, RFIFOW (fd, 2));
-//          printf("char: save_account_reg_reply\n");
-                }
-                break;
-
-            case 0x7924:
-            {                   // [Fate] Itemfrob package: forwarded from login-server
-                if (RFIFOREST (fd) < 10)
-                    return;
-                int  source_id = RFIFOL (fd, 2);
-                int  dest_id = RFIFOL (fd, 6);
-                unsigned char buf[10];
-
-                WBUFW (buf, 0) = 0x2afa;
-                WBUFL (buf, 2) = source_id;
-                WBUFL (buf, 6) = dest_id;
-
-                mapif_sendall (buf, 10);    // forward package to map servers
-                for (int i = 0; i < char_num; i++)
-                {
-                    struct mmo_charstatus *c = char_dat + i;
-                    struct storage *s = account2storage (c->account_id);
-                    int  changes = 0;
-                    int  j;
-#define FIX(v) if (v == source_id) {v = dest_id; ++changes; }
-                    for (j = 0; j < MAX_INVENTORY; j++)
-                        FIX (c->inventory[j].nameid);
-                    for (j = 0; j < MAX_CART; j++)
-                        FIX (c->cart[j].nameid);
-                    FIX (c->weapon);
-                    FIX (c->shield);
-                    FIX (c->head_top);
-                    FIX (c->head_mid);
-                    FIX (c->head_bottom);
-
-                    if (s)
-                        for (j = 0; j < s->storage_amount; j++)
-                            FIX (s->storage_[j].nameid);
-#undef FIX
-                    if (changes)
-                        char_log ("itemfrob(%d -> %d):  `%s'(%d, account %d): changed %d times\n",
-                                  source_id, dest_id, c->name, c->char_id,
-                                  c->account_id, changes);
-
-                }
-
-                mmo_char_sync ();
-                inter_storage_save ();
-                RFIFOSKIP (fd, 10);
-                break;
-            }
-
-                // Account deletion notification (from login-server)
-            case 0x2730:
-                if (RFIFOREST (fd) < 6)
-                    return;
-                // Deletion of all characters of the account
-                for (int i = 0; i < char_num; i++)
-                {
-                    if (char_dat[i].account_id == RFIFOL (fd, 2))
-                    {
-                        char_delete (&char_dat[i]);
-                        if (i < char_num - 1)
-                        {
-                            memcpy (&char_dat[i], &char_dat[char_num - 1],
-                                    sizeof (struct mmo_charstatus));
-                            // if moved character owns to deleted account, check again it's character
-                            if (char_dat[i].account_id == RFIFOL (fd, 2))
-                            {
-                                i--;
-                                // Correct moved character reference in the character's owner by [Yor]
-                            }
-                            else
-                            {
-                                int  j, k;
-                                struct char_session_data *sd2;
-                                for (j = 0; j < fd_max; j++)
-                                {
-                                    if (session[j]
-                                        && (sd2 = (struct char_session_data*)session[j]->session_data)
-                                        && sd2->account_id ==
-                                        char_dat[char_num - 1].account_id)
-                                    {
-                                        for (k = 0; k < MAX_CHARS_PER_ACCOUNT; k++)
-                                        {
-                                            if (sd2->found_char[k] ==
-                                                &char_dat[char_num - 1])
-                                            {
-                                                sd2->found_char[k] = &char_dat[i];
-                                                break;
-                                            }
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        char_num--;
-                    }
-                }
-                // Deletion of the storage
-                inter_storage_delete (RFIFOL (fd, 2));
-                // send to all map-servers to disconnect the player
-                {
-                    unsigned char buf[6];
-                    WBUFW (buf, 0) = 0x2b13;
-                    WBUFL (buf, 2) = RFIFOL (fd, 2);
-                    mapif_sendall (buf, 6);
-                }
-                // disconnect player if online on char-server
-                disconnect_player (RFIFOL (fd, 2));
-                RFIFOSKIP (fd, 6);
-                break;
-
-                // State change of account/ban notification (from login-server) by [Yor]
-            case 0x2731:
-                if (RFIFOREST (fd) < 11)
-                    return;
-                // send to all map-servers to disconnect the player
-                {
-                    unsigned char buf[11];
-                    WBUFW (buf, 0) = 0x2b14;
-                    WBUFL (buf, 2) = RFIFOL (fd, 2);
-                    WBUFB (buf, 6) = RFIFOB (fd, 6);    // 0: change of statut, 1: ban
-                    WBUFL (buf, 7) = RFIFOL (fd, 7);    // status or final date of a banishment
-                    mapif_sendall (buf, 11);
-                }
-                // disconnect player if online on char-server
-                disconnect_player (RFIFOL (fd, 2));
-                RFIFOSKIP (fd, 11);
-                break;
-
-                // Receiving GM acounts info from login-server (by [Yor])
-            case 0x2732:
-                if (RFIFOREST (fd) < 4 || RFIFOREST (fd) < RFIFOW (fd, 2))
-                    return;
-                {
-                    uint8_t buf[32000];
-                    if (gm_account != NULL)
-                        free (gm_account);
-                    CREATE (gm_account, struct gm_account, (RFIFOW (fd, 2) - 4) / 5);
-                    GM_num = 0;
-                    for (int i = 4; i < RFIFOW (fd, 2); i += 5)
-                    {
-                        gm_account[GM_num].account_id = RFIFOL (fd, i);
-                        gm_account[GM_num].level = (int) RFIFOB (fd, i + 4);
-                        //printf("GM account: %d -> level %d\n", gm_account[GM_num].account_id, gm_account[GM_num].level);
-                        GM_num++;
-                    }
-                    char_log ("From login-server: receiving of %d GM accounts information.\n",
-                              GM_num);
-                    create_online_files (); // update online players files (perhaps some online players change of GM level)
-                    // send new gm acccounts level to map-servers
-                    memcpy (buf, RFIFOP (fd, 0), RFIFOW (fd, 2));
-                    WBUFW (buf, 0) = 0x2b15;
-                    mapif_sendall (buf, RFIFOW (fd, 2));
-                }
-                RFIFOSKIP (fd, RFIFOW (fd, 2));
-                break;
-
-            case 0x2741:       // change password reply
-                if (RFIFOREST (fd) < 7)
-                    return;
-                {
-                    int  acc, status, i;
-                    acc = RFIFOL (fd, 2);
-                    status = RFIFOB (fd, 6);
-
-                    for (i = 0; i < fd_max; i++)
-                    {
-                        if (session[i] && (sd = (struct char_session_data*)session[i]->session_data))
-                        {
-                            if (sd->account_id == acc)
-                            {
-                                WFIFOW (i, 0) = 0x62;
-                                WFIFOB (i, 2) = status;
-                                WFIFOSET (i, 3);
-                                break;
-                            }
-                        }
-                    }
-                }
-                RFIFOSKIP (fd, 7);
-                break;
-
-            default:
-                session[fd]->eof = 1;
+        /// State change of account/ban notification (from login-server) by [Yor]
+        // uint16_t packet, uint32_t acc, uint8_t ban? , uint32_t end date or new state
+        case 0x2731:
+            if (RFIFOREST (fd) < 11)
                 return;
+            // send to all map-servers to disconnect the player
+        {
+            RFIFOW (fd, 0) = 0x2b14;
+            mapif_sendall (RFIFOP (fd, 0), 11);
+            // disconnect player if online on char-server
+            disconnect_player (RFIFOL (fd, 2));
+        }
+            RFIFOSKIP (fd, 11);
+            break;
+
+        /// Receiving GM acounts info from login-server (by [Yor])
+        // uint16_t packet, uint16_t byte_len, {uint32_t acc, uint8_t}[]
+        case 0x2732:
+            if (RFIFOREST (fd) < 4 || RFIFOREST (fd) < RFIFOW (fd, 2))
+                return;
+        {
+            if (gm_account != NULL)
+                free (gm_account);
+            GM_num = (RFIFOW (fd, 2) - 4) / 5;
+            CREATE (gm_account, struct gm_account, GM_num);
+            for (int i = 4; i < GM_num; i += 5)
+            {
+                gm_account[GM_num].account_id = RFIFOL (fd, i);
+                gm_account[GM_num].level = RFIFOB (fd, i + 4);
+            }
+            char_log ("From login-server: receiving of %d GM accounts information.\n",
+                      GM_num);
+            update_online = time (NULL) + 8;
+            /// update online players files (perhaps some online players change of GM level)
+            create_online_files ();
+            // send new gm acccounts level to map-servers
+            RFIFOW (fd, 0) = 0x2b15;
+            mapif_sendall (RFIFOP (fd, 0), RFIFOW (fd, 2));
+        }
+            RFIFOSKIP (fd, RFIFOW (fd, 2));
+            break;
+
+        /// change password reply
+        // uint16_t packet, uint32_t acc, uint8_t status
+        case 0x2741:
+            if (RFIFOREST (fd) < 7)
+                return;
+        {
+            account_t acc = RFIFOL (fd, 2);
+            uint8_t status = RFIFOB (fd, 6);
+
+            for (int i = 0; i < fd_max; i++)
+            {
+                if (!session[i])
+                    continue;
+                struct char_session_data *sd = (struct char_session_data *)session[i]->session_data;
+                if (!sd || sd->account_id != acc)
+                    continue;
+                WFIFOW (i, 0) = 0x62;
+                WFIFOB (i, 2) = status;
+                WFIFOSET (i, 3);
+                goto end_x2741;
+            }
+        }
+        end_x2741:
+            RFIFOSKIP (fd, 7);
+            break;
+
+        default:
+            //TODO: (unconditionally?) log unknown packets?
+            session[fd]->eof = 1;
+            return;
         }
     }
-    RFIFOFLUSH (fd);
 }
 
 //--------------------------------
@@ -1812,6 +1732,7 @@ void parse_frommap (int fd)
             for (j = 0; j < char_num; j++)
                 if (online_chars[j] == fd)
                     online_chars[j] = -1;
+            update_online = time (NULL) + 8;
             create_online_files (); // update online players files (to remove all online players of this server)
         }
         close (fd);

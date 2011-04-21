@@ -47,7 +47,7 @@ __builtin_types_compatible_p(typeof(arr), typeof((arr)[0])*) \
 : sizeof(arr)/sizeof((arr)[0]) \
 )
 #define STRZCPY(dst, src) strzcpy (dst, src, ARRAY_SIZEOF(dst))
-
+#define STRZCPY2(dst, src) strzcpy (dst, src, ARRAY_SIZEOF(src))
 /// Make a string safe by replacing control characters with _
 void remove_control_chars (char *str);
 /// Check if there are any control chars

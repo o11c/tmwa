@@ -16,6 +16,7 @@
 #include <stdarg.h>
 #include <sys/wait.h>
 
+#include "../common/utils.h"
 #include "../common/core.h"
 #include "../common/socket.h"
 #include "../common/timer.h"
@@ -51,7 +52,7 @@ int  char_new;
 // disabled by default
 bool email_creation = 0;
 char char_txt[1024];
-char unknown_char_name[1024] = "Unknown";
+char unknown_char_name[24] = "Unknown";
 const char char_log_filename[] = "log/char.log";
 const char char_log_unknown_packets_filename[] = "log/char_unknown_packets.log";
 //Added for lan support
@@ -126,7 +127,7 @@ int  online_refresh_html = 20;
 gm_level_t online_gm_display_min_level = 20;
 
 // same size of char_dat, and id value of current server (or -1)
-int *online_chars;
+int *online_char_server_fd;
 /// When next to update online files when we receiving information from a server (not less than 8 seconds)
 time_t update_online;
 
@@ -431,9 +432,9 @@ void mmo_char_init (void)
 {
     char_max = 256;
     CREATE (char_dat, struct mmo_charstatus, 256);
-    CREATE (online_chars, int, 256);
+    CREATE (online_char_server_fd, int, 256);
     for (int i = 0; i < char_max; i++)
-        online_chars[i] = -1;
+        online_char_server_fd[i] = -1;
     char_num = 0;
 
     FILE *fp = fopen_ (char_txt, "r");
@@ -466,9 +467,9 @@ void mmo_char_init (void)
         {
             char_max += 256;
             RECREATE (char_dat, struct mmo_charstatus, char_max);
-            RECREATE (online_chars, int, char_max);
+            RECREATE (online_char_server_fd, int, char_max);
             for (int i = char_max - 256; i < char_max; i++)
-                online_chars[i] = -1;
+                online_char_server_fd[i] = -1;
         }
 
         int ret = mmo_char_fromstr (line, &char_dat[char_num]);
@@ -729,9 +730,9 @@ struct mmo_charstatus *make_new_char (int fd, uint8_t *raw_dat)
     {
         char_max += 256;
         RECREATE (char_dat, struct mmo_charstatus, char_max);
-        RECREATE (online_chars, int, char_max);
+        RECREATE (online_char_server_fd, int, char_max);
         for (int j = char_max - 256; j < char_max; j++)
-            online_chars[j] = -1;
+            online_char_server_fd[j] = -1;
     }
 
     char ip[16];
@@ -812,7 +813,7 @@ void create_online_files (void)
     // sort online characters.
     for (int i = 0; i < char_num; i++)
     {
-        if (online_chars[i] == -1)
+        if (online_char_server_fd[i] == -1)
             continue;
         id[players] = i;
         // TODO: put the for i loop inside the switch (maybe put switch cases in new func?)
@@ -1503,10 +1504,10 @@ void parse_tologin (int fd)
             struct global_reg reg[ACCOUNT_REG2_NUM];
             account_t acc = RFIFOL (fd, 4);
             int p = 8;
-            int j = 0;
+            int j;
             for (j = 0; p < RFIFOW (fd, 2) && j < ACCOUNT_REG2_NUM; j++)
             {
-                memcpy (reg[j].str, RFIFOP (fd, p), 32);
+                STRZCPY (reg[j].str, (char *)RFIFOP (fd, p));
                 p += 32;
                 reg[j].value = RFIFOL (fd, p);
                 p += 4;
@@ -1692,32 +1693,25 @@ void parse_tologin (int fd)
     }
 }
 
-//--------------------------------
-// Map-server anti-freeze system
-//--------------------------------
+/// Map-server anti-freeze system
 void map_anti_freeze_system (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
 {
-    //printf("Entering in map_anti_freeze_system function to check freeze of servers.\n");
     for (int i = 0; i < MAX_MAP_SERVERS; i++)
     {
-        if (server_fd[i] >= 0)
-        {                       // if map-server is online
-            //printf("map_anti_freeze_system: server #%d, flag: %d.\n", i, server_freezeflag[i]);
-            if (server_freezeflag[i]-- < 1)
-            {                   // Map-server anti-freeze system. Counter. 5 ok, 4...0 freezed
-                char_log ("Map-server anti-freeze system: char-server #%d is freezed -> disconnection.\n",
-                          i);
-                session[server_fd[i]]->eof = 1;
-            }
+        if (server_fd[i] < 0)
+            continue;
+        if (!server_freezeflag[i]--)
+        {
+            char_log ("Map-server anti-freeze system: char-server #%d is freezed -> disconnection.\n",
+                      i);
+            session[server_fd[i]]->eof = 1;
         }
     }
 }
 
 void parse_frommap (int fd)
 {
-    int  i, j;
-    int  id;
-
+    int id;
     for (id = 0; id < MAX_MAP_SERVERS; id++)
         if (server_fd[id] == fd)
             break;
@@ -1725,15 +1719,16 @@ void parse_frommap (int fd)
     {
         if (id < MAX_MAP_SERVERS)
         {
-            printf ("Map-server %d (session #%d) has disconnected.\n", id,
-                    fd);
+            printf ("Map-server %d (session #%d) has disconnected.\n", id, fd);
             memset (&server[id], 0, sizeof (struct mmo_map_server));
             server_fd[id] = -1;
-            for (j = 0; j < char_num; j++)
-                if (online_chars[j] == fd)
-                    online_chars[j] = -1;
+            for (int j = 0; j < char_num; j++)
+                if (online_char_server_fd[j] == fd)
+                    online_char_server_fd[j] = -1;
+            // remove all online players of this server from the online list
+            // is this really necessary? it will update in 8 seconds anyway
             update_online = time (NULL) + 8;
-            create_online_files (); // update online players files (to remove all online players of this server)
+            create_online_files ();
         }
         close (fd);
         delete_session (fd);
@@ -1742,262 +1737,268 @@ void parse_frommap (int fd)
 
     while (RFIFOREST (fd) >= 2)
     {
-//      printf("parse_frommap: connection #%d, packet: 0x%x (with being read: %d bytes).\n", fd, RFIFOW(fd,0), RFIFOREST(fd));
-
         switch (RFIFOW (fd, 0))
         {
-                // request from map-server to reload GM accounts. Transmission to login-server (by Yor)
+            /// request from map-server to reload GM accounts. Transmission to login-server (by Yor)
+            // deprecated - the GM accounts file should not be edited by hand
+            // uint16_t packet
             case 0x2af7:
-                if (login_fd > 0)
-                {               // don't send request if no login-server
-                    WFIFOW (login_fd, 0) = 0x2709;
-                    WFIFOSET (login_fd, 2);
-//              printf("char : request from map-server to reload GM accounts -> login-server.\n");
-                }
+                if (login_fd < 0)
+                    goto end_x2af7;
+                WFIFOW (login_fd, 0) = 0x2709;
+                WFIFOSET (login_fd, 2);
+            end_x2af7:
                 RFIFOSKIP (fd, 2);
                 break;
 
-                // Receiving map names list from the map-server
+            /// Receiving map names list from the map-server
             case 0x2afa:
                 if (RFIFOREST (fd) < 4 || RFIFOREST (fd) < RFIFOW (fd, 2))
                     return;
+            {
                 memset (server[id].map, 0, sizeof (server[id].map));
-                j = 0;
-                for (i = 4; i < RFIFOW (fd, 2); i += 16)
+                int j = 0;
+                for (int i = 4; i < RFIFOW (fd, 2); i += 16)
                 {
                     memcpy (server[id].map[j], RFIFOP (fd, i), 16);
-//              printf("set map %d.%d : %s\n", id, j, server[id].map[j]);
                     j++;
                 }
-                // in a block for switch jump rules
-                {
-                    unsigned char *p = (unsigned char *) &server[id].ip;
-                    char_log ("Map-Server %d connected: %d maps, from IP %hhu.%hhu.%hhu.%hhu port %d.\n Map-server %d loading complete.\n",
-                              id, j, p[0], p[1], p[2], p[3],
-                              server[id].port, id);
-                }
+                char ip[16];
+                ip_to_str (server[id].ip, ip);
+                char_log ("Map-Server %d connected: %d maps, from IP %s port %d.\n Map-server %d loading complete.\n",
+                          id, j, ip, server[id].port, id);
                 WFIFOW (fd, 0) = 0x2afb;
                 WFIFOB (fd, 2) = 0;
-                memcpy (WFIFOP (fd, 3), wisp_server_name, 24);  // name for wisp to player
+                STRZCPY2 ((char *)WFIFOP (fd, 3), wisp_server_name);
                 WFIFOSET (fd, 27);
+                if (j == 0)
                 {
-                    unsigned char buf[16384];
-                    int  x;
-                    if (j == 0)
-                    {
-                        char_log ("WARNING: Map-Server %d has NO maps.\n", id);
-                        // Transmitting maps information to the other map-servers
-                    }
-                    else
-                    {
-                        WBUFW (buf, 0) = 0x2b04;
-                        WBUFW (buf, 2) = j * 16 + 10;
-                        WBUFL (buf, 4) = server[id].ip;
-                        WBUFW (buf, 8) = server[id].port;
-                        memcpy (WBUFP (buf, 10), RFIFOP (fd, 4), j * 16);
-                        mapif_sendallwos (fd, buf, WBUFW (buf, 2));
-                    }
-                    // Transmitting the maps of the other map-servers to the new map-server
-                    for (x = 0; x < MAX_MAP_SERVERS; x++)
-                    {
-                        if (server_fd[x] >= 0 && x != id)
-                        {
-                            WFIFOW (fd, 0) = 0x2b04;
-                            WFIFOL (fd, 4) = server[x].ip;
-                            WFIFOW (fd, 8) = server[x].port;
-                            j = 0;
-                            for (i = 0; i < MAX_MAP_PER_SERVER; i++)
-                                if (server[x].map[i][0])
-                                    memcpy (WFIFOP (fd, 10 + (j++) * 16),
-                                            server[x].map[i], 16);
-                            if (j > 0)
-                            {
-                                WFIFOW (fd, 2) = j * 16 + 10;
-                                WFIFOSET (fd, WFIFOW (fd, 2));
-                            }
-                        }
-                    }
+                    char_log ("WARNING: Map-Server %d has NO maps.\n", id);
                 }
+                else
+                {
+                    // Transmitting maps information to the other map-servers
+                    unsigned char buf[j * 16 + 10];
+                    WBUFW (buf, 0) = 0x2b04;
+                    WBUFW (buf, 2) = j * 16 + 10;
+                    WBUFL (buf, 4) = server[id].ip;
+                    WBUFW (buf, 8) = server[id].port;
+                    memcpy (WBUFP (buf, 10), RFIFOP (fd, 4), j * 16);
+                    mapif_sendallwos (fd, buf, WBUFW (buf, 2));
+                }
+                // Transmitting the maps of the other map-servers to the new map-server
+                for (int x = 0; x < MAX_MAP_SERVERS; x++)
+                {
+                    if (server_fd[x] < 0 || x == id)
+                        continue;
+                    WFIFOW (fd, 0) = 0x2b04;
+                    WFIFOL (fd, 4) = server[x].ip;
+                    WFIFOW (fd, 8) = server[x].port;
+                    int n = 0;
+                    for (int i = 0; i < MAX_MAP_PER_SERVER; i++)
+                        if (server[x].map[i][0])
+                            STRZCPY2 ((char *)WFIFOP (fd, 10 + (n++) * 16), server[x].map[i]);
+                    if (n)
+                    {
+                        WFIFOW (fd, 2) = n * 16 + 10;
+                        WFIFOSET (fd, WFIFOW (fd, 2));
+                    }
+                } // for x in map servers
+            }
                 RFIFOSKIP (fd, RFIFOW (fd, 2));
                 break;
 
-                // 認証要求
+            // Request authentication
             case 0x2afc:
                 if (RFIFOREST (fd) < 22)
                     return;
-                //printf("auth_fifo search: account: %d, char: %d, secure: %08x-%08x\n", RFIFOL(fd,2), RFIFOL(fd,6), RFIFOL(fd,10), RFIFOL(fd,14));
-                for (i = 0; i < AUTH_FIFO_SIZE; i++)
+            {
+                for (int i = 0; i < AUTH_FIFO_SIZE; i++)
                 {
-                    if (auth_fifo[i].account_id == RFIFOL (fd, 2) &&
-                        auth_fifo[i].char_id == RFIFOL (fd, 6) &&
-                        auth_fifo[i].login_id1 == RFIFOL (fd, 10) &&
-#if CMP_AUTHFIFO_LOGIN2 != 0
-                        // here, it's the only area where it's possible that we doesn't know login_id2 (map-server asks just after 0x72 packet, that doesn't given the value)
-                        (auth_fifo[i].login_id2 == RFIFOL (fd, 14) || RFIFOL (fd, 14) == 0) &&  // relate to the versions higher than 18
-#endif
-                        (auth_fifo[i].ip == RFIFOL (fd, 18))
-                        && !auth_fifo[i].delflag)
-                    {
-                        auth_fifo[i].delflag = 1;
-                        WFIFOW (fd, 0) = 0x2afd;
-                        WFIFOW (fd, 2) = 18 + sizeof (struct mmo_charstatus);
-                        WFIFOL (fd, 4) = RFIFOL (fd, 2);
-                        WFIFOL (fd, 8) = auth_fifo[i].login_id2;
-                        WFIFOL (fd, 12) =
-                            (unsigned long) auth_fifo[i].connect_until_time;
-                        auth_fifo[i].char_pos->sex = auth_fifo[i].sex;
-                        WFIFOW (fd, 16) = auth_fifo[i].packet_tmw_version;
-                        fprintf (stderr,
-                                 "From queue index %d: recalling packet version %d\n",
-                                 i, auth_fifo[i].packet_tmw_version);
-                        memcpy (WFIFOP (fd, 18),
-                                auth_fifo[i].char_pos,
-                                sizeof (struct mmo_charstatus));
-                        WFIFOSET (fd, WFIFOW (fd, 2));
-                        //printf("auth_fifo search success (auth #%d, account %d, character: %d).\n", i, RFIFOL(fd,2), RFIFOL(fd,6));
-                        break;
-                    }
+                    if (auth_fifo[i].delflag ||
+                            auth_fifo[i].account_id != RFIFOL (fd, 2) ||
+                            auth_fifo[i].char_id != RFIFOL (fd, 6) ||
+                            auth_fifo[i].login_id1 != RFIFOL (fd, 10) ||
+                            auth_fifo[i].ip != RFIFOL (fd, 18))
+                        continue;
+                    // this is the only place where we might not know login_id2
+                    // (map-server asks just after 0x72 packet, which doesn't given the value)
+                    if (RFIFOL (fd, 14) && auth_fifo[i].login_id2 != RFIFOL (fd, 14))
+                        continue;
+
+                    auth_fifo[i].delflag = 1;
+                    WFIFOW (fd, 0) = 0x2afd;
+                    /// Note: the struct has changed size during the rewrite!
+                    // and the map-server doesn't actually check the size
+                    WFIFOW (fd, 2) = 18 + sizeof (struct mmo_charstatus);
+                    WFIFOL (fd, 4) = RFIFOL (fd, 2);
+                    WFIFOL (fd, 8) = auth_fifo[i].login_id2;
+                    WFIFOL (fd, 12) = auth_fifo[i].connect_until_time;
+                    auth_fifo[i].char_pos->sex = auth_fifo[i].sex;
+                    WFIFOW (fd, 16) = auth_fifo[i].packet_tmw_version;
+                    fprintf (stderr, "Client %d uses packet version %d\n",
+                             i, auth_fifo[i].packet_tmw_version);
+                    /// Note: the struct has changed size during the rewrite!
+                    memcpy (WFIFOP (fd, 18), auth_fifo[i].char_pos, sizeof (struct mmo_charstatus));
+                    WFIFOSET (fd, WFIFOW (fd, 2));
+                    goto end_x2afc;
                 }
-                if (i == AUTH_FIFO_SIZE)
-                {
-                    WFIFOW (fd, 0) = 0x2afe;
-                    WFIFOL (fd, 2) = RFIFOL (fd, 2);
-                    WFIFOSET (fd, 6);
-                    printf ("auth_fifo search error! account %d not authentified.\n",
-                            RFIFOL (fd, 2));
-                }
+                WFIFOW (fd, 0) = 0x2afe;
+                WFIFOL (fd, 2) = RFIFOL (fd, 2);
+                WFIFOSET (fd, 6);
+                printf ("auth_fifo search error! account %d not authentified.\n",
+                        RFIFOL (fd, 2));
+            }
+            end_x2afc:
                 RFIFOSKIP (fd, 22);
                 break;
 
-                // MAPサーバー上のユーザー数受信
+            /// Number of users on map server
+            // uint16_t packet, uint16_t packetlen, uint16_t num_users, uint32_t char_id[num_users]
             case 0x2aff:
                 if (RFIFOREST (fd) < 6 || RFIFOREST (fd) < RFIFOW (fd, 2))
                     return;
+            {
                 server[id].users = RFIFOW (fd, 4);
                 if (anti_freeze_enable)
-                    server_freezeflag[id] = 5;  // Map anti-freeze system. Counter. 5 ok, 4...0 freezed
+                    server_freezeflag[id] = 5;
                 // remove all previously online players of the server
-                for (i = 0; i < char_num; i++)
-                    if (online_chars[i] == id)
-                        online_chars[i] = -1;
+                for (int i = 0; i < char_num; i++)
+                    if (online_char_server_fd[i] == id)
+                        online_char_server_fd[i] = -1;
                 // add online players in the list by [Yor]
-                for (i = 0; i < server[id].users; i++)
+                for (int i = 0; i < server[id].users; i++)
                 {
-                    int  char_id = RFIFOL (fd, 6 + i * 4);
-                    for (j = 0; j < char_num; j++)
+                    charid_t char_id = RFIFOL (fd, 6 + i * 4);
+                    for (int j = 0; j < char_num; j++)
                         if (char_dat[j].char_id == char_id)
                         {
-                            online_chars[j] = id;
-                            //printf("%d\n", char_id);
+                            online_char_server_fd[j] = id;
                             break;
                         }
                 }
                 if (update_online < time (NULL))
-                {               // Time is done
+                {
                     update_online = time (NULL) + 8;
-                    create_online_files (); // only every 8 sec. (normally, 1 server send users every 5 sec.) Don't update every time, because that takes time, but only every 2 connection.
+                    create_online_files ();
+                    // only every 8 sec. (normally, 1 server send users every 5 sec.) Don't update every time, because that takes time, but only every 2 connection.
                     // it set to 8 sec because is more than 5 (sec) and if we have more than 1 map-server, informations can be received in shifted.
                 }
-                RFIFOSKIP (fd, 6 + i * 4);
+            }
+                RFIFOSKIP (fd, 6 + server[id].users * 4);
                 break;
 
-                // キャラデータ保存
+            /// char data storage
+            // uint16_t packet, uint16_t packetlen, uint32_t acc, uint32_t charid, struct mmo_charstatus
             case 0x2b01:
                 if (RFIFOREST (fd) < 4 || RFIFOREST (fd) < RFIFOW (fd, 2))
                     return;
-                for (i = 0; i < char_num; i++)
+            {
+                for (int i = 0; i < char_num; i++)
                 {
                     if (char_dat[i].account_id == RFIFOL (fd, 4) &&
                         char_dat[i].char_id == RFIFOL (fd, 8))
+                    {
+                        char_dat[i] = *(struct mmo_charstatus *)RFIFOP (fd, 12);
                         break;
+                    }
                 }
-                if (i != char_num)
-                    memcpy (&char_dat[i], RFIFOP (fd, 12),
-                            sizeof (struct mmo_charstatus));
+            }
                 RFIFOSKIP (fd, RFIFOW (fd, 2));
                 break;
 
-                // キャラセレ要求
+            /// player wants to switch to a different character
+            // uint16_t packet, uint32_t acc, uint32_t magic[2], uint32_t ip
             case 0x2b02:
                 if (RFIFOREST (fd) < 18)
                     return;
+            {
                 if (auth_fifo_pos >= AUTH_FIFO_SIZE)
                     auth_fifo_pos = 0;
-                //printf("auth_fifo set (auth #%d) - account: %d, secure: %08x-%08x\n", auth_fifo_pos, RFIFOL(fd,2), RFIFOL(fd,6), RFIFOL(fd,10));
                 auth_fifo[auth_fifo_pos].account_id = RFIFOL (fd, 2);
                 auth_fifo[auth_fifo_pos].char_id = 0;
                 auth_fifo[auth_fifo_pos].login_id1 = RFIFOL (fd, 6);
                 auth_fifo[auth_fifo_pos].login_id2 = RFIFOL (fd, 10);
                 auth_fifo[auth_fifo_pos].delflag = 2;
                 auth_fifo[auth_fifo_pos].char_pos = 0;
-                auth_fifo[auth_fifo_pos].connect_until_time = 0;    // unlimited/unknown time by default (not display in map-server)
+                auth_fifo[auth_fifo_pos].connect_until_time = 0;
                 auth_fifo[auth_fifo_pos].ip = RFIFOL (fd, 14);
                 auth_fifo_pos++;
                 WFIFOW (fd, 0) = 0x2b03;
                 WFIFOL (fd, 2) = RFIFOL (fd, 2);
                 WFIFOB (fd, 6) = 0;
                 WFIFOSET (fd, 7);
+            }
                 RFIFOSKIP (fd, 18);
                 break;
 
-                // マップサーバー間移動要求
+            /// change of map servers
+            // I'm not sure why we even care
+            // uint16_t packet, uint32_t acc, uint32_t magic[2], uint32_t charid, {char name[16], uint16_t x,y uint32_t mapip, uint16_t mapport}, uint8_t gender, uint32_t clientip
             case 0x2b05:
                 if (RFIFOREST (fd) < 49)
                     return;
+            {
                 if (auth_fifo_pos >= AUTH_FIFO_SIZE)
                     auth_fifo_pos = 0;
                 WFIFOW (fd, 0) = 0x2b06;
                 memcpy (WFIFOP (fd, 2), RFIFOP (fd, 2), 42);
-                //printf("auth_fifo set (auth#%d) - account: %d, secure: 0x%08x-0x%08x\n", auth_fifo_pos, RFIFOL(fd,2), RFIFOL(fd,6), RFIFOL(fd,10));
                 auth_fifo[auth_fifo_pos].account_id = RFIFOL (fd, 2);
                 auth_fifo[auth_fifo_pos].char_id = RFIFOL (fd, 14);
                 auth_fifo[auth_fifo_pos].login_id1 = RFIFOL (fd, 6);
                 auth_fifo[auth_fifo_pos].login_id2 = RFIFOL (fd, 10);
                 auth_fifo[auth_fifo_pos].delflag = 0;
                 auth_fifo[auth_fifo_pos].sex = (enum gender)RFIFOB (fd, 44);
-                auth_fifo[auth_fifo_pos].connect_until_time = 0;    // unlimited/unknown time by default (not display in map-server)
+                auth_fifo[auth_fifo_pos].connect_until_time = 0;
                 auth_fifo[auth_fifo_pos].ip = RFIFOL (fd, 45);
-                for (i = 0; i < char_num; i++)
-                    if (char_dat[i].account_id == RFIFOL (fd, 2) &&
-                        char_dat[i].char_id == RFIFOL (fd, 14))
-                    {
-                        auth_fifo[auth_fifo_pos].char_pos = &char_dat[i];
-                        auth_fifo_pos++;
-                        WFIFOL (fd, 6) = 0;
-                        break;
-                    }
-                if (i == char_num)
-                    WFIFOW (fd, 6) = 1;
+                for (int i = 0; i < char_num; i++)
+                {
+                    if (char_dat[i].account_id != RFIFOL (fd, 2) ||
+                            char_dat[i].char_id != RFIFOL (fd, 14))
+                        continue;
+                    auth_fifo[auth_fifo_pos].char_pos = &char_dat[i];
+                    auth_fifo_pos++;
+                    WFIFOL (fd, 6) = 0;
+                    goto end_x2b05;
+                }
+                // not found - invalidate
+                WFIFOW (fd, 6) = 1;
+            end_x2b05:
                 WFIFOSET (fd, 44);
+            }
                 RFIFOSKIP (fd, 49);
                 break;
 
-                // キャラ名検索
+            /// Get character name from id
+            // uint16_t packet, uint32_t charid
             case 0x2b08:
                 if (RFIFOREST (fd) < 6)
                     return;
-                for (i = 0; i < char_num; i++)
-                {
-                    if (char_dat[i].char_id == RFIFOL (fd, 2))
-                        break;
-                }
+            {
                 WFIFOW (fd, 0) = 0x2b09;
                 WFIFOL (fd, 2) = RFIFOL (fd, 2);
-                if (i != char_num)
-                    memcpy (WFIFOP (fd, 6), char_dat[i].name, 24);
-                else
-                    memcpy (WFIFOP (fd, 6), unknown_char_name, 24);
+                STRZCPY2 ((char *)WFIFOP (fd, 6), unknown_char_name);
+                for (int i = 0; i < char_num; i++)
+                {
+                    if (char_dat[i].char_id == RFIFOL (fd, 2))
+                    {
+                        STRZCPY2 ((char *)WFIFOP (fd, 6), char_dat[i].name);
+                        break;
+                    }
+                }
                 WFIFOSET (fd, 30);
+            }
                 RFIFOSKIP (fd, 6);
                 break;
 
-                // it is a request to become GM
+            /// request to become GM (@gm command)
+            // uint16_t packet, uint16_t packetlen, uint32_t acc, char passwd[]
             case 0x2b0a:
                 if (RFIFOREST (fd) < 4 || RFIFOREST (fd) < RFIFOW (fd, 2))
                     return;
-//          printf("parse_frommap: change gm -> login, account: %d, pass: '%s'.\n", RFIFOL(fd,4), RFIFOP(fd,8));
-                if (login_fd > 0)
-                {               // don't send request if no login-server
+            {
+                if (login_fd >= 0)
+                {
                     WFIFOW (login_fd, 0) = 0x2720;
                     memcpy (WFIFOP (login_fd, 2), RFIFOP (fd, 2),
                             RFIFOW (fd, 2) - 2);
@@ -2010,224 +2011,170 @@ void parse_frommap (int fd)
                     WFIFOL (fd, 6) = 0;
                     WFIFOSET (fd, 10);
                 }
+            }
                 RFIFOSKIP (fd, RFIFOW (fd, 2));
                 break;
 
-                // Map server send information to change an email of an account -> login-server
+            /// Email change
+            // uint16_t packet, uint32_t acc, char oldemail[40], char newemail[40]
             case 0x2b0c:
                 if (RFIFOREST (fd) < 86)
                     return;
-                if (login_fd > 0)
-                {               // don't send request if no login-server
-                    memcpy (WFIFOP (login_fd, 0), RFIFOP (fd, 0), 86);  // 0x2722 <account_id>.L <actual_e-mail>.40B <new_e-mail>.40B
-                    WFIFOW (login_fd, 0) = 0x2722;
-                    WFIFOSET (login_fd, 86);
-                }
+            {
+                if (login_fd < 0)
+                    goto end_x2b0c;
+                memcpy (WFIFOP (login_fd, 0), RFIFOP (fd, 0), 86);
+                WFIFOW (login_fd, 0) = 0x2722;
+                WFIFOSET (login_fd, 86);
+            }
+            end_x2b0c:
                 RFIFOSKIP (fd, 86);
                 break;
 
-            /// Map server ask char-server about a character name to do some operations (all operations are transmitted to login-server)
+            /// Do special operations on a character name
+            // uint16_t packet, uint32_t src_account, char target_name[24], uint16_t what, int16_t timechanges[6]
+            // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
             case 0x2b0e:
                 if (RFIFOREST (fd) < 44)
                     return;
             {
+                account_t acc = RFIFOL (fd, 2);
                 char character_name[24];
-                account_t acc = RFIFOL (fd, 2);  // account_id of who ask (-1 if nobody)
-                memcpy (character_name, RFIFOP (fd, 6), 24);
-                character_name[sizeof (character_name) - 1] = '\0';
+                STRZCPY (character_name, (char *)RFIFOP (fd, 6));
                 // prepare answer
-                WFIFOW (fd, 0) = 0x2b0f;    // answer
-                WFIFOL (fd, 2) = acc;   // who want do operation
-                WFIFOW (fd, 30) = RFIFOW (fd, 30);  // type of operation: 1-block, 2-ban, 3-unblock, 4-unban, 5-changesex
+                WFIFOW (fd, 0) = 0x2b0f;
+                WFIFOL (fd, 2) = acc;
+                WFIFOW (fd, 30) = RFIFOW (fd, 30);
                 // search character
                 struct mmo_charstatus *character = character_by_name (character_name);
-                if (character)
-                {
-                    memcpy (WFIFOP (fd, 6), character->name, 24); // put correct name if found
-                    // answer: 0-login-server request done, 1-player not found, 2-gm level too low, 3-login-server offline
-                    WFIFOW (fd, 32) = 0;
-                    switch (RFIFOW (fd, 30))
-                    {
-                    case 1:    // block
-                        if (acc == -1 || isGM (acc) >= isGM (char_dat[i].account_id))
-                        {
-                            if (login_fd >= 0)
-                            {   // don't send request if no login-server
-                                WFIFOW (login_fd, 0) = 0x2724;
-                                WFIFOL (login_fd, 2) = char_dat[i].account_id;  // account value
-                                WFIFOL (login_fd, 6) = 5;   // status of the account
-                                WFIFOSET (login_fd, 10);
-//                          printf("char : status -> login: account %d, status: %d \n", char_dat[i].account_id, 5);
-                            }
-                            else
-                                WFIFOW (fd, 32) = 3;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                        }
-                        else
-                            WFIFOW (fd, 32) = 2;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                        break;
-                    case 2:    // ban
-                        if (acc == -1
-                            || isGM (acc) >=
-                            isGM (char_dat[i].account_id))
-                        {
-                            if (login_fd > 0)
-                            {   // don't send request if no login-server
-                                WFIFOW (login_fd, 0) = 0x2725;
-                                WFIFOL (login_fd, 2) = char_dat[i].account_id;  // account value
-                                WFIFOW (login_fd, 6) = RFIFOW (fd, 32); // year
-                                WFIFOW (login_fd, 8) = RFIFOW (fd, 34); // month
-                                WFIFOW (login_fd, 10) = RFIFOW (fd, 36);    // day
-                                WFIFOW (login_fd, 12) = RFIFOW (fd, 38);    // hour
-                                WFIFOW (login_fd, 14) = RFIFOW (fd, 40);    // minute
-                                WFIFOW (login_fd, 16) = RFIFOW (fd, 42);    // second
-                                WFIFOSET (login_fd, 18);
-//                          printf("char : status -> login: account %d, ban: %dy %dm %dd %dh %dmn %ds\n",
-//                                 char_dat[i].account_id, (short)RFIFOW(fd,32), (short)RFIFOW(fd,34), (short)RFIFOW(fd,36), (short)RFIFOW(fd,38), (short)RFIFOW(fd,40), (short)RFIFOW(fd,42));
-                            }
-                            else
-                                WFIFOW (fd, 32) = 3;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                        }
-                        else
-                            WFIFOW (fd, 32) = 2;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                        break;
-                    case 3:    // unblock
-                        if (acc == -1
-                            || isGM (acc) >=
-                            isGM (char_dat[i].account_id))
-                        {
-                            if (login_fd > 0)
-                            {   // don't send request if no login-server
-                                WFIFOW (login_fd, 0) = 0x2724;
-                                WFIFOL (login_fd, 2) = char_dat[i].account_id;  // account value
-                                WFIFOL (login_fd, 6) = 0;   // status of the account
-                                WFIFOSET (login_fd, 10);
-//                          printf("char : status -> login: account %d, status: %d \n", char_dat[i].account_id, 0);
-                            }
-                            else
-                                WFIFOW (fd, 32) = 3;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                        }
-                        else
-                            WFIFOW (fd, 32) = 2;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                        break;
-                    case 4:    // unban
-                        if (acc == -1
-                            || isGM (acc) >=
-                            isGM (char_dat[i].account_id))
-                        {
-                            if (login_fd > 0)
-                            {   // don't send request if no login-server
-                                WFIFOW (login_fd, 0) = 0x272a;
-                                WFIFOL (login_fd, 2) = char_dat[i].account_id;  // account value
-                                WFIFOSET (login_fd, 6);
-//                          printf("char : status -> login: account %d, unban request\n", char_dat[i].account_id);
-                            }
-                            else
-                                WFIFOW (fd, 32) = 3;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                        }
-                        else
-                            WFIFOW (fd, 32) = 2;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                        break;
-                    case 5:    // changesex
-                        if (acc == -1 || isGM (acc) >= isGM (char_dat[i].account_id))
-                        {
-                            if (login_fd > 0)
-                            {   // don't send request if no login-server
-                                WFIFOW (login_fd, 0) = 0x2727;
-                                WFIFOL (login_fd, 2) = char_dat[i].account_id;  // account value
-                                WFIFOSET (login_fd, 6);
-//                          printf("char : status -> login: account %d, change sex request\n", char_dat[i].account_id);
-                            }
-                            else
-                                WFIFOW (fd, 32) = 3;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                        }
-                        else
-                            WFIFOW (fd, 32) = 2;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
-                        break;
-                    }
-                }
-                else
+                if (!character)
                 {
                     // character name not found
                     memcpy (WFIFOP (fd, 6), character_name, 24);
-                    WFIFOW (fd, 32) = 1;    // answer: 0-login-server resquest done, 1-player not found, 2-gm level too low, 3-login-server offline
+                    WFIFOW (fd, 32) = 1;
+                    goto end_x2b0e;
                 }
+
+                STRZCPY2 ((char *)WFIFOP (fd, 6), character->name);
+                WFIFOW (fd, 32) = 0;
+                // FIXME - should GMs have power over those the same GM level?
+                if (acc != -1 && isGM (acc) < isGM (character->account_id))
+                {
+                    WFIFOW (fd, 32) = 2;
+                    goto maybe_reply_2b0e;
+                }
+                if (login_fd < 0)
+                {
+                    WFIFOW (fd, 32) = 3;
+                    goto maybe_reply_2b0e;
+                }
+                switch (RFIFOW (fd, 30))
+                {
+                case 1:    // block
+                    WFIFOW (login_fd, 0) = 0x2724;
+                    WFIFOL (login_fd, 2) = character->account_id;  // account value
+                    WFIFOL (login_fd, 6) = 5;   // status of the account
+                    WFIFOSET (login_fd, 10);
+                    break;
+                case 2:    // ban
+                    WFIFOW (login_fd, 0) = 0x2725;
+                    WFIFOL (login_fd, 2) = character->account_id;
+                    WFIFOW (login_fd, 6) = RFIFOW (fd, 32);     // year
+                    WFIFOW (login_fd, 8) = RFIFOW (fd, 34);     // month
+                    WFIFOW (login_fd, 10) = RFIFOW (fd, 36);    // day
+                    WFIFOW (login_fd, 12) = RFIFOW (fd, 38);    // hour
+                    WFIFOW (login_fd, 14) = RFIFOW (fd, 40);    // minute
+                    WFIFOW (login_fd, 16) = RFIFOW (fd, 42);    // second
+                    WFIFOSET (login_fd, 18);
+                    break;
+                case 3:    // unblock
+                    WFIFOW (login_fd, 0) = 0x2724;
+                    WFIFOL (login_fd, 2) = character->account_id;
+                    WFIFOL (login_fd, 6) = 0;   // status of the account
+                    WFIFOSET (login_fd, 10);
+                    break;
+                case 4:    // unban
+                    WFIFOW (login_fd, 0) = 0x272a;
+                    WFIFOL (login_fd, 2) = character->account_id;
+                    WFIFOSET (login_fd, 6);
+                    break;
+                case 5:    // changesex
+                    WFIFOW (login_fd, 0) = 0x2727;
+                    WFIFOL (login_fd, 2) = character->account_id;
+                    WFIFOSET (login_fd, 6);
+                    break;
+                }
+            maybe_reply_2b0e:
                 // send answer if a player ask, not if the server ask
                 if (acc != -1)
-                {
                     WFIFOSET (fd, 34);
-                }
             }
+            end_x2b0e:
                 RFIFOSKIP (fd, 44);
                 break;
 
-//      case 0x2b0f: not more used (available for futur usage)
-
-                // account_reg保存要求
+            /// store account_reg
+            // uint16_t packet, uint16_t packelen,
             case 0x2b10:
                 if (RFIFOREST (fd) < 4 || RFIFOREST (fd) < RFIFOW (fd, 2))
                     return;
+            {
+                struct global_reg reg[ACCOUNT_REG2_NUM];
+                account_t acc = RFIFOL (fd, 4);
+                int p = 8;
+                int j;
+                for (j = 0; p < RFIFOW (fd, 2) && j < ACCOUNT_REG2_NUM; j++)
                 {
-                    struct global_reg reg[ACCOUNT_REG2_NUM];
-                    int  p, acc;
-                    acc = RFIFOL (fd, 4);
-                    for (p = 8, j = 0;
-                         p < RFIFOW (fd, 2) && j < ACCOUNT_REG2_NUM;
-                         p += 36, j++)
-                    {
-                        memcpy (reg[j].str, RFIFOP (fd, p), 32);
-                        reg[j].value = RFIFOL (fd, p + 32);
-                    }
-                    set_account_reg2 (acc, j, reg);
-                    // loginサーバーへ送る
-                    if (login_fd > 0)
-                    {           // don't send request if no login-server
-                        memcpy (WFIFOP (login_fd, 0), RFIFOP (fd, 0),
-                                RFIFOW (fd, 2));
-                        WFIFOW (login_fd, 0) = 0x2728;
-                        WFIFOSET (login_fd, WFIFOW (login_fd, 2));
-                    }
-                    // ワールドへの同垢ログインがなければmapサーバーに送る必要はない
-                    //memcpy(buf, RFIFOP(fd,0), RFIFOW(fd,2));
-                    //WBUFW(buf,0) = 0x2b11;
-                    //mapif_sendall(buf, WBUFW(buf,2));
-                    RFIFOSKIP (fd, RFIFOW (fd, 2));
-//          printf("char: save_account_reg (from map)\n");
-                    break;
+                    STRZCPY (reg[j].str, (char *)RFIFOP (fd, p));
+                    p += 32;
+                    reg[j].value = RFIFOL (fd, p);
+                    p += 4;
                 }
+                set_account_reg2 (acc, j, reg);
+                if (login_fd >= 0)
+                {
+                    memcpy (WFIFOP (login_fd, 0), RFIFOP (fd, 0), RFIFOW (fd, 2));
+                    WFIFOW (login_fd, 0) = 0x2728;
+                    WFIFOSET (login_fd, WFIFOW (login_fd, 2));
+                }
+            }
+                RFIFOSKIP (fd, RFIFOW (fd, 2));
+                break;
 
-                // Map server is requesting a divorce
+            /// Divorce
             case 0x2b16:
                 if (RFIFOREST (fd) < 4)
                     return;
-                {
-                    for (i = 0; i < char_num; i++)
-                        if (char_dat[i].char_id == RFIFOL (fd, 2))
-                            break;
-
-                    if (i != char_num)
+            {
+                for (int i = 0; i < char_num; i++)
+                    if (char_dat[i].char_id == RFIFOL (fd, 2))
+                    {
                         char_divorce (&char_dat[i]);
+                        break;
+                    }
+            }
+                RFIFOSKIP (fd, 6);
+                break;
 
-                    RFIFOSKIP (fd, 6);
-                    break;
-
-                }
-
+            // else pass parsing to the inter server
             default:
-                // inter server処理に渡す
             {
                 int  r = inter_parse_frommap (fd);
-                if (r == 1)     // 処理できた
+                if (r == 1)
+                    // handled - repeat the while loop, it may be a char packet
                     break;
-                if (r == 2)     // パケット長が足りない
+                if (r == 2)
+                    // packet too short
                     return;
-            }
-                // inter server処理でもない場合は切断
+                /// inter server didn't understand it either
+                // TODO parse unknown packets
                 printf ("char: unknown packet 0x%04x (%d bytes to read in buffer)! (from map).\n",
                         RFIFOW (fd, 0), RFIFOREST (fd));
                 session[fd]->eof = 1;
                 return;
-        }
-    }
+            }
+        } // switch packet
+    } // while packet available
 }
 
 int search_mapserver (const char *map)
@@ -2357,7 +2304,7 @@ void parse_char (int fd)
                     // send back account_id
                     WFIFOL (fd, 0) = RFIFOL (fd, 2);
                     WFIFOSET (fd, 4);
-                    // search authentification
+                    // search authentication
                     for (int i = 0; i < AUTH_FIFO_SIZE; i++)
                     {
                         if (auth_fifo[i].account_id == sd->account_id &&
@@ -2393,7 +2340,7 @@ void parse_char (int fd)
                             goto end_x65;
                         }
                     }
-                    // authentification not found
+                    // authentication not found
                     {
                         if (login_fd > 0)
                         {       // don't send request if no login-server
@@ -3264,9 +3211,9 @@ void term_func (void)
 
     // write online players files with no player
     for (i = 0; i < char_num; i++)
-        online_chars[i] = -1;
+        online_char_server_fd[i] = -1;
     create_online_files ();
-    free (online_chars);
+    free (online_char_server_fd);
 
     mmo_char_sync ();
     inter_save ();

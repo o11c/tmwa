@@ -38,8 +38,6 @@
 
 #include "../common/md5calc.h"
 
-#define STRZCPY2(dst,src) strzcpy (dst, src, ARRAY_SIZEOF(src))
-
 account_t account_id_count = START_ACCOUNT_NUM;
 int  new_account_flag = 0;
 in_port_t login_port = 6900;

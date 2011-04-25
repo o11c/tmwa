@@ -2677,7 +2677,7 @@ bool lan_ip_check (uint8_t *p)
         }
     }
     printf ("LAN test (result): %s source\033[0m.\n",
-            (lancheck) ? "\033[1;36mLAN" : "\033[1;32mWAN");
+            lancheck ? "\033[1;36mLAN" : "\033[1;32mWAN");
     return lancheck;
 }
 

@@ -2816,24 +2816,23 @@ void lan_config_read (const char *lancfgName)
     printf ("---End reading of Lan Support configuration...\n");
 }
 
-int char_config_read (const char *cfgName)
+void char_config_read (const char *cfgName)
 {
-    struct hostent *h = NULL;
-    char line[1024], w1[1024], w2[1024];
     FILE *fp = fopen_ (cfgName, "r");
 
-    if (fp == NULL)
+    if (!fp)
     {
         printf ("Configuration file not found: %s.\n", cfgName);
         exit (1);
     }
 
-    while (fgets (line, sizeof (line) - 1, fp))
+    char line[1024];
+    while (fgets (line, sizeof (line), fp))
     {
         if (line[0] == '/' && line[1] == '/')
             continue;
 
-        line[sizeof (line) - 1] = '\0';
+        char w1[1024], w2[1024];
         if (sscanf (line, "%[^:]: %[^\r\n]", w1, w2) != 2)
             continue;
 
@@ -2841,137 +2840,138 @@ int char_config_read (const char *cfgName)
         remove_control_chars (w2);
         if (strcasecmp (w1, "userid") == 0)
         {
-            memcpy (userid, w2, 24);
+            STRZCPY (userid, w2);
+            continue;
         }
-        else if (strcasecmp (w1, "passwd") == 0)
+        if (strcasecmp (w1, "passwd") == 0)
         {
-            memcpy (passwd, w2, 24);
+            STRZCPY (passwd, w2);
+            continue;
         }
-        else if (strcasecmp (w1, "server_name") == 0)
+        if (strcasecmp (w1, "server_name") == 0)
         {
-            memcpy (server_name, w2, sizeof (server_name));
-            server_name[sizeof (server_name) - 1] = '\0';
+            STRZCPY (server_name, w2);
             printf ("%s server has been intialized\n", w2);
+            continue;
         }
-        else if (strcasecmp (w1, "wisp_server_name") == 0)
+        if (strcasecmp (w1, "wisp_server_name") == 0)
         {
-            if (strlen (w2) >= 4)
-            {
-                strncpy (wisp_server_name, w2, sizeof (wisp_server_name));
-                wisp_server_name[sizeof (wisp_server_name) - 1] = '\0';
-            }
+            // if (strlen (w2) >= 4)
+            STRZCPY (wisp_server_name, w2);
+            continue;
         }
-        else if (strcasecmp (w1, "login_ip") == 0)
+        if (strcasecmp (w1, "login_ip") == 0)
         {
-            h = gethostbyname (w2);
-            if (h != NULL)
+            struct hostent *h = gethostbyname (w2);
+            if (h)
             {
-                printf ("Login server IP address : %s -> %d.%d.%d.%d\n", w2,
-                        (unsigned char) h->h_addr[0],
-                        (unsigned char) h->h_addr[1],
-                        (unsigned char) h->h_addr[2],
-                        (unsigned char) h->h_addr[3]);
-                sprintf (login_ip_str, "%d.%d.%d.%d",
-                         (unsigned char) h->h_addr[0],
-                         (unsigned char) h->h_addr[1],
-                         (unsigned char) h->h_addr[2],
-                         (unsigned char) h->h_addr[3]);
+                printf ("Login server IP address : %s -> %hhu.%hhu.%hhu.%hhu\n", w2,
+                        h->h_addr[0], h->h_addr[1], h->h_addr[2], h->h_addr[3]);
+                sprintf (login_ip_str, "%hhu.%hhu.%hhu.%hhu",
+                         h->h_addr[0], h->h_addr[1], h->h_addr[2], h->h_addr[3]);
             }
             else
-                memcpy (login_ip_str, w2, 16);
+                STRZCPY (login_ip_str, w2);
+            continue;
         }
-        else if (strcasecmp (w1, "login_port") == 0)
+        if (strcasecmp (w1, "login_port") == 0)
         {
             login_port = atoi (w2);
+            continue;
         }
-        else if (strcasecmp (w1, "char_ip") == 0)
+        if (strcasecmp (w1, "char_ip") == 0)
         {
-            h = gethostbyname (w2);
-            if (h != NULL)
+            struct hostent *h = gethostbyname (w2);
+            if (h)
             {
-                printf ("Character server IP address : %s -> %d.%d.%d.%d\n",
-                        w2, (unsigned char) h->h_addr[0],
-                        (unsigned char) h->h_addr[1],
-                        (unsigned char) h->h_addr[2],
-                        (unsigned char) h->h_addr[3]);
-                sprintf (char_ip_str, "%d.%d.%d.%d",
-                         (unsigned char) h->h_addr[0],
-                         (unsigned char) h->h_addr[1],
-                         (unsigned char) h->h_addr[2],
-                         (unsigned char) h->h_addr[3]);
+                printf ("Character server IP address : %s -> %hhu.%hhu.%hhu.%hhu\n",
+                        w2, h->h_addr[0], h->h_addr[1], h->h_addr[2], h->h_addr[3]);
+                sprintf (char_ip_str, "%hhu.%hhu.%hhu.%hhu",
+                         h->h_addr[0], h->h_addr[1], h->h_addr[2], h->h_addr[3]);
             }
             else
-                memcpy (char_ip_str, w2, 16);
+                STRZCPY (char_ip_str, w2);
+            continue;
         }
-        else if (strcasecmp (w1, "char_port") == 0)
+        if (strcasecmp (w1, "char_port") == 0)
         {
             char_port = atoi (w2);
+            continue;
         }
-        else if (strcasecmp (w1, "char_maintenance") == 0)
+        if (strcasecmp (w1, "char_maintenance") == 0)
         {
             char_maintenance = atoi (w2);
+            continue;
         }
-        else if (strcasecmp (w1, "char_new") == 0)
+        if (strcasecmp (w1, "char_new") == 0)
         {
             char_new = atoi (w2);
+            continue;
         }
-        else if (strcasecmp (w1, "char_txt") == 0)
+        if (strcasecmp (w1, "char_txt") == 0)
         {
             strcpy (char_txt, w2);
+            continue;
         }
-        else if (strcasecmp (w1, "max_connect_user") == 0)
+        if (strcasecmp (w1, "max_connect_user") == 0)
         {
             max_connect_user = atoi (w2);
             if (max_connect_user < 0)
-                max_connect_user = 0;   // unlimited online players
+                max_connect_user = 0;
+            continue;
         }
-        else if (strcasecmp (w1, "autosave_time") == 0)
+        if (strcasecmp (w1, "autosave_time") == 0)
         {
             autosave_interval = atoi (w2) * 1000;
             if (autosave_interval <= 0)
                 autosave_interval = DEFAULT_AUTOSAVE_INTERVAL;
+            continue;
         }
-        else if (strcasecmp (w1, "start_point") == 0)
+        if (strcasecmp (w1, "start_point") == 0)
         {
             char map[32];
             int  x, y;
-            if (sscanf (w2, "%[^,],%d,%d", map, &x, &y) < 3)
-                continue;
-            if (strstr (map, ".gat") != NULL)
-            {                   // Verify at least if '.gat' is in the map name
+            if (sscanf (w2, "%[^,],%d,%d", map, &x, &y) == 3 && strstr (map, ".gat"))
+            {
+                // Verify at least if '.gat' is in the map name
                 memcpy (start_point.map, map, 16);
                 start_point.x = x;
                 start_point.y = y;
+                continue;
             }
         }
-        else if (strcasecmp (w1, "start_zeny") == 0)
+        if (strcasecmp (w1, "start_zeny") == 0)
         {
             start_zeny = atoi (w2);
             if (start_zeny < 0)
                 start_zeny = 0;
+            continue;
         }
-        else if (strcasecmp (w1, "start_weapon") == 0)
+        if (strcasecmp (w1, "start_weapon") == 0)
         {
             start_weapon = atoi (w2);
             if (start_weapon < 0)
                 start_weapon = 0;
+            continue;
         }
-        else if (strcasecmp (w1, "start_armor") == 0)
+        if (strcasecmp (w1, "start_armor") == 0)
         {
             start_armor = atoi (w2);
             if (start_armor < 0)
                 start_armor = 0;
+            continue;
         }
-        else if (strcasecmp (w1, "unknown_char_name") == 0)
+        if (strcasecmp (w1, "unknown_char_name") == 0)
         {
-            strcpy (unknown_char_name, w2);
-            unknown_char_name[24] = 0;
+            STRZCPY (unknown_char_name, w2);
+            continue;
         }
-        else if (strcasecmp (w1, "name_ignoring_case") == 0)
+        if (strcasecmp (w1, "name_ignoring_case") == 0)
         {
             name_ignoring_case = config_switch (w2);
+            continue;
         }
-        else if (strcasecmp (w1, "char_name_option") == 0)
+        if (strcasecmp (w1, "char_name_option") == 0)
         {
             switch (atoi (w2))
             {
@@ -2980,58 +2980,71 @@ int char_config_read (const char *cfgName)
             case 2: char_name_option = EXCLUDE;
             default: ;// TODO log something
             }
+            continue;
         }
-        else if (strcasecmp (w1, "char_name_letters") == 0)
+        if (strcasecmp (w1, "char_name_letters") == 0)
         {
             strcpy (char_name_letters, w2);
-// online files options
+            continue;
         }
-        else if (strcasecmp (w1, "online_txt_filename") == 0)
+        
+        // online files options
+        if (strcasecmp (w1, "online_txt_filename") == 0)
         {
             strcpy (online_txt_filename, w2);
+            continue;
         }
-        else if (strcasecmp (w1, "online_html_filename") == 0)
+        if (strcasecmp (w1, "online_html_filename") == 0)
         {
             strcpy (online_html_filename, w2);
+            continue;
         }
-        else if (strcasecmp (w1, "online_sorting_option") == 0)
+        if (strcasecmp (w1, "online_sorting_option") == 0)
         {
             online_sorting_option = atoi (w2);
+            continue;
         }
-        else if (strcasecmp (w1, "online_display_option") == 0)
+        if (strcasecmp (w1, "online_display_option") == 0)
         {
             online_display_option = atoi (w2);
+            continue;
         }
-        else if (strcasecmp (w1, "online_gm_display_min_level") == 0)
-        {                       // minimum GM level to display 'GM' when we want to display it
+        if (strcasecmp (w1, "online_gm_display_min_level") == 0)
+        {
+            // minimum GM level to display 'GM' in the online files
             online_gm_display_min_level = atoi (w2);
-            if (online_gm_display_min_level < 5)    // send online file every 5 seconds to player is enough
-                online_gm_display_min_level = 5;
+            if (online_gm_display_min_level < 1)
+                online_gm_display_min_level = 1;
+            continue;
         }
-        else if (strcasecmp (w1, "online_refresh_html") == 0)
+        if (strcasecmp (w1, "online_refresh_html") == 0)
         {
             online_refresh_html = atoi (w2);
-            if (online_refresh_html < 1)
-                online_refresh_html = 1;
+            if (online_refresh_html < 5)
+                online_refresh_html = 5;
+            continue;
         }
-        else if (strcasecmp (w1, "anti_freeze_enable") == 0)
+
+        if (strcasecmp (w1, "anti_freeze_enable") == 0)
         {
             anti_freeze_enable = config_switch (w2);
+            continue;
         }
-        else if (strcasecmp (w1, "anti_freeze_interval") == 0)
+        if (strcasecmp (w1, "anti_freeze_interval") == 0)
         {
             ANTI_FREEZE_INTERVAL = atoi (w2);
             if (ANTI_FREEZE_INTERVAL < 5)
-                ANTI_FREEZE_INTERVAL = 5;   // minimum 5 seconds
+                ANTI_FREEZE_INTERVAL = 5;
+            continue;
         }
-        else if (strcasecmp (w1, "import") == 0)
+        if (strcasecmp (w1, "import") == 0)
         {
             char_config_read (w2);
+            continue;
         }
+        printf ("%s: unknown option: %s\n", __func__, line);
     }
     fclose_ (fp);
-
-    return 0;
 }
 
 void term_func (void)

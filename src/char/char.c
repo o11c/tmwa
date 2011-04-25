@@ -38,9 +38,9 @@ int  anti_freeze_enable = 0;
 int  ANTI_FREEZE_INTERVAL = 6;
 
 /// the connection to the login server
-int login_fd;
+int login_fd = -1;
 /// the listening socket
-int char_fd;
+int char_fd = -1;
 /// The user id and password used by the map-server to connect to us
 /// and by us to connect to the login-server
 char userid[24];
@@ -2646,29 +2646,30 @@ void mapif_sendallwos (int sfd, const uint8_t *buf, unsigned int len)
     }
 }
 
-// MAPサーバーにデータ送信（map鯖生存確認有り）
+/// Send data only if fd is a map server
+// This is mostly a convenience method, but I think the check is also 
+// because sometimes FDs are saved but the server might disconnect
 void mapif_send (int fd, const uint8_t *buf, unsigned int len)
 {
-    if (fd >= 0)
+    if (fd < 0)
+        return;
+    for (int i = 0; i < MAX_MAP_SERVERS; i++)
     {
-        for (int i = 0; i < MAX_MAP_SERVERS; i++)
-        {
-            if (fd == server_fd[i])
-            {
-                memcpy (WFIFOP (fd, 0), buf, len);
-                WFIFOSET (fd, len);
-                return;
-            }
-        }
+        if (fd != server_fd[i])
+            continue;
+        memcpy (WFIFOP (fd, 0), buf, len);
+        WFIFOSET (fd, len);
+        return;
     }
 }
 
+/// Report number of users on maps to login server and all map servers
 void send_users_tologin (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
 {
     int  users = count_users ();
     uint8_t buf[16];
 
-    if (login_fd > 0 && session[login_fd])
+    if (login_fd >= 0 && session[login_fd])
     {
         // send number of user to login server
         WFIFOW (login_fd, 0) = 0x2714;
@@ -2683,31 +2684,27 @@ void send_users_tologin (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, cus
 
 void check_connect_login_server (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
 {
-    if (login_fd <= 0 || session[login_fd] == NULL)
-    {
-        printf ("Attempt to connect to login-server...\n");
-        if ((login_fd = make_connection (login_ip, login_port)) < 0)
-            return;
-        session[login_fd]->func_parse = parse_tologin;
-        realloc_fifo (login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
-        WFIFOW (login_fd, 0) = 0x2710;
-        memset (WFIFOP (login_fd, 2), 0, 24);
-        memcpy (WFIFOP (login_fd, 2), userid,
-                strlen (userid) < 24 ? strlen (userid) : 24);
-        memset (WFIFOP (login_fd, 26), 0, 24);
-        memcpy (WFIFOP (login_fd, 26), passwd,
-                strlen (passwd) < 24 ? strlen (passwd) : 24);
-        WFIFOL (login_fd, 50) = 0;
-        WFIFOL (login_fd, 54) = char_ip;
-        WFIFOL (login_fd, 58) = char_port;
-        memset (WFIFOP (login_fd, 60), 0, 20);
-        memcpy (WFIFOP (login_fd, 60), server_name,
-                strlen (server_name) < 20 ? strlen (server_name) : 20);
-        WFIFOW (login_fd, 80) = 0;
-        WFIFOW (login_fd, 82) = char_maintenance;
-        WFIFOW (login_fd, 84) = char_new;
-        WFIFOSET (login_fd, 86);
-    }
+    // can both conditions really happen?
+    if (login_fd >= 0 && session[login_fd])
+        return;
+    printf ("Attempt to connect to login-server...\n");
+    login_fd = make_connection (login_ip, login_port);
+    if (login_fd < 0)
+        return;
+    session[login_fd]->func_parse = parse_tologin;
+    realloc_fifo (login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
+
+    WFIFOW (login_fd, 0) = 0x2710;
+    STRZCPY2 ((char *)WFIFOP (login_fd, 2), userid);
+    STRZCPY2 ((char *)WFIFOP (login_fd, 26), passwd);
+    WFIFOL (login_fd, 50) = 0;
+    WFIFOL (login_fd, 54) = char_ip;
+    WFIFOL (login_fd, 58) = char_port;
+    STRZCPY2 ((char *)WFIFOP (login_fd, 60), server_name);
+    WFIFOW (login_fd, 80) = 0;
+    WFIFOW (login_fd, 82) = char_maintenance;
+    WFIFOW (login_fd, 84) = char_new;
+    WFIFOSET (login_fd, 86);
 }
 
 //-------------------------------------------
@@ -3049,25 +3046,14 @@ int char_config_read (const char *cfgName)
 
 void term_func (void)
 {
-    int  i;
-
-    // write online players files with no player
-    for (i = 0; i < char_num; i++)
-        online_char_server_fd[i] = -1;
-    create_online_files ();
-    free (online_char_server_fd);
-
     mmo_char_sync ();
     inter_save ();
 
-    if (gm_account != NULL)
-        free (gm_account);
-
-    free (char_dat);
-    delete_session (login_fd);
-    delete_session (char_fd);
-
-    char_log ("----End of char-server (normal end with closing of all files).\n");
+    // this is a bit of a hack
+    // write out online files saying there is nobody
+    // TODO - should this be replaced with saying "server offline?"
+    char_num = 0;
+    create_online_files ();
 }
 
 void do_init (int argc, char **argv)
@@ -3077,8 +3063,9 @@ void do_init (int argc, char **argv)
 
     char_log ("\nThe char-server starting...\n");
 
+    // FIXME: specifying config by position is deprecated
     char_config_read ((argc > 1) ? argv[1] : CHAR_CONF_NAME);
-    lan_config_read ((argc > 2) ? argv[2] : LOGIN_LAN_CONF_NAME);
+    lan_config_read ((argc > 3) ? argv[3] : LOGIN_LAN_CONF_NAME);
 
     login_ip = inet_addr (login_ip_str);
     char_ip = inet_addr (char_ip_str);
@@ -3092,30 +3079,20 @@ void do_init (int argc, char **argv)
     mmo_char_init ();
 
     update_online = time (NULL);
-    create_online_files ();     // update online players files at start of the server
+    create_online_files ();
 
-    inter_init ((argc > 2) ? argv[2] : inter_cfgName);  // inter server 初期化
+    inter_init ((argc > 2) ? argv[2] : inter_cfgName);
 
-//    set_termfunc (do_final);
     set_defaultparse (parse_char);
 
     char_fd = make_listen_port (char_port);
 
-//    add_timer_func_list (check_connect_login_server, "check_connect_login_server");
-//    add_timer_func_list (send_users_tologin, "send_users_tologin");
-//    add_timer_func_list (mmo_char_sync_timer, "mmo_char_sync_timer");
+    add_timer_interval (gettick () + 1000, check_connect_login_server, 0, 0, 10 * 1000);
+    add_timer_interval (gettick () + 1000, send_users_tologin, 0, 0, 5 * 1000);
+    add_timer_interval (gettick () + autosave_interval, mmo_char_sync_timer, 0, 0, autosave_interval);
 
-    add_timer_interval (gettick () + 1000, check_connect_login_server, 0,
-                        0, 10 * 1000);
-    add_timer_interval (gettick () + 1000, send_users_tologin, 0, 0,
-                        5 * 1000);
-    add_timer_interval (gettick () + autosave_interval,
-                        mmo_char_sync_timer, 0, 0, autosave_interval);
-
-    if (anti_freeze_enable > 0)
-    {
-        add_timer_interval (gettick () + 1000, map_anti_freeze_system, 0, 0, ANTI_FREEZE_INTERVAL * 1000);  // checks every X seconds user specifies
-    }
+    if (anti_freeze_enable)
+        add_timer_interval (gettick () + 1000, map_anti_freeze_system, 0, 0, ANTI_FREEZE_INTERVAL * 1000);
 
     char_log ("The char-server is ready (Server is listening on the port %d).\n",
               char_port);

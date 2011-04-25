@@ -2707,73 +2707,70 @@ void check_connect_login_server (timer_id UNUSED, tick_t UNUSED, custom_id_t UNU
     WFIFOSET (login_fd, 86);
 }
 
-//-------------------------------------------
-// Reading Lan Support configuration by [Yor]
-//-------------------------------------------
-int lan_config_read (const char *lancfgName)
+/// read conf/lan_support.conf
+// Note: this file is shared with the login-server
+// This file is to give a different IP for connections from the LAN
+// Note: it assumes that all map-servers have the same IP, just different ports
+// if this isn't how it is set up, you'll have to do some port-forwarding
+void lan_config_read (const char *lancfgName)
 {
-    int  j;
-    struct hostent *h = NULL;
-    char line[1024], w1[1024], w2[1024];
-    FILE *fp;
-
     // set default configuration
-    strncpy (lan_map_ip, "127.0.0.1", sizeof (lan_map_ip));
+    STRZCPY (lan_map_ip, "127.0.0.1");
     subneti[0] = 127;
     subneti[1] = 0;
     subneti[2] = 0;
     subneti[3] = 1;
-    for (j = 0; j < 4; j++)
+    for (int j = 0; j < 4; j++)
         subnetmaski[j] = 255;
 
-    fp = fopen_ (lancfgName, "r");
+    FILE *fp = fopen_ (lancfgName, "r");
 
-    if (fp == NULL)
+    if (!fp)
     {
         printf ("LAN support configuration file not found: %s\n", lancfgName);
-        return 1;
+        return;
     }
 
     printf ("---start reading of Lan Support configuration...\n");
 
-    while (fgets (line, sizeof (line) - 1, fp))
+    char line[1024];
+    while (fgets (line, sizeof (line), fp))
     {
         if (line[0] == '/' && line[1] == '/')
             continue;
 
-        line[sizeof (line) - 1] = '\0';
+        char w1[1024], w2[1024];
         if (sscanf (line, "%[^:]: %[^\r\n]", w1, w2) != 2)
             continue;
-
         remove_control_chars (w1);
         remove_control_chars (w2);
+        // WARNING: I don't think this should be calling gethostbyname at all, it should just parse the IP
         if (strcasecmp (w1, "lan_map_ip") == 0)
-        {                       // Read map-server Lan IP Address
-            h = gethostbyname (w2);
-            if (h != NULL)
+        {
+            // Read map-server Lan IP Address
+            struct hostent *h = gethostbyname (w2);
+            if (h)
             {
-                sprintf (lan_map_ip, "%d.%d.%d.%d",
-                         (unsigned char) h->h_addr[0],
-                         (unsigned char) h->h_addr[1],
-                         (unsigned char) h->h_addr[2],
-                         (unsigned char) h->h_addr[3]);
+                sprintf (lan_map_ip, "%hhu.%hhu.%hhu.%hhu",
+                         h->h_addr[0], h->h_addr[1],
+                         h->h_addr[2], h->h_addr[3]);
             }
             else
             {
-                strncpy (lan_map_ip, w2, sizeof (lan_map_ip));
-                lan_map_ip[sizeof (lan_map_ip) - 1] = 0;
+                STRZCPY (lan_map_ip, w2);
             }
             printf ("LAN IP of map-server: %s.\n", lan_map_ip);
         }
         else if (strcasecmp (w1, "subnet") == 0)
-        {                       // Read Subnetwork
-            for (j = 0; j < 4; j++)
+        {
+            // Read Subnetwork
+            for (int j = 0; j < 4; j++)
                 subneti[j] = 0;
-            h = gethostbyname (w2);
-            if (h != NULL)
+            struct hostent *h = gethostbyname (w2);
+            if (h)
             {
-                for (j = 0; j < 4; j++)
-                    subneti[j] = (unsigned char) h->h_addr[j];
+                for (int j = 0; j < 4; j++)
+                    subneti[j] = h->h_addr[j];
             }
             else
             {
@@ -2784,14 +2781,15 @@ int lan_config_read (const char *lancfgName)
                     subneti[0], subneti[1], subneti[2], subneti[3]);
         }
         else if (strcasecmp (w1, "subnetmask") == 0)
-        {                       // Read Subnetwork Mask
-            for (j = 0; j < 4; j++)
+        {
+            // Read Subnetwork Mask
+            for (int j = 0; j < 4; j++)
                 subnetmaski[j] = 255;
-            h = gethostbyname (w2);
-            if (h != NULL)
+            struct hostent *h = gethostbyname (w2);
+            if (h)
             {
-                for (j = 0; j < 4; j++)
-                    subnetmaski[j] = (unsigned char) h->h_addr[j];
+                for (int j = 0; j < 4; j++)
+                    subnetmaski[j] = h->h_addr[j];
             }
             else
             {
@@ -2806,24 +2804,16 @@ int lan_config_read (const char *lancfgName)
     fclose_ (fp);
 
     // sub-network check of the map-server
+    uint8_t p[4];
+    sscanf (lan_map_ip, "%hhu.%hhu.%hhu.%hhu", &p[0], &p[1], &p[2], &p[3]);
+    printf ("LAN test of LAN IP of the map-server: ");
+    if (!lan_ip_check (p))
     {
-        unsigned int a0, a1, a2, a3;
-        unsigned char p[4];
-        sscanf (lan_map_ip, "%d.%d.%d.%d", &a0, &a1, &a2, &a3);
-        p[0] = a0;
-        p[1] = a1;
-        p[2] = a2;
-        p[3] = a3;
-        printf ("LAN test of LAN IP of the map-server: ");
-        if (lan_ip_check (p) == 0)
-        {
-            printf ("\033[1;31m***ERROR: LAN IP of the map-server doesn't belong to the specified Sub-network.\033[0m\n");
-        }
+        /// Actually, this could be considered a legitimate entry
+        char_log ("***ERROR: LAN IP of the map-server doesn't belong to the specified Sub-network.\n");
     }
 
     printf ("---End reading of Lan Support configuration...\n");
-
-    return 0;
 }
 
 int char_config_read (const char *cfgName)

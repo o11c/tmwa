@@ -3160,6 +3160,7 @@ void parse_login (int fd)
 }
 
 /// read conf/lan_support.conf
+// Note: this file is shared with the char-server
 // This file is to give a different IP for connections from the LAN
 // Note: it assumes that all char-servers have the same IP, just different ports
 // if this isn't how it it set up, you'll have to do some port-forwarding
@@ -3184,17 +3185,19 @@ void login_lan_config_read (const char *lancfgName)
 
     printf ("---Start reading Lan Support configuration file\n");
 
-    char line[1024], w1[1024], w2[1024];
+    char line[1024];
     while (fgets (line, sizeof (line), fp))
     {
         if (line[0] == '/' && line[1] == '/')
             continue;
+
+        char w1[1024], w2[1024];
         if (sscanf (line, "%[^:]: %[^\r\n]", w1, w2) != 2)
             continue;
 
         remove_control_chars (w1);
         remove_control_chars (w2);
-        // WARNING: I don't think this hsould be calling gethostbyname at all, it should just parse the IP
+        // WARNING: I don't think this should be calling gethostbyname at all, it should just parse the IP
         if (strcasecmp (w1, "lan_char_ip") == 0)
         {
             // Read Char-Server Lan IP Address

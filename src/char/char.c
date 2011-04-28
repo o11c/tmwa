@@ -2205,9 +2205,9 @@ int search_mapserver (const char *map)
 }
 
 /// Currently just calls inter_mapif_init
-static int char_mapif_init (int fd)
+static void char_mapif_init (int fd)
 {
-    return inter_mapif_init (fd);
+    inter_mapif_init (fd);
 }
 
 /// Check if IP is LAN instead of WAN

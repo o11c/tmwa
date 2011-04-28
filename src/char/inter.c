@@ -13,294 +13,323 @@
 #include "int_storage.h"
 #include "../common/lock.h"
 
-#define WISDATA_TTL (60*1000)   // Existence time of Wisp/page data (60 seconds)
-                                // that is the waiting time of answers of all map-servers
-#define WISDELLIST_MAX 256      // Number of elements of Wisp/page data deletion list
-
-char inter_log_filename[1024] = "log/inter.log";
+// how long to hold whisper data, awaiting answers from map servers
+#define WHISPER_DATA_TTL (60*1000)
+// Number of elements of Whisp/page data deletion list
+#define WHISPER_DELLIST_MAX 256
 
 char accreg_txt[1024] = "save/accreg.txt";
 static struct dbt *accreg_db = NULL;
 
 struct accreg
 {
-    int  account_id, reg_num;
+    account_t account_id;
+    int reg_num;
     struct global_reg reg[ACCOUNT_REG_NUM];
 };
 
+/// Max level difference to share xp in a party
 int  party_share_level = 10;
 
-// 送信パケット長リスト
-int  inter_send_packet_length[] = {
-    -1, -1, 27, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    -1, 7, 0, 0, 0, 0, 0, 0, -1, 11, 0, 0, 0, 0, 0, 0,
-    35, -1, 11, 15, 34, 29, 7, -1, 0, 0, 0, 0, 0, 0, 0, 0,
-    10, -1, 15, 0, 79, 19, 7, -1, 0, -1, -1, -1, 14, 67, 186, -1,
-    9, 9, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    11, -1, 7, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/// Lengths of packets sent
+int  inter_send_packet_length[] =
+{
+// 0x3800
+    -1, -1, 27, -1,
+    -1, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+// 0x3810
+    -1, 7, 0, 0,
+    0, 0, 0, 0,
+    -1, 11, 0, 0,
+    0, 0, 0, 0,
+// 0x3820
+    35, -1, 11, 15,
+    34, 29, 7, -1,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+// 0x3830
+    10, -1, 15, 0,
+    79, 19, 7, -1,
+    0, -1, -1, -1,
+    14, 67, 186, -1,
+// 0x3840
+    9, 9, -1, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+// 0x3850
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+// 0x3860
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+// 0x3870
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+// 0x3880
+    11, -1, 7, 3,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
 };
 
-// 受信パケット長リスト
-int  inter_recv_packet_length[] = {
-    -1, -1, 7, -1, -1, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    6, -1, 0, 0, 0, 0, 0, 0, 10, -1, 0, 0, 0, 0, 0, 0,
-    72, 6, 52, 14, 10, 29, 6, -1, 34, 0, 0, 0, 0, 0, 0, 0,
-    -1, 6, -1, 0, 55, 19, 6, -1, 14, -1, -1, -1, 14, 19, 186, -1,
-    5, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    48, 14, -1, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/// Lengths of the received packets
+int  inter_recv_packet_length[] =
+{
+// 0x3000
+    -1, -1, 7, -1,
+    -1, 6, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+// 0x3010
+    6, -1, 0, 0,
+    0, 0, 0, 0,
+    10, -1, 0, 0,
+    0, 0, 0, 0,
+// 0x3020
+    72, 6, 52, 14,
+    10, 29, 6, -1,
+    34, 0, 0, 0,
+    0, 0, 0, 0,
+// 0x3030
+    -1, 6, -1, 0,
+    55, 19, 6, -1,
+    14, -1, -1, -1,
+    14, 19, 186, -1,
+// 0x3040
+    5, 9, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+// 0x3050
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+// 0x3060
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+// 0x3070
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+// 0x3080
+    48, 14, -1, 6,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
 };
 
-struct WisData
+struct WhisperData
 {
     int  id, fd, count, len;
-    unsigned long tick;
-    unsigned char src[24], dst[24], msg[1024];
+    tick_t tick;
+    // speaker
+    char src[24];
+    // target
+    char dst[24];
+    char msg[1024];
 };
-static struct dbt *wis_db = NULL;
-static int wis_dellist[WISDELLIST_MAX], wis_delnum;
+static struct dbt *whis_db = NULL;
 
-//--------------------------------------------------------
+// TODO remove these as soon as the good db iterators are implemented
+static int whis_dellist[WHISPER_DELLIST_MAX] __attribute__((deprecated));
+static int whis_delnum __attribute__((deprecated));
 
-// アカウント変数を文字列へ変換
-int inter_accreg_tostr (char *str, struct accreg *reg)
+
+/// Save variables
+void inter_accreg_tofile (FILE *fp, struct accreg *reg)
 {
-    int  j;
-    char *p = str;
+    if (!reg->reg_num)
+        return;
 
-    p += sprintf (p, "%d\t", reg->account_id);
-    for (j = 0; j < reg->reg_num; j++)
-    {
-        p += sprintf (p, "%s,%d ", reg->reg[j].str, reg->reg[j].value);
-    }
-
-    return 0;
+    fprintf (fp, "%u\t", reg->account_id);
+    for (int j = 0; j < reg->reg_num; j++)
+        fprintf (fp, "%s,%d ", reg->reg[j].str, reg->reg[j].value);
 }
 
-// アカウント変数を文字列から変換
-int inter_accreg_fromstr (const char *str, struct accreg *reg)
+/// Load variables
+int inter_accreg_fromstr (const char *p, struct accreg *reg)
 {
-    int  j, v, n;
-    char buf[128];
-    const char *p = str;
-
-    if (sscanf (p, "%d\t%n", &reg->account_id, &n) != 1
-        || reg->account_id <= 0)
+    int n;
+    if (sscanf (p, "%d\t%n", &reg->account_id, &n) != 1 || !reg->account_id)
         return 1;
-
-    for (j = 0, p += n; j < ACCOUNT_REG_NUM; j++, p += n)
+    p += n;
+    int  j;
+    for (j = 0; j < ACCOUNT_REG_NUM; j++, p += n)
     {
+        char buf[128];
+        int v;
         if (sscanf (p, "%[^,],%d %n", buf, &v, &n) != 2)
             break;
-        memcpy (reg->reg[j].str, buf, 32);
+        STRZCPY (reg->reg[j].str, buf);
         reg->reg[j].value = v;
     }
     reg->reg_num = j;
-
     return 0;
 }
 
-// アカウント変数の読み込み
-int inter_accreg_init (void)
+/// Read the account variables
+void inter_accreg_init (void)
 {
-    char line[8192];
-    FILE *fp;
-    int  c = 0;
-    struct accreg *reg;
-
     accreg_db = numdb_init ();
 
-    if ((fp = fopen_ (accreg_txt, "r")) == NULL)
-        return 1;
-    while (fgets (line, sizeof (line) - 1, fp))
+    FILE *fp = fopen_ (accreg_txt, "r");
+    if (!fp)
+        return;
+
+    int  c = 0;
+    char line[8192];
+    while (fgets (line, sizeof (line), fp))
     {
-        line[sizeof (line) - 1] = '\0';
+        struct accreg *reg;
         CREATE (reg, struct accreg, 1);
-        if (inter_accreg_fromstr (line, reg) == 0 && reg->account_id > 0)
+        if (!inter_accreg_fromstr (line, reg) && reg->account_id)
         {
-            numdb_insert (accreg_db, reg->account_id, reg);
+            numdb_insert (accreg_db, (numdb_key_t)reg->account_id, reg);
         }
         else
         {
-            printf ("inter: accreg: broken data [%s] line %d\n", accreg_txt,
-                    c);
+            printf ("inter: accreg: broken data [%s] line %d\n", accreg_txt, c);
             free (reg);
         }
         c++;
     }
     fclose_ (fp);
-//  printf("inter: %s read done (%d)\n", accreg_txt, c);
-
-    return 0;
 }
 
-// アカウント変数のセーブ用
-void inter_accreg_save_sub (db_key_t key, db_val_t data, va_list ap)
+/// saving the variables of an account
+void inter_accreg_save_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
-    char line[8192];
-    FILE *fp;
+    FILE *fp = va_arg (ap, FILE *);
     struct accreg *reg = (struct accreg *) data;
-
-    if (reg->reg_num > 0)
-    {
-        inter_accreg_tostr (line, reg);
-        fp = va_arg (ap, FILE *);
-        fprintf (fp, "%s\n", line);
-    }
+    inter_accreg_tofile (fp, reg);
 }
 
-// アカウント変数のセーブ
-int inter_accreg_save (void)
+/// Save variables of all accounts
+void inter_accreg_save (void)
 {
-    FILE *fp;
     int  lock;
+    FILE *fp = lock_fopen (accreg_txt, &lock);
 
-    if ((fp = lock_fopen (accreg_txt, &lock)) == NULL)
+    if (!fp)
     {
         printf ("int_accreg: cant write [%s] !!! data is lost !!!\n",
                 accreg_txt);
-        return 1;
+        return;
     }
     numdb_foreach (accreg_db, inter_accreg_save_sub, fp);
     lock_fclose (fp, accreg_txt, &lock);
-//  printf("inter: %s saved.\n", accreg_txt);
-
-    return 0;
 }
 
-//--------------------------------------------------------
-
-/*==========================================
- * 設定ファイルを読み込む
- *------------------------------------------
- */
-int inter_config_read (const char *cfgName)
+/// Read inter server config file
+void inter_config_read (const char *cfgName)
 {
-    char line[1024], w1[1024], w2[1024];
-    FILE *fp;
-
-    fp = fopen_ (cfgName, "r");
-    if (fp == NULL)
+    FILE *fp = fopen_ (cfgName, "r");
+    if (!fp)
     {
         printf ("file not found: %s\n", cfgName);
-        return 1;
+        return;
     }
-    while (fgets (line, sizeof (line) - 1, fp))
+
+    char line[1024];
+    while (fgets (line, sizeof (line), fp))
     {
         if (line[0] == '/' && line[1] == '/')
             continue;
-        line[sizeof (line) - 1] = '\0';
-
+        char w1[1024], w2[1024];
         if (sscanf (line, "%[^:]: %[^\r\n]", w1, w2) != 2)
             continue;
 
         if (strcasecmp (w1, "storage_txt") == 0)
         {
-            strncpy (storage_txt, w2, sizeof (storage_txt));
+            STRZCPY (storage_txt, w2);
+            continue;
         }
-        else if (strcasecmp (w1, "party_txt") == 0)
+        if (strcasecmp (w1, "party_txt") == 0)
         {
-            strncpy (party_txt, w2, sizeof (party_txt));
+            STRZCPY (party_txt, w2);
+            continue;
         }
-        else if (strcasecmp (w1, "guild_txt") == 0)
+        if (strcasecmp (w1, "guild_txt") == 0)
         {
-            strncpy (guild_txt, w2, sizeof (guild_txt));
+            STRZCPY (guild_txt, w2);
+            continue;
         }
-        else if (strcasecmp (w1, "castle_txt") == 0)
+        if (strcasecmp (w1, "castle_txt") == 0)
         {
-            strncpy (castle_txt, w2, sizeof (castle_txt));
+            STRZCPY (castle_txt, w2);
+            continue;
         }
-        else if (strcasecmp (w1, "accreg_txt") == 0)
+        if (strcasecmp (w1, "accreg_txt") == 0)
         {
-            strncpy (accreg_txt, w2, sizeof (accreg_txt));
+            STRZCPY (accreg_txt, w2);
+            continue;
         }
-        else if (strcasecmp (w1, "guild_storage_txt") == 0)
+        if (strcasecmp (w1, "guild_storage_txt") == 0)
         {
-            strncpy (guild_storage_txt, w2, sizeof (guild_storage_txt));
+            STRZCPY (guild_storage_txt, w2);
+            continue;
         }
-        else if (strcasecmp (w1, "party_share_level") == 0)
+        if (strcasecmp (w1, "party_share_level") == 0)
         {
             party_share_level = atoi (w2);
             if (party_share_level < 0)
                 party_share_level = 0;
+            continue;
         }
-        else if (strcasecmp (w1, "inter_log_filename") == 0)
-        {
-            strncpy (inter_log_filename, w2, sizeof (inter_log_filename));
-        }
-        else if (strcasecmp (w1, "import") == 0)
+        if (strcasecmp (w1, "import") == 0)
         {
             inter_config_read (w2);
+            continue;
         }
     }
     fclose_ (fp);
-
-    return 0;
 }
 
-// ログ書き出し
-int inter_log (const char *fmt, ...)
-{
-    FILE *logfp;
-    va_list ap;
-
-    va_start (ap, fmt);
-    logfp = fopen_ (inter_log_filename, "a");
-    if (logfp)
-    {
-        vfprintf (logfp, fmt, ap);
-        fclose_ (logfp);
-    }
-    va_end (ap);
-
-    return 0;
-}
-
-// セーブ
-int inter_save (void)
+/// Save everything
+void inter_save (void)
 {
     inter_party_save ();
     inter_guild_save ();
     inter_storage_save ();
     inter_guild_storage_save ();
     inter_accreg_save ();
-
-    return 0;
 }
 
-// 初期化
-int inter_init (const char *file)
+/// Init everything from config file
+void inter_init (const char *file)
 {
     inter_config_read (file);
 
-    wis_db = numdb_init ();
+    whis_db = numdb_init ();
 
     inter_party_init ();
     inter_guild_init ();
     inter_storage_init ();
     inter_accreg_init ();
-
-    return 0;
 }
 
-// マップサーバー接続
-int inter_mapif_init (int fd)
+/// Called whenever a map server connects
+void inter_mapif_init (int fd)
 {
     inter_guild_mapif_init (fd);
-
-    return 0;
 }
 
-//--------------------------------------------------------
-// sended packets to map-server
-
-// GMメッセージ送信
-int mapif_GMmessage (unsigned char *mes, int len)
+/// Send a message to all GMs
+// length of mes is actually only len-4 - it includes the header
+void mapif_GMmessage (char *mes, int len)
 {
     unsigned char buf[len];
 
@@ -308,209 +337,190 @@ int mapif_GMmessage (unsigned char *mes, int len)
     WBUFW (buf, 2) = len;
     memcpy (WBUFP (buf, 4), mes, len - 4);
     mapif_sendall (buf, len);
-//  printf("inter server: GM:%d %s\n", len, mes);
-
-    return 0;
 }
 
-// Wisp/page transmission to all map-server
-int mapif_wis_message (struct WisData *wd)
+extern int server_fd[];
+/// Transmit a whisper to all map servers
+void mapif_whis_message (struct WhisperData *wd)
 {
     unsigned char buf[56 + wd->len];
 
     WBUFW (buf, 0) = 0x3801;
     WBUFW (buf, 2) = 56 + wd->len;
     WBUFL (buf, 4) = wd->id;
-    memcpy (WBUFP (buf, 8), wd->src, 24);
-    memcpy (WBUFP (buf, 32), wd->dst, 24);
-    memcpy (WBUFP (buf, 56), wd->msg, wd->len);
+    STRZCPY2 ((char *)WBUFP (buf, 8), wd->src);
+    STRZCPY2 ((char *)WBUFP (buf, 32), wd->dst);
+    strzcpy ((char *)WBUFP (buf, 56), wd->msg, wd->len);
     // This was the only case where the return value of mapif_sendall was used
     mapif_sendall (buf, WBUFW (buf, 2));
     wd->count = 0;
     // This feels hackish but it eliminates the return value check
-    extern int server_fd[];
     for (int i = 0; i < MAX_MAP_SERVERS; i++)
         if (server_fd[i] >= 0)
             wd->count++;
-
-    return 0;
 }
 
-// Wisp/page transmission result to map-server
-int mapif_wis_end (struct WisData *wd, int flag)
+/// Transmit the result of a whisper back to the map-server that requested it
+void mapif_whis_end (struct WhisperData *wd, uint8_t flag)
 {
     unsigned char buf[27];
 
     WBUFW (buf, 0) = 0x3802;
-    memcpy (WBUFP (buf, 2), wd->src, 24);
-    WBUFB (buf, 26) = flag;     // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
+    STRZCPY2 ((char *)WBUFP (buf, 2), wd->src);
+    // flag: 0: success, 1: target not logged in, 2: ignored
+    WBUFB (buf, 26) = flag;
     mapif_send (wd->fd, buf, 27);
-//  printf("inter server wis_end: flag: %d\n", flag);
-
-    return 0;
 }
 
-// アカウント変数送信
-int mapif_account_reg (int fd, unsigned char *src)
+/// Send all variables
+// NOTE: src is just WFIFOP (fd, 0)
+void mapif_account_reg (int fd, uint8_t *src)
 {
-    unsigned char buf[WBUFW (src, 2)];
-
-    memcpy (WBUFP (buf, 0), src, WBUFW (src, 2));
-    WBUFW (buf, 0) = 0x3804;
-    mapif_sendallwos (fd, buf, WBUFW (buf, 2));
-
-    return 0;
+    WBUFW (src, 0) = 0x3804;
+    mapif_sendallwos (fd, src, WBUFW (src, 2));
 }
 
-// アカウント変数要求返信
-int mapif_account_reg_reply (int fd, int account_id)
+/// Account variable reply
+void mapif_account_reg_reply (int fd, account_t account_id)
 {
-    struct accreg *reg = (struct accreg *)numdb_search (accreg_db, account_id);
+    struct accreg *reg = (struct accreg *)numdb_search (accreg_db, (numdb_key_t)account_id);
 
     WFIFOW (fd, 0) = 0x3804;
     WFIFOL (fd, 4) = account_id;
-    if (reg == NULL)
+    if (!reg)
     {
         WFIFOW (fd, 2) = 8;
     }
     else
     {
-        int  j, p;
-        for (j = 0, p = 8; j < reg->reg_num; j++, p += 36)
+        int p = 8;
+        for (int j = 0; j < reg->reg_num; j++)
         {
-            memcpy (WFIFOP (fd, p), reg->reg[j].str, 32);
-            WFIFOL (fd, p + 32) = reg->reg[j].value;
+            STRZCPY2 ((char *)WFIFOP (fd, p), reg->reg[j].str);
+            p += 32;
+            WFIFOL (fd, p) = reg->reg[j].value;
+            p += 4;
         }
         WFIFOW (fd, 2) = p;
     }
     WFIFOSET (fd, WFIFOW (fd, 2));
-
-    return 0;
 }
 
-//--------------------------------------------------------
 
-// Existence check of WISP data
-void check_ttl_wisdata_sub (db_key_t key, db_val_t data, va_list ap)
+/// Check whisper data to time out
+void check_ttl_whisdata_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
-    unsigned long tick;
-    struct WisData *wd = (struct WisData *) data;
-    tick = va_arg (ap, unsigned long);
+    struct WhisperData *wd = (struct WhisperData *) data;
+    tick_t tick = va_arg (ap, tick_t);
 
-    if (DIFF_TICK (tick, wd->tick) > WISDATA_TTL
-        && wis_delnum < WISDELLIST_MAX)
-        wis_dellist[wis_delnum++] = wd->id;
+    if (DIFF_TICK (tick, wd->tick) > WHISPER_DATA_TTL
+            && whis_delnum < WHISPER_DELLIST_MAX)
+    {
+        // TODO We really need to implement "delete while traversing"
+        // hm, it we use those new methods I made, instead of the foreach
+        // the node pointers of every valid node do not change, only the valid ones
+        // so, save the "next" pointer, deleted the node
+        // and operate on it - it's that simple
+        whis_dellist[whis_delnum++] = wd->id;
+    }
 }
 
-int check_ttl_wisdata (void)
+/// Check all whisper data to time out
+void check_ttl_whisdata (void)
 {
-    unsigned long tick = gettick ();
-    int  i;
-
+    tick_t tick = gettick ();
     do
     {
-        wis_delnum = 0;
-        numdb_foreach (wis_db, check_ttl_wisdata_sub, tick);
-        for (i = 0; i < wis_delnum; i++)
+        whis_delnum = 0;
+        numdb_foreach (whis_db, check_ttl_whisdata_sub, tick);
+        for (int i = 0; i < whis_delnum; i++)
         {
-            struct WisData *wd = (struct WisData *)numdb_search (wis_db, wis_dellist[i]);
-            printf ("inter: wis data id=%d time out : from %s to %s\n",
+            struct WhisperData *wd = (struct WhisperData *)numdb_search (whis_db, whis_dellist[i]);
+            printf ("inter: whis data id=%d time out : from %s to %s\n",
                     wd->id, wd->src, wd->dst);
-            // removed. not send information after a timeout. Just no answer for the player
-            //mapif_wis_end(wd, 1); // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
-            numdb_erase (wis_db, wd->id);
+            numdb_erase (whis_db, wd->id);
             free (wd);
         }
     }
-    while (wis_delnum >= WISDELLIST_MAX);
-
-    return 0;
+    // the _sub ran out of space. We're just hoping this doesn't happen too much
+    while (whis_delnum == WHISPER_DELLIST_MAX);
 }
 
-//--------------------------------------------------------
-// received packets from map-server
+/// received packets from map-server
 
-// GMメッセージ送信
-int mapif_parse_GMmessage (int fd)
+// GM messaging
+void mapif_parse_GMmessage (int fd)
 {
-    mapif_GMmessage (RFIFOP (fd, 4), RFIFOW (fd, 2));
-
-    return 0;
+    mapif_GMmessage ((char *)RFIFOP (fd, 4), RFIFOW (fd, 2));
 }
 
-// Wisp/page request to send
-int mapif_parse_WisRequest (int fd)
+/// Send whisper
+void mapif_parse_WhisRequest (int fd)
 {
-    struct WisData *wd;
-    static int wisid = 0;
+    struct WhisperData *wd;
+    static int whisid = 0;
 
     if (RFIFOW (fd, 2) - 52 >= sizeof (wd->msg))
     {
-        printf ("inter: Wis message size too long.\n");
-        return 0;
-    }
-    else if (RFIFOW (fd, 2) - 52 <= 0)
-    {                           // normaly, impossible, but who knows...
-        printf ("inter: Wis message doesn't exist.\n");
-        return 0;
+        printf ("inter: Whis message size too long.\n");
+        return;
     }
 
     // search if character exists before to ask all map-servers
-    struct mmo_charstatus *character = character_by_name (RFIFOP (fd, 28));
+    struct mmo_charstatus *character = character_by_name ((char *)RFIFOP (fd, 28));
     if (!character)
     {
         unsigned char buf[27];
         WBUFW (buf, 0) = 0x3802;
         memcpy (WBUFP (buf, 2), RFIFOP (fd, 4), 24);
-        WBUFB (buf, 26) = 1;    // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
+        // flag: 0: success, 1: target not logged in, 2: ignored
+        WBUFB (buf, 26) = 1;
         mapif_send (fd, buf, 27);
-        // Character exists. So, ask all map-servers
+        return;
     }
-    else
+    // Character exists. So, ask all map-servers
+    // to be sure of the correct name, rewrite it
+    STRZCPY2 ((char *)RFIFOP (fd, 28), character->name);
+    // if source is destination, don't ask other servers.
+    if (strcmp ((char *)RFIFOP (fd, 4), (char *)RFIFOP (fd, 28)) == 0)
     {
-        // to be sure of the correct name, rewrite it
-        memset (RFIFOP (fd, 28), 0, 24);
-        strncpy (RFIFOP (fd, 28), character->name, 24);
-        // if source is destination, don't ask other servers.
-        if (strcmp (RFIFOP (fd, 4), RFIFOP (fd, 28)) == 0)
-        {
-            unsigned char buf[27];
-            WBUFW (buf, 0) = 0x3802;
-            memcpy (WBUFP (buf, 2), RFIFOP (fd, 4), 24);
-            // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
-            WBUFB (buf, 26) = 1;
-            mapif_send (fd, buf, 27);
-        }
-        else
-        {
-            CREATE (wd, struct WisData, 1);
-
-            // Whether the failure of previous wisp/page transmission (timeout)
-            check_ttl_wisdata ();
-
-            wd->id = ++wisid;
-            wd->fd = fd;
-            wd->len = RFIFOW (fd, 2) - 52;
-            memcpy (wd->src, RFIFOP (fd, 4), 24);
-            memcpy (wd->dst, RFIFOP (fd, 28), 24);
-            memcpy (wd->msg, RFIFOP (fd, 52), wd->len);
-            wd->tick = gettick ();
-            numdb_insert (wis_db, wd->id, wd);
-            mapif_wis_message (wd);
-        }
+        unsigned char buf[27];
+        WBUFW (buf, 0) = 0x3802;
+        strzcpy ((char *)WBUFP (buf, 2), (char *)RFIFOP (fd, 4), 24);
+        // flag: 0: success, 1: target not logged in, 2: ignored
+        WBUFB (buf, 26) = 1;
+        mapif_send (fd, buf, 27);
+        return;
     }
 
-    return 0;
+    // we're really sending it
+
+    /// Timeout old messages
+    check_ttl_whisdata ();
+
+    CREATE (wd, struct WhisperData, 1);
+    wd->id = ++whisid;
+    wd->fd = fd;
+    wd->len = RFIFOW (fd, 2) - 52;
+    STRZCPY (wd->src, (char *)RFIFOP (fd, 4));
+    STRZCPY (wd->dst, (char *)RFIFOP (fd, 28));
+    strzcpy (wd->msg, (char *)RFIFOP (fd, 52), wd->len);
+    wd->tick = gettick ();
+    numdb_insert (whis_db, wd->id, wd);
+    mapif_whis_message (wd);
 }
 
-// Wisp/page transmission result
-int mapif_parse_WisReply (int fd)
+/// Whisper result
+// note that we get this once per map server
+void mapif_parse_WhisReply (int fd)
 {
-    int  id = RFIFOL (fd, 2), flag = RFIFOB (fd, 6);
-    struct WisData *wd = (struct WisData *)numdb_search (wis_db, id);
+    int id = RFIFOL (fd, 2);
+    uint8_t flag = RFIFOB (fd, 6);
+    struct WhisperData *wd = (struct WhisperData *)numdb_search (whis_db, id);
 
-    if (wd == NULL)
-        return 0;               // This wisp was probably suppress before, because it was timeout of because of target was found on another map-server
+    /// timeout or already delivered to another map-server
+    if (!wd)
+        return;
 
     // fails if sent to more servers (still awaiting reply)
     // and error is "target is not logged in"
@@ -518,130 +528,116 @@ int mapif_parse_WisReply (int fd)
     wd->count--;
     if (wd->count <= 0 || flag != 1)
     {
-        mapif_wis_end (wd, flag);   // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
-        numdb_erase (wis_db, id);
+        // flag: 0: success, 1: target not logged in, 2: ignored
+        mapif_whis_end (wd, flag);
+        numdb_erase (whis_db, id);
         free (wd);
     }
-
-    return 0;
 }
 
-// Received wisp message from map-server for ALL gm (just copy the message and resends it to ALL map-servers)
-int mapif_parse_WisToGM (int fd)
+/// forward @wgm
+// TODO handle immediately on the originating map server and use wos
+void mapif_parse_WhisToGM (int fd)
 {
-    unsigned char buf[RFIFOW (fd, 2)];  // 0x3003/0x3803 <packet_len>.w <wispname>.24B <min_gm_level>.w <message>.?B
-
-    memcpy (WBUFP (buf, 0), RFIFOP (fd, 0), RFIFOW (fd, 2));
-    WBUFW (buf, 0) = 0x3803;
-    mapif_sendall (buf, RFIFOW (fd, 2));
-
-    return 0;
+    RFIFOW (fd, 0) = 0x3803;
+    mapif_sendall (RFIFOP (fd, 0), RFIFOW (fd, 2));
 }
 
-// アカウント変数保存要求
-int mapif_parse_AccReg (int fd)
+/// Store account variables
+void mapif_parse_AccReg (int fd)
 {
-    int  j, p;
-    struct accreg *reg = (struct accreg*)numdb_search (accreg_db, (numdb_key_t)RFIFOL (fd, 4));
+    struct accreg *reg = (struct accreg*)numdb_search (accreg_db, (numdb_key_t)(account_t)RFIFOL (fd, 4));
 
-    if (reg == NULL)
+    if (!reg)
     {
         CREATE (reg, struct accreg, 1);
         reg->account_id = RFIFOL (fd, 4);
         numdb_insert (accreg_db, (numdb_key_t)RFIFOL (fd, 4), reg);
     }
 
-    for (j = 0, p = 8; j < ACCOUNT_REG_NUM && p < RFIFOW (fd, 2);
-         j++, p += 36)
+    int j;
+    int p = 8;
+    for (j = 0; j < ACCOUNT_REG_NUM && p < RFIFOW (fd, 2); j++)
     {
-        memcpy (reg->reg[j].str, RFIFOP (fd, p), 32);
-        reg->reg[j].value = RFIFOL (fd, p + 32);
+        STRZCPY (reg->reg[j].str, (char *)RFIFOP (fd, p));
+        p += 32;
+        reg->reg[j].value = RFIFOL (fd, p);
+        p += 4;
     }
     reg->reg_num = j;
 
-    mapif_account_reg (fd, RFIFOP (fd, 0)); // 他のMAPサーバーに送信
-
-    return 0;
+    /// let the other map servers know of the change
+    mapif_account_reg (fd, RFIFOP (fd, 0));
 }
 
-// アカウント変数送信要求
-int mapif_parse_AccRegRequest (int fd)
+/// Account variable reply
+void mapif_parse_AccRegRequest (int fd)
 {
-//  printf("mapif: accreg request\n");
-    return mapif_account_reg_reply (fd, RFIFOL (fd, 2));
+    mapif_account_reg_reply (fd, RFIFOL (fd, 2));
 }
 
-//--------------------------------------------------------
 
-// map server からの通信（１パケットのみ解析すること）
-// エラーなら0(false)、処理できたなら1、
-// パケット長が足りなければ2をかえさなければならない
+/// parse_char failed
+// try inter server packets instead
+// return: 0 unknown, 1 ok, 2 too short
 int inter_parse_frommap (int fd)
 {
-    int  cmd = RFIFOW (fd, 0);
-    int  len = 0;
+    uint16_t cmd = RFIFOW (fd, 0);
 
-    // inter鯖管轄かを調べる
-    if (cmd < 0x3000
-        || cmd >=
-        0x3000 +
-        (sizeof (inter_recv_packet_length) /
-         sizeof (inter_recv_packet_length[0])))
+    if (cmd < 0x3000 || cmd >= 0x3000 + ARRAY_SIZEOF (inter_recv_packet_length))
+        return 0;
+    if (!inter_recv_packet_length[cmd - 0x3000])
         return 0;
 
-    // パケット長を調べる
-    if ((len =
-         inter_check_length (fd,
-                             inter_recv_packet_length[cmd - 0x3000])) == 0)
+    /// return length of packet, looking up variable-length packets, or 0 if not long enough
+    int len = inter_check_length (fd, inter_recv_packet_length[cmd - 0x3000]);
+    if (len == 0)
         return 2;
 
     switch (cmd)
     {
-        case 0x3000:
-            mapif_parse_GMmessage (fd);
+    case 0x3000:
+        mapif_parse_GMmessage (fd);
+        break;
+    case 0x3001:
+        mapif_parse_WhisRequest (fd);
+        break;
+    case 0x3002:
+        mapif_parse_WhisReply (fd);
+        break;
+    case 0x3003:
+        mapif_parse_WhisToGM (fd);
+        break;
+    case 0x3004:
+        mapif_parse_AccReg (fd);
+        break;
+    case 0x3005:
+        mapif_parse_AccRegRequest (fd);
+        break;
+    default:
+        if (inter_party_parse_frommap (fd))
             break;
-        case 0x3001:
-            mapif_parse_WisRequest (fd);
+        if (inter_guild_parse_frommap (fd))
             break;
-        case 0x3002:
-            mapif_parse_WisReply (fd);
+        if (inter_storage_parse_frommap (fd))
             break;
-        case 0x3003:
-            mapif_parse_WisToGM (fd);
-            break;
-        case 0x3004:
-            mapif_parse_AccReg (fd);
-            break;
-        case 0x3005:
-            mapif_parse_AccRegRequest (fd);
-            break;
-        default:
-            if (inter_party_parse_frommap (fd))
-                break;
-            if (inter_guild_parse_frommap (fd))
-                break;
-            if (inter_storage_parse_frommap (fd))
-                break;
-            return 0;
+        return 0;
     }
     RFIFOSKIP (fd, len);
-
     return 1;
 }
 
-// RFIFOのパケット長確認
-// 必要パケット長があればパケット長、まだ足りなければ0
+/// Return length if enough bytes remain,
+/// return 0 if not enough in the fifo
 int inter_check_length (int fd, int length)
 {
     if (length == -1)
-    {                           // 可変パケット長
-        if (RFIFOREST (fd) < 4) // パケット長が未着
+    {
+        if (RFIFOREST (fd) < 4)
             return 0;
         length = RFIFOW (fd, 2);
     }
-
-    if (RFIFOREST (fd) < length)    // パケットが未着
+    if (RFIFOREST (fd) < length)
         return 0;
-
     return length;
 }

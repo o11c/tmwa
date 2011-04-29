@@ -223,7 +223,7 @@ struct storage *account2storage (int account_id)
         CREATE (s, struct storage, 1);
         memset (s, 0, sizeof (struct storage));
         s->account_id = account_id;
-        numdb_insert (storage_db, s->account_id, s);
+        numdb_insert (storage_db, (numdb_key_t)s->account_id, s);
     }
     return s;
 }
@@ -239,7 +239,7 @@ struct guild_storage *guild2storage (int guild_id)
         {
             CREATE (gs, struct guild_storage, 1);
             gs->guild_id = guild_id;
-            numdb_insert (guild_storage_db, gs->guild_id, gs);
+            numdb_insert (guild_storage_db, (numdb_key_t)gs->guild_id, gs);
         }
     }
     return gs;
@@ -270,7 +270,7 @@ int inter_storage_init (void)
         s->account_id = tmp_int;
         if (s->account_id > 0 && storage_fromstr (line, s) == 0)
         {
-            numdb_insert (storage_db, s->account_id, s);
+            numdb_insert (storage_db, (numdb_key_t)s->account_id, s);
         }
         else
         {
@@ -298,7 +298,7 @@ int inter_storage_init (void)
         gs->guild_id = tmp_int;
         if (gs->guild_id > 0 && guild_storage_fromstr (line, gs) == 0)
         {
-            numdb_insert (guild_storage_db, gs->guild_id, gs);
+            numdb_insert (guild_storage_db, (numdb_key_t)gs->guild_id, gs);
         }
         else
         {

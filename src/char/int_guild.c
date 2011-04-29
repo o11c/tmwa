@@ -453,7 +453,7 @@ int inter_guild_init (void)
         {
             if (g->guild_id >= guild_newid)
                 guild_newid = g->guild_id + 1;
-            numdb_insert (guild_db, g->guild_id, g);
+            numdb_insert (guild_db, (numdb_key_t)g->guild_id, g);
             guild_check_empty (g);
             guild_calcinfo (g);
         }
@@ -625,7 +625,7 @@ int guild_check_empty (struct guild *g)
     }
     // 誰もいないので解散
     numdb_foreach (guild_db, guild_break_sub, g->guild_id);
-    numdb_erase (guild_db, g->guild_id);
+    numdb_erase (guild_db, (numdb_key_t)g->guild_id);
     inter_guild_storage_delete (g->guild_id);
     mapif_guild_broken (g->guild_id, 0);
     free (g);
@@ -1075,13 +1075,13 @@ int mapif_parse_CreateGuild (int fd, int account_id, char *name,
     for (i = 0; i < 5; i++)
         g->skill[i].id = i + 10000;
 
-    numdb_insert (guild_db, g->guild_id, g);
+    numdb_insert (guild_db, (numdb_key_t)g->guild_id, g);
 
     mapif_guild_created (fd, account_id, g);
     mapif_guild_info (fd, g);
 
-    inter_log ("guild %s (id=%d) created by master %s (id=%d)\n",
-               name, g->guild_id, master->name, master->account_id);
+    char_log ("guild %s (id=%d) created by master %s (id=%d)\n",
+              name, g->guild_id, master->name, master->account_id);
 
     return 0;
 }
@@ -1242,7 +1242,7 @@ int mapif_parse_BreakGuild (int fd, int guild_id)
     inter_guild_storage_delete (guild_id);
     mapif_guild_broken (guild_id, 0);
 
-    inter_log ("guild %s (id=%d) broken\n", g->name, guild_id);
+    char_log ("guild %s (id=%d) broken\n", g->name, guild_id);
     free (g);
 
     return 0;
@@ -1553,7 +1553,7 @@ int mapif_parse_GuildCastleDataSave (int fd, int castle_id, int index,
             {
                 int  gid = (value) ? value : gc->guild_id;
                 struct guild *g = (struct guild *)numdb_search (guild_db, gid);
-                inter_log ("guild %s (id=%d) %s castle id=%d\n",
+                char_log ("guild %s (id=%d) %s castle id=%d\n",
                            (g) ? g->name : "??", gid,
                            (value) ? "occupy" : "abandon", index);
             }

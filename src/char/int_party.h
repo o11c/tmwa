@@ -1,13 +1,14 @@
 #ifndef INT_PARTY_H
 #define INT_PARTY_H
+#include "../common/sanity.h"
+#include "../common/mmo.h"
 
-int  inter_party_init (void);
-int  inter_party_save (void);
+bool inter_party_init (void);
+bool inter_party_save (void);
 
-int  inter_party_parse_frommap (int fd);
+bool inter_party_parse_frommap (int fd);
 
-int  inter_party_leave (int party_id, int account_id);
+void inter_party_leave (party_t party_id, account_t account_id);
 
 extern char party_txt[1024];
-
 #endif

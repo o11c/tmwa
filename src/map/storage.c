@@ -116,7 +116,7 @@ struct storage *account2storage (int account_id)
     {
         CREATE (stor, struct storage, 1);
         stor->account_id = account_id;
-        numdb_insert (storage_db, stor->account_id, stor);
+        numdb_insert (storage_db, (numdb_key_t)stor->account_id, stor);
     }
     return stor;
 }
@@ -479,7 +479,7 @@ struct guild_storage *guild2storage (int guild_id)
         {
             CREATE (gs, struct guild_storage, 1);
             gs->guild_id = guild_id;
-            numdb_insert (guild_storage_db, gs->guild_id, gs);
+            numdb_insert (guild_storage_db, (numdb_key_t)gs->guild_id, gs);
         }
     }
     return gs;

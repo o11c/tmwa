@@ -484,10 +484,10 @@ int guild_recv_info (struct guild *sg)
 
     nullpo_retr (0, sg);
 
-    if ((g = (struct guild *)numdb_search (guild_db, sg->guild_id)) == NULL)
+    if ((g = (struct guild *)numdb_search (guild_db, (numdb_key_t)sg->guild_id)) == NULL)
     {
         CREATE (g, struct guild, 1);
-        numdb_insert (guild_db, sg->guild_id, g);
+        numdb_insert (guild_db, (numdb_key_t)sg->guild_id, g);
         before = *sg;
 
         // 最初のロードなのでユーザーのチェックを行う
@@ -544,9 +544,9 @@ int guild_recv_info (struct guild *sg)
     }
 
     // イベントの発生
-    if ((ev = (struct eventlist *)numdb_search (guild_infoevent_db, sg->guild_id)) != NULL)
+    if ((ev = (struct eventlist *)numdb_search (guild_infoevent_db, (numdb_key_t)sg->guild_id)) != NULL)
     {
-        numdb_erase (guild_infoevent_db, sg->guild_id);
+        numdb_erase (guild_infoevent_db, (numdb_key_t)sg->guild_id);
         for (; ev; ev2 = ev->next, free (ev), ev = ev2)
         {
             npc_event_do (ev->name);

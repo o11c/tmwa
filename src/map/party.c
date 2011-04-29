@@ -199,10 +199,10 @@ int party_recv_info (struct party *sp)
 
     nullpo_retr (0, sp);
 
-    if ((p = (struct party *)numdb_search (party_db, sp->party_id)) == NULL)
+    if ((p = (struct party *)numdb_search (party_db, (numdb_key_t)sp->party_id)) == NULL)
     {
         CREATE (p, struct party, 1);
-        numdb_insert (party_db, sp->party_id, p);
+        numdb_insert (party_db, (numdb_key_t)sp->party_id, p);
 
         // 最初のロードなのでユーザーのチェックを行う
         party_check_member (sp);

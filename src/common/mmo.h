@@ -64,6 +64,9 @@
 typedef uint32_t account_t;
 typedef uint8_t gm_level_t;
 typedef uint32_t charid_t;
+typedef uint32_t party_t;
+typedef uint32_t guild_t;
+typedef uint8_t level_t;
 
 struct item
 {
@@ -108,13 +111,14 @@ struct mmo_charstatus
     int  hp, max_hp, sp, max_sp;
     short option, karma, manner;
     short hair, hair_color, clothes_color;
-    int  party_id, guild_id;
+    party_t party_id;
+    guild_t guild_id;
 
     short weapon, shield;
     short head_top, head_mid, head_bottom;
 
     char name[24];
-    unsigned char base_level, job_level;
+    level_t base_level, job_level;
     short str, agi, vit, int_, dex, luk;
     unsigned char char_num, sex;
 
@@ -135,7 +139,7 @@ struct mmo_charstatus
 struct storage
 {
     int  dirty;
-    int  account_id;
+    account_t account_id;
     short storage_status;
     short storage_amount;
     struct item storage_[MAX_STORAGE];
@@ -144,7 +148,7 @@ struct storage
 struct guild_storage
 {
     int  dirty;
-    int  guild_id;
+    guild_t guild_id;
     short storage_status;
     short storage_amount;
     struct item storage_[MAX_GUILD_STORAGE];
@@ -160,27 +164,32 @@ struct gm_account
 
 struct party_member
 {
-    int  account_id;
+    account_t account_id;
     char name[24], map[24];
-    int  leader, online, lv;
+    int  leader;
+    bool online;
+    level_t lv;
     struct map_session_data *sd;
 };
 
 struct party
 {
-    int  party_id;
+    party_t party_id;
     char name[24];
-    int  exp;
-    int  item;
+    bool exp;
+    bool item;
     struct party_member member[MAX_PARTY];
 };
 
 struct guild_member
 {
-    int  account_id, char_id;
-    short hair, hair_color, gender, pc_class, lv;
+    account_t account_id;
+    charid_t char_id;
+    short hair, hair_color, gender, pc_class;
+    level_t lv;
     int  exp, exp_payper;
-    short online, position;
+    bool online;
+    short position;
     int  rsv1, rsv2;
     char name[24];
     struct map_session_data *sd;
@@ -205,18 +214,19 @@ struct guild_explusion
     char name[24];
     char mes[40];
     char acc[40];
-    int  account_id;
+    account_t account_id;
     int  rsv1, rsv2, rsv3;
 };
 
 struct guild_skill
 {
-    int  id, lv;
+    int  id;
+    level_t lv;
 };
 
 struct guild
 {
-    int  guild_id;
+    guild_t guild_id;
     short guild_lv, connect_member, max_member, average_lv;
     int  exp, next_exp, skill_point, castle_id;
     char name[24], master[24];

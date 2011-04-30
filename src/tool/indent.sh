@@ -1,4 +1,6 @@
 #!/bin/sh
+echo This script is not to be used, as it causes formating errors
+exit 1
 # Simple script to help format code to TMW-eA standards.
 # You should use this on any file you edit before
 # committing to git.

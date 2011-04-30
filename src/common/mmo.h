@@ -27,15 +27,7 @@
 # define MIN_WALK_SPEED 0
 # define MAX_WALK_SPEED 1000
 # define MAX_STORAGE 300
-# define MAX_GUILD_STORAGE 1000
 # define MAX_PARTY 12
-# define MAX_GUILD 120            // increased max guild members to accomodate for +2 increase for extension levels [Valaris] (removed) [PoW]
-# define MAX_GUILDPOSITION 20    // increased max guild positions to accomodate for all members [Valaris] (removed) [PoW]
-# define MAX_GUILDEXPLUSION 32
-# define MAX_GUILDALLIANCE 16
-# define MAX_GUILDSKILL	8
-# define MAX_GUILDCASTLE 24      // increased to include novice castles [Valaris]
-# define MAX_GUILDLEVEL 50
 
 /// These were incorrect and generally not respected, so I am changing them
 /// Back to hard-coded values for the places there were magic numbers
@@ -65,7 +57,7 @@ typedef uint32_t account_t;
 typedef uint8_t gm_level_t;
 typedef uint32_t charid_t;
 typedef uint32_t party_t;
-typedef uint32_t guild_t;
+// kept for now to prevent breaking TOO much code
 typedef uint8_t level_t;
 
 struct item
@@ -83,7 +75,7 @@ struct item
 
 struct point
 {
-    char map[24];
+    char map[16];
     short x, y;
 };
 
@@ -112,7 +104,6 @@ struct mmo_charstatus
     short option, karma, manner;
     short hair, hair_color, clothes_color;
     party_t party_id;
-    guild_t guild_id;
 
     short weapon, shield;
     short head_top, head_mid, head_bottom;
@@ -145,15 +136,6 @@ struct storage
     struct item storage_[MAX_STORAGE];
 };
 
-struct guild_storage
-{
-    int  dirty;
-    guild_t guild_id;
-    short storage_status;
-    short storage_amount;
-    struct item storage_[MAX_GUILD_STORAGE];
-};
-
 struct map_session_data;
 
 struct gm_account
@@ -165,7 +147,7 @@ struct gm_account
 struct party_member
 {
     account_t account_id;
-    char name[24], map[24];
+    char name[24], map[16];
     int  leader;
     bool online;
     level_t lv;
@@ -181,121 +163,10 @@ struct party
     struct party_member member[MAX_PARTY];
 };
 
-struct guild_member
-{
-    account_t account_id;
-    charid_t char_id;
-    short hair, hair_color, gender, pc_class;
-    level_t lv;
-    int  exp, exp_payper;
-    bool online;
-    short position;
-    int  rsv1, rsv2;
-    char name[24];
-    struct map_session_data *sd;
-};
-
-struct guild_position
-{
-    char name[24];
-    int  mode;
-    int  exp_mode;
-};
-
-struct guild_alliance
-{
-    int  opposition;
-    int  guild_id;
-    char name[24];
-};
-
-struct guild_explusion
-{
-    char name[24];
-    char mes[40];
-    char acc[40];
-    account_t account_id;
-    int  rsv1, rsv2, rsv3;
-};
-
-struct guild_skill
-{
-    int  id;
-    level_t lv;
-};
-
-struct guild
-{
-    guild_t guild_id;
-    short guild_lv, connect_member, max_member, average_lv;
-    int  exp, next_exp, skill_point, castle_id;
-    char name[24], master[24];
-    struct guild_member member[MAX_GUILD];
-    struct guild_position position[MAX_GUILDPOSITION];
-    char mes1[60], mes2[120];
-    int  emblem_len, emblem_id;
-    char emblem_data[2048];
-    struct guild_alliance alliance[MAX_GUILDALLIANCE];
-    struct guild_explusion explusion[MAX_GUILDEXPLUSION];
-    struct guild_skill skill[MAX_GUILDSKILL];
-};
-
-struct guild_castle
-{
-    int  castle_id;
-    char map_name[24];
-    char castle_name[24];
-    char castle_event[24];
-    int  guild_id;
-    int  economy;
-    int  defense;
-    int  triggerE;
-    int  triggerD;
-    int  nextTime;
-    int  payTime;
-    int  createTime;
-    int  visibleC;
-    int  visibleG0;
-    int  visibleG1;
-    int  visibleG2;
-    int  visibleG3;
-    int  visibleG4;
-    int  visibleG5;
-    int  visibleG6;
-    int  visibleG7;
-    int  Ghp0;                  // added Guardian HP [Valaris]
-    int  Ghp1;
-    int  Ghp2;
-    int  Ghp3;
-    int  Ghp4;
-    int  Ghp5;
-    int  Ghp6;
-    int  Ghp7;
-    int  GID0;
-    int  GID1;
-    int  GID2;
-    int  GID3;
-    int  GID4;
-    int  GID5;
-    int  GID6;
-    int  GID7;                  // end addition [Valaris]
-};
 struct square
 {
     int  val1[5];
     int  val2[5];
-};
-
-enum
-{
-    GBI_EXP = 1,                // ギルドのEXP
-    GBI_GUILDLV = 2,            // ギルドのLv
-    GBI_SKILLPOINT = 3,         // ギルドのスキルポイント
-    GBI_SKILLLV = 4,            // ギルドスキルLv
-
-    GMI_POSITION = 0,           // メンバーの役職変更
-    GMI_EXP = 1,                // メンバーのEXP
-
 };
 
 #endif // MMO_H

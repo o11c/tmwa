@@ -29,7 +29,7 @@ void inter_party_tofile (FILE *fp, struct party *p)
         struct party_member *m = &p->member[i];
         fprintf (fp, "%d,%d\t%s\t", m->account_id, m->leader, (m->account_id ? m->name : "-"));
     }
-    fprintf (fd, "\n");
+    fprintf (fp, "\n");
 }
 
 /// Read a party

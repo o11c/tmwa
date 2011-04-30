@@ -9,7 +9,6 @@
 #include <stdlib.h>
 
 #include "int_party.h"
-#include "int_guild.h"
 #include "int_storage.h"
 #include "../common/lock.h"
 
@@ -262,24 +261,9 @@ void inter_config_read (const char *cfgName)
             STRZCPY (party_txt, w2);
             continue;
         }
-        if (strcasecmp (w1, "guild_txt") == 0)
-        {
-            STRZCPY (guild_txt, w2);
-            continue;
-        }
-        if (strcasecmp (w1, "castle_txt") == 0)
-        {
-            STRZCPY (castle_txt, w2);
-            continue;
-        }
         if (strcasecmp (w1, "accreg_txt") == 0)
         {
             STRZCPY (accreg_txt, w2);
-            continue;
-        }
-        if (strcasecmp (w1, "guild_storage_txt") == 0)
-        {
-            STRZCPY (guild_storage_txt, w2);
             continue;
         }
         if (strcasecmp (w1, "party_share_level") == 0)
@@ -302,9 +286,7 @@ void inter_config_read (const char *cfgName)
 void inter_save (void)
 {
     inter_party_save ();
-    inter_guild_save ();
     inter_storage_save ();
-    inter_guild_storage_save ();
     inter_accreg_save ();
 }
 
@@ -316,15 +298,13 @@ void inter_init (const char *file)
     whis_db = numdb_init ();
 
     inter_party_init ();
-    inter_guild_init ();
     inter_storage_init ();
     inter_accreg_init ();
 }
 
 /// Called whenever a map server connects
-void inter_mapif_init (int fd)
+void inter_mapif_init (int UNUSED)
 {
-    inter_guild_mapif_init (fd);
 }
 
 /// Send a message to all GMs
@@ -616,8 +596,6 @@ int inter_parse_frommap (int fd)
         break;
     default:
         if (inter_party_parse_frommap (fd))
-            break;
-        if (inter_guild_parse_frommap (fd))
             break;
         if (inter_storage_parse_frommap (fd))
             break;

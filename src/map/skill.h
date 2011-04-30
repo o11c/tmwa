@@ -856,12 +856,6 @@ enum
     SL_SWOO,
     SL_SKE,
     SL_SKA,
-
-    GD_APPROVAL = 10000,
-    GD_KAFRACONTACT,
-    GD_GUARDIANRESEARCH,
-    GD_CHARISMA,
-    GD_EXTENSION,
 };
 
 // [Fate] Skill pools API

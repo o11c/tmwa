@@ -122,9 +122,6 @@ int chrif_save (struct map_session_data *sd)
     //For data sync
     if (sd->state.storage_flag == 1)
         storage_storage_save (sd->status.account_id, 0);
-    else if (sd->state.storage_flag == 2)
-        storage_guild_storagesave (sd->status.account_id, sd->status.guild_id,
-                                   0);
 
     return 0;
 }
@@ -273,9 +270,6 @@ int chrif_connectack (int fd)
             npc_event_doall ("OnCharIfInit"));
     printf ("chrif: OnInterIfInit event done. (%d events)\n",
             npc_event_doall ("OnInterIfInit"));
-
-    // <Agit> Run Event [AgitInit]
-//  printf("NPC_Event:[OnAgitInit] do (%d) events (Agit Initialize).\n", npc_event_doall("OnAgitInit"));
 
     return 0;
 }

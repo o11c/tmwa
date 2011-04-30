@@ -25,7 +25,7 @@ void trade_traderequest (struct map_session_data *sd, int target_id)
     {
         if (!battle_config.invite_request_check)
         {
-            if (target_sd->guild_invite > 0 || target_sd->party_invite > 0)
+            if (target_sd->party_invite > 0)
             {
                 clif_tradestart (sd, 2);    // 相手はPT要請中かGuild要請中
                 return;
@@ -93,8 +93,6 @@ void trade_tradeack (struct map_session_data *sd, int type)
         //close STORAGE window if it's open. It protects from spooffing packets [Lupus]
         if (sd->state.storage_flag == 1)
             storage_storageclose (sd);
-        else if (sd->state.storage_flag == 2)
-            storage_guild_storageclose (sd);
     }
 }
 

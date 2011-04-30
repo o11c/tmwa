@@ -19,7 +19,6 @@
 #include "battle.h"
 #include "clif.h"
 #include "chrif.h"
-#include "guild.h"
 #include "intif.h"
 #include "itemdb.h"
 #include "map.h"
@@ -58,7 +57,6 @@ ATCOMMAND_FUNC (save);
 ATCOMMAND_FUNC (load);
 ATCOMMAND_FUNC (speed);
 ATCOMMAND_FUNC (storage);
-ATCOMMAND_FUNC (guildstorage);
 ATCOMMAND_FUNC (option);
 ATCOMMAND_FUNC (hide);
 ATCOMMAND_FUNC (die);
@@ -75,8 +73,6 @@ ATCOMMAND_FUNC (help);
 ATCOMMAND_FUNC (gm);
 ATCOMMAND_FUNC (pvpoff);
 ATCOMMAND_FUNC (pvpon);
-ATCOMMAND_FUNC (gvgoff);
-ATCOMMAND_FUNC (gvgon);
 ATCOMMAND_FUNC (model);
 ATCOMMAND_FUNC (go);
 ATCOMMAND_FUNC (spawn);
@@ -91,7 +87,6 @@ ATCOMMAND_FUNC (statuspoint);
 ATCOMMAND_FUNC (skillpoint);
 ATCOMMAND_FUNC (zeny);
 ATCOMMAND_FUNC (param);
-ATCOMMAND_FUNC (guildlevelup);
 ATCOMMAND_FUNC (recall);
 ATCOMMAND_FUNC (recallall);
 ATCOMMAND_FUNC (revive);
@@ -115,7 +110,6 @@ ATCOMMAND_FUNC (charquestskill);
 ATCOMMAND_FUNC (lostskill);
 ATCOMMAND_FUNC (charlostskill);
 ATCOMMAND_FUNC (party);
-ATCOMMAND_FUNC (guild);
 ATCOMMAND_FUNC (charskreset);
 ATCOMMAND_FUNC (charstreset);
 ATCOMMAND_FUNC (charreset);
@@ -123,8 +117,6 @@ ATCOMMAND_FUNC (charstpoint);
 ATCOMMAND_FUNC (charmodel);
 ATCOMMAND_FUNC (charskpoint);
 ATCOMMAND_FUNC (charzeny);
-ATCOMMAND_FUNC (agitstart);
-ATCOMMAND_FUNC (agitend);
 ATCOMMAND_FUNC (reloaditemdb);
 ATCOMMAND_FUNC (reloadmobdb);
 ATCOMMAND_FUNC (reloadskilldb);
@@ -144,9 +136,7 @@ ATCOMMAND_FUNC (char_unblock);  // by Yor
 ATCOMMAND_FUNC (char_unban);    // by Yor
 ATCOMMAND_FUNC (mount_peco);    // by Valaris
 ATCOMMAND_FUNC (char_mount_peco);   // by Yor
-ATCOMMAND_FUNC (guildspy);      // [Syrus22]
 ATCOMMAND_FUNC (partyspy);      // [Syrus22]
-ATCOMMAND_FUNC (guildrecall);   // by Yor
 ATCOMMAND_FUNC (partyrecall);   // by Yor
 ATCOMMAND_FUNC (enablenpc);
 ATCOMMAND_FUNC (disablenpc);
@@ -236,7 +226,6 @@ static AtCommandInfo atcommand_info[] = {
     {AtCommand_Load, "@load", 40, atcommand_load},
     {AtCommand_Speed, "@speed", 40, atcommand_speed},
     {AtCommand_Storage, "@storage", 1, atcommand_storage},
-    {AtCommand_GuildStorage, "@gstorage", 50, atcommand_guildstorage},
     {AtCommand_Option, "@option", 40, atcommand_option},
     {AtCommand_Hide, "@hide", 40, atcommand_hide},  // + /hide
     {AtCommand_Die, "@die", 1, atcommand_die},
@@ -253,10 +242,6 @@ static AtCommandInfo atcommand_info[] = {
     {AtCommand_GM, "@gm", 100, atcommand_gm},
     {AtCommand_PvPOff, "@pvpoff", 40, atcommand_pvpoff},
     {AtCommand_PvPOn, "@pvpon", 40, atcommand_pvpon},
-    {AtCommand_GvGOff, "@gvgoff", 40, atcommand_gvgoff},
-    {AtCommand_GvGOff, "@gpvpoff", 40, atcommand_gvgoff},
-    {AtCommand_GvGOn, "@gvgon", 40, atcommand_gvgon},
-    {AtCommand_GvGOn, "@gpvpon", 40, atcommand_gvgon},
     {AtCommand_Model, "@model", 20, atcommand_model},
     {AtCommand_Go, "@go", 10, atcommand_go},
     {AtCommand_Spawn, "@spawn", 50, atcommand_spawn},
@@ -275,7 +260,6 @@ static AtCommandInfo atcommand_info[] = {
     {AtCommand_Intelligence, "@int", 60, atcommand_param},
     {AtCommand_Dexterity, "@dex", 60, atcommand_param},
     {AtCommand_Luck, "@luk", 60, atcommand_param},
-    {AtCommand_GuildLevelUp, "@guildlvl", 60, atcommand_guildlevelup},
     {AtCommand_Recall, "@recall", 60, atcommand_recall},    // + /recall
     {AtCommand_Revive, "@revive", 60, atcommand_revive},
     {AtCommand_CharacterStats, "@charstats", 40, atcommand_character_stats},
@@ -303,9 +287,6 @@ static AtCommandInfo atcommand_info[] = {
     {AtCommand_LostSkill, "@lostskill", 40, atcommand_lostskill},
     {AtCommand_CharLostSkill, "@charlostskill", 60, atcommand_charlostskill},
     {AtCommand_Party, "@party", 1, atcommand_party},
-    {AtCommand_Guild, "@guild", 50, atcommand_guild},
-    {AtCommand_AgitStart, "@agitstart", 60, atcommand_agitstart},
-    {AtCommand_AgitEnd, "@agitend", 60, atcommand_agitend},
     {AtCommand_MapExit, "@mapexit", 99, atcommand_mapexit},
     {AtCommand_IDSearch, "@idsearch", 60, atcommand_idsearch},
     {AtCommand_MapMove, "@mapmove", 40, atcommand_warp},    // /mm command
@@ -337,9 +318,7 @@ static AtCommandInfo atcommand_info[] = {
     {AtCommand_CharUnBan, "@unban", 60, atcommand_char_unban},  // by Yor
     {AtCommand_MountPeco, "@mountpeco", 20, atcommand_mount_peco},  // by Valaris
     {AtCommand_CharMountPeco, "@charmountpeco", 50, atcommand_char_mount_peco}, // by Yor
-    {AtCommand_GuildSpy, "@guildspy", 60, atcommand_guildspy},  // [Syrus22]
     {AtCommand_PartySpy, "@partyspy", 60, atcommand_partyspy},  // [Syrus22]
-    {AtCommand_GuildRecall, "@guildrecall", 60, atcommand_guildrecall}, // by Yor
     {AtCommand_PartyRecall, "@partyrecall", 60, atcommand_partyrecall}, // by Yor
     {AtCommand_Enablenpc, "@enablenpc", 80, atcommand_enablenpc},   // []
     {AtCommand_Disablenpc, "@disablenpc", 80, atcommand_disablenpc},    // []
@@ -1317,7 +1296,6 @@ int atcommand_whogroup (const int fd, struct map_session_data *sd,
     int  pl_GM_level, GM_level;
     char match_text[100];
     char player_name[24];
-    struct guild *g;
     struct party *p;
 
     memset (temp0, '\0', sizeof (temp0));
@@ -1349,11 +1327,6 @@ int atcommand_whogroup (const int fd, struct map_session_data *sd,
                     player_name[j] = tolower (player_name[j]);
                 if (strstr (player_name, match_text) != NULL)
                 {               // search with no case sensitive
-                    g = guild_search (pl_sd->status.guild_id);
-                    if (g == NULL)
-                        sprintf (temp1, "None");
-                    else
-                        sprintf (temp1, "%s", g->name);
                     p = party_search (pl_sd->status.party_id);
                     if (p == NULL)
                         sprintf (temp0, "None");
@@ -1361,13 +1334,12 @@ int atcommand_whogroup (const int fd, struct map_session_data *sd,
                         sprintf (temp0, "%s", p->name);
                     if (pl_GM_level > 0)
                         sprintf (output,
-                                 "Name: %s (GM:%d) | Party: '%s' | Guild: '%s'",
-                                 pl_sd->status.name, pl_GM_level, temp0,
-                                 temp1);
+                                 "Name: %s (GM:%d) | Party: '%s'",
+                                 pl_sd->status.name, pl_GM_level, temp0);
                     else
                         sprintf (output,
-                                 "Name: %s | Party: '%s' | Guild: '%s'",
-                                 pl_sd->status.name, temp0, temp1);
+                                 "Name: %s | Party: '%s'",
+                                 pl_sd->status.name, temp0);
                     clif_displaymessage (fd, output);
                     count++;
                 }
@@ -1475,7 +1447,6 @@ int atcommand_whomapgroup (const int fd, struct map_session_data *sd,
     int  pl_GM_level, GM_level;
     int  map_id = 0;
     char map_name[100];
-    struct guild *g;
     struct party *p;
 
     memset (temp0, '\0', sizeof (temp0));
@@ -1509,11 +1480,6 @@ int atcommand_whomapgroup (const int fd, struct map_session_data *sd,
             {                   // you can look only lower or same level
                 if (pl_sd->bl.m == map_id)
                 {
-                    g = guild_search (pl_sd->status.guild_id);
-                    if (g == NULL)
-                        sprintf (temp1, "None");
-                    else
-                        sprintf (temp1, "%s", g->name);
                     p = party_search (pl_sd->status.party_id);
                     if (p == NULL)
                         sprintf (temp0, "None");
@@ -1521,13 +1487,12 @@ int atcommand_whomapgroup (const int fd, struct map_session_data *sd,
                         sprintf (temp0, "%s", p->name);
                     if (pl_GM_level > 0)
                         sprintf (output,
-                                 "Name: %s (GM:%d) | Party: '%s' | Guild: '%s'",
-                                 pl_sd->status.name, pl_GM_level, temp0,
-                                 temp1);
+                                 "Name: %s (GM:%d) | Party: '%s'",
+                                 pl_sd->status.name, pl_GM_level, temp0);
                     else
                         sprintf (output,
-                                 "Name: %s | Party: '%s' | Guild: '%s'",
-                                 pl_sd->status.name, temp0, temp1);
+                                 "Name: %s | Party: '%s'",
+                                 pl_sd->status.name, temp0);
                     clif_displaymessage (fd, output);
                     count++;
                 }
@@ -1563,7 +1528,6 @@ int atcommand_whogm (const int fd, struct map_session_data *sd,
     int  pl_GM_level, GM_level;
     char match_text[100];
     char player_name[24];
-    struct guild *g;
     struct party *p;
 
     memset (temp0, '\0', sizeof (temp0));
@@ -1608,18 +1572,12 @@ int atcommand_whogm (const int fd, struct map_session_data *sd,
                                  job_name (pl_sd->status.pc_class),
                                  pl_sd->status.job_level);
                         clif_displaymessage (fd, output);
-                        g = guild_search (pl_sd->status.guild_id);
-                        if (g == NULL)
-                            sprintf (temp1, "None");
-                        else
-                            sprintf (temp1, "%s", g->name);
                         p = party_search (pl_sd->status.party_id);
                         if (p == NULL)
                             sprintf (temp0, "None");
                         else
                             sprintf (temp0, "%s", p->name);
-                        sprintf (output, "       Party: '%s' | Guild: '%s'",
-                                 temp0, temp1);
+                        sprintf (output, "       Party: '%s'", temp0);
                         clif_displaymessage (fd, output);
                         count++;
                     }
@@ -1756,40 +1714,6 @@ int atcommand_storage (const int fd, struct map_session_data *sd,
     }
 
     storage_storageopen (sd);
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int atcommand_guildstorage (const int fd, struct map_session_data *sd,
-                            const char *command, const char *message)
-{
-    struct storage *stor;       //changes from Freya/Yor
-    nullpo_retr (-1, sd);
-
-    if (sd->status.guild_id > 0)
-    {
-        if (sd->state.storage_flag)
-        {
-            clif_displaymessage (fd, msg_table[251]);
-            return -1;
-        }
-        if ((stor = account2storage2 (sd->status.account_id)) != NULL
-            && stor->storage_status == 1)
-        {
-            clif_displaymessage (fd, msg_table[251]);
-            return -1;
-        }
-        storage_guild_storageopen (sd);
-    }
-    else
-    {
-        clif_displaymessage (fd, msg_table[252]);
-        return -1;
-    }
 
     return 0;
 }
@@ -2427,50 +2351,6 @@ int atcommand_pvpon (const int fd, struct map_session_data *sd,
     else
     {
         clif_displaymessage (fd, msg_table[161]);   // PvP is already On.
-        return -1;
-    }
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int atcommand_gvgoff (const int fd, struct map_session_data *sd,
-                      const char *command, const char *message)
-{
-    if (map[sd->bl.m].flag.gvg)
-    {
-        map[sd->bl.m].flag.gvg = 0;
-        clif_send0199 (sd->bl.m, 0);
-        clif_displaymessage (fd, msg_table[33]);    // GvG: Off.
-    }
-    else
-    {
-        clif_displaymessage (fd, msg_table[162]);   // GvG is already Off.
-        return -1;
-    }
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int atcommand_gvgon (const int fd, struct map_session_data *sd,
-                     const char *command, const char *message)
-{
-    if (!map[sd->bl.m].flag.gvg)
-    {
-        map[sd->bl.m].flag.gvg = 1;
-        clif_send0199 (sd->bl.m, 3);
-        clif_displaymessage (fd, msg_table[34]);    // GvG: On.
-    }
-    else
-    {
-        clif_displaymessage (fd, msg_table[163]);   // GvG is already On.
         return -1;
     }
 
@@ -3552,58 +3432,6 @@ int atcommand_all_stats (const int fd, struct map_session_data *sd,
             clif_displaymessage (fd, msg_table[177]);   // Impossible to decrease a stat.
         else
             clif_displaymessage (fd, msg_table[178]);   // Impossible to increase a stat.
-        return -1;
-    }
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int atcommand_guildlevelup (const int fd, struct map_session_data *sd,
-                            const char *command, const char *message)
-{
-    int  level = 0;
-    short added_level;
-    struct guild *guild_info;
-
-    if (!message || !*message || sscanf (message, "%d", &level) < 1
-        || level == 0)
-    {
-        clif_displaymessage (fd,
-                             "Please, enter a valid level (usage: @guildlvl <# of levels>).");
-        return -1;
-    }
-
-    if (sd->status.guild_id <= 0
-        || (guild_info = guild_search (sd->status.guild_id)) == NULL)
-    {
-        clif_displaymessage (fd, msg_table[43]);    // You're not in a guild.
-        return -1;
-    }
-    if (strcmp (sd->status.name, guild_info->master) != 0)
-    {
-        clif_displaymessage (fd, msg_table[44]);    // You're not the master of your guild.
-        return -1;
-    }
-
-    added_level = (short) level;
-    if (level > 0 && (level > MAX_GUILDLEVEL || added_level > ((short) MAX_GUILDLEVEL - guild_info->guild_lv))) // fix positiv overflow
-        added_level = (short) MAX_GUILDLEVEL - guild_info->guild_lv;
-    else if (level < 0 && (level < -MAX_GUILDLEVEL || added_level < (1 - guild_info->guild_lv)))    // fix negativ overflow
-        added_level = 1 - guild_info->guild_lv;
-
-    if (added_level != 0)
-    {
-        intif_guild_change_basicinfo (guild_info->guild_id, GBI_GUILDLV,
-                                      &added_level, 2);
-        clif_displaymessage (fd, msg_table[179]);   // Guild level changed.
-    }
-    else
-    {
-        clif_displaymessage (fd, msg_table[45]);    // Guild level change failed.
         return -1;
     }
 
@@ -4943,73 +4771,6 @@ int atcommand_party (const int fd, struct map_session_data *sd,
 }
 
 /*==========================================
- *
- *------------------------------------------
- */
-int atcommand_guild (const int fd, struct map_session_data *sd,
-                     const char *command, const char *message)
-{
-    char guild[100];
-    int  prev;
-
-    memset (guild, '\0', sizeof (guild));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", guild) < 1)
-    {
-        clif_displaymessage (fd,
-                             "Please, enter a guild name (usage: @guild <guild_name>).");
-        return -1;
-    }
-
-    prev = battle_config.guild_emperium_check;
-    battle_config.guild_emperium_check = 0;
-    guild_create (sd, guild);
-    battle_config.guild_emperium_check = prev;
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int atcommand_agitstart (const int fd, struct map_session_data *sd,
-                         const char *command, const char *message)
-{
-    if (agit_flag == 1)
-    {
-        clif_displaymessage (fd, msg_table[73]);    // Already it has started siege warfare.
-        return -1;
-    }
-
-    agit_flag = 1;
-    guild_agit_start ();
-    clif_displaymessage (fd, msg_table[72]);    // Guild siege warfare start!
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int atcommand_agitend (const int fd, struct map_session_data *sd,
-                       const char *command, const char *message)
-{
-    if (agit_flag == 0)
-    {
-        clif_displaymessage (fd, msg_table[75]);    // Siege warfare hasn't started yet.
-        return -1;
-    }
-
-    agit_flag = 0;
-    guild_agit_end ();
-    clif_displaymessage (fd, msg_table[74]);    // Guild siege warfare end!
-
-    return 0;
-}
-
-/*==========================================
  * @mapexitでマップサーバーを終了させる
  *------------------------------------------
  */
@@ -5577,75 +5338,6 @@ int atcommand_recallall (const int fd, struct map_session_data *sd,
 }
 
 /*==========================================
- * Recall online characters of a guild to your location
- *------------------------------------------
- */
-int atcommand_guildrecall (const int fd, struct map_session_data *sd,
-                           const char *command, const char *message)
-{
-    struct map_session_data *pl_sd;
-    int  i;
-    char guild_name[100];
-    char output[200];
-    struct guild *g;
-    int  count;
-
-    memset (guild_name, '\0', sizeof (guild_name));
-    memset (output, '\0', sizeof (output));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", guild_name) < 1)
-    {
-        clif_displaymessage (fd,
-                             "Please, enter a guild name/id (usage: @guildrecall <guild_name/id>).");
-        return -1;
-    }
-
-    if (sd->bl.m >= 0 && map[sd->bl.m].flag.nowarpto
-        && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-    {
-        clif_displaymessage (fd,
-                             "You are not authorised to warp somenone to your actual map.");
-        return -1;
-    }
-
-    if ((g = guild_searchname (guild_name)) != NULL ||  // name first to avoid error when name begin with a number
-        (g = guild_search (atoi (message))) != NULL)
-    {
-        count = 0;
-        for (i = 0; i < fd_max; i++)
-        {
-            if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-                && pl_sd->state.auth
-                && sd->status.account_id != pl_sd->status.account_id
-                && pl_sd->status.guild_id == g->guild_id)
-            {
-                if (pl_sd->bl.m >= 0 && map[pl_sd->bl.m].flag.nowarp
-                    && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-                    count++;
-                else
-                    pc_setpos (pl_sd, sd->mapname, sd->bl.x, sd->bl.y, 2);
-            }
-        }
-        sprintf (output, msg_table[93], g->name);   // All online characters of the %s guild are near you.
-        clif_displaymessage (fd, output);
-        if (count)
-        {
-            sprintf (output,
-                     "Because you are not authorised to warp from some maps, %d player(s) have not been recalled.",
-                     count);
-            clif_displaymessage (fd, output);
-        }
-    }
-    else
-    {
-        clif_displaymessage (fd, msg_table[94]);    // Incorrect name/ID, or no one from the guild is online.
-        return -1;
-    }
-
-    return 0;
-}
-
-/*==========================================
  * Recall online characters of a party to your location
  *------------------------------------------
  */
@@ -5848,14 +5540,9 @@ int atcommand_mapinfo (const int fd, struct map_session_data *sd,
     sprintf (output, "Chats In Map: %d", chat_num);
     clif_displaymessage (fd, output);
     clif_displaymessage (fd, "------ Map Flags ------");
-    sprintf (output, "Player vs Player: %s | No Guild: %s | No Party: %s",
+    sprintf (output, "Player vs Player: %s | No Party: %s",
              (map[m_id].flag.pvp) ? "True" : "False",
-             (map[m_id].flag.pvp_noguild) ? "True" : "False",
              (map[m_id].flag.pvp_noparty) ? "True" : "False");
-    clif_displaymessage (fd, output);
-    sprintf (output, "Guild vs Guild: %s | No Party: %s",
-             (map[m_id].flag.gvg) ? "True" : "False",
-             (map[m_id].flag.gvg_noparty) ? "True" : "False");
     clif_displaymessage (fd, output);
     sprintf (output, "No Dead Branch: %s",
              (map[m_id].flag.nobranch) ? "True" : "False");
@@ -6098,52 +5785,6 @@ int atcommand_char_mount_peco (const int fd, struct map_session_data *sd,
     else
     {
         clif_displaymessage (fd, msg_table[3]); // Character not found.
-        return -1;
-    }
-
-    return 0;
-}
-
-/*==========================================
- *Spy Commands by Syrus22
- *------------------------------------------
- */
-int atcommand_guildspy (const int fd, struct map_session_data *sd,
-                        const char *command, const char *message)
-{
-    char guild_name[100];
-    char output[200];
-    struct guild *g;
-
-    memset (guild_name, '\0', sizeof (guild_name));
-    memset (output, '\0', sizeof (output));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", guild_name) < 1)
-    {
-        clif_displaymessage (fd,
-                             "Please, enter a guild name/id (usage: @guildspy <guild_name/id>).");
-        return -1;
-    }
-
-    if ((g = guild_searchname (guild_name)) != NULL ||  // name first to avoid error when name begin with a number
-        (g = guild_search (atoi (message))) != NULL)
-    {
-        if (sd->guildspy == g->guild_id)
-        {
-            sd->guildspy = 0;
-            sprintf (output, msg_table[103], g->name);  // No longer spying on the %s guild.
-            clif_displaymessage (fd, output);
-        }
-        else
-        {
-            sd->guildspy = g->guild_id;
-            sprintf (output, msg_table[104], g->name);  // Spying on the %s guild.
-            clif_displaymessage (fd, output);
-        }
-    }
-    else
-    {
-        clif_displaymessage (fd, msg_table[94]);    // Incorrect name/ID, or no one from the guild is online.
         return -1;
     }
 

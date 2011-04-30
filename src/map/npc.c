@@ -2015,10 +2015,6 @@ static int npc_parse_mapflag (char *w1, char *w2, char *w3, char *w4)
     {
         map[m].flag.pvp_noparty = 1;
     }
-    else if (strcasecmp (w3, "pvp_noguild") == 0)
-    {
-        map[m].flag.pvp_noguild = 1;
-    }
     else if (strcasecmp (w3, "pvp_nightmaredrop") == 0)
     {
         if (sscanf (w4, "%[^,],%[^,],%d", drop_arg1, drop_arg2, &drop_per) ==
@@ -2055,14 +2051,6 @@ static int npc_parse_mapflag (char *w1, char *w2, char *w3, char *w4)
     else if (strcasecmp (w3, "pvp_nocalcrank") == 0)
     {
         map[m].flag.pvp_nocalcrank = 1;
-    }
-    else if (strcasecmp (w3, "gvg") == 0)
-    {
-        map[m].flag.gvg = 1;
-    }
-    else if (strcasecmp (w3, "gvg_noparty") == 0)
-    {
-        map[m].flag.gvg_noparty = 1;
     }
     else if (strcasecmp (w3, "nozenypenalty") == 0)
     {

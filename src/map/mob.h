@@ -102,9 +102,6 @@ int  mob_once_spawn_area (struct map_session_data *sd, char *mapname, int x0,
                           int y0, int x1, int y1, const char *mobname,
                           int class_, int amount, const char *event);
 
-int  mob_spawn_guardian (struct map_session_data *sd, char *mapname,    // Spawning Guardians [Valaris]
-                         int x, int y, const char *mobname, int class_, int amount, const char *event, int guardian);    // Spawning Guardians [Valaris]
-
 int  mob_walktoxy (struct mob_data *md, int x, int y, int easy);
 
 int  mob_target (struct mob_data *md, struct block_list *bl, int dist);
@@ -145,7 +142,7 @@ void mobskill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data
 void mobskill_castend_pos (timer_id tid, tick_t tick, custom_id_t id, custom_data_t data);
 int  mob_summonslave (struct mob_data *md2, int *value, int amount, int flag);
 
-int  mob_gvmobcheck (struct map_session_data *sd, struct block_list *bl);
+int  mob_gvmobcheck (struct map_session_data *sd, struct block_list *bl) __attribute__((deprecated));
 void mob_reload (void);
 
 #endif

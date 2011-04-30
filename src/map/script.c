@@ -26,7 +26,6 @@
 #include "chrif.h"
 #include "clif.h"
 #include "../common/db.h"
-#include "guild.h"
 #include "intif.h"
 #include "itemdb.h"
 #include "../common/lock.h"
@@ -147,9 +146,6 @@ int  buildin_readparam (struct script_state *st);
 int  buildin_getcharid (struct script_state *st);
 int  buildin_getpartyname (struct script_state *st);
 int  buildin_getpartymember (struct script_state *st);
-int  buildin_getguildname (struct script_state *st);
-int  buildin_getguildmaster (struct script_state *st);
-int  buildin_getguildmasterid (struct script_state *st);
 int  buildin_strcharinfo (struct script_state *st);
 int  buildin_getequipid (struct script_state *st);
 int  buildin_getequipname (struct script_state *st);
@@ -172,9 +168,7 @@ int  buildin_bonus2 (struct script_state *st);
 int  buildin_bonus3 (struct script_state *st);
 int  buildin_skill (struct script_state *st);
 int  buildin_setskill (struct script_state *st);
-int  buildin_guildskill (struct script_state *st);
 int  buildin_getskilllv (struct script_state *st);
-int  buildin_getgdskilllv (struct script_state *st);
 int  buildin_basicskillcheck (struct script_state *st);
 int  buildin_getgmlevel (struct script_state *st);
 int  buildin_end (struct script_state *st);
@@ -193,7 +187,6 @@ int  buildin_gettimetick (struct script_state *st);
 int  buildin_gettime (struct script_state *st);
 int  buildin_gettimestr (struct script_state *st);
 int  buildin_openstorage (struct script_state *st);
-int  buildin_guildopenstorage (struct script_state *st);
 int  buildin_itemskill (struct script_state *st);
 int  buildin_monster (struct script_state *st);
 int  buildin_areamonster (struct script_state *st);
@@ -247,18 +240,7 @@ int  buildin_setmapflag (struct script_state *st);
 int  buildin_removemapflag (struct script_state *st);
 int  buildin_pvpon (struct script_state *st);
 int  buildin_pvpoff (struct script_state *st);
-int  buildin_gvgon (struct script_state *st);
-int  buildin_gvgoff (struct script_state *st);
 int  buildin_emotion (struct script_state *st);
-int  buildin_maprespawnguildid (struct script_state *st);
-int  buildin_agitstart (struct script_state *st);   // <Agit>
-int  buildin_agitend (struct script_state *st);
-int  buildin_agitcheck (struct script_state *st);   // <Agitcheck>
-int  buildin_flagemblem (struct script_state *st);  // Flag Emblem
-int  buildin_getcastlename (struct script_state *st);
-int  buildin_getcastledata (struct script_state *st);
-int  buildin_setcastledata (struct script_state *st);
-int  buildin_requestguildinfo (struct script_state *st);
 int  buildin_getequipcardcnt (struct script_state *st);
 int  buildin_successremovecards (struct script_state *st);
 int  buildin_failedremovecards (struct script_state *st);
@@ -283,15 +265,12 @@ int  buildin_clearitem (struct script_state *st);
 int  buildin_classchange (struct script_state *st);
 int  buildin_misceffect (struct script_state *st);
 int  buildin_soundeffect (struct script_state *st);
-int  buildin_setcastledata (struct script_state *st);
 int  buildin_mapwarp (struct script_state *st);
 int  buildin_inittimer (struct script_state *st);
 int  buildin_stoptimer (struct script_state *st);
 int  buildin_cmdothernpc (struct script_state *st);
 int  buildin_mobcount (struct script_state *st);
 int  buildin_strmobinfo (struct script_state *st);  // Script for displaying mob info [Valaris]
-int  buildin_guardian (struct script_state *st);    // Script for displaying mob info [Valaris]
-int  buildin_guardianinfo (struct script_state *st);    // Script for displaying mob info [Valaris]
 int  buildin_npcskilleffect (struct script_state *st);  // skill effects for npcs [Valaris]
 int  buildin_specialeffect (struct script_state *st);   // special effect script [Valaris]
 int  buildin_specialeffect2 (struct script_state *st);  // special effect script [Valaris]
@@ -410,12 +389,6 @@ struct
     {
     buildin_getpartymember, "getpartymember", "i"},
     {
-    buildin_getguildname, "getguildname", "i"},
-    {
-    buildin_getguildmaster, "getguildmaster", "i"},
-    {
-    buildin_getguildmasterid, "getguildmasterid", "i"},
-    {
     buildin_strcharinfo, "strcharinfo", "i"},
     {
     buildin_getequipid, "getequipid", "i"},
@@ -456,11 +429,7 @@ struct
     {
     buildin_setskill, "setskill", "ii"},    // [Fate]
     {
-    buildin_guildskill, "guildskill", "ii"},
-    {
     buildin_getskilllv, "getskilllv", "i"},
-    {
-    buildin_getgdskilllv, "getgdskilllv", "ii"},
     {
     buildin_basicskillcheck, "basicskillcheck", "*"},
     {
@@ -501,8 +470,6 @@ struct
     buildin_gettimestr, "gettimestr", "si"},
     {
     buildin_openstorage, "openstorage", "*"},
-    {
-    buildin_guildopenstorage, "guildopenstorage", "*"},
     {
     buildin_itemskill, "itemskill", "iis"},
     {
@@ -612,29 +579,7 @@ struct
     {
     buildin_pvpoff, "pvpoff", "s"},
     {
-    buildin_gvgon, "gvgon", "s"},
-    {
-    buildin_gvgoff, "gvgoff", "s"},
-    {
     buildin_emotion, "emotion", "i"},
-    {
-    buildin_maprespawnguildid, "maprespawnguildid", "sii"},
-    {
-    buildin_agitstart, "agitstart", ""},    // <Agit>
-    {
-    buildin_agitend, "agitend", ""},
-    {
-    buildin_agitcheck, "agitcheck", "i"},   // <Agitcheck>
-    {
-    buildin_flagemblem, "flagemblem", "i"}, // Flag Emblem
-    {
-    buildin_getcastlename, "getcastlename", "s"},
-    {
-    buildin_getcastledata, "getcastledata", "si*"},
-    {
-    buildin_setcastledata, "setcastledata", "sii"},
-    {
-    buildin_requestguildinfo, "requestguildinfo", "i*"},
     {
     buildin_getequipcardcnt, "getequipcardcnt", "i"},
     {
@@ -683,10 +628,6 @@ struct
     buildin_soundeffect, "soundeffect", "si"},
     {
     buildin_strmobinfo, "strmobinfo", "ii"},    // display mob data [Valaris]
-    {
-    buildin_guardian, "guardian", "siisii*i"},  // summon guardians
-    {
-    buildin_guardianinfo, "guardianinfo", "i"}, // display guardian data [Valaris]
     {
     buildin_npcskilleffect, "npcskilleffect", "iiii"},  // npc skill effect [Valaris]
     {
@@ -3152,7 +3093,7 @@ int buildin_getcharid (struct script_state *st)
     if (num == 1)
         push_val (st->stack, C_INT, sd->status.party_id);
     if (num == 2)
-        push_val (st->stack, C_INT, sd->status.guild_id);
+        push_val (st->stack, C_INT, 0 /*guild_id*/);
     if (num == 3)
         push_val (st->stack, C_INT, sd->status.account_id);
     return 0;
@@ -3226,91 +3167,6 @@ int buildin_getpartymember (struct script_state *st)
 }
 
 /*==========================================
- *指定IDのギルド名取得
- *------------------------------------------
- */
-char *buildin_getguildname_sub (int guild_id)
-{
-    struct guild *g = NULL;
-    g = guild_search (guild_id);
-
-    if (g != NULL)
-    {
-        char *buf;
-        buf = (char *) calloc (24, 1);
-        strcpy (buf, g->name);
-        return buf;
-    }
-    return 0;
-}
-
-int buildin_getguildname (struct script_state *st)
-{
-    char *name;
-    int  guild_id = conv_num (st, &(st->stack->stack_data[st->start + 2]));
-    name = buildin_getguildname_sub (guild_id);
-    if (name != 0)
-        push_str (st->stack, C_STR, name);
-    else
-        push_str (st->stack, C_CONSTSTR, "null");
-    return 0;
-}
-
-/*==========================================
- *指定IDのGuildMaster名取得
- *------------------------------------------
- */
-char *buildin_getguildmaster_sub (int guild_id)
-{
-    struct guild *g = NULL;
-    g = guild_search (guild_id);
-
-    if (g != NULL)
-    {
-        char *buf;
-        buf = (char *) calloc (24, 1);
-        strncpy (buf, g->master, 23);
-        return buf;
-    }
-
-    return 0;
-}
-
-int buildin_getguildmaster (struct script_state *st)
-{
-    char *master;
-    int  guild_id = conv_num (st, &(st->stack->stack_data[st->start + 2]));
-    master = buildin_getguildmaster_sub (guild_id);
-    if (master != 0)
-        push_str (st->stack, C_STR, master);
-    else
-        push_str (st->stack, C_CONSTSTR, "null");
-    return 0;
-}
-
-int buildin_getguildmasterid (struct script_state *st)
-{
-    char *master;
-    struct map_session_data *sd = NULL;
-    int  guild_id = conv_num (st, &(st->stack->stack_data[st->start + 2]));
-    master = buildin_getguildmaster_sub (guild_id);
-    if (master != 0)
-    {
-        if ((sd = map_nick2sd (master)) == NULL)
-        {
-            push_val (st->stack, C_INT, 0);
-            return 0;
-        }
-        push_val (st->stack, C_INT, sd->status.char_id);
-    }
-    else
-    {
-        push_val (st->stack, C_INT, 0);
-    }
-    return 0;
-}
-
-/*==========================================
  * キャラクタの名前
  *------------------------------------------
  */
@@ -3339,12 +3195,8 @@ int buildin_strcharinfo (struct script_state *st)
     }
     if (num == 2)
     {
-        char *buf;
-        buf = buildin_getguildname_sub (sd->status.guild_id);
-        if (buf != 0)
-            push_str (st->stack, C_STR, buf);
-        else
-            push_str (st->stack, C_CONSTSTR, "");
+        // was: guild name
+        push_str (st->stack, C_CONSTSTR, "");
     }
 
     return 0;
@@ -3798,27 +3650,6 @@ int buildin_setskill (struct script_state *st)
 }
 
 /*==========================================
- * ギルドスキル取得
- *------------------------------------------
- */
-int buildin_guildskill (struct script_state *st)
-{
-    int  id, level;
-    struct map_session_data *sd;
-    int  i = 0;
-
-    id = conv_num (st, &(st->stack->stack_data[st->start + 2]));
-    level = conv_num (st, &(st->stack->stack_data[st->start + 3]));
-//  if( st->end>st->start+4 )
-//      flag=conv_num(st,&(st->stack->stack_data[st->start+4]) );
-    sd = script_rid2sd (st);
-    for (i = 0; i < level; i++)
-        guild_skillup (sd, id);
-
-    return 0;
-}
-
-/*==========================================
  * スキルレベル所得
  *------------------------------------------
  */
@@ -3827,40 +3658,6 @@ int buildin_getskilllv (struct script_state *st)
     int  id = conv_num (st, &(st->stack->stack_data[st->start + 2]));
     push_val (st->stack, C_INT, pc_checkskill (script_rid2sd (st), id));
     return 0;
-}
-
-/*==========================================
- * getgdskilllv(Guild_ID, Skill_ID);
- * skill_id = 10000 : GD_APPROVAL
- *            10001 : GD_KAFRACONTACT
- *            10002 : GD_GUARDIANRESEARCH
- *            10003 : GD_CHARISMA
- *            10004 : GD_EXTENSION
- *------------------------------------------
- */
-int buildin_getgdskilllv (struct script_state *st)
-{
-    int  guild_id = conv_num (st, &(st->stack->stack_data[st->start + 2]));
-    int  skill_id = conv_num (st, &(st->stack->stack_data[st->start + 3]));
-    struct guild *g = guild_search (guild_id);
-    push_val (st->stack, C_INT,
-              (g == NULL) ? -1 : guild_checkskill (g, skill_id));
-    return 0;
-/*
-	struct map_session_data *sd=NULL;
-	struct guild *g=NULL;
-	int skill_id;
-
-	skill_id=conv_num(st,& (st->stack->stack_data[st->start+2]));
-	sd=script_rid2sd(st);
-	if(sd && sd->status.guild_id > 0) g=guild_search(sd->status.guild_id);
-	if(sd && g) {
-		push_val(st->stack,C_INT, guild_checkskill(g,skill_id+9999) );
-	} else {
-		push_val(st->stack,C_INT,-1);
-	}
-	return 0;
-*/
 }
 
 /*==========================================
@@ -4224,16 +4021,6 @@ int buildin_openstorage (struct script_state *st)
 //  } else st->state = END;
 
     storage_storageopen (sd);
-    return 0;
-}
-
-int buildin_guildopenstorage (struct script_state *st)
-{
-    struct map_session_data *sd = script_rid2sd (st);
-    int  ret;
-    st->state = STOP;
-    ret = storage_guild_storageopen (sd);
-    push_val (st->stack, C_INT, ret);
     return 0;
 }
 
@@ -5353,8 +5140,8 @@ int buildin_isloggedin (struct script_state *st)
  */
 enum
 { MF_NOMEMO, MF_NOTELEPORT, MF_NOSAVE, MF_NOBRANCH, MF_NOPENALTY,
-    MF_NOZENYPENALTY, MF_PVP, MF_PVP_NOPARTY, MF_PVP_NOGUILD, MF_GVG,
-    MF_GVG_NOPARTY, MF_NOTRADE, MF_NOSKILL, MF_NOWARP, MF_NOPVP,
+    MF_NOZENYPENALTY, MF_PVP, MF_PVP_NOPARTY,
+    MF_NOTRADE, MF_NOSKILL, MF_NOWARP, MF_NOPVP,
     MF_NOICEWALL,
     MF_SNOW, MF_FOG, MF_SAKURA, MF_LEAVES, MF_RAIN
 };
@@ -5406,12 +5193,6 @@ int buildin_setmapflag (struct script_state *st)
                 break;
             case MF_PVP_NOPARTY:
                 map[m].flag.pvp_noparty = 1;
-                break;
-            case MF_PVP_NOGUILD:
-                map[m].flag.pvp_noguild = 1;
-                break;
-            case MF_GVG_NOPARTY:
-                map[m].flag.gvg_noparty = 1;
                 break;
             case MF_NOZENYPENALTY:
                 map[m].flag.nozenypenalty = 1;
@@ -5481,12 +5262,6 @@ int buildin_removemapflag (struct script_state *st)
                 break;
             case MF_PVP_NOPARTY:
                 map[m].flag.pvp_noparty = 0;
-                break;
-            case MF_PVP_NOGUILD:
-                map[m].flag.pvp_noguild = 0;
-                break;
-            case MF_GVG_NOPARTY:
-                map[m].flag.gvg_noparty = 0;
                 break;
             case MF_NOZENYPENALTY:
                 map[m].flag.nozenypenalty = 0;
@@ -5600,38 +5375,6 @@ int buildin_pvpoff (struct script_state *st)
     return 0;
 }
 
-int buildin_gvgon (struct script_state *st)
-{
-    int  m;
-    char *str;
-
-    str = conv_str (st, &(st->stack->stack_data[st->start + 2]));
-    m = map_mapname2mapid (str);
-    if (m >= 0 && !map[m].flag.gvg)
-    {
-        map[m].flag.gvg = 1;
-        clif_send0199 (m, 3);
-    }
-
-    return 0;
-}
-
-int buildin_gvgoff (struct script_state *st)
-{
-    int  m;
-    char *str;
-
-    str = conv_str (st, &(st->stack->stack_data[st->start + 2]));
-    m = map_mapname2mapid (str);
-    if (m >= 0 && map[m].flag.gvg)
-    {
-        map[m].flag.gvg = 0;
-        clif_send0199 (m, 0);
-    }
-
-    return 0;
-}
-
 /*==========================================
  *	NPCエモーション
  *------------------------------------------
@@ -5644,377 +5387,6 @@ int buildin_emotion (struct script_state *st)
     if (type < 0 || type > 100)
         return 0;
     clif_emotion (map_id2bl (st->oid), type);
-    return 0;
-}
-
-int buildin_maprespawnguildid_sub (struct block_list *bl, va_list ap)
-{
-    int  g_id = va_arg (ap, int);
-    int  flag = va_arg (ap, int);
-    struct map_session_data *sd = NULL;
-    struct mob_data *md = NULL;
-
-    if (bl->type == BL_PC)
-        sd = (struct map_session_data *) bl;
-    if (bl->type == BL_MOB)
-        md = (struct mob_data *) bl;
-
-    if (sd)
-    {
-        if ((sd->status.guild_id == g_id) && (flag & 1))
-            pc_setpos (sd, sd->status.save_point.map, sd->status.save_point.x,
-                       sd->status.save_point.y, 3);
-        else if ((sd->status.guild_id != g_id) && (flag & 2))
-            pc_setpos (sd, sd->status.save_point.map, sd->status.save_point.x,
-                       sd->status.save_point.y, 3);
-        else if (sd->status.guild_id == 0)  // Warp out players not in guild [Valaris]
-            pc_setpos (sd, sd->status.save_point.map, sd->status.save_point.x, sd->status.save_point.y, 3); // end addition [Valaris]
-    }
-    if (md && flag & 4)
-    {
-        if (md->mob_class < 1285 || md->mob_class > 1288)
-            mob_delete (md);
-    }
-    return 0;
-}
-
-int buildin_maprespawnguildid (struct script_state *st)
-{
-    char *mapname = conv_str (st, &(st->stack->stack_data[st->start + 2]));
-    int  g_id = conv_num (st, &(st->stack->stack_data[st->start + 3]));
-    int  flag = conv_num (st, &(st->stack->stack_data[st->start + 4]));
-
-    int  m = map_mapname2mapid (mapname);
-
-    if (m)
-        map_foreachinarea (buildin_maprespawnguildid_sub, m, 0, 0,
-                           map[m].xs - 1, map[m].ys - 1, BL_NUL, g_id, flag);
-    return 0;
-}
-
-int buildin_agitstart (struct script_state *st)
-{
-    if (agit_flag == 1)
-        return 1;               // Agit already Start.
-    agit_flag = 1;
-    guild_agit_start ();
-    return 0;
-}
-
-int buildin_agitend (struct script_state *st)
-{
-    if (agit_flag == 0)
-        return 1;               // Agit already End.
-    agit_flag = 0;
-    guild_agit_end ();
-    return 0;
-}
-
-/*==========================================
- * agitcheck 1;    // choice script
- * if(@agit_flag == 1) goto agit;
- * if(agitcheck(0) == 1) goto agit;
- *------------------------------------------
- */
-int buildin_agitcheck (struct script_state *st)
-{
-    struct map_session_data *sd;
-    int  cond;
-
-    sd = script_rid2sd (st);
-    cond = conv_num (st, &(st->stack->stack_data[st->start + 2]));
-
-    if (cond == 0)
-    {
-        if (agit_flag == 1)
-            push_val (st->stack, C_INT, 1);
-        if (agit_flag == 0)
-            push_val (st->stack, C_INT, 0);
-    }
-    else
-    {
-        if (agit_flag == 1)
-            pc_setreg (sd, add_str ("@agit_flag"), 1);
-        if (agit_flag == 0)
-            pc_setreg (sd, add_str ("@agit_flag"), 0);
-    }
-    return 0;
-}
-
-int buildin_flagemblem (struct script_state *st)
-{
-    int  g_id = conv_num (st, &(st->stack->stack_data[st->start + 2]));
-
-    if (g_id < 0)
-        return 0;
-
-//  printf("Script.c: [FlagEmblem] GuildID=%d, Emblem=%d.\n", g->guild_id, g->emblem_id);
-    ((struct npc_data *) map_id2bl (st->oid))->u.scr.guild_id = g_id;
-    return 1;
-}
-
-int buildin_getcastlename (struct script_state *st)
-{
-    char *mapname = conv_str (st, &(st->stack->stack_data[st->start + 2]));
-    struct guild_castle *gc;
-    int  i;
-    char *buf = NULL;
-    for (i = 0; i < MAX_GUILDCASTLE; i++)
-    {
-        if ((gc = guild_castle_search (i)) != NULL)
-        {
-            if (strcmp (mapname, gc->map_name) == 0)
-            {
-                buf = (char *) calloc (24, 1);
-                strncpy (buf, gc->castle_name, 23);
-                break;
-            }
-        }
-    }
-    if (buf)
-        push_str (st->stack, C_STR, buf);
-    else
-        push_str (st->stack, C_CONSTSTR, "");
-    return 0;
-}
-
-int buildin_getcastledata (struct script_state *st)
-{
-    char *mapname = conv_str (st, &(st->stack->stack_data[st->start + 2]));
-    int  index = conv_num (st, &(st->stack->stack_data[st->start + 3]));
-    char *event = NULL;
-    struct guild_castle *gc;
-    int  i, j;
-
-    if (st->end > st->start + 4 && index == 0)
-    {
-        for (i = 0, j = -1; i < MAX_GUILDCASTLE; i++)
-            if ((gc = guild_castle_search (i)) != NULL &&
-                strcmp (mapname, gc->map_name) == 0)
-                j = i;
-        if (j >= 0)
-        {
-            event = conv_str (st, &(st->stack->stack_data[st->start + 4]));
-            guild_addcastleinfoevent (j, 17, event);
-        }
-    }
-
-    for (i = 0; i < MAX_GUILDCASTLE; i++)
-    {
-        if ((gc = guild_castle_search (i)) != NULL)
-        {
-            if (strcmp (mapname, gc->map_name) == 0)
-            {
-                switch (index)
-                {
-                    case 0:
-                        for (j = 1; j < 26; j++)
-                            guild_castledataload (gc->castle_id, j);
-                        break;  // Initialize[AgitInit]
-                    case 1:
-                        push_val (st->stack, C_INT, gc->guild_id);
-                        break;
-                    case 2:
-                        push_val (st->stack, C_INT, gc->economy);
-                        break;
-                    case 3:
-                        push_val (st->stack, C_INT, gc->defense);
-                        break;
-                    case 4:
-                        push_val (st->stack, C_INT, gc->triggerE);
-                        break;
-                    case 5:
-                        push_val (st->stack, C_INT, gc->triggerD);
-                        break;
-                    case 6:
-                        push_val (st->stack, C_INT, gc->nextTime);
-                        break;
-                    case 7:
-                        push_val (st->stack, C_INT, gc->payTime);
-                        break;
-                    case 8:
-                        push_val (st->stack, C_INT, gc->createTime);
-                        break;
-                    case 9:
-                        push_val (st->stack, C_INT, gc->visibleC);
-                        break;
-                    case 10:
-                        push_val (st->stack, C_INT, gc->visibleG0);
-                        break;
-                    case 11:
-                        push_val (st->stack, C_INT, gc->visibleG1);
-                        break;
-                    case 12:
-                        push_val (st->stack, C_INT, gc->visibleG2);
-                        break;
-                    case 13:
-                        push_val (st->stack, C_INT, gc->visibleG3);
-                        break;
-                    case 14:
-                        push_val (st->stack, C_INT, gc->visibleG4);
-                        break;
-                    case 15:
-                        push_val (st->stack, C_INT, gc->visibleG5);
-                        break;
-                    case 16:
-                        push_val (st->stack, C_INT, gc->visibleG6);
-                        break;
-                    case 17:
-                        push_val (st->stack, C_INT, gc->visibleG7);
-                        break;
-                    case 18:
-                        push_val (st->stack, C_INT, gc->Ghp0);
-                        break;
-                    case 19:
-                        push_val (st->stack, C_INT, gc->Ghp1);
-                        break;
-                    case 20:
-                        push_val (st->stack, C_INT, gc->Ghp2);
-                        break;
-                    case 21:
-                        push_val (st->stack, C_INT, gc->Ghp3);
-                        break;
-                    case 22:
-                        push_val (st->stack, C_INT, gc->Ghp4);
-                        break;
-                    case 23:
-                        push_val (st->stack, C_INT, gc->Ghp5);
-                        break;
-                    case 24:
-                        push_val (st->stack, C_INT, gc->Ghp6);
-                        break;
-                    case 25:
-                        push_val (st->stack, C_INT, gc->Ghp7);
-                        break;
-                    default:
-                        push_val (st->stack, C_INT, 0);
-                        break;
-                }
-                return 0;
-            }
-        }
-    }
-    push_val (st->stack, C_INT, 0);
-    return 0;
-}
-
-int buildin_setcastledata (struct script_state *st)
-{
-    char *mapname = conv_str (st, &(st->stack->stack_data[st->start + 2]));
-    int  index = conv_num (st, &(st->stack->stack_data[st->start + 3]));
-    int  value = conv_num (st, &(st->stack->stack_data[st->start + 4]));
-    struct guild_castle *gc;
-    int  i;
-
-    for (i = 0; i < MAX_GUILDCASTLE; i++)
-    {
-        if ((gc = guild_castle_search (i)) != NULL)
-        {
-            if (strcmp (mapname, gc->map_name) == 0)
-            {
-                // Save Data byself First
-                switch (index)
-                {
-                    case 1:
-                        gc->guild_id = value;
-                        break;
-                    case 2:
-                        gc->economy = value;
-                        break;
-                    case 3:
-                        gc->defense = value;
-                        break;
-                    case 4:
-                        gc->triggerE = value;
-                        break;
-                    case 5:
-                        gc->triggerD = value;
-                        break;
-                    case 6:
-                        gc->nextTime = value;
-                        break;
-                    case 7:
-                        gc->payTime = value;
-                        break;
-                    case 8:
-                        gc->createTime = value;
-                        break;
-                    case 9:
-                        gc->visibleC = value;
-                        break;
-                    case 10:
-                        gc->visibleG0 = value;
-                        break;
-                    case 11:
-                        gc->visibleG1 = value;
-                        break;
-                    case 12:
-                        gc->visibleG2 = value;
-                        break;
-                    case 13:
-                        gc->visibleG3 = value;
-                        break;
-                    case 14:
-                        gc->visibleG4 = value;
-                        break;
-                    case 15:
-                        gc->visibleG5 = value;
-                        break;
-                    case 16:
-                        gc->visibleG6 = value;
-                        break;
-                    case 17:
-                        gc->visibleG7 = value;
-                        break;
-                    case 18:
-                        gc->Ghp0 = value;
-                        break;
-                    case 19:
-                        gc->Ghp1 = value;
-                        break;
-                    case 20:
-                        gc->Ghp2 = value;
-                        break;
-                    case 21:
-                        gc->Ghp3 = value;
-                        break;
-                    case 22:
-                        gc->Ghp4 = value;
-                        break;
-                    case 23:
-                        gc->Ghp5 = value;
-                        break;
-                    case 24:
-                        gc->Ghp6 = value;
-                        break;
-                    case 25:
-                        gc->Ghp7 = value;
-                        break;
-                    default:
-                        return 0;
-                }
-                guild_castledatasave (gc->castle_id, index, value);
-                return 0;
-            }
-        }
-    }
-    return 0;
-}
-
-/* =====================================================================
- * ギルド情報を要求する
- * ---------------------------------------------------------------------
- */
-int buildin_requestguildinfo (struct script_state *st)
-{
-    int  guild_id = conv_num (st, &(st->stack->stack_data[st->start + 2]));
-    char *event = NULL;
-
-    if (st->end > st->start + 3)
-        event = conv_str (st, &(st->stack->stack_data[st->start + 3]));
-
-    if (guild_id > 0)
-        guild_npc_request_info (guild_id, event);
     return 0;
 }
 
@@ -6360,63 +5732,6 @@ int buildin_strmobinfo (struct script_state *st)
         push_val (st->stack, C_INT, mob_db[mob_class].base_exp);
     else if (num == 7)
         push_val (st->stack, C_INT, mob_db[mob_class].job_exp);
-    return 0;
-}
-
-/*==========================================
- * Summon guardians [Valaris]
- *------------------------------------------
- */
-int buildin_guardian (struct script_state *st)
-{
-    int  mob_class = 0, amount = 1, x = 0, y = 0, guardian = 0;
-    char *str, *map, *event = "";
-
-    map = conv_str (st, &(st->stack->stack_data[st->start + 2]));
-    x = conv_num (st, &(st->stack->stack_data[st->start + 3]));
-    y = conv_num (st, &(st->stack->stack_data[st->start + 4]));
-    str = conv_str (st, &(st->stack->stack_data[st->start + 5]));
-    mob_class = conv_num (st, &(st->stack->stack_data[st->start + 6]));
-    amount = conv_num (st, &(st->stack->stack_data[st->start + 7]));
-    event = conv_str (st, &(st->stack->stack_data[st->start + 8]));
-    if (st->end > st->start + 9)
-        guardian = conv_num (st, &(st->stack->stack_data[st->start + 9]));
-
-    mob_spawn_guardian (map_id2sd (st->rid), map, x, y, str, mob_class, amount,
-                        event, guardian);
-
-    return 0;
-}
-
-/*================================================
- * Script for Displaying Guardian Info [Valaris]
- *------------------------------------------------
- */
-int buildin_guardianinfo (struct script_state *st)
-{
-    int  guardian = conv_num (st, &(st->stack->stack_data[st->start + 2]));
-    struct map_session_data *sd = script_rid2sd (st);
-    struct guild_castle *gc = guild_mapname2gc (map[sd->bl.m].name);
-
-    if (guardian == 0 && gc->visibleG0 == 1)
-        push_val (st->stack, C_INT, gc->Ghp0);
-    if (guardian == 1 && gc->visibleG1 == 1)
-        push_val (st->stack, C_INT, gc->Ghp1);
-    if (guardian == 2 && gc->visibleG2 == 1)
-        push_val (st->stack, C_INT, gc->Ghp2);
-    if (guardian == 3 && gc->visibleG3 == 1)
-        push_val (st->stack, C_INT, gc->Ghp3);
-    if (guardian == 4 && gc->visibleG4 == 1)
-        push_val (st->stack, C_INT, gc->Ghp4);
-    if (guardian == 5 && gc->visibleG5 == 1)
-        push_val (st->stack, C_INT, gc->Ghp5);
-    if (guardian == 6 && gc->visibleG6 == 1)
-        push_val (st->stack, C_INT, gc->Ghp6);
-    if (guardian == 7 && gc->visibleG7 == 1)
-        push_val (st->stack, C_INT, gc->Ghp7);
-    else
-        push_val (st->stack, C_INT, -1);
-
     return 0;
 }
 

@@ -16,7 +16,6 @@
 #include "chat.h"
 #include "chrif.h"
 #include "clif.h"
-#include "guild.h"
 #include "intif.h"
 #include "itemdb.h"
 #include "magic.h"

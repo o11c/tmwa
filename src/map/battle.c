@@ -10,7 +10,6 @@
 #include "../common/nullpo.h"
 
 #include "clif.h"
-#include "guild.h"
 #include "itemdb.h"
 #include "map.h"
 #include "mob.h"
@@ -1261,19 +1260,6 @@ int battle_get_party_id (struct block_list *bl)
         return 0;
 }
 
-int battle_get_guild_id (struct block_list *bl)
-{
-    nullpo_retr (0, bl);
-    if (bl->type == BL_PC && (struct map_session_data *) bl)
-        return ((struct map_session_data *) bl)->status.guild_id;
-    else if (bl->type == BL_MOB && (struct mob_data *) bl)
-        return ((struct mob_data *) bl)->mob_class;
-    else if (bl->type == BL_SKILL && (struct skill_unit *) bl)
-        return ((struct skill_unit *) bl)->group->guild_id;
-    else
-        return 0;
-}
-
 int battle_get_race (struct block_list *bl)
 {
     nullpo_retr (0, bl);
@@ -1523,7 +1509,7 @@ int battle_damage (struct block_list *bl, struct block_list *target,
         if (tsd && tsd->skilltimer != -1)
         {                       // 詠唱妨害
             // フェンカードや妨害されないスキルかの検査
-            if ((!tsd->special_state.no_castcancel || map[bl->m].flag.gvg)
+            if (!tsd->special_state.no_castcancel
                 && tsd->state.skillcastcancel
                 && !tsd->special_state.no_castcancel2)
                 skill_castcancel (target, 0);
@@ -1783,53 +1769,6 @@ int battle_calc_damage (struct block_list *src, struct block_list *bl,
                     skill_status_change_end (bl, SC_REJECTSWORD, -1);
             }
         }
-    }
-
-    if (class_ == 1288 || class_ == 1287 || class_ == 1286 || class_ == 1285)
-    {
-//  if(class == 1288) {
-        if (class_ == 1288 && flag & BF_SKILL)
-            damage = 0;
-        if (src->type == BL_PC)
-        {
-            struct guild *g =
-                guild_search (((struct map_session_data *) src)->
-                              status.guild_id);
-            struct guild_castle *gc = guild_mapname2gc (map[bl->m].name);
-            if (!((struct map_session_data *) src)->status.guild_id)
-                damage = 0;
-            if (gc && agit_flag == 0 && class_ != 1288)  // guardians cannot be damaged during non-woe [Valaris]
-                damage = 0;     // end woe check [Valaris]
-            if (g == NULL)
-                damage = 0;     //ギルド未加入ならダメージ無し
-            else if ((gc != NULL) && guild_isallied (g, gc))
-                damage = 0;     //自占領ギルドのエンペならダメージ無し
-            else if (g && guild_checkskill (g, GD_APPROVAL) <= 0)
-                damage = 0;     //正規ギルド承認がないとダメージ無し
-            else if (battle_config.guild_max_castles != 0
-                     && guild_checkcastles (g) >=
-                     battle_config.guild_max_castles)
-                damage = 0;     // [MouseJstr]
-        }
-        else
-            damage = 0;
-    }
-
-    if (map[bl->m].flag.gvg && damage > 0)
-    {                           //GvG
-        if (flag & BF_WEAPON)
-        {
-            if (flag & BF_SHORT)
-                damage = damage * battle_config.gvg_short_damage_rate / 100;
-            if (flag & BF_LONG)
-                damage = damage * battle_config.gvg_long_damage_rate / 100;
-        }
-        if (flag & BF_MAGIC)
-            damage = damage * battle_config.gvg_magic_damage_rate / 100;
-        if (flag & BF_MISC)
-            damage = damage * battle_config.gvg_misc_damage_rate / 100;
-        if (damage < 1)
-            damage = 1;
     }
 
     if (battle_config.skill_min_damage || flag & BF_MISC)
@@ -4470,8 +4409,7 @@ struct Damage battle_calc_magic_attack (struct block_list *bl,
     {
         if (battle_config.gtb_pvp_only != 0)
         {                       // [MouseJstr]
-            if ((map[target->m].flag.pvp || map[target->m].flag.gvg)
-                && target->type == BL_PC)
+            if (map[target->m].flag.pvp && target->type == BL_PC)
                 damage = (damage * (100 - battle_config.gtb_pvp_only)) / 100;
         }
         else
@@ -5301,10 +5239,8 @@ int battle_check_target (struct block_list *src, struct block_list *target,
         return 0;               // PCvsMOBなら否定
 
     s_p = battle_get_party_id (ss);
-    s_g = battle_get_guild_id (ss);
 
     t_p = battle_get_party_id (target);
-    t_g = battle_get_guild_id (target);
 
     if (flag & 0x10000)
     {
@@ -5339,36 +5275,6 @@ int battle_check_target (struct block_list *src, struct block_list *target,
             else if (map[ss->m].flag.pvp_noparty && s_p > 0 && t_p > 0
                      && s_p == t_p)
                 return 1;
-            else if (map[ss->m].flag.pvp_noguild && s_g > 0 && t_g > 0
-                     && s_g == t_g)
-                return 1;
-            return 0;
-        }
-        if (map[src->m].flag.gvg)
-        {
-            struct guild *g = NULL;
-            if (su && su->group->target_flag == BCT_NOENEMY)
-                return 1;
-            if (s_g > 0 && s_g == t_g)
-                return 1;
-            if (map[src->m].flag.gvg_noparty && s_p > 0 && t_p > 0
-                && s_p == t_p)
-                return 1;
-            if ((g = guild_search (s_g)))
-            {
-                int  i;
-                for (i = 0; i < MAX_GUILDALLIANCE; i++)
-                {
-                    if (g->alliance[i].guild_id > 0
-                        && g->alliance[i].guild_id == t_g)
-                    {
-                        if (g->alliance[i].opposition)
-                            return 0;   //敵対ギルドなら無条件に敵
-                        else
-                            return 1;   //同盟ギルドなら無条件に味方
-                    }
-                }
-            }
             return 0;
         }
     }
@@ -5499,7 +5405,6 @@ int battle_config_read (const char *cfgName)
         battle_config.gm_allskill = 0;
         battle_config.gm_allequip = 0;
         battle_config.gm_skilluncond = 0;
-        battle_config.guild_max_castles = 0;
         battle_config.skillfree = 0;
         battle_config.skillup_limit = 0;
         battle_config.wp_rate = 100;
@@ -5512,8 +5417,6 @@ int battle_config_read (const char *cfgName)
         battle_config.quest_skill_learn = 0;
         battle_config.quest_skill_reset = 1;
         battle_config.basic_skill_check = 1;
-        battle_config.guild_emperium_check = 1;
-        battle_config.guild_exp_limit = 50;
         battle_config.pc_invincible_time = 5000;
         battle_config.skill_min_damage = 0;
         battle_config.finger_offensive_type = 0;
@@ -5563,11 +5466,6 @@ int battle_config_read (const char *cfgName)
         battle_config.monster_skill_nofootset = 0;
         battle_config.pc_cloak_check_type = 0;
         battle_config.monster_cloak_check_type = 0;
-        battle_config.gvg_short_damage_rate = 100;
-        battle_config.gvg_long_damage_rate = 100;
-        battle_config.gvg_magic_damage_rate = 100;
-        battle_config.gvg_misc_damage_rate = 100;
-        battle_config.gvg_eliminate_time = 7000;
         battle_config.mob_changetarget_byskill = 0;
         battle_config.pc_attack_direction_change = 1;
         battle_config.monster_attack_direction_change = 1;
@@ -5745,8 +5643,6 @@ int battle_config_read (const char *cfgName)
             {
             "gtb_pvp_only", &battle_config.gtb_pvp_only},
             {
-            "guild_max_castles", &battle_config.guild_max_castles},
-            {
             "death_penalty_type", &battle_config.death_penalty_type},
             {
             "death_penalty_base", &battle_config.death_penalty_base},
@@ -5806,10 +5702,6 @@ int battle_config_read (const char *cfgName)
             "quest_skill_reset", &battle_config.quest_skill_reset},
             {
             "basic_skill_check", &battle_config.basic_skill_check},
-            {
-            "guild_emperium_check", &battle_config.guild_emperium_check},
-            {
-            "guild_exp_limit", &battle_config.guild_exp_limit},
             {
             "player_invincible_time", &battle_config.pc_invincible_time},
             {
@@ -5921,20 +5813,6 @@ int battle_config_read (const char *cfgName)
             "monster_cloak_check_type",
                     &battle_config.monster_cloak_check_type},
             {
-            "gvg_short_attack_damage_rate",
-                    &battle_config.gvg_short_damage_rate},
-            {
-            "gvg_long_attack_damage_rate",
-                    &battle_config.gvg_long_damage_rate},
-            {
-            "gvg_magic_attack_damage_rate",
-                    &battle_config.gvg_magic_damage_rate},
-            {
-            "gvg_misc_attack_damage_rate",
-                    &battle_config.gvg_misc_damage_rate},
-            {
-            "gvg_eliminate_time", &battle_config.gvg_eliminate_time},
-            {
             "mob_changetarget_byskill",
                     &battle_config.mob_changetarget_byskill},
             {
@@ -6005,8 +5883,6 @@ int battle_config_read (const char *cfgName)
             "skill_removetrap_type", &battle_config.skill_removetrap_type},
             {
             "disp_experience", &battle_config.disp_experience},
-            {
-            "castle_defense_rate", &battle_config.castle_defense_rate},
             {
             "riding_weight", &battle_config.riding_weight},
             {
@@ -6178,15 +6054,6 @@ int battle_config_read (const char *cfgName)
         if (battle_config.vit_penaly_count < 2)
             battle_config.vit_penaly_count = 2;
 
-        if (battle_config.guild_exp_limit > 99)
-            battle_config.guild_exp_limit = 99;
-        if (battle_config.guild_exp_limit < 0)
-            battle_config.guild_exp_limit = 0;
-
-        if (battle_config.castle_defense_rate < 0)
-            battle_config.castle_defense_rate = 0;
-        if (battle_config.castle_defense_rate > 100)
-            battle_config.castle_defense_rate = 100;
         if (battle_config.item_drop_common_min < 1) // Added by TyrNemesis^
             battle_config.item_drop_common_min = 1;
         if (battle_config.item_drop_common_max > 10000)

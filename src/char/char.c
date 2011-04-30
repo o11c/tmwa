@@ -25,7 +25,6 @@
 #include "../common/lock.h"
 
 #include "inter.h"
-#include "int_guild.h"
 #include "int_party.h"
 #include "int_storage.h"
 
@@ -226,7 +225,7 @@ void mmo_char_tofile (FILE *fp, struct mmo_charstatus *p)
              p->base_exp, p->job_exp, p->zeny,  p->hp, p->max_hp, p->sp, p->max_sp,
              p->str, p->agi, p->vit, p->int_, p->dex, p->luk,
              p->status_point, p->skill_point,   p->option, p->karma, p->manner,
-             p->party_id, p->guild_id, 0,       p->hair, p->hair_color, p->clothes_color,
+             p->party_id, 0, 0,         p->hair, p->hair_color, p->clothes_color,
              p->weapon, p->shield, p->head_top, p->head_mid, p->head_bottom,
              p->last_point.map, p->last_point.x, p->last_point.y,
              p->save_point.map, p->save_point.x, p->save_point.y, p->partner_id);
@@ -305,7 +304,7 @@ int mmo_char_fromstr (char *str, struct mmo_charstatus *p)
                       &p->base_exp, &p->job_exp, &p->zeny,      &p->hp, &p->max_hp, &p->sp, &p->max_sp,
                       &p->str, &p->agi, &p->vit, &p->int_, &p->dex, &p->luk,
                       &p->status_point, &p->skill_point,        &p->option, &p->karma, &p->manner,
-                      &p->party_id, &p->guild_id, &ign/*pet_id*/,       &p->hair, &p->hair_color, &p->clothes_color,
+                      &p->party_id, &ign/*guild_id*/, &ign/*pet_id*/,   &p->hair, &p->hair_color, &p->clothes_color,
                       &p->weapon, &p->shield, &p->head_top, &p->head_mid, &p->head_bottom,
                       p->last_point.map, &p->last_point.x, &p->last_point.y,
                       p->save_point.map, &p->save_point.x, &p->save_point.y,
@@ -778,7 +777,6 @@ struct mmo_charstatus *make_new_char (int fd, uint8_t *raw_dat)
     chardat->karma = 0;
     chardat->manner = 0;
     chardat->party_id = 0;
-    chardat->guild_id = 0;
     chardat->hair = dat.hair_style;
     chardat->hair_color = dat.hair_color;
     chardat->clothes_color = 0;
@@ -1264,8 +1262,6 @@ void disconnect_player (account_t account_id)
 /// Delete a character safely, removing references
 static void char_delete (struct mmo_charstatus *cs)
 {
-    if (cs->guild_id)
-        inter_guild_leave (cs->guild_id, cs->account_id, cs->char_id);
     if (cs->party_id)
         inter_party_leave (cs->party_id, cs->account_id);
     if (cs->partner_id)
@@ -2647,7 +2643,7 @@ void mapif_sendallwos (int sfd, const uint8_t *buf, unsigned int len)
 }
 
 /// Send data only if fd is a map server
-// This is mostly a convenience method, but I think the check is also 
+// This is mostly a convenience method, but I think the check is also
 // because sometimes FDs are saved but the server might disconnect
 void mapif_send (int fd, const uint8_t *buf, unsigned int len)
 {
@@ -2987,7 +2983,7 @@ void char_config_read (const char *cfgName)
             strcpy (char_name_letters, w2);
             continue;
         }
-        
+
         // online files options
         if (strcasecmp (w1, "online_txt_filename") == 0)
         {

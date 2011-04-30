@@ -4,7 +4,7 @@
 void inter_init (const char *file);
 void inter_save (void);
 int  inter_parse_frommap (int fd);
-void inter_mapif_init (int fd);
+void inter_mapif_init (int fd) __attribute__((deprecated));
 
 int  inter_check_length (int fd, int length);
 

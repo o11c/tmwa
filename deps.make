@@ -1,28 +1,27 @@
-${BUILD_DIR}/char/char.o: src/char/char.c src/char/../common/core.h \
- src/char/../common/socket.h src/char/../common/sanity.h \
- src/char/../common/timer.h src/char/../common/mmo.h \
- src/char/../common/utils.h src/char/../common/version.h \
- src/char/../common/lock.h src/char/char.h src/char/inter.h \
- src/char/int_guild.h src/char/int_party.h src/char/int_storage.h
-${BUILD_DIR}/char/inter.o: src/char/inter.c src/char/../common/mmo.h \
- src/char/../common/utils.h src/char/../common/sanity.h src/char/char.h \
- src/char/../common/socket.h src/char/../common/timer.h \
- src/char/../common/db.h src/char/inter.h src/char/int_party.h \
- src/char/int_guild.h src/char/int_storage.h src/char/../common/lock.h
-${BUILD_DIR}/char/int_guild.o: src/char/int_guild.c src/char/inter.h \
- src/char/int_guild.h src/char/int_storage.h src/char/../common/mmo.h \
- src/char/../common/utils.h src/char/../common/sanity.h src/char/char.h \
- src/char/../common/socket.h src/char/../common/db.h \
- src/char/../common/lock.h
-${BUILD_DIR}/char/int_party.o: src/char/int_party.c src/char/inter.h \
- src/char/int_party.h src/char/../common/mmo.h src/char/../common/utils.h \
- src/char/../common/sanity.h src/char/char.h src/char/../common/socket.h \
- src/char/../common/db.h src/char/../common/lock.h
-${BUILD_DIR}/char/int_storage.o: src/char/int_storage.c \
+${BUILD_DIR}/char/char.o: src/char/char.c src/char/char.h \
  src/char/../common/mmo.h src/char/../common/utils.h \
- src/char/../common/sanity.h src/char/../common/socket.h \
- src/char/../common/db.h src/char/../common/lock.h src/char/char.h \
- src/char/inter.h src/char/int_storage.h src/char/int_guild.h
+ src/char/../common/sanity.h src/char/../common/sanity.h \
+ src/char/../common/utils.h src/char/../common/core.h \
+ src/char/../common/socket.h src/char/../common/timer.h \
+ src/char/../common/version.h src/char/../common/lock.h src/char/inter.h \
+ src/char/int_party.h src/char/int_storage.h
+${BUILD_DIR}/char/inter.o: src/char/inter.c src/char/inter.h \
+ src/char/../common/mmo.h src/char/../common/utils.h \
+ src/char/../common/sanity.h src/char/char.h src/char/../common/sanity.h \
+ src/char/../common/socket.h src/char/../common/timer.h \
+ src/char/../common/db.h src/char/int_party.h src/char/int_storage.h \
+ src/char/../common/lock.h
+${BUILD_DIR}/char/int_party.o: src/char/int_party.c src/char/int_party.h \
+ src/char/../common/sanity.h src/char/../common/mmo.h \
+ src/char/../common/utils.h src/char/../common/sanity.h src/char/inter.h \
+ src/char/char.h src/char/../common/socket.h src/char/../common/db.h \
+ src/char/../common/lock.h
+${BUILD_DIR}/char/int_storage.o: src/char/int_storage.c \
+ src/char/int_storage.h src/char/../common/mmo.h \
+ src/char/../common/utils.h src/char/../common/sanity.h \
+ src/char/../common/socket.h src/char/../common/db.h \
+ src/char/../common/lock.h src/char/char.h src/char/../common/sanity.h \
+ src/char/inter.h
 ${BUILD_DIR}/common/core.o: src/common/core.c src/common/core.h \
  src/common/socket.h src/common/sanity.h src/common/timer.h \
  src/common/version.h src/common/mt_rand.h src/common/nullpo.h
@@ -44,8 +43,7 @@ ${BUILD_DIR}/common/socket.o: src/common/socket.c src/common/mmo.h \
 ${BUILD_DIR}/common/timer.o: src/common/timer.c src/common/timer.h \
  src/common/sanity.h src/common/utils.h
 ${BUILD_DIR}/common/utils.o: src/common/utils.c src/common/utils.h \
- src/common/sanity.h
-${BUILD_DIR}/doc/expr.o: src/doc/expr.c
+ src/common/sanity.h src/common/socket.h
 ${BUILD_DIR}/ladmin/ladmin.o: src/ladmin/ladmin.c \
  src/ladmin/../common/core.h src/ladmin/../common/socket.h \
  src/ladmin/../common/sanity.h src/ladmin/../common/version.h \
@@ -64,16 +62,15 @@ ${BUILD_DIR}/map/atcommand.o: src/map/atcommand.c \
  src/map/../common/mt_rand.h src/map/atcommand.h src/map/map.h \
  src/map/../common/mmo.h src/map/../common/utils.h src/map/../common/db.h \
  src/map/battle.h src/map/clif.h src/map/storage.h src/map/chrif.h \
- src/map/guild.h src/map/intif.h src/map/itemdb.h src/map/mob.h \
- src/map/npc.h src/map/pc.h src/map/party.h src/map/script.h \
- src/map/skill.h src/map/magic.h src/map/trade.h src/map/../common/core.h \
- src/map/tmw.h
+ src/map/intif.h src/map/itemdb.h src/map/mob.h src/map/npc.h \
+ src/map/pc.h src/map/party.h src/map/script.h src/map/skill.h \
+ src/map/magic.h src/map/trade.h src/map/../common/core.h src/map/tmw.h
 ${BUILD_DIR}/map/battle.o: src/map/battle.c src/map/battle.h \
  src/map/../common/timer.h src/map/../common/sanity.h \
  src/map/../common/nullpo.h src/map/clif.h src/map/map.h \
  src/map/../common/mmo.h src/map/../common/utils.h src/map/../common/db.h \
- src/map/storage.h src/map/guild.h src/map/itemdb.h src/map/mob.h \
- src/map/pc.h src/map/skill.h src/map/magic.h src/map/intif.h \
+ src/map/storage.h src/map/itemdb.h src/map/mob.h src/map/pc.h \
+ src/map/skill.h src/map/magic.h src/map/intif.h \
  src/map/../common/socket.h src/map/../common/mt_rand.h
 ${BUILD_DIR}/map/chat.o: src/map/chat.c src/map/../common/db.h \
  src/map/../common/sanity.h src/map/../common/nullpo.h src/map/map.h \
@@ -93,21 +90,15 @@ ${BUILD_DIR}/map/clif.o: src/map/clif.c src/map/../common/socket.h \
  src/map/atcommand.h src/map/map.h src/map/../common/mmo.h \
  src/map/../common/utils.h src/map/../common/db.h src/map/battle.h \
  src/map/chat.h src/map/chrif.h src/map/clif.h src/map/storage.h \
- src/map/guild.h src/map/intif.h src/map/itemdb.h src/map/magic.h \
- src/map/mob.h src/map/npc.h src/map/party.h src/map/pc.h \
- src/map/script.h src/map/skill.h src/map/tmw.h src/map/trade.h
-${BUILD_DIR}/map/guild.o: src/map/guild.c src/map/guild.h \
- src/map/storage.h src/map/../common/mmo.h src/map/../common/utils.h \
- src/map/../common/sanity.h src/map/../common/db.h \
- src/map/../common/timer.h src/map/../common/socket.h \
- src/map/../common/nullpo.h src/map/battle.h src/map/npc.h src/map/pc.h \
- src/map/map.h src/map/mob.h src/map/intif.h src/map/clif.h src/map/tmw.h
+ src/map/intif.h src/map/itemdb.h src/map/magic.h src/map/mob.h \
+ src/map/npc.h src/map/party.h src/map/pc.h src/map/script.h \
+ src/map/skill.h src/map/tmw.h src/map/trade.h
 ${BUILD_DIR}/map/intif.o: src/map/intif.c src/map/../common/nullpo.h \
  src/map/../common/sanity.h src/map/../common/socket.h \
  src/map/../common/timer.h src/map/battle.h src/map/chrif.h \
  src/map/clif.h src/map/map.h src/map/../common/mmo.h \
  src/map/../common/utils.h src/map/../common/db.h src/map/storage.h \
- src/map/guild.h src/map/intif.h src/map/party.h src/map/pc.h
+ src/map/intif.h src/map/party.h src/map/pc.h
 ${BUILD_DIR}/map/itemdb.o: src/map/itemdb.c src/map/../common/db.h \
  src/map/../common/sanity.h src/map/../common/grfio.h \
  src/map/../common/nullpo.h src/map/map.h src/map/../common/mmo.h \
@@ -180,16 +171,16 @@ ${BUILD_DIR}/map/map.o: src/map/map.c src/map/../common/core.h \
  src/map/storage.h src/map/intif.h src/map/npc.h src/map/pc.h \
  src/map/mob.h src/map/chat.h src/map/itemdb.h src/map/skill.h \
  src/map/magic.h src/map/trade.h src/map/party.h src/map/battle.h \
- src/map/script.h src/map/guild.h src/map/atcommand.h \
- src/map/../common/nullpo.h src/map/../common/socket.h
+ src/map/script.h src/map/atcommand.h src/map/../common/nullpo.h \
+ src/map/../common/socket.h
 ${BUILD_DIR}/map/mob.o: src/map/mob.c src/map/../common/timer.h \
  src/map/../common/sanity.h src/map/../common/socket.h \
  src/map/../common/db.h src/map/../common/nullpo.h \
  src/map/../common/mt_rand.h src/map/map.h src/map/../common/mmo.h \
  src/map/../common/utils.h src/map/clif.h src/map/storage.h \
- src/map/intif.h src/map/pc.h src/map/mob.h src/map/guild.h \
- src/map/itemdb.h src/map/skill.h src/map/magic.h src/map/battle.h \
- src/map/party.h src/map/npc.h
+ src/map/intif.h src/map/pc.h src/map/mob.h src/map/itemdb.h \
+ src/map/skill.h src/map/magic.h src/map/battle.h src/map/party.h \
+ src/map/npc.h
 ${BUILD_DIR}/map/npc.o: src/map/npc.c src/map/../common/nullpo.h \
  src/map/../common/sanity.h src/map/../common/timer.h src/map/battle.h \
  src/map/clif.h src/map/map.h src/map/../common/mmo.h \
@@ -214,17 +205,17 @@ ${BUILD_DIR}/map/pc.o: src/map/pc.c src/map/../common/socket.h \
  src/map/../common/mt_rand.h src/map/atcommand.h src/map/map.h \
  src/map/../common/mmo.h src/map/../common/utils.h src/map/battle.h \
  src/map/chat.h src/map/chrif.h src/map/clif.h src/map/storage.h \
- src/map/guild.h src/map/intif.h src/map/itemdb.h src/map/mob.h \
- src/map/npc.h src/map/party.h src/map/pc.h src/map/script.h \
- src/map/skill.h src/map/magic.h src/map/trade.h
+ src/map/intif.h src/map/itemdb.h src/map/mob.h src/map/npc.h \
+ src/map/party.h src/map/pc.h src/map/script.h src/map/skill.h \
+ src/map/magic.h src/map/trade.h
 ${BUILD_DIR}/map/script.o: src/map/script.c src/map/../common/socket.h \
  src/map/../common/sanity.h src/map/../common/timer.h \
  src/map/../common/lock.h src/map/../common/mt_rand.h src/map/atcommand.h \
  src/map/map.h src/map/../common/mmo.h src/map/../common/utils.h \
  src/map/../common/db.h src/map/battle.h src/map/chat.h src/map/chrif.h \
- src/map/clif.h src/map/storage.h src/map/guild.h src/map/intif.h \
- src/map/itemdb.h src/map/mob.h src/map/npc.h src/map/party.h \
- src/map/pc.h src/map/script.h src/map/skill.h src/map/magic.h
+ src/map/clif.h src/map/storage.h src/map/intif.h src/map/itemdb.h \
+ src/map/mob.h src/map/npc.h src/map/party.h src/map/pc.h \
+ src/map/script.h src/map/skill.h src/map/magic.h
 ${BUILD_DIR}/map/skill.o: src/map/skill.c src/map/../common/timer.h \
  src/map/../common/sanity.h src/map/../common/nullpo.h \
  src/map/../common/mt_rand.h src/map/magic.h src/map/clif.h src/map/map.h \
@@ -244,18 +235,16 @@ ${BUILD_DIR}/map/storage.o: src/map/storage.c src/map/../common/db.h \
  src/map/../common/sanity.h src/map/../common/nullpo.h src/map/storage.h \
  src/map/../common/mmo.h src/map/../common/utils.h src/map/chrif.h \
  src/map/itemdb.h src/map/map.h src/map/../common/timer.h src/map/clif.h \
- src/map/intif.h src/map/pc.h src/map/guild.h src/map/battle.h \
- src/map/atcommand.h
+ src/map/intif.h src/map/pc.h src/map/battle.h src/map/atcommand.h
 ${BUILD_DIR}/map/tmw.o: src/map/tmw.c src/map/tmw.h src/map/map.h \
  src/map/../common/mmo.h src/map/../common/utils.h \
  src/map/../common/sanity.h src/map/../common/timer.h \
  src/map/../common/db.h src/map/../common/socket.h \
  src/map/../common/version.h src/map/../common/nullpo.h \
  src/map/atcommand.h src/map/battle.h src/map/chat.h src/map/chrif.h \
- src/map/clif.h src/map/storage.h src/map/guild.h src/map/intif.h \
- src/map/itemdb.h src/map/magic.h src/map/mob.h src/map/npc.h \
- src/map/party.h src/map/pc.h src/map/script.h src/map/skill.h \
- src/map/trade.h
+ src/map/clif.h src/map/storage.h src/map/intif.h src/map/itemdb.h \
+ src/map/magic.h src/map/mob.h src/map/npc.h src/map/party.h src/map/pc.h \
+ src/map/script.h src/map/skill.h src/map/trade.h
 ${BUILD_DIR}/map/trade.o: src/map/trade.c src/map/clif.h src/map/map.h \
  src/map/../common/mmo.h src/map/../common/utils.h \
  src/map/../common/sanity.h src/map/../common/timer.h \
@@ -268,41 +257,43 @@ ${BUILD_DIR}/tool/eathena-monitor.o: src/tool/eathena-monitor.c
 ${BUILD_DIR}/tool/itemfrob.o: src/tool/itemfrob.c \
  src/tool/../common/mmo.h src/tool/../common/utils.h \
  src/tool/../common/sanity.h src/tool/../char/char.c \
+ src/tool/../char/char.h src/tool/../char/../common/mmo.h \
+ src/tool/../char/../common/sanity.h src/tool/../char/../common/utils.h \
  src/tool/../char/../common/core.h src/tool/../char/../common/socket.h \
  src/tool/../char/../common/sanity.h src/tool/../char/../common/timer.h \
- src/tool/../char/../common/mmo.h src/tool/../char/../common/version.h \
- src/tool/../char/../common/lock.h src/tool/../char/char.h \
- src/tool/../char/inter.h src/tool/../char/int_guild.h \
- src/tool/../char/int_party.h src/tool/../char/int_storage.h
+ src/tool/../char/../common/version.h src/tool/../char/../common/lock.h \
+ src/tool/../char/inter.h src/tool/../char/int_party.h \
+ src/tool/../char/int_storage.h
 ${BUILD_DIR}/tool/mapfrob.o: src/tool/mapfrob.c src/tool/../common/mmo.h \
  src/tool/../common/utils.h src/tool/../common/sanity.h \
- src/tool/../char/char.c src/tool/../char/../common/core.h \
+ src/tool/../char/char.c src/tool/../char/char.h \
+ src/tool/../char/../common/mmo.h src/tool/../char/../common/sanity.h \
+ src/tool/../char/../common/utils.h src/tool/../char/../common/core.h \
  src/tool/../char/../common/socket.h src/tool/../char/../common/sanity.h \
- src/tool/../char/../common/timer.h src/tool/../char/../common/mmo.h \
- src/tool/../char/../common/version.h src/tool/../char/../common/lock.h \
- src/tool/../char/char.h src/tool/../char/inter.h \
- src/tool/../char/int_guild.h src/tool/../char/int_party.h \
- src/tool/../char/int_storage.h
+ src/tool/../char/../common/timer.h src/tool/../char/../common/version.h \
+ src/tool/../char/../common/lock.h src/tool/../char/inter.h \
+ src/tool/../char/int_party.h src/tool/../char/int_storage.h
 ${BUILD_DIR}/tool/marriage-info.o: src/tool/marriage-info.c \
  src/tool/../login/login.h src/tool/../login/../common/sanity.h \
  src/tool/../login/../common/mmo.h src/tool/../login/../common/utils.h \
  src/tool/../login/../common/sanity.h src/tool/../common/mmo.h \
- src/tool/../char/char.c src/tool/../char/../common/core.h \
+ src/tool/../char/char.c src/tool/../char/char.h \
+ src/tool/../char/../common/mmo.h src/tool/../char/../common/sanity.h \
+ src/tool/../char/../common/utils.h src/tool/../char/../common/core.h \
  src/tool/../char/../common/socket.h src/tool/../char/../common/sanity.h \
- src/tool/../char/../common/timer.h src/tool/../char/../common/mmo.h \
- src/tool/../char/../common/version.h src/tool/../char/../common/lock.h \
- src/tool/../char/char.h src/tool/../char/inter.h \
- src/tool/../char/int_guild.h src/tool/../char/int_party.h \
- src/tool/../char/int_storage.h
+ src/tool/../char/../common/timer.h src/tool/../char/../common/version.h \
+ src/tool/../char/../common/lock.h src/tool/../char/inter.h \
+ src/tool/../char/int_party.h src/tool/../char/int_storage.h
 ${BUILD_DIR}/tool/skillfrob.o: src/tool/skillfrob.c \
  src/tool/../common/mmo.h src/tool/../common/utils.h \
  src/tool/../common/sanity.h src/tool/../char/char.c \
+ src/tool/../char/char.h src/tool/../char/../common/mmo.h \
+ src/tool/../char/../common/sanity.h src/tool/../char/../common/utils.h \
  src/tool/../char/../common/core.h src/tool/../char/../common/socket.h \
  src/tool/../char/../common/sanity.h src/tool/../char/../common/timer.h \
- src/tool/../char/../common/mmo.h src/tool/../char/../common/version.h \
- src/tool/../char/../common/lock.h src/tool/../char/char.h \
- src/tool/../char/inter.h src/tool/../char/int_guild.h \
- src/tool/../char/int_party.h src/tool/../char/int_storage.h
+ src/tool/../char/../common/version.h src/tool/../char/../common/lock.h \
+ src/tool/../char/inter.h src/tool/../char/int_party.h \
+ src/tool/../char/int_storage.h
 ${BUILD_DIR}/webserver/generate.o: src/webserver/generate.c
 ${BUILD_DIR}/webserver/htmlstyle.o: src/webserver/htmlstyle.c
 ${BUILD_DIR}/webserver/logs.o: src/webserver/logs.c

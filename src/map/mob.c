@@ -15,7 +15,6 @@
 #include "intif.h"
 #include "pc.h"
 #include "mob.h"
-#include "guild.h"
 #include "itemdb.h"
 #include "skill.h"
 #include "battle.h"
@@ -426,16 +425,6 @@ int mob_once_spawn (struct map_session_data *sd, char *mapname,
         map_addiddb (&md->bl);
         mob_spawn (md->bl.id);
 
-        if (mob_class == 1288)
-        {                       // emperium hp based on defense level [Valaris]
-            struct guild_castle *gc = guild_mapname2gc (map[md->bl.m].name);
-            if (gc)
-            {
-                mob_db[mob_class].max_hp += 2000 * gc->defense;
-                md->hp = mob_db[mob_class].max_hp;
-            }
-        }                       // end addition [Valaris]
-
     }
     return (amount > 0) ? md->bl.id : 0;
 }
@@ -488,116 +477,6 @@ int mob_once_spawn_area (struct map_session_data *sd, char *mapname,
         ly = y;
     }
     return id;
-}
-
-/*==========================================
- * Summoning Guardians [Valaris]
- *------------------------------------------
- */
-int mob_spawn_guardian (struct map_session_data *sd, char *mapname,
-                        int x, int y, const char *mobname, int mob_class,
-                        int amount, const char *event, int guardian)
-{
-    struct mob_data *md = NULL;
-    int  m, count = 1, lv = 255;
-
-    if (sd)
-        lv = sd->status.base_level;
-
-    if (sd && strcmp (mapname, "this") == 0)
-        m = sd->bl.m;
-    else
-        m = map_mapname2mapid (mapname);
-
-    if (m < 0 || amount <= 0 || (mob_class >= 0 && mob_class <= 1000) || mob_class > 2000)  // 値が異常なら召喚を止める
-        return 0;
-
-    if (mob_class < 0)
-        return 0;
-
-    if (sd)
-    {
-        if (x <= 0)
-            x = sd->bl.x;
-        if (y <= 0)
-            y = sd->bl.y;
-    }
-
-    else if (x <= 0 || y <= 0)
-        printf ("mob_spawn_guardian: ??\n");
-
-    for (count = 0; count < amount; count++)
-    {
-        struct guild_castle *gc;
-        CREATE (md, struct mob_data, 1);
-
-        mob_spawn_dataset (md, mobname, mob_class);
-        md->bl.m = m;
-        md->bl.x = x;
-        md->bl.y = y;
-        md->m = m;
-        md->x0 = x;
-        md->y0 = y;
-        md->xs = 0;
-        md->ys = 0;
-        md->spawndelay1 = -1;   // Only once is a flag.
-        md->spawndelay2 = -1;   // Only once is a flag.
-
-        memcpy (md->npc_event, event, sizeof (md->npc_event));
-
-        md->bl.type = BL_MOB;
-        map_addiddb (&md->bl);
-        mob_spawn (md->bl.id);
-
-        gc = guild_mapname2gc (map[md->bl.m].name);
-        if (gc)
-        {
-            mob_db[mob_class].max_hp += 2000 * gc->defense;
-            if (guardian == 0)
-            {
-                md->hp = gc->Ghp0;
-                gc->GID0 = md->bl.id;
-            }
-            if (guardian == 1)
-            {
-                md->hp = gc->Ghp1;
-                gc->GID1 = md->bl.id;
-            }
-            if (guardian == 2)
-            {
-                md->hp = gc->Ghp2;
-                gc->GID2 = md->bl.id;
-            }
-            if (guardian == 3)
-            {
-                md->hp = gc->Ghp3;
-                gc->GID3 = md->bl.id;
-            }
-            if (guardian == 4)
-            {
-                md->hp = gc->Ghp4;
-                gc->GID4 = md->bl.id;
-            }
-            if (guardian == 5)
-            {
-                md->hp = gc->Ghp5;
-                gc->GID5 = md->bl.id;
-            }
-            if (guardian == 6)
-            {
-                md->hp = gc->Ghp6;
-                gc->GID6 = md->bl.id;
-            }
-            if (guardian == 7)
-            {
-                md->hp = gc->Ghp7;
-                gc->GID7 = md->bl.id;
-            }
-
-        }
-    }
-
-    return (amount > 0) ? md->bl.id : 0;
 }
 
 /*==========================================
@@ -1405,38 +1284,6 @@ int mob_can_reach (struct mob_data *md, struct block_list *bl, int range)
 
     dx = abs (bl->x - md->bl.x);
     dy = abs (bl->y - md->bl.y);
-
-    //=========== guildcastle guardian no search start===========
-    //when players are the guild castle member not attack them !
-    if (md->mob_class == 1285 || md->mob_class == 1286 || md->mob_class == 1287)
-    {
-        struct map_session_data *sd;
-        struct guild *g = NULL;
-        struct guild_castle *gc = guild_mapname2gc (map[bl->m].name);
-
-        if (gc && agit_flag == 0)   // Guardians will not attack during non-woe time [Valaris]
-            return 0;           // end addition [Valaris]
-
-        if (bl && bl->type == BL_PC)
-        {
-            if ((sd = (struct map_session_data *) bl) == NULL)
-            {
-                printf ("mob_can_reach nullpo\n");
-                return 0;
-            }
-
-            if (gc && sd && sd->status.guild_id && sd->status.guild_id > 0)
-            {
-                g = guild_search (sd->status.guild_id); // don't attack guild members [Valaris]
-                if (g && g->guild_id > 0 && g->guild_id == gc->guild_id)
-                    return 0;
-                if (g && gc && guild_isallied (g, gc))
-                    return 0;
-
-            }
-        }
-    }
-    //========== guildcastle guardian no search eof==============
 
     if (bl && bl->type == BL_PC && battle_config.monsters_ignore_gm == 1)
     {                           // option to have monsters ignore GMs [Valaris]
@@ -2714,88 +2561,6 @@ int mob_damage (struct block_list *src, struct mob_data *md, int damage,
 
     md->hp -= damage;
 
-    if (md->mob_class >= 1285 && md->mob_class <= 1287)
-    {                           // guardian hp update [Valaris]
-        struct guild_castle *gc = guild_mapname2gc (map[md->bl.m].name);
-        if (gc)
-        {
-
-            if (md->bl.id == gc->GID0)
-            {
-                gc->Ghp0 = md->hp;
-                if (gc->Ghp0 <= 0)
-                {
-                    guild_castledatasave (gc->castle_id, 10, 0);
-                    guild_castledatasave (gc->castle_id, 18, 0);
-                }
-            }
-            if (md->bl.id == gc->GID1)
-            {
-                gc->Ghp1 = md->hp;
-                if (gc->Ghp1 <= 0)
-                {
-                    guild_castledatasave (gc->castle_id, 11, 0);
-                    guild_castledatasave (gc->castle_id, 19, 0);
-                }
-            }
-            if (md->bl.id == gc->GID2)
-            {
-                gc->Ghp2 = md->hp;
-                if (gc->Ghp2 <= 0)
-                {
-                    guild_castledatasave (gc->castle_id, 12, 0);
-                    guild_castledatasave (gc->castle_id, 20, 0);
-                }
-            }
-            if (md->bl.id == gc->GID3)
-            {
-                gc->Ghp3 = md->hp;
-                if (gc->Ghp3 <= 0)
-                {
-                    guild_castledatasave (gc->castle_id, 13, 0);
-                    guild_castledatasave (gc->castle_id, 21, 0);
-                }
-            }
-            if (md->bl.id == gc->GID4)
-            {
-                gc->Ghp4 = md->hp;
-                if (gc->Ghp4 <= 0)
-                {
-                    guild_castledatasave (gc->castle_id, 14, 0);
-                    guild_castledatasave (gc->castle_id, 22, 0);
-                }
-            }
-            if (md->bl.id == gc->GID5)
-            {
-                gc->Ghp5 = md->hp;
-                if (gc->Ghp5 <= 0)
-                {
-                    guild_castledatasave (gc->castle_id, 15, 0);
-                    guild_castledatasave (gc->castle_id, 23, 0);
-                }
-            }
-            if (md->bl.id == gc->GID6)
-            {
-                gc->Ghp6 = md->hp;
-                if (gc->Ghp6 <= 0)
-                {
-                    guild_castledatasave (gc->castle_id, 16, 0);
-                    guild_castledatasave (gc->castle_id, 24, 0);
-                }
-            }
-            if (md->bl.id == gc->GID7)
-            {
-                gc->Ghp7 = md->hp;
-                if (gc->Ghp7 <= 0)
-                {
-                    guild_castledatasave (gc->castle_id, 17, 0);
-                    guild_castledatasave (gc->castle_id, 25, 0);
-
-                }
-            }
-        }
-    }                           // end addition [Valaris]
-
     if (md->option & 2)
         skill_status_change_end (&md->bl, SC_HIDING, -1);
     if (md->option & 4)
@@ -3112,16 +2877,6 @@ int mob_damage (struct block_list *src, struct mob_data *md, int damage,
 
     }                           // [MouseJstr]
 
-    // <Agit> NPC Event [OnAgitBreak]
-    if (md->npc_event[0]
-        && strcmp (((md->npc_event) + strlen (md->npc_event) - 13),
-                   "::OnAgitBreak") == 0)
-    {
-        printf ("MOB.C: Run NPC_Event[OnAgitBreak].\n");
-        if (agit_flag == 1)     //Call to Run NPC_Event[OnAgitBreak]
-            guild_agit_break (md);
-    }
-
     // SCRIPT実行
     if (md->npc_event[0])
     {
@@ -3254,30 +3009,6 @@ int mob_heal (struct mob_data *md, int heal)
     md->hp += heal;
     if (max_hp < md->hp)
         md->hp = max_hp;
-
-    if (md->mob_class >= 1285 && md->mob_class <= 1287)
-    {                           // guardian hp update [Valaris]
-        struct guild_castle *gc = guild_mapname2gc (map[md->bl.m].name);
-        if (gc)
-        {
-            if (md->bl.id == gc->GID0)
-                gc->Ghp0 = md->hp;
-            if (md->bl.id == gc->GID1)
-                gc->Ghp1 = md->hp;
-            if (md->bl.id == gc->GID2)
-                gc->Ghp2 = md->hp;
-            if (md->bl.id == gc->GID3)
-                gc->Ghp3 = md->hp;
-            if (md->bl.id == gc->GID4)
-                gc->Ghp4 = md->hp;
-            if (md->bl.id == gc->GID5)
-                gc->Ghp5 = md->hp;
-            if (md->bl.id == gc->GID6)
-                gc->Ghp6 = md->hp;
-            if (md->bl.id == gc->GID7)
-                gc->Ghp7 = md->hp;
-        }
-    }                           // end addition [Valaris]
 
     return 0;
 }
@@ -3877,12 +3608,6 @@ int mobskill_use_id (struct mob_data *md, struct block_list *target,
         && skill_id != RG_BACKSTAP && skill_id != RG_RAID)
         return 0;
 
-    if (map[md->bl.m].flag.gvg
-        && (skill_id == SM_ENDURE || skill_id == AL_TELEPORT
-            || skill_id == AL_WARP || skill_id == WZ_ICEWALL
-            || skill_id == TF_BACKSLIDING))
-        return 0;
-
     if (skill_get_inf2 (skill_id) & 0x200 && md->bl.id == target->id)
         return 0;
 
@@ -4006,12 +3731,6 @@ int mobskill_use_pos (struct mob_data *md,
     }
 
     if (md->option & 2)
-        return 0;
-
-    if (map[md->bl.m].flag.gvg
-        && (skill_id == SM_ENDURE || skill_id == AL_TELEPORT
-            || skill_id == AL_WARP || skill_id == WZ_ICEWALL
-            || skill_id == TF_BACKSLIDING))
         return 0;
 
     // 射程と障害物チェック
@@ -4394,25 +4113,6 @@ int mob_gvmobcheck (struct map_session_data *sd, struct block_list *bl)
 
     nullpo_retr (0, sd);
     nullpo_retr (0, bl);
-
-    if (bl->type == BL_MOB && (md = (struct mob_data *) bl) &&
-        (md->mob_class == 1288 || md->mob_class == 1287 || md->mob_class == 1286
-         || md->mob_class == 1285))
-    {
-        struct guild_castle *gc = guild_mapname2gc (map[sd->bl.m].name);
-        struct guild *g = guild_search (sd->status.guild_id);
-
-        if (g == NULL && md->mob_class == 1288)
-            return 0;           //ギルド未加入ならダメージ無し
-        else if (gc != NULL && !map[sd->bl.m].flag.gvg)
-            return 0;           //砦内でGvじゃないときはダメージなし
-        else if (g && gc != NULL && g->guild_id == gc->guild_id)
-            return 0;           //自占領ギルドのエンペならダメージ無し
-        else if (g && guild_checkskill (g, GD_APPROVAL) <= 0
-                 && md->mob_class == 1288)
-            return 0;           //正規ギルド承認がないとダメージ無し
-
-    }
 
     return 1;
 }

@@ -116,7 +116,6 @@ struct skill_unit_group
 {
     int  src_id;
     int  party_id;
-    int  guild_id;
     int  map, range;
     int  target_flag;
     unsigned int tick;
@@ -181,7 +180,7 @@ struct map_session_data
         unsigned produce_flag:1;
         unsigned make_arrow_flag:1;
         unsigned potionpitcher_flag:1;
-        unsigned storage_flag:2;    //0: closed, 1: Normal Storage open, 2: guild storage open [Skotlex]
+        unsigned storage_flag:1;    //0: closed, 1: Normal Storage open
         unsigned shroud_active:1;
         unsigned shroud_hides_name_talking:1;
         unsigned shroud_disappears_on_pickup:1;
@@ -367,9 +366,6 @@ struct map_session_data
     int  party_sended, party_invite, party_invite_account;
     int  party_hp, party_x, party_y;
 
-    int  guild_sended, guild_invite, guild_invite_account;
-    int  guild_emblem_id, guild_alliance, guild_alliance_account;
-    int  guildspy;              // [Syrus22]
     int  partyspy;              // [Syrus22]
 
     char message[80];
@@ -437,7 +433,6 @@ struct npc_data
         {
             char *script;
             short xs, ys;
-            int  guild_id;
             int  timer, timerid, timeramount, nexttimer;
             unsigned int timertick;
             struct npc_timerevent_list *timer_event;
@@ -528,7 +523,6 @@ struct mob_data
     short opt1, opt2, opt3, option;
     short min_chase;
     short sg_count;
-    int  guild_id;
     int  deletetimer;
 
     int  skilltimer;
@@ -538,7 +532,7 @@ struct mob_data
     unsigned int skilldelay[MAX_MOBSKILL];
     int  def_ele;
     int  master_id, master_dist;
-    int  exclusion_src, exclusion_party, exclusion_guild;
+    int  exclusion_src, exclusion_party;
     struct skill_timerskill skilltimerskill[MAX_MOBSKILLTIMERSKILL];
     struct skill_unit_group skillunit[MAX_MOBSKILLUNITGROUP];
     struct skill_unit_group_tickset skillunittick[MAX_SKILLUNITGROUPTICKSET];
@@ -581,11 +575,8 @@ struct map_data
         unsigned nopenalty:1;
         unsigned pvp:1;
         unsigned pvp_noparty:1;
-        unsigned pvp_noguild:1;
         unsigned pvp_nightmaredrop:1;
         unsigned pvp_nocalcrank:1;
-        unsigned gvg:1;
-        unsigned gvg_noparty:1;
         unsigned nozenypenalty:1;
         unsigned notrade:1;
         unsigned noskill:1;
@@ -717,7 +708,6 @@ extern struct map_data map[];
 extern int map_num;
 extern int autosave_interval;
 extern int save_settings;
-extern int agit_flag;
 extern int night_flag;          // 0=day, 1=night [Yor]
 
 extern char motd_txt[];

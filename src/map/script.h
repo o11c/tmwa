@@ -1,6 +1,5 @@
-// $Id: script.h,v 1.2 2004/09/25 05:32:19 MouseJstr Exp $
-#ifndef _SCRIPT_H_
-#define _SCRIPT_H_
+#ifndef SCRIPT_H
+#define SCRIPT_H
 
 struct script_data
 {
@@ -49,4 +48,4 @@ int  do_final_script (void);
 
 extern char mapreg_txt[];
 
-#endif
+#endif // SCRIPT_H

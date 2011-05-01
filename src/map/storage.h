@@ -1,8 +1,5 @@
-// Copyright (c) Athena Dev Teams - Licensed under GNU GPL
-// For more information, see LICENCE in the main folder
-
-#ifndef _STORAGE_H_
-#define _STORAGE_H_
+#ifndef STORAGE_H
+#define STORAGE_H
 
 #include "../common/mmo.h"
 
@@ -29,4 +26,4 @@ int  storage_comp_item (const void *_i1, const void *_i2);
 //int storage_comp_item(const struct item* i1, const struct item* i2);
 void sortage_sortitem (struct storage *stor);
 
-#endif
+#endif // STORAGE_H

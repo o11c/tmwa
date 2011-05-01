@@ -1,4 +1,5 @@
-// $Id: pc.c 101 2004-09-25 17:57:22Z Valaris $
+#include "pc.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,15 +24,10 @@
 #include "mob.h"
 #include "npc.h"
 #include "party.h"
-#include "pc.h"
 #include "script.h"
 #include "skill.h"
 #include "storage.h"
 #include "trade.h"
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
 #define PVP_CALCRANK_INTERVAL 1000  // PVP順位計算の間隔
 

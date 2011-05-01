@@ -1,10 +1,8 @@
-//
+#include "tmw.h"
 
 #include <string.h>
 #include <ctype.h>
 #include <stdarg.h>
-
-#include "tmw.h"
 
 #include "../common/socket.h"
 #include "../common/timer.h"

@@ -1,4 +1,5 @@
-// $Id: mob.c,v 1.7 2004/09/25 05:32:18 MouseJstr Exp $
+#include "mob.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,16 +15,11 @@
 #include "clif.h"
 #include "intif.h"
 #include "pc.h"
-#include "mob.h"
 #include "itemdb.h"
 #include "skill.h"
 #include "battle.h"
 #include "party.h"
 #include "npc.h"
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
 #ifndef max
 #define max( a, b ) ( ((a) > (b)) ? (a) : (b) )

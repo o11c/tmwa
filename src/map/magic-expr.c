@@ -1,7 +1,9 @@
 #include "magic-expr.h"
+
+#include <math.h>
+
 #include "magic-expr-eval.h"
 #include "itemdb.h"
-#include <math.h>
 
 #include "../common/mt_rand.h"
 

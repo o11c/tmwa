@@ -1,6 +1,5 @@
-// $Id: trade.h,v 1.2 2004/09/25 05:32:19 MouseJstr Exp $
-#ifndef	_TRADE_H_
-#define	_TRADE_H_
+#ifndef TRADE_H
+#define TRADE_H
 
 #include "map.h"
 void trade_traderequest (struct map_session_data *sd, int target_id);
@@ -11,4 +10,4 @@ void trade_tradecancel (struct map_session_data *sd);
 void trade_tradecommit (struct map_session_data *sd);
 void trade_verifyzeny (struct map_session_data *sd);
 
-#endif // _TRADE_H_
+#endif // TRADE_H

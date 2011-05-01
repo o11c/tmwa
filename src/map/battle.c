@@ -1,10 +1,9 @@
-// $Id: battle.c,v 1.10 2004/09/29 21:08:17 Akitasha Exp $
+#include "battle.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-
-#include "battle.h"
 
 #include "../common/timer.h"
 #include "../common/nullpo.h"
@@ -17,10 +16,6 @@
 #include "skill.h"
 #include "../common/socket.h"
 #include "../common/mt_rand.h"
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
 int  attr_fix_table[4][10][10];
 

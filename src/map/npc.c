@@ -1,4 +1,5 @@
-// $Id: npc.c,v 1.5 2004/09/25 05:32:18 MouseJstr Exp $
+#include "npc.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -16,15 +17,10 @@
 #include "itemdb.h"
 #include "map.h"
 #include "mob.h"
-#include "npc.h"
 #include "pc.h"
 #include "script.h"
 #include "skill.h"
 #include "../common/socket.h"
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
 struct npc_src_list
 {

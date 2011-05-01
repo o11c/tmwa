@@ -1,6 +1,7 @@
-// $Id: intif.h,v 1.2 2004/09/25 05:32:18 MouseJstr Exp $
-#ifndef _INTIF_H_
-#define _INFIF_H_
+#ifndef INTIF_H
+#define INFIF_H
+
+#include "../common/mmo.h"
 
 int  intif_parse (int fd);
 
@@ -28,4 +29,4 @@ int  intif_break_party (int party_id);
 int  intif_party_message (int party_id, int account_id, char *mes, int len);
 int  intif_party_checkconflict (int party_id, int account_id, char *nick);
 
-#endif
+#endif // INTIF_H

@@ -1,6 +1,9 @@
-// $Id: mob.h,v 1.4 2004/09/25 05:32:18 MouseJstr Exp $
-#ifndef _MOB_H_
-#define _MOB_H_
+#ifndef MOB_H
+#define MOB_H
+
+#include "../common/mmo.h"
+#include "map.h"
+
 #include "../common/timer.h"
 #define MAX_RANDOMMONSTER 3
 
@@ -145,4 +148,4 @@ int  mob_summonslave (struct mob_data *md2, int *value, int amount, int flag);
 int  mob_gvmobcheck (struct map_session_data *sd, struct block_list *bl) __attribute__((deprecated));
 void mob_reload (void);
 
-#endif
+#endif // MOB_H

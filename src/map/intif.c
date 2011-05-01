@@ -1,19 +1,17 @@
-// $Id: intif.c,v 1.2 2004/09/25 05:32:18 MouseJstr Exp $
+#include "intif.h"
+
 #include <sys/types.h>
-#ifdef LCCWIN32
-#include <winsock.h>
-#else
 #include <sys/socket.h>
 #include <netinet/in.h>
-#endif
+
 #include <stdio.h>
 #include <stdlib.h>
-#ifndef LCCWIN32
+
 #include <sys/time.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#endif
+
 #include <signal.h>
 #include <fcntl.h>
 #include <string.h>
@@ -25,15 +23,10 @@
 #include "battle.h"
 #include "chrif.h"
 #include "clif.h"
-#include "intif.h"
 #include "map.h"
 #include "party.h"
 #include "pc.h"
 #include "storage.h"
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
 static const int packet_len_table[] = {
     -1, -1, 27, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

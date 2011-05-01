@@ -1,9 +1,9 @@
-// $Id: party.c,v 1.2 2004/09/22 02:59:47 Akitasha Exp $
+#include "party.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "party.h"
 #include "../common/db.h"
 #include "../common/timer.h"
 #include "../common/socket.h"
@@ -15,10 +15,6 @@
 #include "clif.h"
 #include "skill.h"
 #include "tmw.h"
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
 #define PARTY_SEND_XYHP_INVERVAL	1000    // 座標やＨＰ送信の間隔
 

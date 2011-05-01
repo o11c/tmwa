@@ -1,5 +1,5 @@
-#ifndef MAGIC_EXPR_H_
-#define MAGIC_EXPR_H_
+#ifndef MAGIC_EXPR_H
+#define MAGIC_EXPR_H
 #include "magic-interpreter.h"
 #include "magic-interpreter-aux.h"
 
@@ -92,4 +92,4 @@ int                             // ret -1: not a string, ret 1: no such item, re
 
 int  magic_location_in_area (int m, int x, int y, area_t * area);
 
-#endif /* !defined(MAGIC_EXPR_H_) */
+#endif // MAGIC_EXPR_H

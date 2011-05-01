@@ -1,5 +1,3 @@
-/* Magic interpreter */
-
 #ifndef MAGIC_INTERPRETER_H
 #define MAGIC_INTERPRETER_H
 
@@ -497,4 +495,4 @@ typedef struct
     effect_t *body;
 } proc_t;
 
-#endif /* !defined (MAGIC_INTERPRETER_H) */
+#endif // MAGIC_INTERPRETER_H

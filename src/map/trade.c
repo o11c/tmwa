@@ -1,10 +1,11 @@
+#include "trade.h"
+
 #include <stdio.h>
 #include <string.h>
 
 #include "clif.h"
 #include "itemdb.h"
 #include "map.h"
-#include "trade.h"
 #include "pc.h"
 #include "npc.h"
 #include "battle.h"

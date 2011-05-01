@@ -1,6 +1,5 @@
-// $Id: battle.h,v 1.6 2004/09/29 21:08:17 Akitasha Exp $
-#ifndef _BATTLE_H_
-#define _BATTLE_H_
+#ifndef BATTLE_H
+#define BATTLE_H
 
 // ダメージ
 struct Damage
@@ -343,4 +342,4 @@ extern struct Battle_Config
 
 int  battle_config_read (const char *cfgName);
 
-#endif
+#endif // BATTLE_H

@@ -1,6 +1,6 @@
-// $Id: chrif.h,v 1.3 2004/09/25 11:39:17 MouseJstr Exp $
-#ifndef _CHRIF_H_
-#define _CHRIF_H_
+#ifndef CHRIF_H
+#define CHRIF_H
+#include "../common/mmo.h"
 
 void chrif_setuserid (char *);
 void chrif_setpasswd (char *);
@@ -33,4 +33,4 @@ int  chrif_send_divorce (int char_id);
 
 int  do_init_chrif (void);
 
-#endif
+#endif // CHRIF_H

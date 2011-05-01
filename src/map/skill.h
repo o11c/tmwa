@@ -1,6 +1,5 @@
-// $Id: skill.h,v 1.5 2004/09/25 05:32:19 MouseJstr Exp $
-#ifndef _SKILL_H_
-#define _SKILL_H_
+#ifndef SKILL_H
+#define SKILL_H
 
 #include "../common/timer.h"
 
@@ -882,4 +881,4 @@ int  skill_power (struct map_session_data *sd, int skill);  // Yields the power 
 int  skill_power_bl (struct block_list *bl, int skill); // Yields the power of a skill.  This is zero if the skill is unknown or if it's a pool skill that is outside of the skill pool,
                              // otherwise a value from 0 to 255 (with 200 being the `normal maximum')
 
-#endif
+#endif // SKILL_H

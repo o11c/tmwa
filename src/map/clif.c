@@ -1,6 +1,4 @@
-// $Id: clif.c 164 2004-10-01 16:46:58Z $
-
-#define DUMP_UNKNOWN_PACKET	1
+#include "clif.h"
 
 #include <stdio.h>
 #include <ctype.h>
@@ -8,14 +6,12 @@
 #include <string.h>
 #include <stdarg.h>
 #include <sys/types.h>
-#ifdef LCCWIN32
-#include <winsock.h>
-#else
+
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#endif
+
 #include <time.h>
 
 #include "../common/socket.h"
@@ -29,7 +25,6 @@
 #include "battle.h"
 #include "chat.h"
 #include "chrif.h"
-#include "clif.h"
 #include "intif.h"
 #include "itemdb.h"
 #include "magic.h"
@@ -43,10 +38,6 @@
 #include "storage.h"
 #include "tmw.h"
 #include "trade.h"
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
 #define STATE_BLIND 0x10
 #define EMOTE_IGNORED 0x0e
@@ -8833,7 +8824,6 @@ static void clif_parse (int fd)
             if (fd)
                 printf ("\nclif_parse: session #%d, packet 0x%x, lenght %d\n",
                         fd, cmd, packet_len);
-#ifdef DUMP_UNKNOWN_PACKET
             {
                 int  i;
                 FILE *fp;
@@ -8899,7 +8889,6 @@ static void clif_parse (int fd)
                     fclose_ (fp);
                 }
             }
-#endif
         }
     }
     RFIFOSKIP (fd, packet_len);
@@ -8918,11 +8907,7 @@ int do_init_clif (void)
     {
         if (make_listen_port (map_port))
             break;
-#ifdef LCCWIN32
-        Sleep (20000);
-#else
         sleep (20);
-#endif
     }
     if (i == 10)
     {

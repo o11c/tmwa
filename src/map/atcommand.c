@@ -1,4 +1,5 @@
-// $Id: atcommand.c 148 2004-09-30 14:05:37Z MouseJstr $
+#include "atcommand.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +16,6 @@
 #include "../common/nullpo.h"
 #include "../common/mt_rand.h"
 
-#include "atcommand.h"
 #include "battle.h"
 #include "clif.h"
 #include "chrif.h"

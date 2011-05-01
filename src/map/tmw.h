@@ -1,6 +1,5 @@
-//
-#ifndef _TMW_H_
-#define _TMW_H_
+#ifndef TMW_H
+#define TMW_H
 
 #include "map.h"
 
@@ -11,4 +10,4 @@ void tmw_GmHackMsg (const char *fmt, ...);
 void tmw_AutoBan (struct map_session_data *sd, char *reason, int length);
 void tmw_TrimStr (char *str);
 
-#endif /* _TMW_H_ */
+#endif // TMW_H

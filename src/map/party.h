@@ -1,6 +1,5 @@
-// $Id: party.h,v 1.3 2004/09/25 05:32:18 MouseJstr Exp $
-#ifndef _PARTY_H_
-#define _PARTY_H_
+#ifndef PARTY_H
+#define PARTY_H
 
 #include <stdarg.h>
 
@@ -49,4 +48,4 @@ int  party_exp_share (struct party *p, int map, int base_exp, int job_exp);
 void party_foreachsamemap (int (*func) (struct block_list *, va_list),
                            struct map_session_data *sd, int type, ...);
 
-#endif
+#endif // PARTY_H

@@ -1,17 +1,11 @@
-// $Id: clif.h,v 1.4 2004/09/25 05:32:18 MouseJstr Exp $
-#ifndef _CLIF_H_
-#define _CLIF_H_
+#ifndef CLIF_H
+#define CLIF_H
 
 #include <sys/types.h>
 
-#ifdef LCCWIN32
-#include <winsock.h>
-typedef unsigned int in_addr_t;
-#else
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#endif
 
 #include "map.h"
 
@@ -244,4 +238,4 @@ int  clif_foreachclient (int (*)(struct map_session_data *, va_list), ...);
 int  do_final_clif (void);
 int  do_init_clif (void);
 
-#endif
+#endif // CLIF_H

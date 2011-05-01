@@ -1,7 +1,5 @@
-// $Id: pc.h,v 1.4 2004/09/25 05:32:18 MouseJstr Exp $
-
-#ifndef _PC_H_
-#define _PC_H_
+#ifndef PC_H
+#define PC_H
 
 #include "map.h"
 
@@ -207,4 +205,4 @@ timer_id night_timer_tid;
 void map_day_timer (timer_id, tick_t, custom_id_t, custom_data_t);   // by [yor]
 void map_night_timer (timer_id, tick_t, custom_id_t, custom_data_t); // by [yor]
 
-#endif
+#endif // PC_H

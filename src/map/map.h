@@ -1,12 +1,12 @@
-// $Id: map.h,v 1.8 2004/09/25 11:39:17 MouseJstr Exp $
-#ifndef _MAP_H_
-#define _MAP_H_
+#ifndef MAP_H
+#define MAP_H
 
 #include <stdio.h>
 #include <stdarg.h>
 #include <time.h>
 #include <sys/time.h>
 #include <netinet/in.h>
+
 #include "../common/mmo.h"
 #include "../common/timer.h"
 #include "../common/db.h"

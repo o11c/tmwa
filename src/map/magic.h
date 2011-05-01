@@ -1,5 +1,5 @@
-#ifndef MAGIC_H_
-#define MAGIC_H_
+#ifndef MAGIC_H
+#define MAGIC_H
 
 #include "clif.h"
 #include "intif.h"
@@ -87,4 +87,4 @@ int  spell_attack (int caster, int target);
 
 void spell_free_invocation (struct invocation *invocation);
 
-#endif /* !defined(MAGIC_H_) */
+#endif // MAGIC_H

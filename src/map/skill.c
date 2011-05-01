@@ -1,5 +1,4 @@
-// $Id: skill.c,v 1.8 2004/09/25 05:32:19 MouseJstr Exp $
-/* スキル関係 */
+#include "skill.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,12 +19,7 @@
 #include "party.h"
 #include "pc.h"
 #include "script.h"
-#include "skill.h"
 #include "../common/socket.h"
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
 #define SKILLUNITTIMER_INVERVAL	100
 

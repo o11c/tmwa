@@ -1,15 +1,14 @@
-// $Id: chrif.c,v 1.6 2004/09/25 11:39:17 MouseJstr Exp $
+#include "chrif.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef LCCWIN32
-#include <winsock.h>
-#else
+
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#endif
+
 #include <sys/types.h>
 #include <time.h>
 
@@ -17,17 +16,12 @@
 #include "../common/timer.h"
 #include "map.h"
 #include "battle.h"
-#include "chrif.h"
 #include "clif.h"
 #include "intif.h"
 #include "npc.h"
 #include "pc.h"
 #include "../common/nullpo.h"
 #include "itemdb.h"
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
 static const int packet_len_table[0x20] = {
     60, 3, 10, 27, 22, -1, 6, -1,   // 2af8-2aff

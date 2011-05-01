@@ -1,16 +1,9 @@
-// $Id: script.c 148 2004-09-30 14:05:37Z MouseJstr $
-//#define DEBUG_FUNCIN
-//#define DEBUG_DISP
-//#define DEBUG_RUN
+#include "script.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-
-#ifndef LCCWIN32
-#include <sys/time.h>
-#endif
 
 #include <time.h>
 #include <math.h>
@@ -34,13 +27,8 @@
 #include "npc.h"
 #include "party.h"
 #include "pc.h"
-#include "script.h"
 #include "skill.h"
 #include "storage.h"
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
 #define SCRIPT_BLOCK_SIZE 256
 enum
@@ -1013,10 +1001,6 @@ unsigned char *parse_simpleexpr (unsigned char *p)
     int  i;
     p = skip_space (p);
 
-#ifdef DEBUG_FUNCIN
-    if (battle_config.etc_log)
-        printf ("parse_simpleexpr %s\n", p);
-#endif
     if (*p == ';' || *p == ',')
     {
         disp_error_message ("unexpected expr end", p);
@@ -1113,10 +1097,6 @@ unsigned char *parse_simpleexpr (unsigned char *p)
 
     }
 
-#ifdef DEBUG_FUNCIN
-    if (battle_config.etc_log)
-        printf ("parse_simpleexpr end %s\n", p);
-#endif
     return p;
 }
 
@@ -1129,10 +1109,6 @@ unsigned char *parse_subexpr (unsigned char *p, int limit)
     int  op, opl, len;
     char *tmpp;
 
-#ifdef DEBUG_FUNCIN
-    if (battle_config.etc_log)
-        printf ("parse_subexpr %s\n", p);
-#endif
     p = skip_space (p);
 
     if (*p == '-')
@@ -1233,10 +1209,6 @@ unsigned char *parse_subexpr (unsigned char *p, int limit)
         add_scriptc (op);
         p = skip_space (p);
     }
-#ifdef DEBUG_FUNCIN
-    if (battle_config.etc_log)
-        printf ("parse_subexpr end %s\n", p);
-#endif
     return p;                   /* return first untreated operator */
 }
 
@@ -1246,10 +1218,6 @@ unsigned char *parse_subexpr (unsigned char *p, int limit)
  */
 unsigned char *parse_expr (unsigned char *p)
 {
-#ifdef DEBUG_FUNCIN
-    if (battle_config.etc_log)
-        printf ("parse_expr %s\n", p);
-#endif
     switch (*p)
     {
         case ')':
@@ -1262,10 +1230,6 @@ unsigned char *parse_expr (unsigned char *p)
             exit (1);
     }
     p = parse_subexpr (p, -1);
-#ifdef DEBUG_FUNCIN
-    if (battle_config.etc_log)
-        printf ("parse_expr end %s\n", p);
-#endif
     return p;
 }
 
@@ -1502,17 +1466,6 @@ unsigned char *parse_script (unsigned char *src, int line)
         }
     }
 
-#ifdef DEBUG_DISP
-    for (i = 0; i < script_pos; i++)
-    {
-        if ((i & 15) == 0)
-            printf ("%04x : ", i);
-        printf ("%02x ", script_buf[i]);
-        if ((i & 15) == 15)
-            printf ("\n");
-    }
-    printf ("\n");
-#endif
 
     return script_buf;
 }
@@ -6871,38 +6824,6 @@ int run_func (struct script_state *st)
         st->state = END;
         return 0;
     }
-#ifdef DEBUG_RUN
-    if (battle_config.etc_log)
-    {
-        printf ("run_func : %s? (%d(%d))\n", str_buf + str_data[func].str,
-                func, str_data[func].type);
-        printf ("stack dump :");
-        for (i = 0; i < end_sp; i++)
-        {
-            switch (st->stack->stack_data[i].type)
-            {
-                case C_INT:
-                    printf (" int(%d)", st->stack->stack_data[i].u.num);
-                    break;
-                case C_NAME:
-                    printf (" name(%s)",
-                            str_buf +
-                            str_data[st->stack->stack_data[i].u.num].str);
-                    break;
-                case C_ARG:
-                    printf (" arg");
-                    break;
-                case C_POS:
-                    printf (" pos(%d)", st->stack->stack_data[i].u.num);
-                    break;
-                default:
-                    printf (" %d,%d", st->stack->stack_data[i].type,
-                            st->stack->stack_data[i].u.num);
-            }
-        }
-        printf ("\n");
-    }
-#endif
     if (str_data[func].func)
     {
         str_data[func].func (st);

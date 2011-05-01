@@ -41,4 +41,4 @@ magic_area_rect (int *m, int *x, int *y, int *width, int *height,
 
 #define ARG_MAY_BE_AREA(x) (TY(x) == TY_AREA || TY(x) == TY_LOCATION)
 
-#endif /* !defined(MAGIC_EXPR_EVAL) */
+#endif // MAGIC_EXPR_EVAL

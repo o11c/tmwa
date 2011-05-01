@@ -1,4 +1,5 @@
-// $Id: chat.c,v 1.2 2004/09/22 02:59:47 Akitasha Exp $
+#include "chat.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,12 +9,7 @@
 #include "map.h"
 #include "clif.h"
 #include "pc.h"
-#include "chat.h"
 #include "npc.h"
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
 int  chat_triggerevent (struct chat_data *cd);
 

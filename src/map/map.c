@@ -1,20 +1,16 @@
-// $Id: map.c,v 1.6 2004/09/25 17:37:01 MouseJstr Exp $
+#include "map.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#ifdef LCCWIN32
-#include <winsock.h>
-#else
 #include <netdb.h>
-#endif
 
 #include "../common/core.h"
 #include "../common/timer.h"
 #include "../common/db.h"
 #include "../common/grfio.h"
 #include "../common/mt_rand.h"
-#include "map.h"
 #include "chrif.h"
 #include "clif.h"
 #include "intif.h"
@@ -33,10 +29,6 @@
 #include "../common/nullpo.h"
 #include "../common/socket.h"
 #include "magic.h"
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
 // 極力 staticでローカルに収める
 static struct dbt *id_db = NULL;

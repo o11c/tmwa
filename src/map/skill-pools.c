@@ -20,10 +20,6 @@
 #include "skill.h"
 #include "../common/socket.h"
 
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
-
 int  skill_pool_skills[MAX_POOL_SKILLS];
 int  skill_pool_skills_size = 0;
 

@@ -1,4 +1,5 @@
-// $Id: itemdb.c,v 1.3 2004/09/25 05:32:18 MouseJstr Exp $
+#include "itemdb.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,15 +9,10 @@
 #include "../common/nullpo.h"
 #include "map.h"
 #include "battle.h"
-#include "itemdb.h"
 #include "script.h"
 #include "pc.h"
 #include "../common/socket.h"
 #include "../common/mt_rand.h"
-
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
 
 #define MAX_RANDITEM	2000
 

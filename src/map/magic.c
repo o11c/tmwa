@@ -5,8 +5,6 @@
 
 #include "magic-interpreter.h"
 
-#undef DEBUG
-
 static char *magic_preprocess_message (character_t * character, char *start,
                                        char *end)
 {
@@ -92,10 +90,6 @@ int magic_message (character_t * caster, char *spell_, size_t spell_len)
         else
             effects = NULL;
 
-#ifdef DEBUG
-        fprintf (stderr, "Found spell `%s', triggered = %d\n", spell_,
-                 effects != NULL);
-#endif
         if (caster->status.option & OPTION_HIDE)
             return 0;           // No spellcasting while hidden
 

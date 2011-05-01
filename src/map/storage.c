@@ -1,5 +1,4 @@
-// Copyright (c) Athena Dev Teams - Licensed under GNU GPL
-// For more information, see LICENCE in the main folder
+#include "storage.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,7 +7,6 @@
 #include "../common/db.h"
 #include "../common/nullpo.h"
 
-#include "storage.h"
 #include "chrif.h"
 #include "itemdb.h"
 #include "clif.h"

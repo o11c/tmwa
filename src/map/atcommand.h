@@ -1,6 +1,5 @@
-// $Id: atcommand.h 148 2004-09-30 14:05:37Z MouseJstr $
-#ifndef _ATCOMMAND_H_
-#define _ATCOMMAND_H_
+#ifndef ATCOMMAND_H
+#define ATCOMMAND_H
 
 #include "map.h"
 
@@ -213,4 +212,4 @@ int  msg_config_read (const char *cfgName);
 void log_atcommand (struct map_session_data *sd, const char *fmt, ...);
 void gm_log (const char *fmt, ...);
 
-#endif
+#endif // ATCOMMAND_H

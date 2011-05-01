@@ -1,6 +1,5 @@
-// $Id: itemdb.h,v 1.3 2004/09/25 05:32:18 MouseJstr Exp $
-#ifndef _ITEMDB_H_
-#define _ITEMDB_H_
+#ifndef ITEMDB_H
+#define ITEMDB_H
 
 #include "map.h"
 
@@ -79,4 +78,4 @@ void itemdb_reload (void);
 void do_final_itemdb (void);
 int  do_init_itemdb (void);
 
-#endif
+#endif // ITEMDB_H

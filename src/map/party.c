@@ -25,9 +25,9 @@ void party_send_xyhp_timer (timer_id tid, tick_t tick, custom_id_t id, custom_da
  * 終了
  *------------------------------------------
  */
-static void party_db_final (db_key_t key, db_val_t data, va_list ap)
+static void party_db_final (db_key_t UNUSED, db_val_t data, va_list UNUSED)
 {
-    free (data);
+    free (data.p);
 }
 
 void do_final_party (void)
@@ -48,12 +48,12 @@ void do_init_party (void)
 // 検索
 struct party *party_search (int party_id)
 {
-    return (struct party *)numdb_search (party_db, party_id);
+    return (struct party *)numdb_search (party_db, party_id).p;
 }
 
-void party_searchname_sub (db_key_t key, db_val_t data, va_list ap)
+void party_searchname_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
-    struct party *p = (struct party *) data, **dst;
+    struct party *p = (struct party *) data.p, **dst;
     char *str;
     str = va_arg (ap, char *);
     dst = va_arg (ap, struct party **);
@@ -106,7 +106,7 @@ int party_created (int account_id, int fail, int party_id, char *name)
         struct party *p;
         sd->status.party_id = party_id;
 
-        if ((p = (struct party *)numdb_search (party_db, party_id)) != NULL)
+        if ((p = (struct party *)numdb_search (party_db, party_id).p) != NULL)
         {
             printf ("party_created(): ID already exists!\n");
             exit (1);
@@ -115,7 +115,7 @@ int party_created (int account_id, int fail, int party_id, char *name)
         CREATE (p, struct party, 1);
         p->party_id = party_id;
         memcpy (p->name, name, 24);
-        numdb_insert (party_db, party_id, p);
+        numdb_insert (party_db, party_id, (void *)p);
 
         /* The party was created successfully. */
         clif_party_created (sd, 0);
@@ -195,10 +195,10 @@ int party_recv_info (struct party *sp)
 
     nullpo_retr (0, sp);
 
-    if ((p = (struct party *)numdb_search (party_db, (numdb_key_t)sp->party_id)) == NULL)
+    if ((p = (struct party *)numdb_search (party_db, (numdb_key_t)sp->party_id).p) == NULL)
     {
         CREATE (p, struct party, 1);
-        numdb_insert (party_db, (numdb_key_t)sp->party_id, p);
+        numdb_insert (party_db, (numdb_key_t)sp->party_id, (void *)p);
 
         // 最初のロードなのでユーザーのチェックを行う
         party_check_member (sp);
@@ -378,7 +378,7 @@ int party_member_added (int party_id, int account_id, int flag)
 
 // パーティ除名要求
 int party_removemember (struct map_session_data *sd, int account_id,
-                        char *name)
+                        char *UNUSED)
 {
     struct party *p;
     int  i;
@@ -429,7 +429,7 @@ int party_leave (struct map_session_data *sd)
 }
 
 // パーティメンバが脱退した
-int party_member_leaved (int party_id, int account_id, char *name)
+int party_member_left (int party_id, int account_id, char *name)
 {
     struct map_session_data *sd = map_id2sd (account_id);
     struct party *p = party_search (party_id);
@@ -439,7 +439,7 @@ int party_member_leaved (int party_id, int account_id, char *name)
         for (i = 0; i < MAX_PARTY; i++)
             if (p->member[i].account_id == account_id)
             {
-                clif_party_leaved (p, sd, account_id, name, 0x00);
+                clif_party_left (p, sd, account_id, name, 0x00);
                 p->member[i].account_id = 0;
                 p->member[i].sd = NULL;
             }
@@ -464,7 +464,7 @@ int party_broken (int party_id)
     {
         if (p->member[i].sd != NULL)
         {
-            clif_party_leaved (p, p->member[i].sd,
+            clif_party_left (p, p->member[i].sd,
                                p->member[i].account_id, p->member[i].name,
                                0x10);
             p->member[i].sd->status.party_id = 0;
@@ -637,9 +637,9 @@ int party_check_conflict (struct map_session_data *sd)
 }
 
 // 位置やＨＰ通知用
-void party_send_xyhp_timer_sub (db_key_t key, db_val_t data, va_list ap)
+void party_send_xyhp_timer_sub (db_key_t UNUSED, db_val_t data, va_list UNUSED)
 {
-    struct party *p = (struct party *) data;
+    struct party *p = (struct party *) data.p;
     int  i;
 
     nullpo_retv (p);
@@ -668,7 +668,7 @@ void party_send_xyhp_timer_sub (db_key_t key, db_val_t data, va_list ap)
 }
 
 // 位置やＨＰ通知
-void party_send_xyhp_timer (timer_id tid, tick_t tick, custom_id_t id, custom_data_t data)
+void party_send_xyhp_timer (timer_id UNUSED, tick_t tick, custom_id_t UNUSED, custom_data_t UNUSED)
 {
     numdb_foreach (party_db, party_send_xyhp_timer_sub, tick);
 }
@@ -743,7 +743,7 @@ void party_foreachsamemap (int (*func) (struct block_list *, va_list),
     struct party *p;
     va_list ap;
     int  i;
-    int  x0, y0, x1, y1;
+    int  x_0, y_0, x_1, y_1;
     struct block_list *list[MAX_PARTY];
     int  blockcount = 0;
 
@@ -752,10 +752,10 @@ void party_foreachsamemap (int (*func) (struct block_list *, va_list),
     if ((p = party_search (sd->status.party_id)) == NULL)
         return;
 
-    x0 = sd->bl.x - AREA_SIZE;
-    y0 = sd->bl.y - AREA_SIZE;
-    x1 = sd->bl.x + AREA_SIZE;
-    y1 = sd->bl.y + AREA_SIZE;
+    x_0 = sd->bl.x - AREA_SIZE;
+    y_0 = sd->bl.y - AREA_SIZE;
+    x_1 = sd->bl.x + AREA_SIZE;
+    y_1 = sd->bl.y + AREA_SIZE;
 
     va_start (ap, type);
 
@@ -767,8 +767,8 @@ void party_foreachsamemap (int (*func) (struct block_list *, va_list),
             if (sd->bl.m != m->sd->bl.m)
                 continue;
             if (type != 0 &&
-                (m->sd->bl.x < x0 || m->sd->bl.y < y0 ||
-                 m->sd->bl.x > x1 || m->sd->bl.y > y1))
+                (m->sd->bl.x < x_0 || m->sd->bl.y < y_0 ||
+                 m->sd->bl.x > x_1 || m->sd->bl.y > y_1))
                 continue;
             list[blockcount++] = &m->sd->bl;
         }

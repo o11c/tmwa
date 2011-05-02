@@ -54,8 +54,8 @@ int  pc_can_reach (struct map_session_data *, int, int);
 int  pc_walktoxy (struct map_session_data *, int, int);
 int  pc_stop_walking (struct map_session_data *, int);
 int  pc_movepos (struct map_session_data *, int, int);
-int  pc_setpos (struct map_session_data *, char *, int, int, int);
-int  pc_setsavepoint (struct map_session_data *, char *, int, int);
+int  pc_setpos (struct map_session_data *, const char *, int, int, int);
+int  pc_setsavepoint (struct map_session_data *, const char *, int, int);
 int  pc_randomwarp (struct map_session_data *sd, int type);
 int  pc_memo (struct map_session_data *sd, int i);
 
@@ -150,13 +150,13 @@ int  pc_setparam (struct map_session_data *, int, int);
 int  pc_readreg (struct map_session_data *, int);
 int  pc_setreg (struct map_session_data *, int, int);
 char *pc_readregstr (struct map_session_data *sd, int reg);
-int  pc_setregstr (struct map_session_data *sd, int reg, char *str);
-int  pc_readglobalreg (struct map_session_data *, char *);
-int  pc_setglobalreg (struct map_session_data *, char *, int);
-int  pc_readaccountreg (struct map_session_data *, char *);
-int  pc_setaccountreg (struct map_session_data *, char *, int);
-int  pc_readaccountreg2 (struct map_session_data *, char *);
-int  pc_setaccountreg2 (struct map_session_data *, char *, int);
+int  pc_setregstr (struct map_session_data *sd, int reg, const char *str);
+int  pc_readglobalreg (struct map_session_data *, const char *);
+int  pc_setglobalreg (struct map_session_data *, const char *, int);
+int  pc_readaccountreg (struct map_session_data *, const char *);
+int  pc_setaccountreg (struct map_session_data *, const char *, int);
+int  pc_readaccountreg2 (struct map_session_data *, const char *);
+int  pc_setaccountreg2 (struct map_session_data *, const char *, int);
 int  pc_percentrefinery (struct map_session_data *sd, struct item *item);
 
 int  pc_addeventtimer (struct map_session_data *sd, int tick,

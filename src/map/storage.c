@@ -35,9 +35,9 @@ int storage_comp_item (const void *_i1, const void *_i2)
     return i1->nameid - i2->nameid;
 }
 
-static void storage_db_final (db_key_t key, db_val_t data, va_list ap)
+static void storage_db_final (db_key_t UNUSED, db_val_t data, va_list UNUSED)
 {
-    struct storage *stor = (struct storage *) data;
+    struct storage *stor = (struct storage *) data.p;
     free (stor);
 }
 
@@ -64,9 +64,9 @@ void do_final_storage (void)    // by [MC Cameri]
         numdb_final (storage_db, storage_db_final);
 }
 
-static void storage_reconnect_sub (db_key_t key, db_val_t data, va_list ap)
+static void storage_reconnect_sub (db_key_t UNUSED, db_val_t data, va_list UNUSED)
 {                               //Parses storage and saves 'dirty' ones upon reconnect. [Skotlex]
-    struct storage *stor = (struct storage *) data;
+    struct storage *stor = (struct storage *) data.p;
     if (stor->dirty && stor->storage_status == 0)   //Save closed storages.
         storage_storage_save (stor->account_id, stor->dirty == 2 ? 1 : 0);
 }
@@ -80,12 +80,12 @@ void do_reconnect_storage (void)
 struct storage *account2storage (int account_id)
 {
     struct storage *stor =
-        (struct storage *) numdb_search (storage_db, account_id);
+        (struct storage *) numdb_search (storage_db, account_id).p;
     if (stor == NULL)
     {
         CREATE (stor, struct storage, 1);
         stor->account_id = account_id;
-        numdb_insert (storage_db, (numdb_key_t)stor->account_id, stor);
+        numdb_insert (storage_db, (numdb_key_t)stor->account_id, (void *)stor);
     }
     return stor;
 }
@@ -93,13 +93,13 @@ struct storage *account2storage (int account_id)
 // Just to ask storage, without creation
 struct storage *account2storage2 (int account_id)
 {
-    return (struct storage *) numdb_search (storage_db, account_id);
+    return (struct storage *) numdb_search (storage_db, account_id).p;
 }
 
 int storage_delete (int account_id)
 {
     struct storage *stor =
-        (struct storage *) numdb_search (storage_db, account_id);
+        (struct storage *) numdb_search (storage_db, account_id).p;
     if (stor)
     {
         numdb_erase (storage_db, account_id);
@@ -122,7 +122,7 @@ int storage_storageopen (struct map_session_data *sd)
 
     if ((stor =
          (struct storage *) numdb_search (storage_db,
-                                          (numdb_key_t)sd->status.account_id)) == NULL)
+                                          (numdb_key_t)sd->status.account_id).p) == NULL)
     {                           //Request storage.
         intif_request_storage (sd->status.account_id);
         return 1;
@@ -212,7 +212,7 @@ static int storage_delitem (struct map_session_data *sd, struct storage *stor,
  * Add an item to the storage from the inventory.
  *------------------------------------------
  */
-int storage_storageadd (struct map_session_data *sd, int index, int amount)
+int storage_storageadd (struct map_session_data *sd, int idx, int amount)
 {
     struct storage *stor;
 
@@ -222,21 +222,21 @@ int storage_storageadd (struct map_session_data *sd, int index, int amount)
     if ((stor->storage_amount > MAX_STORAGE) || !stor->storage_status)
         return 0;               // storage full / storage closed
 
-    if (index < 0 || index >= MAX_INVENTORY)
+    if (idx < 0 || idx >= MAX_INVENTORY)
         return 0;
 
-    if (sd->status.inventory[index].nameid <= 0)
+    if (sd->status.inventory[idx].nameid <= 0)
         return 0;               //No item on that spot
 
-    if (amount < 1 || amount > sd->status.inventory[index].amount)
+    if (amount < 1 || amount > sd->status.inventory[idx].amount)
         return 0;
 
-//  log_tostorage(sd, index, 0);
-    if (storage_additem (sd, stor, &sd->status.inventory[index], amount) == 0)
+//  log_tostorage(sd, idx, 0);
+    if (storage_additem (sd, stor, &sd->status.inventory[idx], amount) == 0)
     {
         // remove item from inventory
-        pc_unequipinvyitem (sd, index, 0);
-        pc_delitem (sd, index, amount, 0);
+        pc_unequipinvyitem (sd, idx, 0);
+        pc_delitem (sd, idx, amount, 0);
     }
 
     return 1;
@@ -246,7 +246,7 @@ int storage_storageadd (struct map_session_data *sd, int index, int amount)
  * Retrieve an item from the storage.
  *------------------------------------------
  */
-int storage_storageget (struct map_session_data *sd, int index, int amount)
+int storage_storageget (struct map_session_data *sd, int idx, int amount)
 {
     struct storage *stor;
     int  flag;
@@ -254,20 +254,20 @@ int storage_storageget (struct map_session_data *sd, int index, int amount)
     nullpo_retr (0, sd);
     nullpo_retr (0, stor = account2storage2 (sd->status.account_id));
 
-    if (index < 0 || index >= MAX_STORAGE)
+    if (idx < 0 || idx >= MAX_STORAGE)
         return 0;
 
-    if (stor->storage_[index].nameid <= 0)
+    if (stor->storage_[idx].nameid <= 0)
         return 0;               //Nothing there
 
-    if (amount < 1 || amount > stor->storage_[index].amount)
+    if (amount < 1 || amount > stor->storage_[idx].amount)
         return 0;
 
-    if ((flag = pc_additem (sd, &stor->storage_[index], amount)) == 0)
-        storage_delitem (sd, stor, index, amount);
+    if ((flag = pc_additem (sd, &stor->storage_[idx], amount)) == 0)
+        storage_delitem (sd, stor, idx, amount);
     else
         clif_additem (sd, 0, 0, flag);
-//  log_fromstorage(sd, index, 0);
+//  log_fromstorage(sd, idx, 0);
     return 1;
 }
 
@@ -275,7 +275,7 @@ int storage_storageget (struct map_session_data *sd, int index, int amount)
  * Move an item from cart to storage.
  *------------------------------------------
  */
-int storage_storageaddfromcart (struct map_session_data *sd, int index,
+int storage_storageaddfromcart (struct map_session_data *sd, int idx,
                                 int amount)
 {
     struct storage *stor;
@@ -286,17 +286,17 @@ int storage_storageaddfromcart (struct map_session_data *sd, int index,
     if (stor->storage_amount > MAX_STORAGE || !stor->storage_status)
         return 0;               // storage full / storage closed
 
-    if (index < 0 || index >= MAX_CART)
+    if (idx < 0 || idx >= MAX_CART)
         return 0;
 
-    if (sd->status.cart[index].nameid <= 0)
+    if (sd->status.cart[idx].nameid <= 0)
         return 0;               //No item there.
 
-    if (amount < 1 || amount > sd->status.cart[index].amount)
+    if (amount < 1 || amount > sd->status.cart[idx].amount)
         return 0;
 
-    if (storage_additem (sd, stor, &sd->status.cart[index], amount) == 0)
-        pc_cart_delitem (sd, index, amount, 0);
+    if (storage_additem (sd, stor, &sd->status.cart[idx], amount) == 0)
+        pc_cart_delitem (sd, idx, amount, 0);
 
     return 1;
 }
@@ -305,7 +305,7 @@ int storage_storageaddfromcart (struct map_session_data *sd, int index,
  * Get from Storage to the Cart
  *------------------------------------------
  */
-int storage_storagegettocart (struct map_session_data *sd, int index,
+int storage_storagegettocart (struct map_session_data *sd, int idx,
                               int amount)
 {
     struct storage *stor;
@@ -316,17 +316,17 @@ int storage_storagegettocart (struct map_session_data *sd, int index,
     if (!stor->storage_status)
         return 0;
 
-    if (index < 0 || index >= MAX_STORAGE)
+    if (idx < 0 || idx >= MAX_STORAGE)
         return 0;
 
-    if (stor->storage_[index].nameid <= 0)
+    if (stor->storage_[idx].nameid <= 0)
         return 0;               //Nothing there.
 
-    if (amount < 1 || amount > stor->storage_[index].amount)
+    if (amount < 1 || amount > stor->storage_[idx].amount)
         return 0;
 
-    if (pc_cart_additem (sd, &stor->storage_[index], amount) == 0)
-        storage_delitem (sd, stor, index, amount);
+    if (pc_cart_additem (sd, &stor->storage_[idx], amount) == 0)
+        storage_delitem (sd, stor, idx, amount);
 
     return 1;
 }

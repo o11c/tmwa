@@ -95,7 +95,7 @@ db_val_t db_search (struct dbt *table, db_key_t key)
         else
             p = p->right;
     }
-    return NULL;
+    return (db_val_t)(void *)NULL;
 }
 
 // Tree maintainance methods
@@ -390,7 +390,7 @@ db_val_t db_erase (struct dbt *table, db_key_t key)
             p = p->right;
     }
     if (!p)
-        return NULL;
+        return (db_val_t)(void *)NULL;
     db_val_t data = p->data;
     db_rebalance_erase (p, &table->ht[hash]);
     free (p);

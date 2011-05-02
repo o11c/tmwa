@@ -1,6 +1,7 @@
 #ifndef ITEMDB_H
 #define ITEMDB_H
 
+#include "script.h"
 #include "map.h"
 
 struct item_data
@@ -24,8 +25,8 @@ struct item_data
     int  elv;
     int  wlv;
     int  refine;
-    char *use_script;
-    char *equip_script;
+    script_ptr use_script;
+    script_ptr equip_script;
     struct
     {
         unsigned available:1;

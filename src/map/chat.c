@@ -269,7 +269,7 @@ int chat_kickchat (struct map_session_data *sd, char *kickusername)
  *------------------------------------------
  */
 int chat_createnpcchat (struct npc_data *nd, int limit, int pub, int trigger,
-                        char *title, int titlelen, const char *ev)
+                        const char *title, int titlelen, const char *ev)
 {
     struct chat_data *cd;
 

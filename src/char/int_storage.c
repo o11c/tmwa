@@ -82,12 +82,12 @@ bool storage_fromstr (const char *str, struct storage *p)
 /// Get the storage of an account, creating if it does not exist
 struct storage *account2storage (account_t account_id)
 {
-    struct storage *s = (struct storage *) numdb_search (storage_db, (numdb_key_t)account_id);
+    struct storage *s = (struct storage *) numdb_search (storage_db, (numdb_key_t)account_id).p;
     if (!s)
     {
         CREATE (s, struct storage, 1);
         s->account_id = account_id;
-        numdb_insert (storage_db, (numdb_key_t)s->account_id, s);
+        numdb_insert (storage_db, (numdb_key_t)s->account_id, (void *)s);
     }
     return s;
 }
@@ -113,7 +113,7 @@ bool inter_storage_init (void)
         CREATE (s, struct storage, 1);
         if (storage_fromstr (line, s) == 0)
         {
-            numdb_insert (storage_db, (numdb_key_t)s->account_id, s);
+            numdb_insert (storage_db, (numdb_key_t)s->account_id, (void *)s);
         }
         else
         {
@@ -127,7 +127,7 @@ bool inter_storage_init (void)
 
 void storage_db_final (db_key_t UNUSED, db_val_t data, va_list UNUSED)
 {
-    free (data);
+    free (data.p);
 }
 
 void inter_storage_final (void)
@@ -140,7 +140,7 @@ void inter_storage_final (void)
 void inter_storage_save_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
     FILE *fp = va_arg (ap, FILE *);
-    storage_tofile (fp, (struct storage *) data);
+    storage_tofile (fp, (struct storage *) data.p);
 }
 
 /// Save everybody's storage
@@ -164,7 +164,7 @@ bool inter_storage_save (void)
 /// Delete somebody's storage
 void inter_storage_delete (account_t account_id)
 {
-    struct storage *s = (struct storage *) numdb_search (storage_db, (numdb_key_t)account_id);
+    struct storage *s = (struct storage *) numdb_search (storage_db, (numdb_key_t)account_id).p;
     if (s)
     {
         numdb_erase (storage_db, (numdb_key_t)account_id);

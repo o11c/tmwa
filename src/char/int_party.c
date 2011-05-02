@@ -90,7 +90,7 @@ bool inter_party_init (void)
         {
             if (p->party_id >= party_newid)
                 party_newid = p->party_id + 1;
-            numdb_insert (party_db, (numdb_key_t)p->party_id, p);
+            numdb_insert (party_db, (numdb_key_t)p->party_id, (void *)p);
             party_check_empty (p);
         }
         else
@@ -108,7 +108,7 @@ bool inter_party_init (void)
 void inter_party_save_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
     FILE *fp = va_arg (ap, FILE *);
-    inter_party_tofile (fp, (struct party *) data);
+    inter_party_tofile (fp, (struct party *) data.p);
 }
 
 /// Save all parties
@@ -129,7 +129,7 @@ bool inter_party_save (void)
 /// Check if a party has the name
 void search_partyname_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
-    struct party *p = (struct party *) data;
+    struct party *p = (struct party *) data.p;
     const char *str = va_arg (ap, const char *);
     struct party **dst = va_arg (ap, struct party **);
     if (strcasecmp (p->name, str) == 0)
@@ -181,7 +181,7 @@ bool party_check_empty (struct party *p)
 /// Checks if player is in the party, but only if it isn't the target party
 void party_check_conflict_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
-    struct party *p = (struct party *) data;
+    struct party *p = (struct party *) data.p;
 
     party_t party_id = va_arg (ap, party_t);
     account_t account_id = va_arg (ap, account_t);
@@ -371,7 +371,7 @@ void mapif_parse_CreateParty (int fd, account_t account_id, const char *name,
     p->member[0].online = 1;
     p->member[0].lv = lv;
 
-    numdb_insert (party_db, (numdb_key_t)p->party_id, p);
+    numdb_insert (party_db, (numdb_key_t)p->party_id, (void *)p);
 
     mapif_party_created (fd, account_id, p);
     mapif_party_info (fd, p);
@@ -380,7 +380,7 @@ void mapif_parse_CreateParty (int fd, account_t account_id, const char *name,
 /// Request for party info
 void mapif_parse_PartyInfo (int fd, party_t party_id)
 {
-    struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id);
+    struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id).p;
     if (p)
         mapif_party_info (fd, p);
     else
@@ -391,7 +391,7 @@ void mapif_parse_PartyInfo (int fd, party_t party_id)
 void mapif_parse_PartyAddMember (int fd, party_t party_id, account_t account_id,
                                  const char *nick, const char *map, level_t lv)
 {
-    struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id);
+    struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id).p;
     if (!p)
     {
         mapif_party_memberadded (fd, party_id, account_id, 1);
@@ -430,7 +430,7 @@ void mapif_parse_PartyAddMember (int fd, party_t party_id, account_t account_id,
 void mapif_parse_PartyChangeOption (int fd, party_t party_id, account_t account_id,
                                     bool exp, bool item)
 {
-    struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id);
+    struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id).p;
     if (!p)
         return;
 
@@ -450,7 +450,7 @@ void mapif_parse_PartyChangeOption (int fd, party_t party_id, account_t account_
 /// Somebody leaves the party
 void mapif_parse_PartyLeave (int UNUSED, party_t party_id, account_t account_id)
 {
-    struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id);
+    struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id).p;
     if (!p)
         return;
     for (int i = 0; i < MAX_PARTY; i++)
@@ -471,7 +471,7 @@ void mapif_parse_PartyLeave (int UNUSED, party_t party_id, account_t account_id)
 void mapif_parse_PartyChangeMap (int fd, party_t party_id, account_t account_id,
                                  const char *map, bool online, level_t lv)
 {
-    struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id);
+    struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id).p;
     if (!p)
         return;
 
@@ -500,7 +500,7 @@ void mapif_parse_PartyChangeMap (int fd, party_t party_id, account_t account_id,
 /// Request to delete a party
 void mapif_parse_BreakParty (int fd, party_t party_id)
 {
-    struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id);
+    struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id).p;
     if (!p)
         return;
     numdb_erase (party_db, (numdb_key_t)party_id);

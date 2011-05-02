@@ -1,13 +1,16 @@
 #ifndef SCRIPT_H
 #define SCRIPT_H
 
+/// This really should be plain char, but there is a lot of bad code
+typedef unsigned char *script_ptr;
+
 struct script_data
 {
     int  type;
     union
     {
         int  num;
-        char *str;
+        const char *str;
     } u;
 };
 
@@ -22,27 +25,27 @@ struct script_state
     int  start, end;
     int  pos, state;
     int  rid, oid;
-    char *script, *new_script;
+    script_ptr script, new_script;
     int  defsp, new_pos, new_defsp;
 };
 
-unsigned char *parse_script (unsigned char *, int);
+script_ptr parse_script (script_ptr, int);
 typedef struct argrec
 {
-    char *name;
+    const char *name;
     union
     {
         int  i;
-        char *s;
+        const char *s;
     } v;
 } argrec_t;
-int  run_script_l (unsigned char *, int, int, int, int, argrec_t * args);
-int  run_script (unsigned char *, int, int, int);
+int  run_script_l (script_ptr, int, int, int, int, argrec_t * args);
+int  run_script (script_ptr, int, int, int);
 
 struct dbt *script_get_label_db (void);
 struct dbt *script_get_userfunc_db (void);
 
-int  script_config_read (char *cfgName);
+int  script_config_read (const char *cfgName);
 int  do_init_script (void);
 int  do_final_script (void);
 

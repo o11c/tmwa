@@ -20,7 +20,7 @@ int  party_member_added (int party_id, int account_id, int flag);
 int  party_leave (struct map_session_data *sd);
 int  party_removemember (struct map_session_data *sd, int account_id,
                          char *name);
-int  party_member_leaved (int party_id, int account_id, char *name);
+int  party_member_left (int party_id, int account_id, char *name);
 int  party_reply_invite (struct map_session_data *sd, int account_id,
                          int flag);
 int  party_recv_noinfo (int party_id);

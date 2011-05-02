@@ -23,7 +23,11 @@ typedef union db_key_t
     const char* s;
     numdb_key_t i;
 } db_key_t;
-typedef void* db_val_t;
+typedef union db_val_t
+{
+    void* p;
+    intptr_t i;
+} db_val_t;
 typedef uint32_t hash_t;
 typedef void (*db_func_t)(db_key_t, db_val_t, va_list);
 

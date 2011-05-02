@@ -73,3 +73,6 @@ deps.make:
 	done > deps.make
 
 include deps.make
+
+# It isn't feaible to fix this single use of strftime with nonconstant format string
+${BUILD_DIR}/map/script.o: override WARNINGS+=-Wno-error=format-nonliteral

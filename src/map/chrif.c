@@ -147,10 +147,10 @@ int chrif_sendmap (int fd)
 
     WFIFOW (fd, 0) = 0x2afa;
     for (i = 0; i < map_num; i++)
-        if (map[i].alias[0] != '\0')    // [MouseJstr] map aliasing
-            memcpy (WFIFOP (fd, 4 + i * 16), map[i].alias, 16);
+        if (maps[i].alias[0] != '\0')    // [MouseJstr] map aliasing
+            memcpy (WFIFOP (fd, 4 + i * 16), maps[i].alias, 16);
         else
-            memcpy (WFIFOP (fd, 4 + i * 16), map[i].name, 16);
+            memcpy (WFIFOP (fd, 4 + i * 16), maps[i].name, 16);
     WFIFOW (fd, 2) = 4 + i * 16;
     WFIFOSET (fd, WFIFOW (fd, 2));
 
@@ -173,7 +173,7 @@ int chrif_recvmap (int fd)
     port = RFIFOW (fd, 8);
     for (i = 10, j = 0; i < RFIFOW (fd, 2); i += 16, j++)
     {
-        map_setipport (RFIFOP (fd, i), ip, port);
+        map_setipport ((char *)RFIFOP (fd, i), ip, port);
 //      if (battle_config.etc_log)
 //          printf("recv map %d %s\n", j, RFIFOP(fd,i));
     }
@@ -238,7 +238,7 @@ int chrif_changemapserverack (int fd)
         pc_authfail (sd->fd);
         return 0;
     }
-    clif_changemapserver (sd, RFIFOP (fd, 18), RFIFOW (fd, 34),
+    clif_changemapserver (sd, (char *)RFIFOP (fd, 18), RFIFOW (fd, 34),
                           RFIFOW (fd, 36), RFIFOL (fd, 38), RFIFOW (fd, 42));
 
     return 0;
@@ -1191,7 +1191,7 @@ void chrif_parse (int fd)
                 chrif_changemapserverack (fd);
                 break;
             case 0x2b09:
-                map_addchariddb (RFIFOL (fd, 2), RFIFOP (fd, 6));
+                map_addchariddb (RFIFOL (fd, 2), (char *)RFIFOP (fd, 6));
                 break;
             case 0x2b0b:
                 chrif_changedgm (fd);
@@ -1234,7 +1234,7 @@ void chrif_parse (int fd)
  * 今このmap鯖に繋がっているクライアント人数をchar鯖へ送る
  *------------------------------------------
  */
-void send_users_tochar (timer_id tid, tick_t tick, custom_id_t id, custom_data_t data)
+void send_users_tochar (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
 {
     int  users = 0, i;
     struct map_session_data *sd;
@@ -1264,7 +1264,7 @@ void send_users_tochar (timer_id tid, tick_t tick, custom_id_t id, custom_data_t
  * char鯖との接続を確認し、もし切れていたら再度接続する
  *------------------------------------------
  */
-void check_connect_char_server (timer_id tid, tick_t tick, custom_id_t id, custom_data_t data)
+void check_connect_char_server (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
 {
     if (char_fd <= 0 || session[char_fd] == NULL)
     {

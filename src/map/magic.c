@@ -52,13 +52,13 @@ static char *magic_tokenise (char *src, char **parameter)
     return retval;
 }
 
-int magic_message (character_t * caster, char *spell_, size_t spell_len)
+int magic_message (character_t * caster, uint8_t *spell_, size_t UNUSED)
 {
     if (pc_isdead (caster))
         return 0;
 
     int  power = caster->matk1;
-    char *invocation_base = spell_ + 8;
+    char *invocation_base = (char *)spell_ + 8;
     char *source_invocation =
         1 + invocation_base + strlen (caster->status.name);
     spell_t *spell;
@@ -116,7 +116,7 @@ int magic_message (character_t * caster, char *spell_, size_t spell_len)
     return 0;                   /* Not a spell */
 }
 
-int  magic_init (char *conffile);   // must be called after itemdb initialisation
+int  magic_init (const char *conffile);   // must be called after itemdb initialisation
 
 void do_init_magic (void)
 {

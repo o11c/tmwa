@@ -224,7 +224,7 @@ typedef struct effect
             struct effect *true_branch, *false_branch;
         } e_if;
         expr_t *e_sleep;        /* sleep time */
-        unsigned char *e_script;
+        script_ptr e_script;
         struct
         {
             int  id;
@@ -304,7 +304,7 @@ typedef struct spell
 {
     char *name;
     char *invocation;
-    int  index;                 // Relative location in the definitions file
+    int  idx;                 // Relative location in the definitions file
     int  flags;
     int  arg;
     int  spellarg_ty;
@@ -383,7 +383,7 @@ typedef struct cont_activation_record
             effect_t *body;
             int  entities_nr;
             int *entities;
-            int  index;
+            int  idx;
         } c_foreach;
         struct
         {

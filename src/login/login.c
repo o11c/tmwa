@@ -223,7 +223,7 @@ void login_log (const char *fmt, ...)
 /// Determine GM level of account (0 is not a GM)
 gm_level_t isGM (account_t account_id)
 {
-    struct gm_account *p = (struct gm_account*) numdb_search (gm_account_db, (numdb_key_t)account_id);
+    struct gm_account *p = (struct gm_account*) numdb_search (gm_account_db, (numdb_key_t)account_id).p;
     if (!p)
         return 0;
     return p->level;
@@ -273,7 +273,7 @@ void read_gm_account (void)
         struct gm_account *ptr;
         CREATE (ptr, struct gm_account, 1);
         *ptr = p;
-        numdb_insert (gm_account_db, (numdb_key_t)p.account_id, ptr);
+        numdb_insert (gm_account_db, (numdb_key_t)p.account_id, (void *)ptr);
         if (!GM_level)
             count++;
     }

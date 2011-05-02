@@ -18,7 +18,7 @@ struct tmp_path
  * 経路探索補助heap push
  *------------------------------------------
  */
-static void push_heap_path (int *heap, struct tmp_path *tp, int index)
+static void push_heap_path (int *heap, struct tmp_path *tp, int idx)
 {
     int  i, h;
 
@@ -31,9 +31,9 @@ static void push_heap_path (int *heap, struct tmp_path *tp, int index)
     heap[0]++;
 
     for (h = heap[0] - 1, i = (h - 1) / 2;
-         h > 0 && tp[index].cost < tp[heap[i + 1]].cost; i = (h - 1) / 2)
+         h > 0 && tp[idx].cost < tp[heap[i + 1]].cost; i = (h - 1) / 2)
         heap[h + 1] = heap[i + 1], h = i;
-    heap[h + 1] = index;
+    heap[h + 1] = idx;
 }
 
 /*==========================================
@@ -41,7 +41,7 @@ static void push_heap_path (int *heap, struct tmp_path *tp, int index)
  * costが減ったので根の方へ移動
  *------------------------------------------
  */
-static void update_heap_path (int *heap, struct tmp_path *tp, int index)
+static void update_heap_path (int *heap, struct tmp_path *tp, int idx)
 {
     int  i, h;
 
@@ -49,7 +49,7 @@ static void update_heap_path (int *heap, struct tmp_path *tp, int index)
     nullpo_retv (tp);
 
     for (h = 0; h < heap[0]; h++)
-        if (heap[h + 1] == index)
+        if (heap[h + 1] == idx)
             break;
     if (h == heap[0])
     {
@@ -57,9 +57,9 @@ static void update_heap_path (int *heap, struct tmp_path *tp, int index)
         exit (1);
     }
     for (i = (h - 1) / 2;
-         h > 0 && tp[index].cost < tp[heap[i + 1]].cost; i = (h - 1) / 2)
+         h > 0 && tp[idx].cost < tp[heap[i + 1]].cost; i = (h - 1) / 2)
         heap[h + 1] = heap[i + 1], h = i;
-    heap[h + 1] = index;
+    heap[h + 1] = idx;
 }
 
 /*==========================================
@@ -101,16 +101,16 @@ static int pop_heap_path (int *heap, struct tmp_path *tp)
  * 現在の点のcost計算
  *------------------------------------------
  */
-static int calc_cost (struct tmp_path *p, int x1, int y1)
+static int calc_cost (struct tmp_path *p, int x_1, int y_1)
 {
     int  xd, yd;
 
     nullpo_retr (0, p);
 
-    xd = x1 - p->x;
+    xd = x_1 - p->x;
     if (xd < 0)
         xd = -xd;
-    yd = y1 - p->y;
+    yd = y_1 - p->y;
     if (yd < 0)
         yd = -yd;
     return (xd + yd) * 10 + p->dist;
@@ -121,7 +121,7 @@ static int calc_cost (struct tmp_path *p, int x1, int y1)
  *------------------------------------------
  */
 static int add_path (int *heap, struct tmp_path *tp, int x, int y, int dist,
-                     int dir, int before, int x1, int y1)
+                     int dir, int before, int x_1, int y_1)
 {
     int  i;
 
@@ -137,7 +137,7 @@ static int add_path (int *heap, struct tmp_path *tp, int x, int y, int dist,
             tp[i].dist = dist;
             tp[i].dir = dir;
             tp[i].before = before;
-            tp[i].cost = calc_cost (&tp[i], x1, y1);
+            tp[i].cost = calc_cost (&tp[i], x_1, y_1);
             if (tp[i].flag)
                 push_heap_path (heap, tp, i);
             else
@@ -155,7 +155,7 @@ static int add_path (int *heap, struct tmp_path *tp, int x, int y, int dist,
     tp[i].dist = dist;
     tp[i].dir = dir;
     tp[i].before = before;
-    tp[i].cost = calc_cost (&tp[i], x1, y1);
+    tp[i].cost = calc_cost (&tp[i], x_1, y_1);
     tp[i].flag = 0;
     push_heap_path (heap, tp, i);
 
@@ -183,41 +183,41 @@ static int can_place (struct map_data *m, int x, int y, int flag)
 }
 
 /*==========================================
- * (x0,y0)から(x1,y1)へ1歩で移動可能か計算
+ * (x_0,y_0)から(x_1,y_1)へ1歩で移動可能か計算
  *------------------------------------------
  */
-static int can_move (struct map_data *m, int x0, int y0, int x1, int y1,
+static int can_move (struct map_data *m, int x_0, int y_0, int x_1, int y_1,
                      int flag)
 {
     nullpo_retr (0, m);
 
-    if (x0 - x1 < -1 || x0 - x1 > 1 || y0 - y1 < -1 || y0 - y1 > 1)
+    if (x_0 - x_1 < -1 || x_0 - x_1 > 1 || y_0 - y_1 < -1 || y_0 - y_1 > 1)
         return 0;
-    if (x1 < 0 || y1 < 0 || x1 >= m->xs || y1 >= m->ys)
+    if (x_1 < 0 || y_1 < 0 || x_1 >= m->xs || y_1 >= m->ys)
         return 0;
-    if (!can_place (m, x0, y0, flag))
+    if (!can_place (m, x_0, y_0, flag))
         return 0;
-    if (!can_place (m, x1, y1, flag))
+    if (!can_place (m, x_1, y_1, flag))
         return 0;
-    if (x0 == x1 || y0 == y1)
+    if (x_0 == x_1 || y_0 == y_1)
         return 1;
-    if (!can_place (m, x0, y1, flag) || !can_place (m, x1, y0, flag))
+    if (!can_place (m, x_0, y_1, flag) || !can_place (m, x_1, y_0, flag))
         return 0;
     return 1;
 }
 
 /*==========================================
- * (x0,y0)から(dx,dy)方向へcountセル分
+ * (x_0,y_0)から(dx,dy)方向へcountセル分
  * 吹き飛ばしたあとの座標を所得
  *------------------------------------------
  */
-int path_blownpos (int m, int x0, int y0, int dx, int dy, int count)
+int path_blownpos (int m, int x_0, int y_0, int dx, int dy, int count)
 {
     struct map_data *md;
 
-    if (!map[m].gat)
+    if (!maps[m].gat)
         return -1;
-    md = &map[m];
+    md = &maps[m];
 
     if (count > 15)
     {                           // 最大10マスに制限
@@ -235,10 +235,10 @@ int path_blownpos (int m, int x0, int y0, int dx, int dy, int count)
 
     while ((count--) > 0 && (dx != 0 || dy != 0))
     {
-        if (!can_move (md, x0, y0, x0 + dx, y0 + dy, 0))
+        if (!can_move (md, x_0, y_0, x_0 + dx, y_0 + dy, 0))
         {
-            int  fx = (dx != 0 && can_move (md, x0, y0, x0 + dx, y0, 0));
-            int  fy = (dy != 0 && can_move (md, x0, y0, x0, y0 + dy, 0));
+            int  fx = (dx != 0 && can_move (md, x_0, y_0, x_0 + dx, y_0, 0));
+            int  fy = (dy != 0 && can_move (md, x_0, y_0, x_0, y_0 + dy, 0));
             if (fx && fy)
             {
                 if (rand () & 1)
@@ -251,18 +251,18 @@ int path_blownpos (int m, int x0, int y0, int dx, int dy, int count)
             if (!fy)
                 dy = 0;
         }
-        x0 += dx;
-        y0 += dy;
+        x_0 += dx;
+        y_0 += dy;
     }
-    return (x0 << 16) | y0;
+    return (x_0 << 16) | y_0;
 }
 
 /*==========================================
- * path探索 (x0,y0)->(x1,y1)
+ * path探索 (x_0,y_0)->(x_1,y_1)
  *------------------------------------------
  */
-int path_search (struct walkpath_data *wpd, int m, int x0, int y0, int x1,
-                 int y1, int flag)
+int path_search (struct walkpath_data *wpd, int m, int x_0, int y_0, int x_1,
+                 int y_1, int flag)
 {
     int  heap[MAX_HEAP + 1];
     struct tmp_path tp[MAX_WALKPATH * MAX_WALKPATH];
@@ -272,21 +272,21 @@ int path_search (struct walkpath_data *wpd, int m, int x0, int y0, int x1,
 
     nullpo_retr (0, wpd);
 
-    if (!map[m].gat)
+    if (!maps[m].gat)
         return -1;
-    md = &map[m];
-    if (x1 < 0 || x1 >= md->xs || y1 < 0 || y1 >= md->ys
-        || (i = read_gatp (md, x1, y1)) == 1 || i == 5)
+    md = &maps[m];
+    if (x_1 < 0 || x_1 >= md->xs || y_1 < 0 || y_1 >= md->ys
+        || (i = read_gatp (md, x_1, y_1)) == 1 || i == 5)
         return -1;
 
     // easy
-    dx = (x1 - x0 < 0) ? -1 : 1;
-    dy = (y1 - y0 < 0) ? -1 : 1;
-    for (x = x0, y = y0, i = 0; x != x1 || y != y1;)
+    dx = (x_1 - x_0 < 0) ? -1 : 1;
+    dy = (y_1 - y_0 < 0) ? -1 : 1;
+    for (x = x_0, y = y_0, i = 0; x != x_1 || y != y_1;)
     {
         if (i >= sizeof (wpd->path))
             return -1;
-        if (x != x1 && y != y1)
+        if (x != x_1 && y != y_1)
         {
             if (!can_move (md, x, y, x + dx, y + dy, flag))
                 break;
@@ -295,7 +295,7 @@ int path_search (struct walkpath_data *wpd, int m, int x0, int y0, int x1,
             wpd->path[i++] =
                 (dx < 0) ? ((dy > 0) ? 1 : 3) : ((dy < 0) ? 5 : 7);
         }
-        else if (x != x1)
+        else if (x != x_1)
         {
             if (!can_move (md, x, y, x + dx, y, flag))
                 break;
@@ -303,13 +303,13 @@ int path_search (struct walkpath_data *wpd, int m, int x0, int y0, int x1,
             wpd->path[i++] = (dx < 0) ? 2 : 6;
         }
         else
-        {                       // y!=y1
+        {                       // y!=y_1
             if (!can_move (md, x, y, x, y + dy, flag))
                 break;
             y += dy;
             wpd->path[i++] = (dy > 0) ? 0 : 4;
         }
-        if (x == x1 && y == y1)
+        if (x == x_1 && y == y_1)
         {
             wpd->path_len = i;
             wpd->path_pos = 0;
@@ -322,16 +322,16 @@ int path_search (struct walkpath_data *wpd, int m, int x0, int y0, int x1,
 
     memset (tp, 0, sizeof (tp));
 
-    i = calc_index (x0, y0);
-    tp[i].x = x0;
-    tp[i].y = y0;
+    i = calc_index (x_0, y_0);
+    tp[i].x = x_0;
+    tp[i].y = y_0;
     tp[i].dist = 0;
     tp[i].dir = 0;
     tp[i].before = 0;
-    tp[i].cost = calc_cost (&tp[i], x1, y1);
+    tp[i].cost = calc_cost (&tp[i], x_1, y_1);
     tp[i].flag = 0;
     heap[0] = 0;
-    push_heap_path (heap, tp, calc_index (x0, y0));
+    push_heap_path (heap, tp, calc_index (x_0, y_0));
     while (1)
     {
         int  e = 0, fromdir;
@@ -341,11 +341,11 @@ int path_search (struct walkpath_data *wpd, int m, int x0, int y0, int x1,
         rp = pop_heap_path (heap, tp);
         x = tp[rp].x;
         y = tp[rp].y;
-        if (x == x1 && y == y1)
+        if (x == x_1 && y == y_1)
         {
             int  len, j;
 
-            for (len = 0, i = rp; len < 100 && i != calc_index (x0, y0);
+            for (len = 0, i = rp; len < 100 && i != calc_index (x_0, y_0);
                  i = tp[i].before, len++);
             if (len == 100 || len >= sizeof (wpd->path))
                 return -1;
@@ -360,28 +360,28 @@ int path_search (struct walkpath_data *wpd, int m, int x0, int y0, int x1,
         fromdir = tp[rp].dir;
         if (can_move (md, x, y, x + 1, y - 1, flag))
             e += add_path (heap, tp, x + 1, y - 1, tp[rp].dist + 14, 5, rp,
-                           x1, y1);
+                           x_1, y_1);
         if (can_move (md, x, y, x + 1, y, flag))
-            e += add_path (heap, tp, x + 1, y, tp[rp].dist + 10, 6, rp, x1,
-                           y1);
+            e += add_path (heap, tp, x + 1, y, tp[rp].dist + 10, 6, rp, x_1,
+                           y_1);
         if (can_move (md, x, y, x + 1, y + 1, flag))
             e += add_path (heap, tp, x + 1, y + 1, tp[rp].dist + 14, 7, rp,
-                           x1, y1);
+                           x_1, y_1);
         if (can_move (md, x, y, x, y + 1, flag))
-            e += add_path (heap, tp, x, y + 1, tp[rp].dist + 10, 0, rp, x1,
-                           y1);
+            e += add_path (heap, tp, x, y + 1, tp[rp].dist + 10, 0, rp, x_1,
+                           y_1);
         if (can_move (md, x, y, x - 1, y + 1, flag))
             e += add_path (heap, tp, x - 1, y + 1, tp[rp].dist + 14, 1, rp,
-                           x1, y1);
+                           x_1, y_1);
         if (can_move (md, x, y, x - 1, y, flag))
-            e += add_path (heap, tp, x - 1, y, tp[rp].dist + 10, 2, rp, x1,
-                           y1);
+            e += add_path (heap, tp, x - 1, y, tp[rp].dist + 10, 2, rp, x_1,
+                           y_1);
         if (can_move (md, x, y, x - 1, y - 1, flag))
             e += add_path (heap, tp, x - 1, y - 1, tp[rp].dist + 14, 3, rp,
-                           x1, y1);
+                           x_1, y_1);
         if (can_move (md, x, y, x, y - 1, flag))
-            e += add_path (heap, tp, x, y - 1, tp[rp].dist + 10, 4, rp, x1,
-                           y1);
+            e += add_path (heap, tp, x, y - 1, tp[rp].dist + 10, 4, rp, x_1,
+                           y_1);
         tp[rp].flag = 1;
         if (e || heap[0] >= MAX_HEAP - 5)
             return -1;

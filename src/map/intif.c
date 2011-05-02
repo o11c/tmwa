@@ -47,7 +47,7 @@ extern int char_fd;             // inter serverのfdはchar_fdを使う
 // inter serverへの送信
 
 // Message for all GMs on all map servers
-int intif_GMmessage (char *mes, int len, int flag)
+int intif_GMmessage (const char *mes, int len, int flag)
 {
     int  lp = (flag & 0x10) ? 8 : 4;
     WFIFOW (inter_fd, 0) = 0x3000;
@@ -172,7 +172,7 @@ int intif_create_party (struct map_session_data *sd, char *name)
     WFIFOL (inter_fd, 2) = sd->status.account_id;
     memcpy (WFIFOP (inter_fd, 6), name, 24);
     memcpy (WFIFOP (inter_fd, 30), sd->status.name, 24);
-    memcpy (WFIFOP (inter_fd, 54), map[sd->bl.m].name, 16);
+    memcpy (WFIFOP (inter_fd, 54), maps[sd->bl.m].name, 16);
     WFIFOW (inter_fd, 70) = sd->status.base_level;
     WFIFOSET (inter_fd, 72);
 //  if(battle_config.etc_log)
@@ -204,7 +204,7 @@ int intif_party_addmember (int party_id, int account_id)
         WFIFOL (inter_fd, 2) = party_id;
         WFIFOL (inter_fd, 6) = account_id;
         memcpy (WFIFOP (inter_fd, 10), sd->status.name, 24);
-        memcpy (WFIFOP (inter_fd, 34), map[sd->bl.m].name, 16);
+        memcpy (WFIFOP (inter_fd, 34), maps[sd->bl.m].name, 16);
         WFIFOW (inter_fd, 50) = sd->status.base_level;
         WFIFOSET (inter_fd, 52);
     }
@@ -243,7 +243,7 @@ int intif_party_changemap (struct map_session_data *sd, int online)
         WFIFOW (inter_fd, 0) = 0x3025;
         WFIFOL (inter_fd, 2) = sd->status.party_id;
         WFIFOL (inter_fd, 6) = sd->status.account_id;
-        memcpy (WFIFOP (inter_fd, 10), map[sd->bl.m].name, 16);
+        memcpy (WFIFOP (inter_fd, 10), maps[sd->bl.m].name, 16);
         WFIFOB (inter_fd, 26) = online;
         WFIFOW (inter_fd, 27) = sd->status.base_level;
         WFIFOSET (inter_fd, 29);
@@ -302,15 +302,15 @@ int intif_parse_WisMessage (int fd)
             ("intif_parse_wismessage: id: %d, from: %s, to: %s, message: '%s'\n",
              RFIFOL (fd, 4), RFIFOP (fd, 8), RFIFOP (fd, 32), RFIFOP (fd,
                                                                       56));
-    sd = map_nick2sd (RFIFOP (fd, 32)); // Searching destination player
-    if (sd != NULL && strcmp (sd->status.name, RFIFOP (fd, 32)) == 0)
+    sd = map_nick2sd ((char *)RFIFOP (fd, 32)); // Searching destination player
+    if (sd != NULL && strcmp (sd->status.name, (char *)RFIFOP (fd, 32)) == 0)
     {                           // exactly same name (inter-server have checked the name before)
         // if player ignore all
         if (sd->ignoreAll == 1)
             intif_wis_replay (RFIFOL (fd, 4), 2);   // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
         else
         {
-            wisp_source = RFIFOP (fd, 8);   // speed up
+            wisp_source = (char *)RFIFOP (fd, 8);   // speed up
             // if player ignore the source character
             for (i = 0; i < (sizeof (sd->ignore) / sizeof (sd->ignore[0]));
                  i++)
@@ -322,7 +322,7 @@ int intif_parse_WisMessage (int fd)
             // if source player not found in ignore list
             if (i == (sizeof (sd->ignore) / sizeof (sd->ignore[0])))
             {
-                clif_wis_message (sd->fd, RFIFOP (fd, 8), RFIFOP (fd, 56),
+                clif_wis_message (sd->fd, (char *)RFIFOP (fd, 8), (char *)RFIFOP (fd, 56),
                                   RFIFOW (fd, 2) - 56);
                 intif_wis_replay (RFIFOL (fd, 4), 0);   // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
             }
@@ -339,8 +339,8 @@ int intif_parse_WisEnd (int fd)
     struct map_session_data *sd;
 
     if (battle_config.etc_log)
-        printf ("intif_parse_wisend: player: %s, flag: %d\n", RFIFOP (fd, 2), RFIFOB (fd, 26)); // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
-    sd = map_nick2sd (RFIFOP (fd, 2));
+        printf ("intif_parse_wisend: player: %s, flag: %d\n", (char *)RFIFOP (fd, 2), RFIFOB (fd, 26)); // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
+    sd = map_nick2sd ((char *)RFIFOP (fd, 2));
     if (sd != NULL)
         clif_wis_end (sd->fd, RFIFOB (fd, 26));
 
@@ -467,7 +467,7 @@ int intif_parse_PartyCreated (int fd)
     if (battle_config.etc_log)
         printf ("intif: party created\n");
     party_created (RFIFOL (fd, 2), RFIFOB (fd, 6), RFIFOL (fd, 7),
-                   RFIFOP (fd, 11));
+                   (char *)RFIFOP (fd, 11));
     return 0;
 }
 
@@ -516,9 +516,9 @@ int intif_parse_PartyOptionChanged (int fd)
 int intif_parse_PartyMemberLeaved (int fd)
 {
     if (battle_config.etc_log)
-        printf ("intif: party member leaved %d %d %s\n", RFIFOL (fd, 2),
+        printf ("intif: party member left %d %d %s\n", RFIFOL (fd, 2),
                 RFIFOL (fd, 6), RFIFOP (fd, 10));
-    party_member_leaved (RFIFOL (fd, 2), RFIFOL (fd, 6), RFIFOP (fd, 10));
+    party_member_left (RFIFOL (fd, 2), RFIFOL (fd, 6), (char *)RFIFOP (fd, 10));
     return 0;
 }
 
@@ -534,7 +534,7 @@ int intif_parse_PartyMove (int fd)
 {
 //  if(battle_config.etc_log)
 //      printf("intif: party move %d %d %s %d %d\n",RFIFOL(fd,2),RFIFOL(fd,6),RFIFOP(fd,10),RFIFOB(fd,26),RFIFOW(fd,27));
-    party_recv_movemap (RFIFOL (fd, 2), RFIFOL (fd, 6), RFIFOP (fd, 10),
+    party_recv_movemap (RFIFOL (fd, 2), RFIFOL (fd, 6), (char *)RFIFOP (fd, 10),
                         RFIFOB (fd, 26), RFIFOW (fd, 27));
     return 0;
 }
@@ -544,7 +544,7 @@ int intif_parse_PartyMessage (int fd)
 {
 //  if(battle_config.etc_log)
 //      printf("intif_parse_PartyMessage: %s\n",RFIFOP(fd,12));
-    party_recv_message (RFIFOL (fd, 4), RFIFOL (fd, 8), RFIFOP (fd, 12),
+    party_recv_message (RFIFOL (fd, 4), RFIFOL (fd, 8), (char *)RFIFOP (fd, 12),
                         RFIFOW (fd, 2) - 12);
     return 0;
 }
@@ -583,7 +583,7 @@ int intif_parse (int fd)
     switch (cmd)
     {
         case 0x3800:
-            clif_GMmessage (NULL, RFIFOP (fd, 4), packet_len - 4, 0);
+            clif_GMmessage (NULL, (char *)RFIFOP (fd, 4), packet_len - 4, 0);
             break;
         case 0x3801:
             intif_parse_WisMessage (fd);

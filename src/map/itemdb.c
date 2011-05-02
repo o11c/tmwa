@@ -45,9 +45,9 @@ void itemdb_reload (void);
  *------------------------------------------
  */
 // name = item alias, so we should find items aliases first. if not found then look for "jname" (full name)
-void itemdb_searchname_sub (db_key_t key, db_val_t data, va_list ap)
+void itemdb_searchname_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
-    struct item_data *item = (struct item_data *) data, **dst;
+    struct item_data *item = (struct item_data *) data.p, **dst;
     char *str;
     str = va_arg (ap, char *);
     dst = va_arg (ap, struct item_data **);
@@ -61,7 +61,7 @@ void itemdb_searchname_sub (db_key_t key, db_val_t data, va_list ap)
  * 名前で検索用
  *------------------------------------------
  */
-int itemdb_searchjname_sub (void *key, void *data, va_list ap)
+int itemdb_searchjname_sub (void *UNUSED, void *data, va_list ap)
 {
     struct item_data *item = (struct item_data *) data, **dst;
     char *str;
@@ -89,7 +89,7 @@ struct item_data *itemdb_searchname (const char *str)
  */
 int itemdb_searchrandomid (int flags)
 {
-    int  nameid = 0, i, index, count;
+    int  nameid = 0, i, idx, count;
     struct random_item_data *list = NULL;
 
     struct
@@ -121,10 +121,10 @@ int itemdb_searchrandomid (int flags)
         {
             for (i = 0; i < 1000; i++)
             {
-                index = MRAND (count);
-                if (MRAND (1000000) < list[index].per)
+                idx = MRAND (count);
+                if (MRAND (1000000) < list[idx].per)
                 {
-                    nameid = list[index].nameid;
+                    nameid = list[idx].nameid;
                     break;
                 }
             }
@@ -139,7 +139,7 @@ int itemdb_searchrandomid (int flags)
  */
 struct item_data *itemdb_exists (int nameid)
 {
-    return (struct item_data *)numdb_search (item_db, nameid);
+    return (struct item_data *)numdb_search (item_db, nameid).p;
 }
 
 /*==========================================
@@ -148,12 +148,12 @@ struct item_data *itemdb_exists (int nameid)
  */
 struct item_data *itemdb_search (int nameid)
 {
-    struct item_data *id = (struct item_data *)numdb_search (item_db, nameid);
+    struct item_data *id = (struct item_data *)numdb_search (item_db, nameid).p;
     if (id)
         return id;
 
     id = (struct item_data *) calloc (1, sizeof (struct item_data));
-    numdb_insert (item_db, nameid, id);
+    numdb_insert (item_db, nameid, (void *)id);
 
     id->nameid = nameid;
     id->value_buy = 10;
@@ -255,7 +255,7 @@ int itemdb_isdropable (int nameid)
 static int itemdb_read_itemslottable (void)
 {
     char *buf, *p;
-    int  s;
+    size_t s;
 
     buf = (char *)grfio_reads ("data\\itemslottable.txt", &s);
     if (buf == NULL)
@@ -290,10 +290,11 @@ static int itemdb_readdb (void)
     char line[1024];
     int  ln = 0, lines = 0;
     int  nameid, j;
-    char *str[32], *p, *np;
+    char *str[32];
+    script_ptr p, np;
     struct item_data *id;
     int  i = 0;
-    char *filename[] = { "db/item_db.txt", "db/item_db2.txt" };
+    const char *filename[] = { "db/item_db.txt", "db/item_db2.txt" };
 
     for (i = 0; i < 2; i++)
     {
@@ -314,12 +315,12 @@ static int itemdb_readdb (void)
             if (line[0] == '/' && line[1] == '/')
                 continue;
             memset (str, 0, sizeof (str));
-            for (j = 0, np = p = line; j < 17 && p; j++)
+            for (j = 0, np = p = (script_ptr)line; j < 17 && p; j++)
             {
                 while (*p == '\t' || *p == ' ')
                     p++;
-                str[j] = p;
-                p = strchr (p, ',');
+                str[j] = (char *)p;
+                p = (script_ptr)strchr ((char *)p, ',');
                 if (p)
                 {
                     *p++ = 0;
@@ -371,11 +372,11 @@ static int itemdb_readdb (void)
             id->use_script = NULL;
             id->equip_script = NULL;
 
-            if ((p = strchr (np, '{')) == NULL)
+            if ((p = (script_ptr)strchr ((char *)np, '{')) == NULL)
                 continue;
             id->use_script = parse_script (p, lines);
 
-            if ((p = strchr (p + 1, '{')) == NULL)
+            if ((p = (script_ptr)strchr ((char *)p + 1, '{')) == NULL)
                 continue;
             id->equip_script = parse_script (p, lines);
         }
@@ -538,7 +539,7 @@ static int itemdb_read_itemavail (void)
 static int itemdb_read_itemnametable (void)
 {
     char *buf, *p;
-    int  s;
+    size_t s;
 
     buf = (char *)grfio_reads ("data\\idnum2itemdisplaynametable.txt", &s);
 
@@ -584,7 +585,7 @@ static int itemdb_read_itemnametable (void)
 static int itemdb_read_cardillustnametable (void)
 {
     char *buf, *p;
-    int  s;
+    size_t s;
 
     buf = (char *)grfio_reads ("data\\num2cardillustnametable.txt", &s);
 
@@ -666,11 +667,11 @@ static int itemdb_read_noequip (void)
  *
  *------------------------------------------
  */
-static void itemdb_final (db_key_t key, db_val_t data, va_list ap)
+static void itemdb_final (db_key_t UNUSED, db_val_t data, va_list UNUSED)
 {
     struct item_data *id;
 
-    nullpo_retv (id = (struct item_data *)data);
+    nullpo_retv (id = (struct item_data *)data.p);
 
     if (id->use_script)
         free (id->use_script);

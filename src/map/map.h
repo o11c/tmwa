@@ -11,6 +11,8 @@
 #include "../common/timer.h"
 #include "../common/db.h"
 
+#include "script.h"
+
 #ifndef MAX
 #  define MAX(x,y) (((x)>(y)) ? (x) : (y))
 #endif
@@ -224,7 +226,7 @@ struct map_session_data
     int  npc_menu;
     int  npc_amount;
     int  npc_stack, npc_stackmax;
-    char *npc_script, *npc_scriptroot;
+    script_ptr npc_script, npc_scriptroot;
     char *npc_stackbuf;
     char npc_str[256];
     struct
@@ -431,7 +433,7 @@ struct npc_data
     {
         struct
         {
-            char *script;
+            script_ptr script;
             short xs, ys;
             int  timer, timerid, timeramount, nexttimer;
             unsigned int timertick;
@@ -483,9 +485,9 @@ struct mob_data
     struct block_list bl;
     short n;
     short base_class, mob_class, dir, mode;
-    short m, x0, y0, xs, ys;
+    short m, x_0, y_0, xs, ys;
     char name[24];
-    int  spawndelay1, spawndelay2;
+    int  spawndelay_1, spawndelay2;
     struct
     {
         unsigned state:8;
@@ -608,7 +610,7 @@ struct map_data_other_server
     unsigned long ip;
     unsigned int port;
 };
-#define read_gat(m,x,y) (map[m].gat[(x)+(y)*map[m].xs])
+#define read_gat(m,x,y) (maps[m].gat[(x)+(y)*maps[m].xs])
 #define read_gatp(m,x,y) (m->gat[(x)+(y)*m->xs])
 
 struct flooritem_data
@@ -688,12 +690,13 @@ enum
 
 #define LOOK_LAST LOOK_MISC2
 
+// AFAIK the client doesn't support this
 struct chat_data
 {
     struct block_list bl;
 
-    unsigned char pass[8];      /* password */
-    unsigned char title[61];    /* room title MAX 60 */
+    char pass[8];      /* password */
+    char title[61];    /* room title MAX 60 */
     unsigned char limit;        /* join limit */
     unsigned char trigger;
     unsigned char users;        /* current users */
@@ -704,7 +707,7 @@ struct chat_data
     char npc_event[50];
 };
 
-extern struct map_data map[];
+extern struct map_data maps[];
 extern int map_num;
 extern int autosave_interval;
 extern int save_settings;
@@ -748,7 +751,7 @@ int  map_quit (struct map_session_data *);
 int  map_addnpc (int, struct npc_data *);
 
 extern FILE *map_logfile;
-void map_write_log (char *format, ...);
+void map_write_log (const char *format, ...) __attribute__((format(printf, 1, 2)));
 #define MAP_LOG(format, args...) {if (map_logfile) map_write_log(format, ##args);}
 
 #define MAP_LOG_PC(sd, fmt, args...) MAP_LOG("PC%d %d:%d,%d " fmt, sd->status.char_id, sd->bl.m, sd->bl.x, sd->bl.y, ## args)
@@ -766,23 +769,23 @@ int  map_addflooritem (struct item *, int, int, int, int,
 int  map_searchrandfreecell (int, int, int, int);
 
 // キャラid＝＞キャラ名 変換関連
-void map_addchariddb (int charid, char *name);
+void map_addchariddb (int charid, const char *name);
 void map_delchariddb (int charid);
 int  map_reqchariddb (struct map_session_data *sd, int charid);
 char *map_charid2nick (int);
 
 struct map_session_data *map_id2sd (int);
 struct block_list *map_id2bl (int);
-int  map_mapname2mapid (char *);
-int  map_mapname2ipport (char *, int *, int *);
-int  map_setipport (char *name, unsigned long ip, int port);
-int  map_eraseipport (char *name, unsigned long ip, int port);
+int  map_mapname2mapid (const char *);
+int  map_mapname2ipport (const char *, in_addr_t *, in_port_t *);
+int  map_setipport (const char *name, in_addr_t ip, in_port_t port);
+int  map_eraseipport (const char *name, in_addr_t ip, in_port_t port);
 void map_addiddb (struct block_list *);
 void map_deliddb (struct block_list *bl);
 int  map_foreachiddb (db_func_t, ...);
 void map_addnickdb (struct map_session_data *);
 int  map_scriptcont (struct map_session_data *sd, int id);  /* Continues a script either on a spell or on an NPC */
-struct map_session_data *map_nick2sd (char *);
+struct map_session_data *map_nick2sd (const char *);
 int  compare_item (struct item *a, struct item *b);
 
 struct map_session_data *map_get_first_session (void);
@@ -802,11 +805,11 @@ int  map_calc_dir (struct block_list *src, int x, int y);
 
 // path.cより
 int  path_search (struct walkpath_data *, int, int, int, int, int, int);
-int  path_blownpos (int m, int x0, int y0, int dx, int dy, int count);
+int  path_blownpos (int m, int x_0, int y_0, int dx, int dy, int count);
 
 int  map_who (int fd);
 
-void map_helpscreen (void);         // [Valaris]
-int  map_delmap (char *mapname);
+void map_helpscreen (void) __attribute__((noreturn));
+int  map_delmap (const char *mapname);
 
 #endif

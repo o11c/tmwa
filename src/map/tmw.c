@@ -27,7 +27,7 @@
 #include "storage.h"
 #include "trade.h"
 
-int tmw_CheckChatSpam (struct map_session_data *sd, char *message)
+int tmw_CheckChatSpam (struct map_session_data *sd, const char *message)
 {
     nullpo_retr (1, sd);
     time_t now = time (NULL);
@@ -64,7 +64,7 @@ int tmw_CheckChatSpam (struct map_session_data *sd, char *message)
     }
 
     // Penalty for lame, it can stack on top of the repeat penalty.
-    if (tmw_CheckChatLameness (sd, message))
+    if (tmw_CheckChatLameness (message))
         sd->chat_lines_in += battle_config.chat_lame_penalty;
 
     strncpy ((char *) sd->chat_lastmsg, message, battle_config.chat_maxline);
@@ -83,16 +83,14 @@ int tmw_CheckChatSpam (struct map_session_data *sd, char *message)
         (sd->chat_lines_in >= battle_config.chat_spam_warn
          || sd->chat_total_repeats >= battle_config.chat_spam_warn))
     {
-        /* "WARNING: You are about to be automatically banned for spam!" */
-        clif_displaymessage (sd->fd, msg_txt (506));
-        /* "WARNING: Please slow down, do not repeat, and do not SHOUT!" */
-        clif_displaymessage (sd->fd, msg_txt (507));
+        clif_displaymessage (sd->fd, "WARNING: You are about to be automatically banned for spam!");
+        clif_displaymessage (sd->fd, "WARNING: Please slow down, do not repeat, and do not SHOUT!");
     }
 
     return 0;
 }
 
-void tmw_AutoBan(struct map_session_data *sd, char *reason, int length)
+void tmw_AutoBan(struct map_session_data *sd, const char *reason, int length)
 {
     char anotherbuf[512];
 
@@ -105,11 +103,12 @@ void tmw_AutoBan(struct map_session_data *sd, char *reason, int length)
                    sd->status.name, reason);
 
     gm_log ("%s(%d,%d) Server : @autoban %s %dh (%s spam)",
-            map[sd->bl.m].name, sd->bl.x, sd->bl.y,
+            maps[sd->bl.m].name, sd->bl.x, sd->bl.y,
             sd->status.name, length, reason);
 
     /* "You have been banned for %s spamming. Please do not spam." */
-    snprintf (anotherbuf, 511, msg_txt (508), reason);
+    snprintf (anotherbuf, sizeof (anotherbuf),
+              "You have been banned for %s spamming. Please do not spam.", reason);
 
     clif_displaymessage (sd->fd, anotherbuf);
     /* type: 2 - ban (year, month, day, hour, minute, second) */
@@ -118,7 +117,7 @@ void tmw_AutoBan(struct map_session_data *sd, char *reason, int length)
 }
 
 // Compares the length of two strings and returns that of the shorter
-int tmw_ShorterStrlen (char *s1, char *s2)
+int tmw_ShorterStrlen (const char *s1, const char *s2)
 {
     int  s1_len = strlen (s1);
     int  s2_len = strlen (s2);
@@ -126,7 +125,7 @@ int tmw_ShorterStrlen (char *s1, char *s2)
 }
 
 // Returns true if more than 50% of input message is caps or punctuation
-int tmw_CheckChatLameness (struct map_session_data *sd, char *message)
+int tmw_CheckChatLameness (const char *message)
 {
     int  count, lame;
 

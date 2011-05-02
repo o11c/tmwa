@@ -98,11 +98,11 @@ enum
 
 int  mobdb_searchname (const char *str);
 int  mobdb_checkid (const int id);
-int  mob_once_spawn (struct map_session_data *sd, char *mapname,
+int  mob_once_spawn (struct map_session_data *sd, const char *mapname,
                      int x, int y, const char *mobname, int class_, int amount,
                      const char *event);
-int  mob_once_spawn_area (struct map_session_data *sd, char *mapname, int x0,
-                          int y0, int x1, int y1, const char *mobname,
+int  mob_once_spawn_area (struct map_session_data *sd, const char *mapname, int x_0,
+                          int y_0, int x_1, int y_1, const char *mobname,
                           int class_, int amount, const char *event);
 
 int  mob_walktoxy (struct mob_data *md, int x, int y, int easy);
@@ -145,7 +145,6 @@ void mobskill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data
 void mobskill_castend_pos (timer_id tid, tick_t tick, custom_id_t id, custom_data_t data);
 int  mob_summonslave (struct mob_data *md2, int *value, int amount, int flag);
 
-int  mob_gvmobcheck (struct map_session_data *sd, struct block_list *bl) __attribute__((deprecated));
 void mob_reload (void);
 
 #endif // MOB_H

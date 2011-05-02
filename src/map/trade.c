@@ -101,13 +101,13 @@ void trade_tradeack (struct map_session_data *sd, int type)
  * アイテム追加
  *------------------------------------------
  */
-void trade_tradeadditem (struct map_session_data *sd, int index, int amount)
+void trade_tradeadditem (struct map_session_data *sd, int idx, int amount)
 {
     struct map_session_data *target_sd;
     struct item_data *id;
     int  trade_i;
     int  trade_weight = 0;
-    int  free = 0;
+    int free_ = 0;
     int  c;
     int  i;
 
@@ -116,15 +116,15 @@ void trade_tradeadditem (struct map_session_data *sd, int index, int amount)
     if (((target_sd = map_id2sd (sd->trade_partner)) != NULL)
         && (sd->deal_locked < 1))
     {
-        if (index < 2 || index >= MAX_INVENTORY + 2)
+        if (idx < 2 || idx >= MAX_INVENTORY + 2)
         {
-            if (index == 0 && amount > 0 && amount <= sd->status.zeny)
+            if (idx == 0 && amount > 0 && amount <= sd->status.zeny)
             {
                 sd->deal_zeny = amount;
                 clif_tradeadditem (sd, target_sd, 0, amount);
             }
         }
-        else if (amount <= sd->status.inventory[index - 2].amount
+        else if (amount <= sd->status.inventory[idx - 2].amount
                  && amount > 0)
         {
             // determine free slots of receiver
@@ -132,7 +132,7 @@ void trade_tradeadditem (struct map_session_data *sd, int index, int amount)
             {
                 if (target_sd->status.inventory[i].nameid == 0
                     && target_sd->inventory_data[i] == NULL)
-                    free++;
+                    free_++;
             }
             for (trade_i = 0; trade_i < 10; trade_i++)
             {
@@ -140,20 +140,20 @@ void trade_tradeadditem (struct map_session_data *sd, int index, int amount)
                 {
                     // calculate trade weight
                     trade_weight +=
-                        sd->inventory_data[index - 2]->weight * amount;
+                        sd->inventory_data[idx - 2]->weight * amount;
 
                     // determine if item is a stackable already in receivers inventory, and up free count
                     for (i = 0; i < MAX_INVENTORY; i++)
                     {
                         if (target_sd->status.inventory[i].nameid ==
-                            sd->status.inventory[index - 2].nameid
+                            sd->status.inventory[idx - 2].nameid
                             && target_sd->inventory_data[i] != NULL)
                         {
                             id = target_sd->inventory_data[i];
                             if (id->type != 4 && id->type != 5
                                 && id->type != 7 && id->type != 8)
                             {
-                                free++;
+                                free_++;
                                 break;
                             }
                         }
@@ -162,29 +162,29 @@ void trade_tradeadditem (struct map_session_data *sd, int index, int amount)
                     if (target_sd->weight + trade_weight >
                         target_sd->max_weight)
                     {
-                        clif_tradeitemok (sd, index, 0, 1); //fail to add item -- the player was over weighted.
+                        clif_tradeitemok (sd, idx, 0, 1); //fail to add item -- the player was over weighted.
                         amount = 0; // [MouseJstr]
                     }
-                    else if (free <= 0)
+                    else if (free_ <= 0)
                     {
-                        clif_tradeitemok (sd, index, 0, 2); //fail to add item -- no free slots at receiver
+                        clif_tradeitemok (sd, idx, 0, 2); //fail to add item -- no free slots at receiver
                         amount = 0; // peavey
                     }
                     else
                     {
                         for (c = 0; c == trade_i - 1; c++)
                         {       // re-deal exploit protection [Valaris]
-                            if (sd->deal_item_index[c] == index)
+                            if (sd->deal_item_index[c] == idx)
                             {
                                 trade_tradecancel (sd);
                                 return;
                             }
                         }
-                        pc_unequipinvyitem (sd, index - 2, 0);
-                        sd->deal_item_index[trade_i] = index;
+                        pc_unequipinvyitem (sd, idx - 2, 0);
+                        sd->deal_item_index[trade_i] = idx;
                         sd->deal_item_amount[trade_i] += amount;
-                        clif_tradeitemok (sd, index, amount, 0);    //success to add item
-                        clif_tradeadditem (sd, target_sd, index, amount);
+                        clif_tradeitemok (sd, idx, amount, 0);    //success to add item
+                        clif_tradeadditem (sd, target_sd, idx, amount);
                     }
                     break;
                 }
@@ -207,14 +207,14 @@ void trade_tradeadditem (struct map_session_data *sd, int index, int amount)
                             if (id->type != 4 && id->type != 5
                                 && id->type != 7 && id->type != 8)
                             {
-                                free++;
+                                free_++;
                                 break;
                             }
                         }
                     }
                 }
                 // used a slot, but might be cancelled out by stackable checks above
-                free--;
+                free_--;
             }
         }
     }

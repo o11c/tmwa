@@ -22,7 +22,7 @@ struct invocation;              /* Spell invocation */
  * \return 1 or -1 if the input message was magic and was handled by this function, 0 otherwise.  -1 is returned when the
  *         message should not be repeated.
  */
-int  magic_message (character_t * caster, char *spell, size_t spell_len);
+int  magic_message (character_t * caster, uint8_t *spell, size_t spell_len);
 
 /**
  * Removes the shroud from a character
@@ -53,14 +53,14 @@ void do_init_magic (void);
  *
  * Returns NULL if not found
  */
-char *magic_find_invocation (char *spellame);
+char *magic_find_invocation (const char *spellame);
 
 /**
  * Identifies the invocation used to denote a teleport location
  *
  * Returns NULL if not found
  */
-char *magic_find_anchor_invocation (char *teleport_location);
+char *magic_find_anchor_invocation (const char *teleport_location);
 
 /**
  * Execute a spell invocation and sets up timers to finish

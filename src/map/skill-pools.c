@@ -35,7 +35,7 @@ extern void skill_pool_register (int id)
     skill_pool_skills[skill_pool_skills_size++] = id;
 }
 
-char *skill_name (int skill)
+const char *skill_name (int skill)
 {
     if (skill > 0 && skill < MAX_SKILL_DB)
         return skill_names[skill].desc;

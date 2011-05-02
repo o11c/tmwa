@@ -196,7 +196,7 @@ void inter_accreg_init (void)
         CREATE (reg, struct accreg, 1);
         if (!inter_accreg_fromstr (line, reg) && reg->account_id)
         {
-            numdb_insert (accreg_db, (numdb_key_t)reg->account_id, reg);
+            numdb_insert (accreg_db, (numdb_key_t)reg->account_id, (void *)reg);
         }
         else
         {
@@ -212,7 +212,7 @@ void inter_accreg_init (void)
 void inter_accreg_save_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
     FILE *fp = va_arg (ap, FILE *);
-    struct accreg *reg = (struct accreg *) data;
+    struct accreg *reg = (struct accreg *) data.p;
     inter_accreg_tofile (fp, reg);
 }
 
@@ -363,7 +363,7 @@ void mapif_account_reg (int fd, uint8_t *src)
 /// Account variable reply
 void mapif_account_reg_reply (int fd, account_t account_id)
 {
-    struct accreg *reg = (struct accreg *)numdb_search (accreg_db, (numdb_key_t)account_id);
+    struct accreg *reg = (struct accreg *)numdb_search (accreg_db, (numdb_key_t)account_id).p;
 
     WFIFOW (fd, 0) = 0x3804;
     WFIFOL (fd, 4) = account_id;
@@ -390,7 +390,7 @@ void mapif_account_reg_reply (int fd, account_t account_id)
 /// Check whisper data to time out
 void check_ttl_whisdata_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
-    struct WhisperData *wd = (struct WhisperData *) data;
+    struct WhisperData *wd = (struct WhisperData *) data.p;
     tick_t tick = va_arg (ap, tick_t);
 
     if (DIFF_TICK (tick, wd->tick) > WHISPER_DATA_TTL
@@ -415,7 +415,7 @@ void check_ttl_whisdata (void)
         numdb_foreach (whis_db, check_ttl_whisdata_sub, tick);
         for (int i = 0; i < whis_delnum; i++)
         {
-            struct WhisperData *wd = (struct WhisperData *)numdb_search (whis_db, whis_dellist[i]);
+            struct WhisperData *wd = (struct WhisperData *)numdb_search (whis_db, whis_dellist[i]).p;
             printf ("inter: whis data id=%d time out : from %s to %s\n",
                     wd->id, wd->src, wd->dst);
             numdb_erase (whis_db, wd->id);
@@ -486,7 +486,7 @@ void mapif_parse_WhisRequest (int fd)
     STRZCPY (wd->dst, (char *)RFIFOP (fd, 28));
     strzcpy (wd->msg, (char *)RFIFOP (fd, 52), wd->len);
     wd->tick = gettick ();
-    numdb_insert (whis_db, wd->id, wd);
+    numdb_insert (whis_db, wd->id, (void *)wd);
     mapif_whis_message (wd);
 }
 
@@ -496,7 +496,7 @@ void mapif_parse_WhisReply (int fd)
 {
     int id = RFIFOL (fd, 2);
     uint8_t flag = RFIFOB (fd, 6);
-    struct WhisperData *wd = (struct WhisperData *)numdb_search (whis_db, id);
+    struct WhisperData *wd = (struct WhisperData *)numdb_search (whis_db, id).p;
 
     /// timeout or already delivered to another map-server
     if (!wd)
@@ -526,13 +526,14 @@ void mapif_parse_WhisToGM (int fd)
 /// Store account variables
 void mapif_parse_AccReg (int fd)
 {
-    struct accreg *reg = (struct accreg*)numdb_search (accreg_db, (numdb_key_t)(account_t)RFIFOL (fd, 4));
+    account_t acc = RFIFOL (fd, 4);
+    struct accreg *reg = (struct accreg*)numdb_search (accreg_db, (numdb_key_t)acc).p;
 
     if (!reg)
     {
         CREATE (reg, struct accreg, 1);
-        reg->account_id = RFIFOL (fd, 4);
-        numdb_insert (accreg_db, (numdb_key_t)RFIFOL (fd, 4), reg);
+        reg->account_id = acc;
+        numdb_insert (accreg_db, (numdb_key_t)acc, (void *)reg);
     }
 
     int j;

@@ -23,7 +23,7 @@ static void
 magic_frontend_error(const char *msg);
 
 static void
-fail(int line, int column, const char *fmt, ...);
+fail(int line, int column, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
 
 static spell_t *
 new_spell(spellguard_t *guard);
@@ -678,7 +678,7 @@ effect			: '(' effect_list ')'
                                 }
 			| SCRIPT_DATA
                         	{ $$ = new_effect(EFFECT_SCRIPT);
-                                  $$->e.e_script = parse_script((unsigned char *) $1, @1.first_line);
+                                  $$->e.e_script = parse_script((script_ptr) $1, @1.first_line);
                                   free($1);
                                   if ($$->e.e_script == NULL)
                                       fail(@1.first_line, @1.first_column, "Failed to compile script\n");
@@ -725,10 +725,10 @@ intern_id(const char *id_name)
 static void
 add_spell(spell_t *spell, int line_nr)
 {
-        int index = magic_conf.spells_nr;
+        int idx = magic_conf.spells_nr;
         int i;
 
-        for (i = 0; i < index; i++) {
+        for (i = 0; i < idx; i++) {
                 if (!strcmp(magic_conf.spells[i]->name, spell->name)) {
                         fail(line_nr, 0, "Attempt to redefine spell `%s'\n", spell->name);
                         return;
@@ -742,7 +742,7 @@ add_spell(spell_t *spell, int line_nr)
         magic_conf.spells_nr++;
 
         RECREATE(magic_conf.spells, spell_t *, magic_conf.spells_nr);
-        magic_conf.spells[index] = spell;
+        magic_conf.spells[idx] = spell;
 
 
 }
@@ -750,10 +750,10 @@ add_spell(spell_t *spell, int line_nr)
 static void
 add_teleport_anchor(teleport_anchor_t *anchor, int line_nr)
 {
-        int index = magic_conf.anchors_nr;
+        int idx = magic_conf.anchors_nr;
         int i;
 
-        for (i = 0; i < index; i++) {
+        for (i = 0; i < idx; i++) {
                 if (!strcmp(magic_conf.anchors[i]->name, anchor->name)) {
                         fail(line_nr, 0, "Attempt to redefine teleport anchor `%s'\n", anchor->name);
                         return;
@@ -767,7 +767,7 @@ add_teleport_anchor(teleport_anchor_t *anchor, int line_nr)
         magic_conf.anchors_nr++;
 
         RECREATE(magic_conf.anchors, teleport_anchor_t *, magic_conf.anchors_nr);
-        magic_conf.anchors[index] = anchor;
+        magic_conf.anchors[idx] = anchor;
 }
 
 
@@ -830,7 +830,7 @@ new_spell(spellguard_t *guard)
         static int spell_counter = 0;
 
         spell_t *retval = (spell_t*)calloc(1, sizeof(spell_t));
-        retval->index = ++spell_counter;
+        retval->idx = ++spell_counter;
         retval->spellguard = guard;
         return retval;
 }
@@ -1036,8 +1036,11 @@ magic_init(char *conffile) // must be called after itemdb initialisation
         int error_flag = 0;
 
         magic_conf.vars_nr = 0;
-        magic_conf.var_name = (char **)malloc(1);
-        magic_conf.vars = (val_t *)malloc(1);
+        // TODO was there a reason these were mallocing a minimal amount?
+        // probably it was just somebody not knowing the standard library
+        // very well - that it is safe to realloc NULL
+        magic_conf.var_name = (const char **)NULL;
+        magic_conf.vars = (val_t *)NULL;
 
         magic_conf.obscure_chance = 95;
         magic_conf.min_casttime = 100;

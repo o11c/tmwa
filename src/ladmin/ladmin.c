@@ -53,7 +53,11 @@ int  loginserverport = 6900;    // Port of login-server
 char loginserveradminpassword[24] = "admin";    // Administration password
 int  passenc = 2;               // Encoding type of the password
 char ladmin_log_filename[1024] = "log/ladmin.log";
-char date_format[32] = "%Y-%m-%d %H:%M:%S";
+
+// TODO - use the common method
+#define DATE_FORMAT "%Y-%m-%d %H:%M:%S"
+#define DATE_FORMAT_MAX 20
+
 //-------------------------------------------------------------------------
 //  LIST of COMMANDs that you can type at the prompt:
 //    To use these commands you can only type only the first letters.
@@ -240,7 +244,7 @@ char date_format[32] = "%Y-%m-%d %H:%M:%S";
 int  login_fd;
 int  login_ip;
 int  bytes_to_read = 0;         // flag to know if we waiting bytes from login-server
-char command[1024];
+char command_[1024];
 char parameters[1024];
 int  list_first, list_last, list_type, list_count;  // parameter to display a list of accounts
 int  already_exit_function = 0; // sometimes, the exit function is called twice... so, don't log twice the message
@@ -248,6 +252,7 @@ int  already_exit_function = 0; // sometimes, the exit function is called twice.
 //------------------------------
 // Writing function of logs file
 //------------------------------
+int ladmin_log (const char *fmt, ...) __attribute__((format (printf, 1, 2)));
 int ladmin_log (const char *fmt, ...)
 {
     FILE *logfp;
@@ -265,7 +270,7 @@ int ladmin_log (const char *fmt, ...)
         else
         {
             gettimeofday (&tv, NULL);
-            strftime (tmpstr, 24, date_format, localtime (&(tv.tv_sec)));
+            strftime (tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, localtime (&tv.tv_sec));
             sprintf (tmpstr + strlen (tmpstr), ".%03d: %s",
                      (int) tv.tv_usec / 1000, fmt);
             vfprintf (logfp, tmpstr, ap);
@@ -1163,7 +1168,7 @@ int banaddaccount (char *param)
 // Sub-function of sub-function banaccount, unbanaccount or bansetaccount
 // Set the final date of a banishment of an account
 //-----------------------------------------------------------------------
-int bansetaccountsub (char *name, char *date, char *time)
+int bansetaccountsub (char *name, const char *date, const char *time_)
 {
     int  year, month, day, hour, minute, second;
     time_t ban_until_time;      // # of seconds 1/1/1970 (timestamp): ban time limit of the account (0 = no ban)
@@ -1182,7 +1187,7 @@ int bansetaccountsub (char *name, char *date, char *time)
         ((sscanf (date, "%d/%d/%d", &year, &month, &day) < 3 &&
           sscanf (date, "%d-%d-%d", &year, &month, &day) < 3 &&
           sscanf (date, "%d.%d.%d", &year, &month, &day) < 3) ||
-         sscanf (time, "%d:%d:%d", &hour, &minute, &second) < 3))
+         sscanf (time_, "%d:%d:%d", &hour, &minute, &second) < 3))
     {
         printf ("Please input a date and a time (format: yyyy/mm/dd hh:mm:ss).\n");
         printf ("You can imput 0 instead of if you use 'banset' command.\n");
@@ -1277,15 +1282,15 @@ int bansetaccountsub (char *name, char *date, char *time)
 //---------------------------------------------------------------------
 int banaccount (char *param)
 {
-    char name[1023], date[1023], time[1023];
+    char name[1023], date[1023], time_[1023];
 
     memset (name, '\0', sizeof (name));
     memset (date, '\0', sizeof (date));
-    memset (time, '\0', sizeof (time));
+    memset (time_, '\0', sizeof (time_));
 
-    if (sscanf (param, "%s %s \"%[^\"]\"", date, time, name) < 3 &&
-        sscanf (param, "%s %s '%[^']'", date, time, name) < 3 &&
-        sscanf (param, "%s %s %[^\r\n]", date, time, name) < 3)
+    if (sscanf (param, "%s %s \"%[^\"]\"", date, time_, name) < 3 &&
+        sscanf (param, "%s %s '%[^']'", date, time_, name) < 3 &&
+        sscanf (param, "%s %s %[^\r\n]", date, time_, name) < 3)
     {
         printf ("Please input an account name, a date and a hour.\n");
         printf ("<example>: banset <account_name> yyyy/mm/dd [hh:mm:ss]\n");
@@ -1297,7 +1302,7 @@ int banaccount (char *param)
         return 136;
     }
 
-    return bansetaccountsub (name, date, time);
+    return bansetaccountsub (name, date, time_);
 }
 
 //------------------------------------------------------------------------
@@ -1305,16 +1310,16 @@ int banaccount (char *param)
 //------------------------------------------------------------------------
 int bansetaccount (char *param)
 {
-    char name[1023], date[1023], time[1023];
+    char name[1023], date[1023], time_[1023];
 
     memset (name, '\0', sizeof (name));
     memset (date, '\0', sizeof (date));
-    memset (time, '\0', sizeof (time));
+    memset (time_, '\0', sizeof (time_));
 
-    if (sscanf (param, "\"%[^\"]\" %s %[^\r\n]", name, date, time) < 2 &&   // if date = 0, time can be void
-        sscanf (param, "'%[^']' %s %[^\r\n]", name, date, time) < 2 &&  // if date = 0, time can be void
-        sscanf (param, "%s %s %[^\r\n]", name, date, time) < 2)
-    {                           // if date = 0, time can be void
+    if (sscanf (param, "\"%[^\"]\" %s %[^\r\n]", name, date, time_) < 2 &&   // if date = 0, time_ can be void
+        sscanf (param, "'%[^']' %s %[^\r\n]", name, date, time_) < 2 &&  // if date = 0, time_ can be void
+        sscanf (param, "%s %s %[^\r\n]", name, date, time_) < 2)
+    {                           // if date = 0, time_ can be void
         printf ("Please input an account name, a date and a hour.\n");
         printf ("<example>: banset <account_name> yyyy/mm/dd [hh:mm:ss]\n");
         printf ("           banset <account_name> 0   (0 = un-banished)\n");
@@ -1325,10 +1330,10 @@ int bansetaccount (char *param)
         return 136;
     }
 
-    if (time[0] == '\0')
-        strcpy (time, "23:59:59");
+    if (time_[0] == '\0')
+        strcpy (time_, "23:59:59");
 
-    return bansetaccountsub (name, date, time);
+    return bansetaccountsub (name, date, time_);
 }
 
 //-------------------------------------------------
@@ -1937,7 +1942,7 @@ int changesex (char *param)
 // Sub-function of sub-function changestate, blockaccount or unblockaccount
 // Asking to modify the state of an account
 //-------------------------------------------------------------------------
-int changestatesub (char *name, int state, char *error_message7)
+int changestatesub (char *name, int state, const char *error_message7)
 {
     char error_message[1023];   // need to use, because we can modify error_message7
 
@@ -2249,22 +2254,22 @@ int timeaddaccount (char *param)
 //-------------------------------------------------
 int timesetaccount (char *param)
 {
-    char name[1023], date[1023], time[1023];
+    char name[1023], date[1023], time_[1023];
     int  year, month, day, hour, minute, second;
     time_t connect_until_time;  // # of seconds 1/1/1970 (timestamp): Validity limit of the account (0 = unlimited)
     struct tm *tmtime;
 
     memset (name, '\0', sizeof (name));
     memset (date, '\0', sizeof (date));
-    memset (time, '\0', sizeof (time));
+    memset (time_, '\0', sizeof (time_));
     year = month = day = hour = minute = second = 0;
     connect_until_time = 0;
     tmtime = localtime (&connect_until_time);   // initialize
 
-    if (sscanf (param, "\"%[^\"]\" %s %[^\r\n]", name, date, time) < 2 &&   // if date = 0, time can be void
-        sscanf (param, "'%[^']' %s %[^\r\n]", name, date, time) < 2 &&  // if date = 0, time can be void
-        sscanf (param, "%s %s %[^\r\n]", name, date, time) < 2)
-    {                           // if date = 0, time can be void
+    if (sscanf (param, "\"%[^\"]\" %s %[^\r\n]", name, date, time_) < 2 &&   // if date = 0, time_ can be void
+        sscanf (param, "'%[^']' %s %[^\r\n]", name, date, time_) < 2 &&  // if date = 0, time_ can be void
+        sscanf (param, "%s %s %[^\r\n]", name, date, time_) < 2)
+    {                           // if date = 0, time_ can be void
         printf ("Please input an account name, a date and a hour.\n");
         printf ("<example>: timeset <account_name> yyyy/mm/dd [hh:mm:ss]\n");
         printf ("           timeset <account_name> 0   (0 = unlimited)\n");
@@ -2277,15 +2282,15 @@ int timesetaccount (char *param)
         return 102;
     }
 
-    if (time[0] == '\0')
-        strcpy (time, "23:59:59");
+    if (time_[0] == '\0')
+        strcpy (time_, "23:59:59");
 
     if (atoi (date) != 0 &&
         ((sscanf (date, "%d/%d/%d", &year, &month, &day) < 3 &&
           sscanf (date, "%d-%d-%d", &year, &month, &day) < 3 &&
           sscanf (date, "%d.%d.%d", &year, &month, &day) < 3 &&
           sscanf (date, "%d'%d'%d", &year, &month, &day) < 3) ||
-         sscanf (time, "%d:%d:%d", &hour, &minute, &second) < 3))
+         sscanf (time_, "%d:%d:%d", &hour, &minute, &second) < 3))
     {
         printf ("Please input 0 or a date and a time (format: 0 or yyyy/mm/dd hh:mm:ss).\n");
         ladmin_log ("Invalid format for the date/time ('timeset' command).\n");
@@ -2511,179 +2516,178 @@ int prompt (void)
             }
 
         // extract command name and parameters
-        memset (command, '\0', sizeof (command));
+        memset (command_, '\0', sizeof (command_));
         memset (parameters, '\0', sizeof (parameters));
-        sscanf (buf, "%1023s %[^\n]", command, parameters);
-        command[1023] = '\0';
+        sscanf (buf, "%1023s %[^\n]", command_, parameters);
+        command_[1023] = '\0';
         parameters[1023] = '\0';
 
         // lowercase for command line
-        for (i = 0; command[i]; i++)
-            command[i] = tolower (command[i]);
+        for (i = 0; command_[i]; i++)
+            command_[i] = tolower (command_[i]);
 
-        if (command[0] == '?' || strlen (command) == 0)
+        if (command_[0] == '?' || strlen (command_) == 0)
         {
             strcpy (buf, "help");
-            strcpy (command, "help");
+            strcpy (command_, "help");
         }
 
         // Analyse of the command
-        check_command (command);    // give complete name to the command
+        check_command (command_);    // give complete name to the command
 
         if (strlen (parameters) == 0)
         {
-            ladmin_log ("Command: '%s' (without parameters)\n",
-                        command, parameters);
+            ladmin_log ("Command: '%s' (without parameters)\n", command_);
         }
         else
         {
             ladmin_log ("Command: '%s', parameters: '%s'\n",
-                        command, parameters);
+                        command_, parameters);
         }
 
         // Analyse of the command
 // help
-        if (strcmp (command, "help") == 0)
+        if (strcmp (command_, "help") == 0)
         {
             display_help (parameters);   // 0: english
 // general commands
         }
-        else if (strcmp (command, "add") == 0)
+        else if (strcmp (command_, "add") == 0)
         {
             addaccount (parameters, 0); // 0: no email
         }
-        else if (strcmp (command, "ban") == 0)
+        else if (strcmp (command_, "ban") == 0)
         {
             banaccount (parameters);
         }
-        else if (strcmp (command, "banadd") == 0)
+        else if (strcmp (command_, "banadd") == 0)
         {
             banaddaccount (parameters);
         }
-        else if (strcmp (command, "banset") == 0)
+        else if (strcmp (command_, "banset") == 0)
         {
             bansetaccount (parameters);
         }
-        else if (strcmp (command, "block") == 0)
+        else if (strcmp (command_, "block") == 0)
         {
             blockaccount (parameters);
         }
-        else if (strcmp (command, "check") == 0)
+        else if (strcmp (command_, "check") == 0)
         {
             checkaccount (parameters);
         }
-        else if (strcmp (command, "create") == 0)
+        else if (strcmp (command_, "create") == 0)
         {
             addaccount (parameters, 1); // 1: with email
         }
-        else if (strcmp (command, "delete") == 0)
+        else if (strcmp (command_, "delete") == 0)
         {
             delaccount (parameters);
         }
-        else if (strcmp (command, "email") == 0)
+        else if (strcmp (command_, "email") == 0)
         {
             changeemail (parameters);
         }
-        else if (strcmp (command, "getcount") == 0)
+        else if (strcmp (command_, "getcount") == 0)
         {
             getlogincount ();
         }
-        else if (strcmp (command, "gm") == 0)
+        else if (strcmp (command_, "gm") == 0)
         {
             changegmlevel (parameters);
         }
-        else if (strcmp (command, "id") == 0)
+        else if (strcmp (command_, "id") == 0)
         {
             idaccount (parameters);
         }
-        else if (strcmp (command, "info") == 0)
+        else if (strcmp (command_, "info") == 0)
         {
             infoaccount (atoi (parameters));
         }
-        else if (strcmp (command, "kami") == 0)
+        else if (strcmp (command_, "kami") == 0)
         {
             sendbroadcast (0, parameters);  // flag for normal
         }
-        else if (strcmp (command, "kamib") == 0)
+        else if (strcmp (command_, "kamib") == 0)
         {
             sendbroadcast (0x10, parameters);   // flag for blue
         }
-        else if (strcmp (command, "itemfrob") == 0)
+        else if (strcmp (command_, "itemfrob") == 0)
         {
             itemfrob (parameters);  // 0: to list all
         }
-        else if (strcmp (command, "list") == 0)
+        else if (strcmp (command_, "list") == 0)
         {
             listaccount (parameters, 0);    // 0: to list all
         }
-        else if (strcmp (command, "listban") == 0)
+        else if (strcmp (command_, "listban") == 0)
         {
             listaccount (parameters, 3);    // 3: to list only accounts with state or bannished
         }
-        else if (strcmp (command, "listgm") == 0)
+        else if (strcmp (command_, "listgm") == 0)
         {
             listaccount (parameters, 1);    // 1: to list only GM
         }
-        else if (strcmp (command, "listok") == 0)
+        else if (strcmp (command_, "listok") == 0)
         {
             listaccount (parameters, 4);    // 4: to list only accounts without state and not bannished
         }
-        else if (strcmp (command, "memo") == 0)
+        else if (strcmp (command_, "memo") == 0)
         {
             changememo (parameters);
         }
-        else if (strcmp (command, "name") == 0)
+        else if (strcmp (command_, "name") == 0)
         {
             nameaccount (atoi (parameters));
         }
-        else if (strcmp (command, "password") == 0)
+        else if (strcmp (command_, "password") == 0)
         {
             changepasswd (parameters);
         }
-        else if (strcmp (command, "reloadgm") == 0)
+        else if (strcmp (command_, "reloadgm") == 0)
         {
             reloadGM ();
         }
-        else if (strcmp (command, "search") == 0)
+        else if (strcmp (command_, "search") == 0)
         {                       // no regex in C version
             listaccount (parameters, 2);    // 2: to list with pattern
         }
-        else if (strcmp (command, "sex") == 0)
+        else if (strcmp (command_, "sex") == 0)
         {
             changesex (parameters);
         }
-        else if (strcmp (command, "state") == 0)
+        else if (strcmp (command_, "state") == 0)
         {
             changestate (parameters);
         }
-        else if (strcmp (command, "timeadd") == 0)
+        else if (strcmp (command_, "timeadd") == 0)
         {
             timeaddaccount (parameters);
         }
-        else if (strcmp (command, "timeset") == 0)
+        else if (strcmp (command_, "timeset") == 0)
         {
             timesetaccount (parameters);
         }
-        else if (strcmp (command, "unban") == 0)
+        else if (strcmp (command_, "unban") == 0)
         {
             unbanaccount (parameters);
         }
-        else if (strcmp (command, "unblock") == 0)
+        else if (strcmp (command_, "unblock") == 0)
         {
             unblockaccount (parameters);
         }
-        else if (strcmp (command, "version") == 0)
+        else if (strcmp (command_, "version") == 0)
         {
             checkloginversion ();
         }
-        else if (strcmp (command, "who") == 0)
+        else if (strcmp (command_, "who") == 0)
         {
             whoaccount (parameters);
 // quit
         }
-        else if (strcmp (command, "quit") == 0 ||
-                 strcmp (command, "exit") == 0 ||
-                 strcmp (command, "end") == 0)
+        else if (strcmp (command_, "quit") == 0 ||
+                 strcmp (command_, "exit") == 0 ||
+                 strcmp (command_, "end") == 0)
         {
             printf ("Bye.\n");
             exit (0);
@@ -2704,8 +2708,6 @@ int prompt (void)
 //-------------------------------------------------------------
 void parse_fromlogin (int fd)
 {
-    struct char_session_data *sd;
-
     if (session[fd]->eof)
     {
         printf ("Impossible to have a connection with the login-server [%s:%d] !\n",
@@ -2716,9 +2718,6 @@ void parse_fromlogin (int fd)
         delete_session (fd);
         exit (0);
     }
-
-//  printf("parse_fromlogin : %d %d %d\n", fd, RFIFOREST(fd), RFIFOW(fd,0));
-    sd = (struct char_session_data *)session[fd]->session_data;
 
     while (RFIFOREST (fd) >= 2)
     {
@@ -2753,20 +2752,20 @@ void parse_fromlogin (int fd)
                 if (RFIFOREST (fd) < 4 || RFIFOREST (fd) < RFIFOW (fd, 2))
                     return;
                 {
-                    char md5str[64] =
-                        "", md5bin[32], md5key[RFIFOW (fd, 2) - 4 + 1];
+                    char md5str[64] = "", md5key[RFIFOW (fd, 2) - 4 + 1];
+                    uint8_t md5bin[32];
                     memcpy (md5key, RFIFOP (fd, 4), RFIFOW (fd, 2) - 4);
                     md5key[sizeof (md5key) - 1] = '0';
                     if (passenc == 1)
                     {
-                        strncpy (md5str, RFIFOP (fd, 4), RFIFOW (fd, 2) - 4);
+                        strncpy (md5str, (char *)RFIFOP (fd, 4), RFIFOW (fd, 2) - 4);
                         strcat (md5str, loginserveradminpassword);
                     }
                     else if (passenc == 2)
                     {
                         strncpy (md5str, loginserveradminpassword,
                                  sizeof (loginserveradminpassword));
-                        strcat (md5str, RFIFOP (fd, 4));
+                        strcat (md5str, (char *)RFIFOP (fd, 4));
                     }
                     MD5_to_bin(MD5_from_cstring(md5str), md5bin);
                     WFIFOW (login_fd, 0) = 0x7918;  // Request for administation login (encrypted password)
@@ -3212,7 +3211,7 @@ void parse_fromlogin (int fd)
             case 0x7947:       // answer of an account name search
                 if (RFIFOREST (fd) < 30)
                     return;
-                if (strcmp (RFIFOP (fd, 6), "") == 0)
+                if (strcmp ((char *)RFIFOP (fd, 6), "") == 0)
                 {
                     printf ("Unable to find the account [%d] name. Account doesn't exist.\n",
                             RFIFOL (fd, 2));
@@ -3255,7 +3254,7 @@ void parse_fromlogin (int fd)
                     else
                     {
                         char tmpstr[128];
-                        strftime (tmpstr, 24, date_format,
+                        strftime (tmpstr, 24, DATE_FORMAT,
                                   localtime (&timestamp));
                         printf ("Validity Limit of the account [%s][id: %d] successfully changed to be until %s.\n",
                                 RFIFOP (fd, 6), RFIFOL (fd, 2), tmpstr);
@@ -3290,7 +3289,7 @@ void parse_fromlogin (int fd)
                     else
                     {
                         char tmpstr[128];
-                        strftime (tmpstr, 24, date_format,
+                        strftime (tmpstr, 24, DATE_FORMAT,
                                   localtime (&timestamp));
                         printf ("Final date of banishment of the account [%s][id: %d] successfully changed to be until %s.\n",
                                 RFIFOP (fd, 6), RFIFOL (fd, 2), tmpstr);
@@ -3326,7 +3325,7 @@ void parse_fromlogin (int fd)
                     else
                     {
                         char tmpstr[128];
-                        strftime (tmpstr, 24, date_format,
+                        strftime (tmpstr, 24, DATE_FORMAT,
                                   localtime (&timestamp));
                         printf ("Final date of banishment of the account [%s][id: %d] successfully changed to be until %s.\n",
                                 RFIFOP (fd, 6), RFIFOL (fd, 2), tmpstr);
@@ -3380,7 +3379,7 @@ void parse_fromlogin (int fd)
                     else
                     {
                         char tmpstr[128];
-                        strftime (tmpstr, 24, date_format,
+                        strftime (tmpstr, 24, DATE_FORMAT,
                                   localtime (&timestamp));
                         printf ("Validity limit of the account [%s][id: %d] successfully changed to be until %s.\n",
                                 RFIFOP (fd, 6), RFIFOL (fd, 2), tmpstr);
@@ -3415,7 +3414,7 @@ void parse_fromlogin (int fd)
                     connect_until_time = (time_t) RFIFOL (fd, 140);
                     ban_until_time = (time_t) RFIFOL (fd, 144);
                     memset (memo, '\0', sizeof (memo));
-                    strncpy (memo, RFIFOP (fd, 150), RFIFOW (fd, 148));
+                    strncpy (memo, (char *)RFIFOP (fd, 150), RFIFOW (fd, 148));
                     if (RFIFOL (fd, 2) == -1)
                     {
                         printf ("Unabled to find the account [%s]. Account doesn't exist.\n",
@@ -3496,7 +3495,7 @@ void parse_fromlogin (int fd)
                         else
                         {
                             char tmpstr[128];
-                            strftime (tmpstr, 24, date_format,
+                            strftime (tmpstr, 24, DATE_FORMAT,
                                         localtime (&ban_until_time));
                             printf (" Banishment: until %s.\n", tmpstr);
                         }
@@ -3515,7 +3514,7 @@ void parse_fromlogin (int fd)
                         else
                         {
                             char tmpstr[128];
-                            strftime (tmpstr, 24, date_format,
+                            strftime (tmpstr, 24, DATE_FORMAT,
                                         localtime (&connect_until_time));
                             printf (" Validity limit: until %s.\n",
                                     tmpstr);
@@ -3643,24 +3642,6 @@ int ladmin_config_read (const char *cfgName)
                          sizeof (ladmin_log_filename));
                 ladmin_log_filename[sizeof (ladmin_log_filename) - 1] = '\0';
             }
-            else if (strcasecmp (w1, "date_format") == 0)
-            {                   // note: never have more than 19 char for the date!
-                switch (atoi (w2))
-                {
-                    case 0:
-                        strcpy (date_format, "%d-%m-%Y %H:%M:%S");  // 31-12-2004 23:59:59
-                        break;
-                    case 1:
-                        strcpy (date_format, "%m-%d-%Y %H:%M:%S");  // 12-31-2004 23:59:59
-                        break;
-                    case 2:
-                        strcpy (date_format, "%Y-%d-%m %H:%M:%S");  // 2004-31-12 23:59:59
-                        break;
-                    case 3:
-                        strcpy (date_format, "%Y-%m-%d %H:%M:%S");  // 2004-12-31 23:59:59
-                        break;
-                }
-            }
             else if (strcasecmp (w1, "import") == 0)
             {
                 ladmin_config_read (w2);
@@ -3702,7 +3683,7 @@ void do_init (int argc, char **argv)
     // read ladmin configuration
     ladmin_config_read ((argc > 1) ? argv[1] : LADMIN_CONF_NAME);
 
-    ladmin_log ("");
+    ladmin_log ("\n");
     ladmin_log ("Configuration file readed.\n");
 
     srand (time (NULL));

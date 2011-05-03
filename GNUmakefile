@@ -11,31 +11,31 @@ include make.defs
 	+mkdir -p $@
 
 # The default recipe is suboptimal
-%.c: %.l
+%.cpp: %.lpp
 	$(LEX) -o $@ $<
-%.c %.h: %.y
-	$(BISON) -d -o $*.c $<
+%.cpp %.hpp: %.ypp
+	$(BISON) -d -o $*.cpp $<
 
 tags:
 	ctags -R src/
 
 # All this duplication is required because make handles pattern rules specially
-${BUILD_DIR}/char/%.o: src/char/%.c | ${BUILD_DIR}/char/
-	$(COMPILE.c) -o $@ $<
-${BUILD_DIR}/common/%.o: src/common/%.c | ${BUILD_DIR}/common/
-	$(COMPILE.c) -o $@ $<
-${BUILD_DIR}/ladmin/%.o: src/ladmin/%.c | ${BUILD_DIR}/ladmin/
-	$(COMPILE.c) -o $@ $<
-${BUILD_DIR}/login/%.o: src/login/%.c | ${BUILD_DIR}/login/
-	$(COMPILE.c) -o $@ $<
-${BUILD_DIR}/map/%.o: src/map/%.c | ${BUILD_DIR}/map/
-	$(COMPILE.c) -o $@ $<
-${BUILD_DIR}/tool/%.o: src/tool/%.c | ${BUILD_DIR}/tool/
-	$(COMPILE.c) -o $@ $<
-${BUILD_DIR}/webserver/%.o: src/webserver/%.c | ${BUILD_DIR}/webserver/
-	$(COMPILE.c) -o $@ $<
-${BUILD_DIR}/webserver/pages/%.o: src/webserver/pages/%.c | ${BUILD_DIR}/webserver/pages/
-	$(COMPILE.c) -o $@ $<
+${BUILD_DIR}/char/%.o: src/char/%.cpp | ${BUILD_DIR}/char/
+	$(COMPILE.cpp) -o $@ $<
+${BUILD_DIR}/common/%.o: src/common/%.cpp | ${BUILD_DIR}/common/
+	$(COMPILE.cpp) -o $@ $<
+${BUILD_DIR}/ladmin/%.o: src/ladmin/%.cpp | ${BUILD_DIR}/ladmin/
+	$(COMPILE.cpp) -o $@ $<
+${BUILD_DIR}/login/%.o: src/login/%.cpp | ${BUILD_DIR}/login/
+	$(COMPILE.cpp) -o $@ $<
+${BUILD_DIR}/map/%.o: src/map/%.cpp | ${BUILD_DIR}/map/
+	$(COMPILE.cpp) -o $@ $<
+${BUILD_DIR}/tool/%.o: src/tool/%.cpp | ${BUILD_DIR}/tool/
+	$(COMPILE.cpp) -o $@ $<
+${BUILD_DIR}/webserver/%.o: src/webserver/%.cpp | ${BUILD_DIR}/webserver/
+	$(COMPILE.cpp) -o $@ $<
+${BUILD_DIR}/webserver/pages/%.o: src/webserver/pages/%.cpp | ${BUILD_DIR}/webserver/pages/
+	$(COMPILE.cpp) -o $@ $<
 
 PROGS = login-server char-server map-server ladmin eathena-monitor webserver
 # Things to actually make
@@ -68,8 +68,8 @@ ${BUILD_DIR}/tool/eathena-monitor: ${BUILD_DIR}/tool/eathena-monitor.o
 ${BUILD_DIR}/webserver/main: ${BUILD_DIR}/webserver/main.o ${BUILD_DIR}/webserver/parse.o ${BUILD_DIR}/webserver/generate.o ${BUILD_DIR}/webserver/htmlstyle.o ${BUILD_DIR}/webserver/logs.o ${BUILD_DIR}/webserver/pages/about.o ${BUILD_DIR}/webserver/pages/sample.o ${BUILD_DIR}/webserver/pages/notdone.o
 
 deps.make:
-	for F in `find src/ -name '*.c' | sort`; do \
-	    gcc -m32 -std=c99 -MM "$$F" -MT "$$(sed 's/src/$${BUILD_DIR}/;s/\.c/.o/' <<< "$$F")"; \
+	for F in `find src/ -name '*.cpp' | sort`; do \
+	    ${CXX} -MM "$$F" -MT "$$(sed 's/src/$${BUILD_DIR}/;s/\.cpp/.o/' <<< "$$F")"; \
 	done > deps.make
 
 include deps.make

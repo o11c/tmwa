@@ -11,7 +11,6 @@
 -Werror=write-strings
 -Wunused
 -Wshadow
--Wbad-function-cast
 -Werror=strict-prototypes
 -Werror=old-style-definition
 -Wno-missing-declarations
@@ -29,7 +28,6 @@
 -Wfloat-equal
 -Wmissing-format-attribute
 -Wno-redundant-decls
--Wnested-externs
 -Wno-sign-compare
 
 -Wno-switch

@@ -8,7 +8,7 @@
 /map-server
 /eathena-monitor
 # Generated source files
-src/map/magic-interpreter-parser.h
-src/map/magic-interpreter-parser.c
-src/map/magic-interpreter-lexer.c
+src/map/magic-interpreter-parser.hpp
+src/map/magic-interpreter-parser.cpp
+src/map/magic-interpreter-lexer.cpp
 

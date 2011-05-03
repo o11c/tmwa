@@ -656,6 +656,7 @@ struct mmo_charstatus *make_new_char (int fd, uint8_t *raw_dat)
                           fd, sd->account_id, name, name[i]);
                 return NULL;
             }
+        break;
     case EXCLUDE:
         for (int i = 0; name[i]; i++)
             if (strchr (char_name_letters, name[i]) != NULL)
@@ -664,6 +665,7 @@ struct mmo_charstatus *make_new_char (int fd, uint8_t *raw_dat)
                           fd, sd->account_id, name, name[i]);
                     return NULL;
             }
+        break;
     }
     if (dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5] != 5 * 6 ||
         dat.slot >= MAX_CHARS_PER_ACCOUNT ||
@@ -2971,9 +2973,9 @@ void char_config_read (const char *cfgName)
         {
             switch (atoi (w2))
             {
-            case 0: char_name_option = ALL;
-            case 1: char_name_option = ONLY;
-            case 2: char_name_option = EXCLUDE;
+            case 0: char_name_option = ALL; break;
+            case 1: char_name_option = ONLY; break;
+            case 2: char_name_option = EXCLUDE; break;
             default: ;// TODO log something
             }
             continue;

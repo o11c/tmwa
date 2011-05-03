@@ -136,10 +136,8 @@ static struct block_list bl_head;
 
 
 /// link a new block
-int map_addblock (struct block_list *bl)
+bool map_addblock (struct block_list *bl)
 {
-    int  m, x, y;
-
     nullpo_retr (0, bl);
 
     if (bl->prev)
@@ -148,35 +146,31 @@ int map_addblock (struct block_list *bl)
         return 0;
     }
 
-    m = bl->m;
-    x = bl->x;
-    y = bl->y;
-    if (m < 0 || m >= map_num ||
-        x < 0 || x >= maps[m].xs || y < 0 || y >= maps[m].ys)
+if (bl->m >= map_num || bl->x >= maps[bl->m].xs || bl->y >= maps[bl->m].ys)
     {
-        map_log ("%s: bad x/y/m: %d/%d/%d", __func__, x, y, m);
+        map_log ("%s: bad x/y/m: %hu/%hu/%hu", __func__, bl->x, bl->y, bl->m);
         return 1;
     }
-    int b = bl->x / BLOCK_SIZE + (bl->y / BLOCK_SIZE) * maps[bl->m].bxs;
+    size_t b = bl->x / BLOCK_SIZE + (bl->y / BLOCK_SIZE) * maps[bl->m].bxs;
     if (bl->type == BL_MOB)
     {
-        bl->next = maps[m].block_mob[b];
+        bl->next = maps[bl->m].block_mob[b];
         bl->prev = &bl_head;
         if (bl->next)
             bl->next->prev = bl;
-        maps[m].block_mob[b] = bl;
-        maps[m].block_mob_count[b]++;
+        maps[bl->m].block_mob[b] = bl;
+        maps[bl->m].block_mob_count[b]++;
     }
     else
     {
-        bl->next =maps[m].block[b];
+        bl->next =maps[bl->m].block[b];
         bl->prev = &bl_head;
         if (bl->next)
             bl->next->prev = bl;
-        maps[m].block[b] = bl;
-        maps[m].block_count[b]++;
+        maps[bl->m].block[b] = bl;
+        maps[bl->m].block_count[b]++;
         if (bl->type == BL_PC)
-            maps[m].users++;
+            maps[bl->m].users++;
     }
 
     return 0;
@@ -205,7 +199,7 @@ int map_delblock (struct block_list *bl)
     // if this is the first in the list, need to update the true root blocks
     if (bl->prev == &bl_head)
     {
-        int b = bl->x / BLOCK_SIZE + (bl->y / BLOCK_SIZE) * maps[bl->m].bxs;
+        size_t b = bl->x / BLOCK_SIZE + (bl->y / BLOCK_SIZE) * maps[bl->m].bxs;
         if (bl->type == BL_MOB)
         {
             maps[bl->m].block_mob[b] = bl->next;

@@ -74,7 +74,7 @@ struct block_list
 {
     struct block_list *next, *prev;
     int  id;
-    short m, x, y;
+    unsigned short m, x, y;
     unsigned char type;
     unsigned char subtype;
 };
@@ -727,7 +727,7 @@ int  map_freeblock (void *bl);
 int  map_freeblock_lock (void);
 int  map_freeblock_unlock (void);
 // block関連
-int  map_addblock (struct block_list *);
+bool map_addblock (struct block_list *);
 int  map_delblock (struct block_list *);
 void map_foreachinarea (int (*)(struct block_list *, va_list), int, int, int,
                         int, int, int, ...);

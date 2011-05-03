@@ -30,7 +30,6 @@
 #include "../common/socket.hpp"
 #include "magic.hpp"
 
-// 極力 staticでローカルに収める
 static struct dbt *id_db = NULL;
 static struct dbt *map_db = NULL;
 static struct dbt *nick_db = NULL;
@@ -51,11 +50,10 @@ static int bl_list_count = 0;
 struct map_data maps[MAX_MAP_PER_SERVER];
 int  map_num = 0;
 
-int  map_port = 0;
+in_port_t map_port = 0;
 
 int  autosave_interval = DEFAULT_AUTOSAVE_INTERVAL;
-int  save_settings = 0xFFFF;
-int  night_flag = 0;            // 0=day, 1=night [Yor]
+bool night_flag = 0;
 
 struct charid2nick
 {
@@ -66,124 +64,87 @@ struct charid2nick
 char motd_txt[256] = "conf/motd.txt";
 char help_txt[256] = "conf/help.txt";
 
-char wisp_server_name[24] = "Server";   // can be modified in char-server configuration file
+// can be modified in char-server configuration file
+char wisp_server_name[24] = "Server";
 
-/*==========================================
- * 全map鯖総計での接続数設定
- * (char鯖から送られてくる)
- *------------------------------------------
- */
+/// Save the number of users reported by the char server
 void map_setusers (int n)
 {
     users = n;
 }
 
-/*==========================================
- * 全map鯖総計での接続数取得 (/wへの応答用)
- *------------------------------------------
- */
+/// Get the number of users previously reported by the char server
 int map_getusers (void)
 {
     return users;
 }
 
-//
-// block削除の安全性確保処理
-//
 
-/*==========================================
- * blockをfreeするときfreeの変わりに呼ぶ
- * ロックされているときはバッファにためる
- *------------------------------------------
- */
+
+/// Free a block
+// prohibits calling free() until block_free_lock is 0
 int map_freeblock (void *bl)
 {
-    if (block_free_lock == 0)
+    if (!block_free_lock)
     {
         free (bl);
         bl = NULL;
+        return 0;
+    }
+    map_log ("Adding block %d due to %d locks", block_free_count, block_free_lock);
+    if (block_free_count >= block_free_max)
+    {
+        map_log ("MEMORY LEAK: too many free blocks!");
     }
     else
-    {
-        if (block_free_count >= block_free_max)
-        {
-            if (battle_config.error_log)
-                printf
-                    ("map_freeblock: *WARNING* too many free block! %d %d\n",
-                     block_free_count, block_free_lock);
-        }
-        else
-            block_free[block_free_count++] = bl;
-    }
+        block_free[block_free_count++] = bl;
     return block_free_lock;
 }
 
-/*==========================================
- * blockのfreeを一時的に禁止する
- *------------------------------------------
- */
+/// Temporarily prohibit freeing blocks.
 int map_freeblock_lock (void)
 {
     return ++block_free_lock;
 }
 
-/*==========================================
- * blockのfreeのロックを解除する
- * このとき、ロックが完全になくなると
- * バッファにたまっていたblockを全部削除
- *------------------------------------------
- */
+/// Remove a prohibition on freeing blocks
+// if this was the last lock, free the queued ones
 int map_freeblock_unlock (void)
 {
-    if ((--block_free_lock) == 0)
+    if (!block_free_lock)
     {
-        int  i;
-//      if(block_free_count>0) {
-//          if(battle_config.error_log)
-//              printf("map_freeblock_unlock: free %d object\n",block_free_count);
-//      }
-        for (i = 0; i < block_free_count; i++)
-        {
-            free (block_free[i]);
-            block_free[i] = NULL;
-        }
-        block_free_count = 0;
+        map_log ("ERROR: Unlocked more times than locked");
+        abort();
     }
-    else if (block_free_lock < 0)
+    --block_free_lock;
+    if (block_free_lock)
+        return block_free_lock;
+
+    map_log ("Freeing %d deferred blocks", block_free_count);
+    for (int i = 0; i < block_free_count; i++)
     {
-        if (battle_config.error_log)
-            printf ("map_freeblock_unlock: lock count < 0 !\n");
+        free (block_free[i]);
+        block_free[i] = NULL;
     }
-    return block_free_lock;
+    block_free_count = 0;
+    return 0;
 }
 
-//
-// block化処理
-//
-/*==========================================
- * map[]のblock_listから繋がっている場合に
- * bl->prevにbl_headのアドレスを入れておく
- *------------------------------------------
- */
+
+/// this is a dummy bl->prev so that legitimate blocks always have non-NULL
 static struct block_list bl_head;
 
-/*==========================================
- * map[]のblock_listに追加
- * mobは数が多いので別リスト
- *
- * 既にlink済みかの確認が無い。危険かも
- *------------------------------------------
- */
+
+/// link a new block
 int map_addblock (struct block_list *bl)
 {
     int  m, x, y;
 
     nullpo_retr (0, bl);
 
-    if (bl->prev != NULL)
+    if (bl->prev)
     {
-        if (battle_config.error_log)
-            printf ("map_addblock error : bl->prev!=NULL\n");
+        map_log ("%s: error: already linked", __func__);
         return 0;
     }
 
@@ -192,28 +153,28 @@ int map_addblock (struct block_list *bl)
     y = bl->y;
     if (m < 0 || m >= map_num ||
         x < 0 || x >= maps[m].xs || y < 0 || y >= maps[m].ys)
+    {
+        map_log ("%s: bad x/y/m: %d/%d/%d", __func__, x, y, m);
         return 1;
-
+    }
+    int b = bl->x / BLOCK_SIZE + (bl->y / BLOCK_SIZE) * maps[bl->m].bxs;
     if (bl->type == BL_MOB)
     {
-        bl->next =
-            maps[m].block_mob[x / BLOCK_SIZE + (y / BLOCK_SIZE) * maps[m].bxs];
+        bl->next = maps[m].block_mob[b];
         bl->prev = &bl_head;
         if (bl->next)
             bl->next->prev = bl;
-        maps[m].block_mob[x / BLOCK_SIZE + (y / BLOCK_SIZE) * maps[m].bxs] = bl;
-        maps[m].block_mob_count[x / BLOCK_SIZE +
-                               (y / BLOCK_SIZE) * maps[m].bxs]++;
+        maps[m].block_mob[b] = bl;
+        maps[m].block_mob_count[b]++;
     }
     else
     {
-        bl->next =
-            maps[m].block[x / BLOCK_SIZE + (y / BLOCK_SIZE) * maps[m].bxs];
+        bl->next =maps[m].block[b];
         bl->prev = &bl_head;
         if (bl->next)
             bl->next->prev = bl;
-        maps[m].block[x / BLOCK_SIZE + (y / BLOCK_SIZE) * maps[m].bxs] = bl;
-        maps[m].block_count[x / BLOCK_SIZE + (y / BLOCK_SIZE) * maps[m].bxs]++;
+        maps[m].block[b] = bl;
+        maps[m].block_count[b]++;
         if (bl->type == BL_PC)
             maps[m].users++;
     }
@@ -221,55 +182,57 @@ int map_addblock (struct block_list *bl)
     return 0;
 }
 
-/*==========================================
- * map[]のblock_listから外す
- * prevがNULLの場合listに繋がってない
- *------------------------------------------
- */
+/// Remove a block from the list
+// prev shouldn't be NULL
 int map_delblock (struct block_list *bl)
 {
-    int  b;
     nullpo_retr (0, bl);
 
-    // 既にblocklistから抜けている
-    if (bl->prev == NULL)
+    // not in the blocklist
+    if (!bl->prev)
     {
-        if (bl->next != NULL)
-        {
-            // prevがNULLでnextがNULLでないのは有ってはならない
-            if (battle_config.error_log)
-                printf ("map_delblock error : bl->next!=NULL\n");
-        }
+        map_log ("Removing already unlinked block from list");
+        if (bl->next)
+            map_log ("but it still links to other blocks!");
         return 0;
     }
-
-    b = bl->x / BLOCK_SIZE + (bl->y / BLOCK_SIZE) * maps[bl->m].bxs;
 
     if (bl->type == BL_PC)
         maps[bl->m].users--;
 
     if (bl->next)
         bl->next->prev = bl->prev;
+    // if this is the first in the list, need to update the true root blocks
     if (bl->prev == &bl_head)
     {
-        // リストの頭なので、map[]のblock_listを更新する
+        int b = bl->x / BLOCK_SIZE + (bl->y / BLOCK_SIZE) * maps[bl->m].bxs;
         if (bl->type == BL_MOB)
         {
             maps[bl->m].block_mob[b] = bl->next;
-            if ((maps[bl->m].block_mob_count[b]--) < 0)
+            maps[bl->m].block_mob_count[b]--;
+            if (maps[bl->m].block_mob_count[b] < 0)
+            {
+                map_log ("???: Negative mobs on map %d.%d", bl->m, b);
                 maps[bl->m].block_mob_count[b] = 0;
+            }
         }
         else
         {
             maps[bl->m].block[b] = bl->next;
-            if ((maps[bl->m].block_count[b]--) < 0)
+            maps[bl->m].block_count[b]--;
+            if (maps[bl->m].block_count[b] < 0)
+            {
+                map_log ("???: Negative normal blocks on %d.%d", bl->m, b);
                 maps[bl->m].block_count[b] = 0;
+            }
         }
     }
-    else
+    else // not head of list
     {
+        map_log ("???: removing non-head block, possible synchronization problem - does this happen?");
         bl->prev->next = bl->next;
     }
+    // make sure we aren't used again
     bl->next = NULL;
     bl->prev = NULL;
 
@@ -1857,15 +1820,15 @@ static void map_set_logfile (char *filename)
 
     map_start_logfile (tv.tv_sec);
     atexit (map_close_logfile);
-    MAP_LOG ("log-start v3");
+    map_log ("log-start v3");
 }
 
-void map_write_log (const char *format, ...)
+void map_log (const char *format, ...)
 {
-    struct timeval tv;
-    va_list args;
-    va_start (args, format);
+    if (!map_logfile)
+        return;
 
+    struct timeval tv;
     gettimeofday (&tv, NULL);
 
     if ((tv.tv_sec >> LOGFILE_SECONDS_PER_CHUNK_SHIFT) != map_logfile_index)
@@ -1873,10 +1836,15 @@ void map_write_log (const char *format, ...)
         map_close_logfile ();
         map_start_logfile (tv.tv_sec);
     }
+    if (!map_logfile)
+        return;
 
+    va_list args;
+    va_start (args, format);
     fprintf (map_logfile, "%ld.%06ld ", (long) tv.tv_sec, (long) tv.tv_usec);
     vfprintf (map_logfile, format, args);
     fputc ('\n', map_logfile);
+    va_end(args);
 }
 
 /*==========================================

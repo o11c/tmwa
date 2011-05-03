@@ -345,10 +345,7 @@ int storage_storageclose (struct map_session_data *sd)
     clif_storageclose (sd);
     if (stor->storage_status)
     {
-        if (save_settings & 4)
-            chrif_save (sd);    //Invokes the storage saving as well.
-        else
-            storage_storage_save (sd->status.account_id, 0);
+        chrif_save (sd);
     }
     stor->storage_status = 0;
     sd->state.storage_flag = 0;

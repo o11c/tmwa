@@ -2583,7 +2583,7 @@ int mob_damage (struct block_list *src, struct mob_data *md, int damage,
         return 0;
     }
 
-    MAP_LOG ("MOB%d DEAD", md->bl.id);
+    map_log ("MOB%d DEAD", md->bl.id);
 
     // ----- ここから死亡処理 -----
 

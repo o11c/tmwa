@@ -4795,7 +4795,7 @@ int battle_weapon_attack (struct block_list *src, struct block_list *target,
                 && sd->status.inventory[weapon_index].equip & 0x2)
                 weapon = sd->inventory_data[weapon_index]->nameid;
 
-            MAP_LOG ("PC%d %d:%d,%d WPNDMG %s%d %d FOR %d WPN %d",
+            map_log ("PC%d %d:%d,%d WPNDMG %s%d %d FOR %d WPN %d",
                      sd->status.char_id, src->m, src->x, src->y,
                      (target->type == BL_PC) ? "PC" : "MOB",
                      (target->type ==
@@ -4809,7 +4809,7 @@ int battle_weapon_attack (struct block_list *src, struct block_list *target,
         if (target->type == BL_PC)
         {
             struct map_session_data *sd2 = (struct map_session_data *) target;
-            MAP_LOG ("PC%d %d:%d,%d WPNINJURY %s%d %d FOR %d",
+            map_log ("PC%d %d:%d,%d WPNINJURY %s%d %d FOR %d",
                      sd2->status.char_id, target->m, target->x, target->y,
                      (src->type == BL_PC) ? "PC" : "MOB",
                      (src->type ==

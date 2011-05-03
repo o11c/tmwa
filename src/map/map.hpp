@@ -710,11 +710,10 @@ struct chat_data
 extern struct map_data maps[];
 extern int map_num;
 extern int autosave_interval;
-extern int save_settings;
-extern int night_flag;          // 0=day, 1=night [Yor]
+extern bool night_flag;
 
 extern char motd_txt[];
-extern char help_txt[];
+extern char help_txt[] __attribute__((deprecated));
 
 extern char talkie_mes[];
 
@@ -751,10 +750,9 @@ int  map_quit (struct map_session_data *);
 int  map_addnpc (int, struct npc_data *);
 
 extern FILE *map_logfile;
-void map_write_log (const char *format, ...) __attribute__((format(printf, 1, 2)));
-#define MAP_LOG(format, args...) {if (map_logfile) map_write_log(format, ##args);}
+void map_log (const char *format, ...) __attribute__((format(printf, 1, 2)));
 
-#define MAP_LOG_PC(sd, fmt, args...) MAP_LOG("PC%d %d:%d,%d " fmt, sd->status.char_id, sd->bl.m, sd->bl.x, sd->bl.y, ## args)
+#define MAP_LOG_PC(sd, fmt, args...) map_log("PC%d %d:%d,%d " fmt, sd->status.char_id, sd->bl.m, sd->bl.x, sd->bl.y, ## args)
 
 // 床アイテム関連
 void map_clearflooritem_timer (timer_id, tick_t, custom_id_t, custom_data_t);

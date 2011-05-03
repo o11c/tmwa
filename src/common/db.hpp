@@ -17,17 +17,26 @@ typedef enum dbn_color
 } dbn_color;
 
 typedef intptr_t numdb_key_t;
-typedef union db_key_t
+struct db_key_t
 {
-    char *ms __attribute__((deprecated));
-    const char* s;
-    numdb_key_t i;
-} db_key_t;
-typedef union db_val_t
+    union
+    {
+        const char* s;
+        numdb_key_t i;
+    };
+    db_key_t (const char *name) : s(name) {}
+    db_key_t (numdb_key_t idx) : i(idx) {}
+};
+struct db_val_t
 {
-    void* p;
-    intptr_t i;
-} db_val_t;
+    union
+    {
+        void* p;
+        intptr_t i;
+    };
+    db_val_t (void *ptr) : p(ptr) {}
+    db_val_t (intptr_t iv) : i(iv) {}
+};
 typedef uint32_t hash_t;
 typedef void (*db_func_t)(db_key_t, db_val_t, va_list);
 

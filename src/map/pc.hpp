@@ -200,8 +200,8 @@ enum
 { ADDITEM_EXIST, ADDITEM_NEW, ADDITEM_OVERAMOUNT };
 
 // timer for night.day
-timer_id day_timer_tid;
-timer_id night_timer_tid;
+extern timer_id day_timer_tid;
+extern timer_id night_timer_tid;
 void map_day_timer (timer_id, tick_t, custom_id_t, custom_data_t);   // by [yor]
 void map_night_timer (timer_id, tick_t, custom_id_t, custom_data_t); // by [yor]
 

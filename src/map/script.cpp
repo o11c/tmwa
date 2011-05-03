@@ -289,7 +289,7 @@ int  run_func (struct script_state *st);
 int  mapreg_setreg (int num, int val);
 int  mapreg_setregstr (int num, const char *str);
 
-struct
+struct builtin_function
 {
     int  (*func) (struct script_state *);
     const char *name;

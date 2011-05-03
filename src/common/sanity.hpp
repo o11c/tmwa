@@ -1,8 +1,9 @@
 /// return wrappers for unexpected NULL pointers
 #ifndef SANITY_H
 #define SANITY_H
-# if __STDC_VERSION__ < 199901L
-#  error "Please compile in C99 mode"
+
+# if __STDC_VERSION__ < 199901L && !(defined __cplusplus)
+#  error "Please compile in C99 mode or as C++"
 # endif
 # if __GNUC__ < 3
 // I don't specifically know what version this requires,

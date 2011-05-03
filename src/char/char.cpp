@@ -85,7 +85,7 @@ struct char_session_data
 };
 
 #define AUTH_FIFO_SIZE 256
-struct
+struct auth_fifo
 {
     account_t account_id;
     charid_t char_id;

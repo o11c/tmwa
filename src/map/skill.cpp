@@ -2238,7 +2238,7 @@ int skill_area_sub_count (struct block_list *UNUSED, struct block_list *UNUSED,
  *
  *------------------------------------------
  */
-static void skill_timerskill (timer_id UNUSED, tick_t tick, custom_id_t id, custom_data_t data)
+static void skill_timerskill_ (timer_id UNUSED, tick_t tick, custom_id_t id, custom_data_t data)
 {
     struct map_session_data *sd = NULL;
     struct mob_data *md = NULL;
@@ -2421,7 +2421,7 @@ int skill_addtimerskill (struct block_list *src, unsigned int tick,
             if (sd->skilltimerskill[i].timer == -1)
             {
                 sd->skilltimerskill[i].timer =
-                    add_timer (tick, skill_timerskill, src->id, i);
+                    add_timer (tick, skill_timerskill_, src->id, i);
                 sd->skilltimerskill[i].src_id = src->id;
                 sd->skilltimerskill[i].target_id = target;
                 sd->skilltimerskill[i].skill_id = skill_id;
@@ -2446,7 +2446,7 @@ int skill_addtimerskill (struct block_list *src, unsigned int tick,
             if (md->skilltimerskill[i].timer == -1)
             {
                 md->skilltimerskill[i].timer =
-                    add_timer (tick, skill_timerskill, src->id, i);
+                    add_timer (tick, skill_timerskill_, src->id, i);
                 md->skilltimerskill[i].src_id = src->id;
                 md->skilltimerskill[i].target_id = target;
                 md->skilltimerskill[i].skill_id = skill_id;
@@ -2484,7 +2484,7 @@ int skill_cleartimerskill (struct block_list *src)
         {
             if (sd->skilltimerskill[i].timer != -1)
             {
-                delete_timer (sd->skilltimerskill[i].timer, skill_timerskill);
+                delete_timer (sd->skilltimerskill[i].timer, skill_timerskill_);
                 sd->skilltimerskill[i].timer = -1;
             }
         }
@@ -2497,7 +2497,7 @@ int skill_cleartimerskill (struct block_list *src)
         {
             if (md->skilltimerskill[i].timer != -1)
             {
-                delete_timer (md->skilltimerskill[i].timer, skill_timerskill);
+                delete_timer (md->skilltimerskill[i].timer, skill_timerskill_);
                 md->skilltimerskill[i].timer = -1;
             }
         }
@@ -11884,13 +11884,14 @@ int skill_readdb (void)
 
         char *s = strdup (split[17]);
         skill_names[i].desc = s;
+        char *stest;
         // replace "_" by " "
-        while ((s = strchr (s, '_')))
-            *s = ' ';
-        if ((s = strchr (skill_names[i].desc, '\t'))
-            || (s = strchr (skill_names[i].desc, ' '))
-            || (s = strchr (skill_names[i].desc, '\n')))
-            *s = '\000';
+        while ((stest = strchr (s, '_')))
+            *stest = ' ';
+        if ((stest = strchr (s, '\t'))
+            || (stest = strchr (s, ' '))
+            || (stest = strchr (s, '\n')))
+            *stest = '\000';
     }
     fclose_ (fp);
     printf ("read db/skill_db.txt done\n");

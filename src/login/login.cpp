@@ -116,7 +116,7 @@ struct login_session_data
 };
 
 #define AUTH_FIFO_SIZE 256
-struct
+struct auth_fifo
 {
     account_t account_id;
     uint32_t login_id1, login_id2;
@@ -1873,7 +1873,7 @@ void x793e (int fd)
     account_name[23] = '\0';
     remove_control_chars (account_name);
     strzcpy ((char *)WFIFOP (fd, 6), account_name, 24);
-    gm_level_t new_gm_level = new_gm_level = RFIFOB (fd, 26);
+    gm_level_t new_gm_level = RFIFOB (fd, 26);
     if (new_gm_level > 99)
     {
         login_log ("'ladmin': Attempt to give an invalid GM level (account: %s, received GM level: %d, ip: %s)\n",

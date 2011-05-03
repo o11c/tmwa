@@ -1,6 +1,11 @@
+#include "sanity.hpp"
 // for fopencookie()
 // we don't want/need to enable this globally
-#define _GNU_SOURCE
+// but, in C++ it enables it by default
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE
+#endif
+
 #include "utils.hpp"
 
 #include <time.h>

@@ -1432,7 +1432,7 @@ void npc_convertlabel_db (db_key_t key, db_val_t data, va_list ap)
     struct npc_data *nd;
     struct npc_label_list *lst;
     int  num;
-    char *p = strchr (lname, ':');
+    char *p = (char *)strchr (lname, ':');
 
     nullpo_retv (ap);
     nullpo_retv (nd = va_arg (ap, struct npc_data *));

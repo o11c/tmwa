@@ -1405,14 +1405,14 @@ static int spell_run (invocation_t * invocation, int allow_delete)
                 if (caster)
                 {
                     env_t *env = invocation->env;
-                    argrec_t arg[] = { {"@target",.v.i =
+                    argrec_t arg[] = { {"@target", v: { i:
                                         VAR (VAR_TARGET).ty ==
                                         TY_ENTITY ? 0 : VAR (VAR_TARGET).
-                                        v.v_int}
+                                        v.v_int } }
                     ,
-                    {"@caster",.v.i = invocation->caster}
+                    {"@caster", v:{i: invocation->caster}}
                     ,
-                    {"@caster_name$",.v.s = caster ? caster->status.name : ""}
+                    {"@caster_name$", v:{s:  caster ? caster->status.name : ""}}
                     };
                     int  message_recipient =
                         VAR (VAR_SCRIPTTARGET).ty ==

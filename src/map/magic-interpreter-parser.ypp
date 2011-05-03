@@ -1,9 +1,17 @@
-%{
+%code requires {
 #include "magic-interpreter.hpp"
 #include "magic-expr.hpp"
+}
+
+%code {
+/// I don't know why the code is making me do this, but it is required
+#define YYLEX_PARAM 0, 0
+
+#include "magic-interpreter-parser.hpp"
+
 #include <stdarg.h>
 
-magic_conf_t magic_conf;
+extern magic_conf_t magic_conf;
 
 static int
 intern_id(const char *id_name);
@@ -50,7 +58,7 @@ static effect_t *
 op_effect(char *name, int args_nr, expr_t **args, int line, int column);
 
 int
-magic_frontend_lex(void);
+magic_frontend_lex(YYSTYPE *, YYLTYPE *);
 
 static void
 install_proc(proc_t *proc);
@@ -64,8 +72,7 @@ bind_constant(char *name, val_t *val, int line_nr);
 static val_t *
 find_constant(char *name);
 
-
-%}
+}
 
 %name-prefix="magic_frontend_"
 
@@ -1031,7 +1038,7 @@ find_constant(char *name)
 extern FILE *magic_frontend_in;
 
 int
-magic_init(char *conffile) // must be called after itemdb initialisation
+magic_init(const char *conffile) // must be called after itemdb initialisation
 {
         int error_flag = 0;
 

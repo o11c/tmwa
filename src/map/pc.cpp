@@ -94,6 +94,10 @@ static unsigned int equip_pos[11] =
 static struct gm_account *gm_account = NULL;
 static int GM_num = 0;
 
+
+timer_id day_timer_tid;
+timer_id night_timer_tid;
+
 int pc_isGM (struct map_session_data *sd)
 {
 //  struct gm_account *p;

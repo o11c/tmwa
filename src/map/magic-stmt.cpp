@@ -1123,7 +1123,7 @@ find_entities_in_area (area_t * area, int *entities_allocd_p,
             magic_area_rect (&m, &x, &y, &width, &height, area);
             map_foreachinarea (find_entities_in_area_c,
                                m, x, y, x + width, y + height,
-                               0 /* filter elsewhere */ ,
+                               BL_NUL /* filter elsewhere */ ,
                                entities_allocd_p, entities_nr_p, entities_p,
                                filter);
         }

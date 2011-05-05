@@ -420,7 +420,7 @@ int pc_counttargeted (struct map_session_data *sd, struct block_list *src,
     int  c = 0;
     map_foreachinarea (pc_counttargeted_sub, sd->bl.m,
                        sd->bl.x - AREA_SIZE, sd->bl.y - AREA_SIZE,
-                       sd->bl.x + AREA_SIZE, sd->bl.y + AREA_SIZE, 0,
+                       sd->bl.x + AREA_SIZE, sd->bl.y + AREA_SIZE, BL_NUL,
                        sd->bl.id, &c, src, target_lv);
     return c;
 }
@@ -4369,7 +4369,7 @@ static void pc_walk (timer_id tid, tick_t tick, custom_id_t id, custom_data_t da
         sd->walktimer = 1;
         map_foreachinmovearea (clif_pcoutsight, sd->bl.m, x - AREA_SIZE,
                                y - AREA_SIZE, x + AREA_SIZE, y + AREA_SIZE,
-                               dx, dy, 0, sd);
+                               dx, dy, BL_NUL, sd);
 
         x += dx;
         y += dy;
@@ -4388,7 +4388,7 @@ static void pc_walk (timer_id tid, tick_t tick, custom_id_t id, custom_data_t da
 
         map_foreachinmovearea (clif_pcinsight, sd->bl.m, x - AREA_SIZE,
                                y - AREA_SIZE, x + AREA_SIZE, y + AREA_SIZE,
-                               -dx, -dy, 0, sd);
+                               -dx, -dy, BL_NUL, sd);
         sd->walktimer = -1;
 
         if (sd->status.party_id > 0)
@@ -4559,7 +4559,7 @@ int pc_movepos (struct map_session_data *sd, int dst_x, int dst_y)
 
     map_foreachinmovearea (clif_pcoutsight, sd->bl.m, sd->bl.x - AREA_SIZE,
                            sd->bl.y - AREA_SIZE, sd->bl.x + AREA_SIZE,
-                           sd->bl.y + AREA_SIZE, dx, dy, 0, sd);
+                           sd->bl.y + AREA_SIZE, dx, dy, BL_NUL, sd);
 
     if (moveblock)
         map_delblock (&sd->bl);
@@ -4570,7 +4570,7 @@ int pc_movepos (struct map_session_data *sd, int dst_x, int dst_y)
 
     map_foreachinmovearea (clif_pcinsight, sd->bl.m, sd->bl.x - AREA_SIZE,
                            sd->bl.y - AREA_SIZE, sd->bl.x + AREA_SIZE,
-                           sd->bl.y + AREA_SIZE, -dx, -dy, 0, sd);
+                           sd->bl.y + AREA_SIZE, -dx, -dy, BL_NUL, sd);
 
     if (sd->status.party_id > 0)
     {                           // パーティのＨＰ情報通知検査

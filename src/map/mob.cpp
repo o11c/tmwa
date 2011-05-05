@@ -1875,7 +1875,7 @@ static int mob_ai_sub_hard (struct block_list *bl, va_list ap)
                                md->bl.x - AREA_SIZE * 2,
                                md->bl.y - AREA_SIZE * 2,
                                md->bl.x + AREA_SIZE * 2,
-                               md->bl.y + AREA_SIZE * 2, 0, md, &i);
+                               md->bl.y + AREA_SIZE * 2, BL_NUL, md, &i);
         }
         else
         {
@@ -3291,7 +3291,7 @@ int mob_counttargeted (struct mob_data *md, struct block_list *src,
 
     map_foreachinarea (mob_counttargeted_sub, md->bl.m,
                        md->bl.x - AREA_SIZE, md->bl.y - AREA_SIZE,
-                       md->bl.x + AREA_SIZE, md->bl.y + AREA_SIZE, 0,
+                       md->bl.x + AREA_SIZE, md->bl.y + AREA_SIZE, BL_NUL,
                        md->bl.id, &c, src, target_lv);
     return c;
 }

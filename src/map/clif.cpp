@@ -5820,7 +5820,7 @@ void clif_parse_LoadEndAck (int UNUSED, struct map_session_data *sd)
 
     map_foreachinarea (clif_getareachar, sd->bl.m, sd->bl.x - AREA_SIZE,
                        sd->bl.y - AREA_SIZE, sd->bl.x + AREA_SIZE,
-                       sd->bl.y + AREA_SIZE, 0, sd);
+                       sd->bl.y + AREA_SIZE, BL_NUL, sd);
 }
 
 /*==========================================

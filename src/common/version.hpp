@@ -1,3 +1,7 @@
+/// TODO change this to a yy.mm.dd +backport/localmodcount and remove "flavor"
+// This work work until the year 2255
+// but the old server will die in 2038
+
 /// Some constants to identify the version of (e)Athena
 /// The values are different if the client connects (-1,'T','M','W',flags32)
 // The flavor characters are now settable below

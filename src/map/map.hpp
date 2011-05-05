@@ -66,23 +66,24 @@
 #define CLIF_OPTION_SC_INVISIBILITY	(CLIF_OPTION_SC_BASE)
 #define CLIF_OPTION_SC_SCRIBE		(CLIF_OPTION_SC_BASE + 1)
 
-enum
+enum BlockType
 { BL_NUL, BL_PC, BL_NPC, BL_MOB, BL_ITEM, BL_CHAT, BL_SKILL, BL_SPELL };
 enum
 { WARP, SHOP, SCRIPT, MONS, MESSAGE };
 struct block_list
 {
     struct block_list *next, *prev;
-    int  id;
-    unsigned short m, x, y;
-    unsigned char type;
-    unsigned char subtype;
+    // different kind of ID depending on type: mob, pc, npc?
+    uint32_t id;
+    uint16_t m, x, y;
+    BlockType type;
+    uint32_t subtype;
 };
 
 struct walkpath_data
 {
-    unsigned char path_len, path_pos, path_half;
-    unsigned char path[MAX_WALKPATH];
+    uint8_t path_len, path_pos, path_half;
+    uint8_t path[MAX_WALKPATH];
 };
 struct script_reg
 {
@@ -730,15 +731,10 @@ int  map_freeblock_unlock (void);
 bool map_addblock (struct block_list *);
 int  map_delblock (struct block_list *);
 void map_foreachinarea (int (*)(struct block_list *, va_list), int, int, int,
-                        int, int, int, ...);
-// -- moonsoul (added map_foreachincell)
-void map_foreachincell (int (*)(struct block_list *, va_list), int, int, int,
-                        int, ...);
+                        int, int, BlockType, ...);
 void map_foreachinmovearea (int (*)(struct block_list *, va_list), int, int,
-                            int, int, int, int, int, int, ...);
-int  map_countnearpc (int, int, int);
-//block関連に追加
-int  map_count_oncell (int m, int x, int y);
+                            int, int, int, int, int, BlockType, ...);
+uint32_t  map_count_oncell (uint16_t m, uint16_t x, uint16_t y);
 // 一時的object関連
 int  map_addobject (struct block_list *);
 int  map_delobject (int, int type);

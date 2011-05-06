@@ -3217,17 +3217,13 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl,
             int  heal = skill_calc_heal (src, skilllv);
             int  heal_get_jobexp;
             int  skill;
-            struct pc_base_job s_class;
 
             if (dstsd && dstsd->special_state.no_magic_damage)
                 heal = 0;       /* 黄金蟲カード（ヒール量０） */
             if (sd)
             {
-                s_class = pc_calc_base_job (sd->status.pc_class);
                 if ((skill = pc_checkskill (sd, HP_MEDITATIO)) > 0) // メディテイティオ
                     heal += heal * (skill * 2 / 100);
-                if (sd && dstsd && sd->status.partner_id == dstsd->status.char_id && s_class.job == 23 && sd->status.sex == 0)  //自分も対象もPC、対象が自分のパートナー、自分がスパノビ、自分が♀なら
-                    heal = heal * 2;    //スパノビの嫁が旦那にヒールすると2倍になる
             }
 
             clif_skill_nodamage (src, bl, skillid, heal, 1);
@@ -3699,9 +3695,7 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl,
                     || (lv > 10)    // レベル差±10まで
                     || (!sd->status.party_id)   // PTにもギルドにも所属無しはだめ
                     || (sd->status.party_id != dstsd->status.party_id) // 同じパーティーか、
-                    || (dstsd->status.pc_class == 14 || dstsd->status.pc_class == 21
-                        || dstsd->status.pc_class == 4015
-                        || dstsd->status.pc_class == 4022))
+                    )
                 {               // クルセだめ
                     clif_skill_fail (sd, skillid, 0, 0);
                     map_freeblock_unlock ();
@@ -7136,8 +7130,6 @@ static int skill_check_condition_char_sub (struct block_list *bl, va_list ap)
     struct block_list *src;
     struct map_session_data *sd;
     struct map_session_data *ssd;
-    struct pc_base_job s_class;
-    struct pc_base_job ss_class;
 
     nullpo_retr (0, bl);
     nullpo_retr (0, ap);
@@ -7146,7 +7138,6 @@ static int skill_check_condition_char_sub (struct block_list *bl, va_list ap)
     nullpo_retr (0, c = va_arg (ap, int *));
     nullpo_retr (0, ssd = (struct map_session_data *) src);
 
-    s_class = pc_calc_base_job (sd->status.pc_class);
     //チェックしない設定ならcにありえない大きな数字を返して終了
     if (!battle_config.player_skill_partner_check)
     {                           //本当はforeachの前にやりたいけど設定適用箇所をまとめるためにここへ
@@ -7154,44 +7145,6 @@ static int skill_check_condition_char_sub (struct block_list *bl, va_list ap)
         return 0;
     }
 
-    ;
-    ss_class = pc_calc_base_job (ssd->status.pc_class);
-
-    switch (ssd->skillid)
-    {
-        case PR_BENEDICTIO:    /* 聖体降福 */
-            if (sd != ssd
-                && (sd->status.pc_class == 4 || sd->status.pc_class == 8
-                    || sd->status.pc_class == 15 || sd->status.pc_class == 4005
-                    || sd->status.pc_class == 4009 || sd->status.pc_class == 4016)
-                && (sd->bl.x == ssd->bl.x - 1 || sd->bl.x == ssd->bl.x + 1)
-                && sd->status.sp >= 10)
-                (*c)++;
-            break;
-        case BD_LULLABY:       /* 子守歌 */
-        case BD_RICHMANKIM:    /* ニヨルドの宴 */
-        case BD_ETERNALCHAOS:  /* 永遠の混沌 */
-        case BD_DRUMBATTLEFIELD:   /* 戦太鼓の響き */
-        case BD_RINGNIBELUNGEN:    /* ニーベルングの指輪 */
-        case BD_ROKISWEIL:     /* ロキの叫び */
-        case BD_INTOABYSS:     /* 深淵の中に */
-        case BD_SIEGFRIED:     /* 不死身のジークフリード */
-        case BD_RAGNAROK:      /* 神々の黄昏 */
-        case CG_MOONLIT:       /* 月明りの泉に落ちる花びら */
-            if (sd != ssd &&
-                ((ssd->status.pc_class == 19 && sd->status.pc_class == 20) ||
-                 (ssd->status.pc_class == 20 && sd->status.pc_class == 19) ||
-                 (ssd->status.pc_class == 4020 && sd->status.pc_class == 4021) ||
-                 (ssd->status.pc_class == 4021 && sd->status.pc_class == 4020) ||
-                 (ssd->status.pc_class == 20 && sd->status.pc_class == 4020) ||
-                 (ssd->status.pc_class == 19 && sd->status.pc_class == 4021)) &&
-                pc_checkskill (sd, ssd->skillid) > 0 &&
-                (*c) == 0 &&
-                sd->status.party_id == ssd->status.party_id &&
-                !pc_issit (sd) && sd->sc_data[SC_DANCING].timer == -1)
-                (*c) = pc_checkskill (sd, ssd->skillid);
-            break;
-    }
     return 0;
 }
 
@@ -7206,9 +7159,6 @@ static int skill_check_condition_use_sub (struct block_list *bl, va_list ap)
     struct block_list *src;
     struct map_session_data *sd;
     struct map_session_data *ssd;
-    struct pc_base_job s_class;
-    struct pc_base_job ss_class;
-    int  skillid, skilllv;
 
     nullpo_retr (0, bl);
     nullpo_retr (0, ap);
@@ -7217,8 +7167,6 @@ static int skill_check_condition_use_sub (struct block_list *bl, va_list ap)
     nullpo_retr (0, c = va_arg (ap, int *));
     nullpo_retr (0, ssd = (struct map_session_data *) src);
 
-    s_class = pc_calc_base_job (sd->status.pc_class);
-
     //チェックしない設定ならcにありえない大きな数字を返して終了
     if (!battle_config.player_skill_partner_check)
     {                           //本当はforeachの前にやりたいけど設定適用箇所をまとめるためにここへ
@@ -7226,61 +7174,6 @@ static int skill_check_condition_use_sub (struct block_list *bl, va_list ap)
         return 0;
     }
 
-    ss_class = pc_calc_base_job (ssd->status.pc_class);
-    skillid = ssd->skillid;
-    skilllv = ssd->skilllv;
-    switch (skillid)
-    {
-        case PR_BENEDICTIO:    /* 聖体降福 */
-            if (sd != ssd
-                && (sd->status.pc_class == 4 || sd->status.pc_class == 8
-                    || sd->status.pc_class == 15 || sd->status.pc_class == 4005
-                    || sd->status.pc_class == 4009 || sd->status.pc_class == 4016)
-                && (sd->bl.x == ssd->bl.x - 1 || sd->bl.x == ssd->bl.x + 1)
-                && sd->status.sp >= 10)
-            {
-                sd->status.sp -= 10;
-                pc_calcstatus (sd, 0);
-                (*c)++;
-            }
-            break;
-        case BD_LULLABY:       /* 子守歌 */
-        case BD_RICHMANKIM:    /* ニヨルドの宴 */
-        case BD_ETERNALCHAOS:  /* 永遠の混沌 */
-        case BD_DRUMBATTLEFIELD:   /* 戦太鼓の響き */
-        case BD_RINGNIBELUNGEN:    /* ニーベルングの指輪 */
-        case BD_ROKISWEIL:     /* ロキの叫び */
-        case BD_INTOABYSS:     /* 深淵の中に */
-        case BD_SIEGFRIED:     /* 不死身のジークフリード */
-        case BD_RAGNAROK:      /* 神々の黄昏 */
-        case CG_MOONLIT:       /* 月明りの泉に落ちる花びら */
-            if (sd != ssd &&    //本人以外で
-                ((ssd->status.pc_class == 19 && sd->status.pc_class == 20) ||
-                (ssd->status.pc_class == 20 && sd->status.pc_class == 19) ||
-                (ssd->status.pc_class == 4020 && sd->status.pc_class == 4021) ||
-                (ssd->status.pc_class == 4021 && sd->status.pc_class == 4020) ||
-                (ssd->status.pc_class == 20 && sd->status.pc_class == 4020) ||
-                (ssd->status.pc_class == 19 && sd->status.pc_class == 4021)) && //自分がダンサーならバードで
-                pc_checkskill (sd, skillid) > 0 &&  //スキルを持っていて
-                (*c) == 0 &&    //最初の一人で
-                sd->status.party_id == ssd->status.party_id &&  //パーティーが同じで
-                !pc_issit (sd) &&   //座ってない
-                sd->sc_data[SC_DANCING].timer == -1 //ダンス中じゃない
-                )
-            {
-                ssd->sc_data[SC_DANCING].val4 = bl->id;
-                clif_skill_nodamage (bl, src, skillid, skilllv, 1);
-                skill_status_change_start (bl, SC_DANCING, skillid,
-                                           ssd->sc_data[SC_DANCING].val2, 0,
-                                           src->id, skill_get_time (skillid,
-                                                                    skilllv) +
-                                           1000, 0);
-                sd->skillid_dance = sd->skillid = skillid;
-                sd->skilllv_dance = sd->skilllv = skilllv;
-                (*c)++;
-            }
-            break;
-    }
     return 0;
 }
 

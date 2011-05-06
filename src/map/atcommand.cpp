@@ -391,156 +391,6 @@ static AtCommandInfo atcommand_info[] = {
     {AtCommand_Unknown, NULL, 1, NULL}
 };
 
-/*====================================================
- * This function return the name of the job (by [Yor])
- *----------------------------------------------------
- */
-const char *job_name (int pc_class)
-{
-    switch (pc_class)
-    {
-        case 0:
-            return "Novice";
-        case 1:
-            return "Swordsman";
-        case 2:
-            return "Mage";
-        case 3:
-            return "Archer";
-        case 4:
-            return "Acolyte";
-        case 5:
-            return "Merchant";
-        case 6:
-            return "Thief";
-        case 7:
-            return "Knight";
-        case 8:
-            return "Priest";
-        case 9:
-            return "Wizard";
-        case 10:
-            return "Blacksmith";
-        case 11:
-            return "Hunter";
-        case 12:
-            return "Assassin";
-        case 13:
-            return "Knight 2";
-        case 14:
-            return "Crusader";
-        case 15:
-            return "Monk";
-        case 16:
-            return "Sage";
-        case 17:
-            return "Rogue";
-        case 18:
-            return "Alchemist";
-        case 19:
-            return "Bard";
-        case 20:
-            return "Dancer";
-        case 21:
-            return "Crusader 2";
-        case 22:
-            return "Wedding";
-        case 23:
-            return "Super Novice";
-        case 4001:
-            return "Novice High";
-        case 4002:
-            return "Swordsman High";
-        case 4003:
-            return "Mage High";
-        case 4004:
-            return "Archer High";
-        case 4005:
-            return "Acolyte High";
-        case 4006:
-            return "Merchant High";
-        case 4007:
-            return "Thief High";
-        case 4008:
-            return "Lord Knight";
-        case 4009:
-            return "High Priest";
-        case 4010:
-            return "High Wizard";
-        case 4011:
-            return "Whitesmith";
-        case 4012:
-            return "Sniper";
-        case 4013:
-            return "Assassin Cross";
-        case 4014:
-            return "Peko Knight";
-        case 4015:
-            return "Paladin";
-        case 4016:
-            return "Champion";
-        case 4017:
-            return "Professor";
-        case 4018:
-            return "Stalker";
-        case 4019:
-            return "Creator";
-        case 4020:
-            return "Clown";
-        case 4021:
-            return "Gypsy";
-        case 4022:
-            return "Peko Paladin";
-        case 4023:
-            return "Baby Novice";
-        case 4024:
-            return "Baby Swordsman";
-        case 4025:
-            return "Baby Mage";
-        case 4026:
-            return "Baby Archer";
-        case 4027:
-            return "Baby Acolyte";
-        case 4028:
-            return "Baby Merchant";
-        case 4029:
-            return "Baby Thief";
-        case 4030:
-            return "Baby Knight";
-        case 4031:
-            return "Baby Priest";
-        case 4032:
-            return "Baby Wizard";
-        case 4033:
-            return "Baby Blacksmith";
-        case 4034:
-            return "Baby Hunter";
-        case 4035:
-            return "Baby Assassin";
-        case 4036:
-            return "Baby Peco Knight";
-        case 4037:
-            return "Baby Crusader";
-        case 4038:
-            return "Baby Monk";
-        case 4039:
-            return "Baby Sage";
-        case 4040:
-            return "Baby Rogue";
-        case 4041:
-            return "Baby Alchemist";
-        case 4042:
-            return "Baby Bard";
-        case 4043:
-            return "Baby Dancer";
-        case 4044:
-            return "Baby Peco Crusader";
-        case 4045:
-            return "Super Baby";
-    }
-    return "Unknown Job";
-}
-
 /*==========================================
  * get_atcommand_level @コマンドの必要レベルを取得
  *------------------------------------------
@@ -1512,7 +1362,7 @@ int atcommand_whogm (const int fd, struct map_session_data *sd,
                         sprintf (output,
                                  "       BLvl: %d | Job: %s (Lvl: %d)",
                                  pl_sd->status.base_level,
-                                 job_name (pl_sd->status.pc_class),
+                                 "N/A",
                                  pl_sd->status.job_level);
                         clif_displaymessage (fd, output);
                         p = party_search (pl_sd->status.party_id);
@@ -1690,43 +1540,9 @@ int atcommand_option (const int fd, struct map_session_data *sd,
     }
     sd->status.option = param3;
     // fix pecopeco display
-    if (sd->status.pc_class == 13 || sd->status.pc_class == 21
-        || sd->status.pc_class == 4014 || sd->status.pc_class == 4022)
-    {
-        if (!pc_isriding (sd))
-        {                       // sd have the new value...
-            if (sd->status.pc_class == 13)
-                sd->status.pc_class = sd->view_class = 7;
-            else if (sd->status.pc_class == 21)
-                sd->status.pc_class = sd->view_class = 14;
-            else if (sd->status.pc_class == 4014)
-                sd->status.pc_class = sd->view_class = 4008;
-            else if (sd->status.pc_class == 4022)
-                sd->status.pc_class = sd->view_class = 4015;
-        }
-    }
-    else
-    {
-        if (pc_isriding (sd))
-        {                       // sd have the new value...
-            if (sd->disguise > 0)
-            {                   // temporary prevention of crash caused by peco + disguise, will look into a better solution [Valaris] (code added by [Yor])
-                sd->status.option &= ~0x0020;
-            }
-            else
-            {
-                if (sd->status.pc_class == 7)
-                    sd->status.pc_class = sd->view_class = 13;
-                else if (sd->status.pc_class == 14)
-                    sd->status.pc_class = sd->view_class = 21;
-                else if (sd->status.pc_class == 4008)
-                    sd->status.pc_class = sd->view_class = 4014;
-                else if (sd->status.pc_class == 4015)
-                    sd->status.pc_class = sd->view_class = 4022;
-                else
-                    sd->status.option &= ~0x0020;
-            }
-        }
+    if (pc_isriding (sd))
+    {                       // sd have the new value...
+        sd->status.option &= ~0x0020;
     }
 
     clif_changeoption (&sd->bl);
@@ -2080,11 +1896,7 @@ int atcommand_joblevelup (const int fd, struct map_session_data *sd,
         return -1;
     }
 
-    if (sd->status.pc_class == 0 || sd->status.pc_class == 4001)
-        up_level -= 40;
-    else if ((sd->status.pc_class > 4007 && sd->status.pc_class < 4024)
-             || sd->status.pc_class == 23)
-        up_level += 20;
+    up_level -= 40;
 
     if (level > 0)
     {
@@ -2328,21 +2140,10 @@ int atcommand_model (const int fd, struct map_session_data *sd,
         hair_color >= 0 && hair_color < NUM_HAIR_COLORS &&
         cloth_color >= 0 && cloth_color < NUM_CLOTHES_COLORS)
     {
-        //服の色変更
-        if (cloth_color != 0 && sd->status.sex == 1
-            && (sd->status.pc_class == 12 || sd->status.pc_class == 17))
-        {
-            //服の色未実装職の判定
-            clif_displaymessage (fd, "You can't use this command with this class.");
-            return -1;
-        }
-        else
-        {
-            pc_changelook (sd, LOOK_HAIR, hair_style);
-            pc_changelook (sd, LOOK_HAIR_COLOR, hair_color);
-            pc_changelook (sd, LOOK_CLOTHES_COLOR, cloth_color);
-            clif_displaymessage (fd, "Appearence changed.");
-        }
+        pc_changelook (sd, LOOK_HAIR, hair_style);
+        pc_changelook (sd, LOOK_HAIR_COLOR, hair_color);
+        pc_changelook (sd, LOOK_CLOTHES_COLOR, cloth_color);
+        clif_displaymessage (fd, "Appearence changed.");
     }
     else
     {
@@ -2376,17 +2177,8 @@ int atcommand_dye (const int fd, struct map_session_data *sd,
 
     if (cloth_color >= 0 && cloth_color <= NUM_CLOTHES_COLORS)
     {
-        if (cloth_color != 0 && sd->status.sex == 1
-            && (sd->status.pc_class == 12 || sd->status.pc_class == 17))
-        {
-            clif_displaymessage (fd, "You can't use this command with this class.");
-            return -1;
-        }
-        else
-        {
-            pc_changelook (sd, LOOK_CLOTHES_COLOR, cloth_color);
-            clif_displaymessage (fd, "Appearance changed.");
-        }
+        pc_changelook (sd, LOOK_CLOTHES_COLOR, cloth_color);
+        clif_displaymessage (fd, "Appearance changed.");
     }
     else
     {
@@ -2431,17 +2223,8 @@ int atcommand_hair_style (const int fd, struct map_session_data *sd,
 
     if (hair_style >= 0 && hair_style < NUM_HAIR_STYLES)
     {
-        if (hair_style != 0 && sd->status.sex == 1
-            && (sd->status.pc_class == 12 || sd->status.pc_class == 17))
-        {
-            clif_displaymessage (fd, "You can't use this command with this class.");
-            return -1;
-        }
-        else
-        {
-            pc_changelook (sd, LOOK_HAIR, hair_style);
-            clif_displaymessage (fd, "Appearance changed.");
-        }
+        pc_changelook (sd, LOOK_HAIR, hair_style);
+        clif_displaymessage (fd, "Appearance changed.");
     }
     else
     {
@@ -2486,17 +2269,8 @@ int atcommand_hair_color (const int fd, struct map_session_data *sd,
 
     if (hair_color >= 0 && hair_color < NUM_HAIR_COLORS)
     {
-        if (hair_color != 0 && sd->status.sex == 1
-            && (sd->status.pc_class == 12 || sd->status.pc_class == 17))
-        {
-            clif_displaymessage (fd, "You can't use this command with this class.");
-            return -1;
-        }
-        else
-        {
-            pc_changelook (sd, LOOK_HAIR_COLOR, hair_color);
-            clif_displaymessage (fd, "Appearance changed.");
-        }
+        pc_changelook (sd, LOOK_HAIR_COLOR, hair_color);
+        clif_displaymessage (fd, "Appearance changed.");
     }
     else
     {
@@ -3525,7 +3299,7 @@ int atcommand_character_stats (const int fd, struct map_session_data *UNUSED,
             {"Zeny", pl_sd->status.zeny},
             {NULL, 0}
         };
-        sprintf (job_jobname, "Job - %s %s", job_name (pl_sd->status.pc_class),
+        sprintf (job_jobname, "Job - %s %s", "N/A",
                  "(level %d)");
                  sprintf (output, "'%s' stats:", pl_sd->status.name);
         clif_displaymessage (fd, output);
@@ -3575,7 +3349,7 @@ int atcommand_character_stats_all (const int fd, struct map_session_data *UNUSED
             sprintf (output,
                      "Name: %s | BLvl: %d | Job: %s (Lvl: %d) | HP: %d/%d | SP: %d/%d",
                      pl_sd->status.name, pl_sd->status.base_level,
-                     job_name (pl_sd->status.pc_class), pl_sd->status.job_level,
+                     "N/A", pl_sd->status.job_level,
                      pl_sd->status.hp, pl_sd->status.max_hp, pl_sd->status.sp,
                      pl_sd->status.max_sp);
             clif_displaymessage (fd, output);
@@ -3633,43 +3407,9 @@ int atcommand_character_option (const int fd, struct map_session_data *sd,
             pl_sd->opt2 = opt2;
             pl_sd->status.option = opt3;
             // fix pecopeco display
-            if (pl_sd->status.pc_class == 13 || pl_sd->status.pc_class == 21
-                || pl_sd->status.pc_class == 4014 || pl_sd->status.pc_class == 4022)
-            {
-                if (!pc_isriding (pl_sd))
-                {               // pl_sd have the new value...
-                    if (pl_sd->status.pc_class == 13)
-                        pl_sd->status.pc_class = pl_sd->view_class = 7;
-                    else if (pl_sd->status.pc_class == 21)
-                        pl_sd->status.pc_class = pl_sd->view_class = 14;
-                    else if (pl_sd->status.pc_class == 4014)
-                        pl_sd->status.pc_class = pl_sd->view_class = 4008;
-                    else if (pl_sd->status.pc_class == 4022)
-                        pl_sd->status.pc_class = pl_sd->view_class = 4015;
-                }
-            }
-            else
-            {
-                if (pc_isriding (pl_sd))
-                {               // pl_sd have the new value...
-                    if (pl_sd->disguise > 0)
-                    {           // temporary prevention of crash caused by peco + disguise, will look into a better solution [Valaris] (code added by [Yor])
-                        pl_sd->status.option &= ~0x0020;
-                    }
-                    else
-                    {
-                        if (pl_sd->status.pc_class == 7)
-                            pl_sd->status.pc_class = pl_sd->view_class = 13;
-                        else if (pl_sd->status.pc_class == 14)
-                            pl_sd->status.pc_class = pl_sd->view_class = 21;
-                        else if (pl_sd->status.pc_class == 4008)
-                            pl_sd->status.pc_class = pl_sd->view_class = 4014;
-                        else if (pl_sd->status.pc_class == 4015)
-                            pl_sd->status.pc_class = pl_sd->view_class = 4022;
-                        else
-                            pl_sd->status.option &= ~0x0020;
-                    }
-                }
+            if (pc_isriding (pl_sd))
+            {               // pl_sd have the new value...
+                    pl_sd->status.option &= ~0x0020;
             }
             clif_changeoption (&pl_sd->bl);
             pc_calcstatus (pl_sd, 0);
@@ -4302,8 +4042,6 @@ int atcommand_character_joblevel (const int fd, struct map_session_data *sd,
     struct map_session_data *pl_sd;
     char character[100];
     int  max_level = 50, level = 0;
-    //転生や養子の場合の元の職業を算出する
-    struct pc_base_job pl_s_class;
 
     memset (character, '\0', sizeof (character));
 
@@ -4318,13 +4056,9 @@ int atcommand_character_joblevel (const int fd, struct map_session_data *sd,
 
     if ((pl_sd = map_nick2sd (character)) != NULL)
     {
-        pl_s_class = pc_calc_base_job (pl_sd->status.pc_class);
         if (pc_isGM (sd) >= pc_isGM (pl_sd))
         {                       // you can change job level only lower or same gm level
-            if (pl_s_class.job == 0)
-                max_level -= 40;
-            if ((pl_s_class.job == 23) || (pl_s_class.upper == 1 && pl_s_class.type == 2))  //スパノビと転生職はJobレベルの最高が70
-                max_level += 20;
+            max_level -= 40;
 
             if (level > 0)
             {
@@ -5025,21 +4759,10 @@ int atcommand_charmodel (const int fd, struct map_session_data *UNUSED,
             hair_color >= 0 && hair_color <= NUM_HAIR_COLORS &&
             cloth_color >= 0 && cloth_color <= NUM_CLOTHES_COLORS)
         {
-
-            if (cloth_color != 0 &&
-                pl_sd->status.sex == 1 &&
-                (pl_sd->status.pc_class == 12 || pl_sd->status.pc_class == 17))
-            {
-                clif_displaymessage (fd, "You can't use this command with this class.");
-                return -1;
-            }
-            else
-            {
-                pc_changelook (pl_sd, LOOK_HAIR, hair_style);
-                pc_changelook (pl_sd, LOOK_HAIR_COLOR, hair_color);
-                pc_changelook (pl_sd, LOOK_CLOTHES_COLOR, cloth_color);
-                clif_displaymessage (fd, "Appearance changed.");
-            }
+            pc_changelook (pl_sd, LOOK_HAIR, hair_style);
+            pc_changelook (pl_sd, LOOK_HAIR_COLOR, hair_color);
+            pc_changelook (pl_sd, LOOK_CLOTHES_COLOR, cloth_color);
+            clif_displaymessage (fd, "Appearance changed.");
         }
         else
         {
@@ -5611,36 +5334,11 @@ int atcommand_mount_peco (const int fd, struct map_session_data *sd,
 
     if (!pc_isriding (sd))
     {                           // if actually no peco
-        if (sd->status.pc_class == 7 || sd->status.pc_class == 14
-            || sd->status.pc_class == 4008 || sd->status.pc_class == 4015)
-        {
-            if (sd->status.pc_class == 7)
-                sd->status.pc_class = sd->view_class = 13;
-            else if (sd->status.pc_class == 14)
-                sd->status.pc_class = sd->view_class = 21;
-            else if (sd->status.pc_class == 4008)
-                sd->status.pc_class = sd->view_class = 4014;
-            else if (sd->status.pc_class == 4015)
-                sd->status.pc_class = sd->view_class = 4022;
-            pc_setoption (sd, sd->status.option | 0x0020);
-            clif_displaymessage (fd, "Mounted Peco.");
-        }
-        else
-        {
-            clif_displaymessage (fd, "You can not mount a peco with your job.");
-            return -1;
-        }
+        clif_displaymessage (fd, "You can not mount a peco with your job.");
+        return -1;
     }
     else
     {
-        if (sd->status.pc_class == 13)
-            sd->status.pc_class = sd->view_class = 7;
-        else if (sd->status.pc_class == 21)
-            sd->status.pc_class = sd->view_class = 14;
-        else if (sd->status.pc_class == 4014)
-            sd->status.pc_class = sd->view_class = 4008;
-        else if (sd->status.pc_class == 4022)
-            sd->status.pc_class = sd->view_class = 4015;
         pc_setoption (sd, sd->status.option & ~0x0020);
         clif_displaymessage (fd, "Unmounted Peco.");
     }
@@ -5677,36 +5375,11 @@ int atcommand_char_mount_peco (const int fd, struct map_session_data *UNUSED,
 
         if (!pc_isriding (pl_sd))
         {                       // if actually no peco
-            if (pl_sd->status.pc_class == 7 || pl_sd->status.pc_class == 14
-                || pl_sd->status.pc_class == 4008 || pl_sd->status.pc_class == 4015)
-            {
-                if (pl_sd->status.pc_class == 7)
-                    pl_sd->status.pc_class = pl_sd->view_class = 13;
-                else if (pl_sd->status.pc_class == 14)
-                    pl_sd->status.pc_class = pl_sd->view_class = 21;
-                else if (pl_sd->status.pc_class == 4008)
-                    pl_sd->status.pc_class = pl_sd->view_class = 4014;
-                else if (pl_sd->status.pc_class == 4015)
-                    pl_sd->status.pc_class = pl_sd->view_class = 4022;
-                pc_setoption (pl_sd, pl_sd->status.option | 0x0020);
-                clif_displaymessage (fd, "Now, this player mounts a peco.");
-            }
-            else
-            {
-                clif_displaymessage (fd, "This player can not mount a peco with his/her job.");
-                return -1;
-            }
+            clif_displaymessage (fd, "This player can not mount a peco with his/her job.");
+            return -1;
         }
         else
         {
-            if (pl_sd->status.pc_class == 13)
-                pl_sd->status.pc_class = pl_sd->view_class = 7;
-            else if (pl_sd->status.pc_class == 21)
-                pl_sd->status.pc_class = pl_sd->view_class = 14;
-            else if (pl_sd->status.pc_class == 4014)
-                pl_sd->status.pc_class = pl_sd->view_class = 4008;
-            else if (pl_sd->status.pc_class == 4022)
-                pl_sd->status.pc_class = pl_sd->view_class = 4015;
             pc_setoption (pl_sd, pl_sd->status.option & ~0x0020);
             clif_displaymessage (fd, "Now, this player has not more peco.");
         }

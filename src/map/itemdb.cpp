@@ -165,7 +165,6 @@ struct item_data *itemdb_search (int nameid)
     id->flag.value_notdc = 0;   //一応・・・
     id->flag.value_notoc = 0;
     id->flag.no_equip = 0;
-    id->view_id = 0;
 
     if (nameid > 500 && nameid < 600)
         id->type = 0;           //heal item
@@ -367,7 +366,6 @@ static int itemdb_readdb (void)
             id->flag.available = 1;
             id->flag.value_notdc = 0;
             id->flag.value_notoc = 0;
-            id->view_id = 0;
 
             id->use_script = NULL;
             id->equip_script = NULL;
@@ -488,7 +486,7 @@ static int itemdb_read_itemavail (void)
     FILE *fp;
     char line[1024];
     int  ln = 0;
-    int  nameid, j, k;
+    int  nameid, j;
     char *str[10], *p;
 
     if ((fp = fopen_ ("db/item_avail.txt", "r")) == NULL)
@@ -517,14 +515,8 @@ static int itemdb_read_itemavail (void)
         nameid = atoi (str[0]);
         if (nameid < 0 || nameid >= 20000 || !(id = itemdb_exists (nameid)))
             continue;
-        k = atoi (str[1]);
-        if (k > 0)
-        {
-            id->flag.available = 1;
-            id->view_id = k;
-        }
-        else
-            id->flag.available = 0;
+
+        id->flag.available = 0;
         ln++;
     }
     fclose_ (fp);

@@ -556,17 +556,12 @@ int clif_charselectok (int id)
  */
 static int clif_set009e (struct flooritem_data *fitem, uint8_t *buf)
 {
-    int  view;
-
     nullpo_retr (0, fitem);
 
     //009e <ID>.l <name ID>.w <identify flag>.B <X>.w <Y>.w <subX>.B <subY>.B <amount>.w
     WBUFW (buf, 0) = 0x9e;
     WBUFL (buf, 2) = fitem->bl.id;
-    if ((view = itemdb_viewid (fitem->item_data.nameid)) > 0)
-        WBUFW (buf, 6) = view;
-    else
-        WBUFW (buf, 6) = fitem->item_data.nameid;
+    WBUFW (buf, 6) = fitem->item_data.nameid;
     WBUFB (buf, 8) = fitem->item_data.identify;
     WBUFW (buf, 9) = fitem->bl.x;
     WBUFW (buf, 11) = fitem->bl.y;
@@ -736,33 +731,20 @@ static int clif_set0078 (struct map_session_data *sd, unsigned char *buf)
     WBUFW (buf, 8) = sd->opt1;
     WBUFW (buf, 10) = sd->opt2;
     WBUFW (buf, 12) = sd->status.option;
-    WBUFW (buf, 14) = sd->view_class;
+    WBUFW (buf, 14) = 0;// = sd->view_class;
     WBUFW (buf, 16) = sd->status.hair;
     if (sd->attack_spell_override)
         WBUFB (buf, 18) = sd->attack_spell_look_override;
     else
     {
-        if (sd->equip_index[9] >= 0 && sd->inventory_data[sd->equip_index[9]]
-            && sd->view_class != 22)
-        {
-            if (sd->inventory_data[sd->equip_index[9]]->view_id > 0)
-                WBUFW (buf, 18) =
-                    sd->inventory_data[sd->equip_index[9]]->view_id;
-            else
-                WBUFW (buf, 18) =
-                    sd->status.inventory[sd->equip_index[9]].nameid;
-        }
+        if (sd->equip_index[9] >= 0 && sd->inventory_data[sd->equip_index[9]])
+            WBUFW (buf, 18) = sd->status.inventory[sd->equip_index[9]].nameid;
         else
             WBUFW (buf, 18) = 0;
     }
     if (sd->equip_index[8] >= 0 && sd->equip_index[8] != sd->equip_index[9]
-        && sd->inventory_data[sd->equip_index[8]] && sd->view_class != 22)
-    {
-        if (sd->inventory_data[sd->equip_index[8]]->view_id > 0)
-            WBUFW (buf, 20) = sd->inventory_data[sd->equip_index[8]]->view_id;
-        else
-            WBUFW (buf, 20) = sd->status.inventory[sd->equip_index[8]].nameid;
-    }
+        && sd->inventory_data[sd->equip_index[8]])
+        WBUFW (buf, 20) = sd->status.inventory[sd->equip_index[8]].nameid;
     else
         WBUFW (buf, 20) = 0;
     WBUFW (buf, 22) = sd->status.head_bottom;
@@ -824,26 +806,15 @@ static int clif_set007b (struct map_session_data *sd, unsigned char *buf)
     WBUFW (buf, 8) = sd->opt1;
     WBUFW (buf, 10) = sd->opt2;
     WBUFW (buf, 12) = sd->status.option;
-    WBUFW (buf, 14) = sd->view_class;
+    WBUFW (buf, 14) = 0; //sd->view_class;
     WBUFW (buf, 16) = sd->status.hair;
-    if (sd->equip_index[9] >= 0 && sd->inventory_data[sd->equip_index[9]]
-        && sd->view_class != 22)
-    {
-        if (sd->inventory_data[sd->equip_index[9]]->view_id > 0)
-            WBUFW (buf, 18) = sd->inventory_data[sd->equip_index[9]]->view_id;
-        else
-            WBUFW (buf, 18) = sd->status.inventory[sd->equip_index[9]].nameid;
-    }
+    if (sd->equip_index[9] >= 0 && sd->inventory_data[sd->equip_index[9]])
+        WBUFW (buf, 18) = sd->status.inventory[sd->equip_index[9]].nameid;
     else
         WBUFW (buf, 18) = 0;
     if (sd->equip_index[8] >= 0 && sd->equip_index[8] != sd->equip_index[9]
-        && sd->inventory_data[sd->equip_index[8]] && sd->view_class != 22)
-    {
-        if (sd->inventory_data[sd->equip_index[8]]->view_id > 0)
-            WBUFW (buf, 20) = sd->inventory_data[sd->equip_index[8]]->view_id;
-        else
-            WBUFW (buf, 20) = sd->status.inventory[sd->equip_index[8]].nameid;
-    }
+            && sd->inventory_data[sd->equip_index[8]])
+        WBUFW (buf, 20) = sd->status.inventory[sd->equip_index[8]].nameid;
     else
         WBUFW (buf, 20) = 0;
     WBUFW (buf, 22) = sd->status.head_bottom;
@@ -1143,15 +1114,6 @@ int clif_spawnpc (struct map_session_data *sd)
 
     if (sd->spiritball > 0)
         clif_spiritball (sd);
-
-    if (sd->status.pc_class == 13 || sd->status.pc_class == 21
-        || sd->status.pc_class == 4014 || sd->status.pc_class == 4022)
-        pc_setoption (sd, sd->status.option | 0x0020);  // [Valaris]
-
-    if ((pc_isriding (sd) && pc_checkskill (sd, KN_RIDING) > 0)
-        && (sd->status.pc_class == 7 || sd->status.pc_class == 14
-            || sd->status.pc_class == 4008 || sd->status.pc_class == 4015))
-        pc_setriding (sd);      // update peco riders for people upgrading athena [Valaris]
 
     if (maps[sd->bl.m].flag.snow)
         clif_specialeffect (&sd->bl, 162, 1);
@@ -1474,10 +1436,7 @@ int clif_buylist (struct map_session_data *sd, struct npc_data *nd)
             val = pc_modifybuyvalue (sd, val);
         WFIFOL (fd, 8 + i * 11) = val;
         WFIFOB (fd, 12 + i * 11) = id->type;
-        if (id->view_id > 0)
-            WFIFOW (fd, 13 + i * 11) = id->view_id;
-        else
-            WFIFOW (fd, 13 + i * 11) = nd->u.shop_item[i].nameid;
+        WFIFOW (fd, 13 + i * 11) = nd->u.shop_item[i].nameid;
     }
     WFIFOW (fd, 2) = i * 11 + 4;
     WFIFOSET (fd, WFIFOW (fd, 2));
@@ -1679,7 +1638,7 @@ int clif_cutin (struct map_session_data *sd, const char *image, int type)
  */
 int clif_additem (struct map_session_data *sd, int n, int amount, int fail)
 {
-    int  fd, j;
+    int  fd;
     unsigned char *buf;
 
     nullpo_retr (0, sd);
@@ -1712,48 +1671,17 @@ int clif_additem (struct map_session_data *sd, int n, int amount, int fail)
         WBUFW (buf, 0) = 0xa0;
         WBUFW (buf, 2) = n + 2;
         WBUFW (buf, 4) = amount;
-        if (sd->inventory_data[n]->view_id > 0)
-            WBUFW (buf, 6) = sd->inventory_data[n]->view_id;
-        else
-            WBUFW (buf, 6) = sd->status.inventory[n].nameid;
+        WBUFW (buf, 6) = sd->status.inventory[n].nameid;
         WBUFB (buf, 8) = sd->status.inventory[n].identify;
         if (sd->status.inventory[n].broken == 1)
             WBUFB (buf, 9) = 1; // is weapon broken [Valaris]
         else
             WBUFB (buf, 9) = sd->status.inventory[n].attribute;
         WBUFB (buf, 10) = sd->status.inventory[n].refine;
-        if (sd->status.inventory[n].card[0] == 0x00ff
-            || sd->status.inventory[n].card[0] == 0x00fe
-            || sd->status.inventory[n].card[0] == (short) 0xff00)
-        {
-            WBUFW (buf, 11) = sd->status.inventory[n].card[0];
-            WBUFW (buf, 13) = sd->status.inventory[n].card[1];
-            WBUFW (buf, 15) = sd->status.inventory[n].card[2];
-            WBUFW (buf, 17) = sd->status.inventory[n].card[3];
-        }
-        else
-        {
-            if (sd->status.inventory[n].card[0] > 0
-                && (j = itemdb_viewid (sd->status.inventory[n].card[0])) > 0)
-                WBUFW (buf, 11) = j;
-            else
-                WBUFW (buf, 11) = sd->status.inventory[n].card[0];
-            if (sd->status.inventory[n].card[1] > 0
-                && (j = itemdb_viewid (sd->status.inventory[n].card[1])) > 0)
-                WBUFW (buf, 13) = j;
-            else
-                WBUFW (buf, 13) = sd->status.inventory[n].card[1];
-            if (sd->status.inventory[n].card[2] > 0
-                && (j = itemdb_viewid (sd->status.inventory[n].card[2])) > 0)
-                WBUFW (buf, 15) = j;
-            else
-                WBUFW (buf, 15) = sd->status.inventory[n].card[2];
-            if (sd->status.inventory[n].card[3] > 0
-                && (j = itemdb_viewid (sd->status.inventory[n].card[3])) > 0)
-                WBUFW (buf, 17) = j;
-            else
-                WBUFW (buf, 17) = sd->status.inventory[n].card[3];
-        }
+        WBUFW (buf, 11) = sd->status.inventory[n].card[0];
+        WBUFW (buf, 13) = sd->status.inventory[n].card[1];
+        WBUFW (buf, 15) = sd->status.inventory[n].card[2];
+        WBUFW (buf, 17) = sd->status.inventory[n].card[3];
         WBUFW (buf, 19) = pc_equippoint (sd, n);
         WBUFB (buf, 21) =
             (sd->inventory_data[n]->type ==
@@ -1806,10 +1734,7 @@ int clif_itemlist (struct map_session_data *sd)
             || itemdb_isequip2 (sd->inventory_data[i]))
             continue;
         WBUFW (buf, n * 18 + 4) = i + 2;
-        if (sd->inventory_data[i]->view_id > 0)
-            WBUFW (buf, n * 18 + 6) = sd->inventory_data[i]->view_id;
-        else
-            WBUFW (buf, n * 18 + 6) = sd->status.inventory[i].nameid;
+        WBUFW (buf, n * 18 + 6) = sd->status.inventory[i].nameid;
         WBUFB (buf, n * 18 + 8) = sd->inventory_data[i]->type;
         WBUFB (buf, n * 18 + 9) = sd->status.inventory[i].identify;
         WBUFW (buf, n * 18 + 10) = sd->status.inventory[i].amount;
@@ -1843,7 +1768,7 @@ int clif_itemlist (struct map_session_data *sd)
  */
 int clif_equiplist (struct map_session_data *sd)
 {
-    int  i, j, n, fd;
+    int  i, n, fd;
     unsigned char *buf;
 
     nullpo_retr (0, sd);
@@ -1858,10 +1783,7 @@ int clif_equiplist (struct map_session_data *sd)
             || !itemdb_isequip2 (sd->inventory_data[i]))
             continue;
         WBUFW (buf, n * 20 + 4) = i + 2;
-        if (sd->inventory_data[i]->view_id > 0)
-            WBUFW (buf, n * 20 + 6) = sd->inventory_data[i]->view_id;
-        else
-            WBUFW (buf, n * 20 + 6) = sd->status.inventory[i].nameid;
+        WBUFW (buf, n * 20 + 6) = sd->status.inventory[i].nameid;
         WBUFB (buf, n * 20 + 8) =
             (sd->inventory_data[i]->type ==
              7) ? 4 : sd->inventory_data[i]->type;
@@ -1873,38 +1795,10 @@ int clif_equiplist (struct map_session_data *sd)
         else
             WBUFB (buf, n * 20 + 14) = sd->status.inventory[i].attribute;
         WBUFB (buf, n * 20 + 15) = sd->status.inventory[i].refine;
-        if (sd->status.inventory[i].card[0] == 0x00ff
-            || sd->status.inventory[i].card[0] == 0x00fe
-            || sd->status.inventory[i].card[0] == (short) 0xff00)
-        {
-            WBUFW (buf, n * 20 + 16) = sd->status.inventory[i].card[0];
-            WBUFW (buf, n * 20 + 18) = sd->status.inventory[i].card[1];
-            WBUFW (buf, n * 20 + 20) = sd->status.inventory[i].card[2];
-            WBUFW (buf, n * 20 + 22) = sd->status.inventory[i].card[3];
-        }
-        else
-        {
-            if (sd->status.inventory[i].card[0] > 0
-                && (j = itemdb_viewid (sd->status.inventory[i].card[0])) > 0)
-                WBUFW (buf, n * 20 + 16) = j;
-            else
-                WBUFW (buf, n * 20 + 16) = sd->status.inventory[i].card[0];
-            if (sd->status.inventory[i].card[1] > 0
-                && (j = itemdb_viewid (sd->status.inventory[i].card[1])) > 0)
-                WBUFW (buf, n * 20 + 18) = j;
-            else
-                WBUFW (buf, n * 20 + 18) = sd->status.inventory[i].card[1];
-            if (sd->status.inventory[i].card[2] > 0
-                && (j = itemdb_viewid (sd->status.inventory[i].card[2])) > 0)
-                WBUFW (buf, n * 20 + 20) = j;
-            else
-                WBUFW (buf, n * 20 + 20) = sd->status.inventory[i].card[2];
-            if (sd->status.inventory[i].card[3] > 0
-                && (j = itemdb_viewid (sd->status.inventory[i].card[3])) > 0)
-                WBUFW (buf, n * 20 + 22) = j;
-            else
-                WBUFW (buf, n * 20 + 22) = sd->status.inventory[i].card[3];
-        }
+        WBUFW (buf, n * 20 + 16) = sd->status.inventory[i].card[0];
+        WBUFW (buf, n * 20 + 18) = sd->status.inventory[i].card[1];
+        WBUFW (buf, n * 20 + 20) = sd->status.inventory[i].card[2];
+        WBUFW (buf, n * 20 + 22) = sd->status.inventory[i].card[3];
         n++;
     }
     if (n)
@@ -1940,11 +1834,8 @@ int clif_storageitemlist (struct map_session_data *sd, struct storage *stor)
             continue;
 
         WBUFW (buf, n * 18 + 4) = i + 1;
-        if (id->view_id > 0)
-            WBUFW (buf, n * 18 + 6) = id->view_id;
-        else
-            WBUFW (buf, n * 18 + 6) = stor->storage_[i].nameid;
-        WBUFB (buf, n * 18 + 8) = id->type;;
+        WBUFW (buf, n * 18 + 6) = stor->storage_[i].nameid;
+        WBUFB (buf, n * 18 + 8) = id->type;
         WBUFB (buf, n * 18 + 9) = stor->storage_[i].identify;
         WBUFW (buf, n * 18 + 10) = stor->storage_[i].amount;
         WBUFW (buf, n * 18 + 12) = 0;
@@ -1969,7 +1860,7 @@ int clif_storageitemlist (struct map_session_data *sd, struct storage *stor)
 int clif_storageequiplist (struct map_session_data *sd, struct storage *stor)
 {
     struct item_data *id;
-    int  i, j, n, fd;
+    int  i, n, fd;
     unsigned char *buf;
 
     nullpo_retr (0, sd);
@@ -1986,10 +1877,7 @@ int clif_storageequiplist (struct map_session_data *sd, struct storage *stor)
         if (!itemdb_isequip2 (id))
             continue;
         WBUFW (buf, n * 20 + 4) = i + 1;
-        if (id->view_id > 0)
-            WBUFW (buf, n * 20 + 6) = id->view_id;
-        else
-            WBUFW (buf, n * 20 + 6) = stor->storage_[i].nameid;
+        WBUFW (buf, n * 20 + 6) = stor->storage_[i].nameid;
         WBUFB (buf, n * 20 + 8) = id->type;
         WBUFB (buf, n * 20 + 9) = stor->storage_[i].identify;
         WBUFW (buf, n * 20 + 10) = id->equip;
@@ -2010,26 +1898,10 @@ int clif_storageequiplist (struct map_session_data *sd, struct storage *stor)
         }
         else
         {
-            if (stor->storage_[i].card[0] > 0
-                && (j = itemdb_viewid (stor->storage_[i].card[0])) > 0)
-                WBUFW (buf, n * 20 + 16) = j;
-            else
-                WBUFW (buf, n * 20 + 16) = stor->storage_[i].card[0];
-            if (stor->storage_[i].card[1] > 0
-                && (j = itemdb_viewid (stor->storage_[i].card[1])) > 0)
-                WBUFW (buf, n * 20 + 18) = j;
-            else
-                WBUFW (buf, n * 20 + 18) = stor->storage_[i].card[1];
-            if (stor->storage_[i].card[2] > 0
-                && (j = itemdb_viewid (stor->storage_[i].card[2])) > 0)
-                WBUFW (buf, n * 20 + 20) = j;
-            else
-                WBUFW (buf, n * 20 + 20) = stor->storage_[i].card[2];
-            if (stor->storage_[i].card[3] > 0
-                && (j = itemdb_viewid (stor->storage_[i].card[3])) > 0)
-                WBUFW (buf, n * 20 + 22) = j;
-            else
-                WBUFW (buf, n * 20 + 22) = stor->storage_[i].card[3];
+            WBUFW (buf, n * 20 + 16) = stor->storage_[i].card[0];
+            WBUFW (buf, n * 20 + 18) = stor->storage_[i].card[1];
+            WBUFW (buf, n * 20 + 20) = stor->storage_[i].card[2];
+            WBUFW (buf, n * 20 + 22) = stor->storage_[i].card[3];
         }
         n++;
     }
@@ -2320,18 +2192,8 @@ int clif_changelook_towards (struct block_list *bl, int type, int val,
 
             WBUFB (buf, 6) = type;
             if (sd->equip_index[equip_point] >= 0
-                && sd->inventory_data[sd->equip_index[2]])
-            {
-                if (sd->
-                    inventory_data[sd->equip_index[equip_point]]->view_id > 0)
-                    WBUFW (buf, 7) =
-                        sd->inventory_data[sd->
-                                           equip_index[equip_point]]->view_id;
-                else
-                    WBUFW (buf, 7) =
-                        sd->status.inventory[sd->
-                                             equip_index[equip_point]].nameid;
-            }
+                    && sd->inventory_data[sd->equip_index[2]])
+                WBUFW (buf, 7) = sd->status.inventory[sd->equip_index[equip_point]].nameid;
             else
                 WBUFW (buf, 7) = 0;
             WBUFW (buf, 9) = 0;
@@ -2344,31 +2206,15 @@ int clif_changelook_towards (struct block_list *bl, int type, int val,
             else
             {
                 if (sd->equip_index[9] >= 0
-                    && sd->inventory_data[sd->equip_index[9]]
-                    && sd->view_class != 22)
-                {
-                    if (sd->inventory_data[sd->equip_index[9]]->view_id > 0)
-                        WBUFW (buf, 7) =
-                            sd->inventory_data[sd->equip_index[9]]->view_id;
-                    else
-                        WBUFW (buf, 7) =
-                            sd->status.inventory[sd->equip_index[9]].nameid;
-                }
+                        && sd->inventory_data[sd->equip_index[9]])
+                    WBUFW (buf, 7) = sd->status.inventory[sd->equip_index[9]].nameid;
                 else
                     WBUFW (buf, 7) = 0;
             }
             if (sd->equip_index[8] >= 0
-                && sd->equip_index[8] != sd->equip_index[9]
-                && sd->inventory_data[sd->equip_index[8]]
-                && sd->view_class != 22)
-            {
-                if (sd->inventory_data[sd->equip_index[8]]->view_id > 0)
-                    WBUFW (buf, 9) =
-                        sd->inventory_data[sd->equip_index[8]]->view_id;
-                else
-                    WBUFW (buf, 9) =
-                        sd->status.inventory[sd->equip_index[8]].nameid;
-            }
+                    && sd->equip_index[8] != sd->equip_index[9]
+                    && sd->inventory_data[sd->equip_index[8]])
+                WBUFW (buf, 9) = sd->status.inventory[sd->equip_index[8]].nameid;
             else
                 WBUFW (buf, 9) = 0;
         }
@@ -2651,11 +2497,7 @@ int clif_useitemack (struct map_session_data *sd, int idx, int amount,
 
         WBUFW (buf, 0) = 0x1c8;
         WBUFW (buf, 2) = idx + 2;
-        if (sd->inventory_data[idx]
-            && sd->inventory_data[idx]->view_id > 0)
-            WBUFW (buf, 4) = sd->inventory_data[idx]->view_id;
-        else
-            WBUFW (buf, 4) = sd->status.inventory[idx].nameid;
+        WBUFW (buf, 4) = sd->status.inventory[idx].nameid;
         WBUFL (buf, 6) = sd->bl.id;
         WBUFW (buf, 10) = amount;
         WBUFB (buf, 12) = ok;
@@ -2916,7 +2758,7 @@ int clif_tradestart (struct map_session_data *sd, int type)
 int clif_tradeadditem (struct map_session_data *sd,
                        struct map_session_data *tsd, int idx, int amount)
 {
-    int  fd, j;
+    int  fd;
 
     nullpo_retr (0, sd);
     nullpo_retr (0, tsd);
@@ -2938,53 +2780,17 @@ int clif_tradeadditem (struct map_session_data *sd,
     else
     {
         idx -= 2;
-        if (sd->inventory_data[idx]
-            && sd->inventory_data[idx]->view_id > 0)
-            WFIFOW (fd, 6) = sd->inventory_data[idx]->view_id;
-        else
-            WFIFOW (fd, 6) = sd->status.inventory[idx].nameid;    // type id
+        WFIFOW (fd, 6) = sd->status.inventory[idx].nameid;    // type id
         WFIFOB (fd, 8) = sd->status.inventory[idx].identify;  //identify flag
         if (sd->status.inventory[idx].broken == 1)
             WFIFOB (fd, 9) = 1; // is broke weapon [Valaris]
         else
             WFIFOB (fd, 9) = sd->status.inventory[idx].attribute; // attribute
         WFIFOB (fd, 10) = sd->status.inventory[idx].refine;   //refine
-        if (sd->status.inventory[idx].card[0] == 0x00ff
-            || sd->status.inventory[idx].card[0] == 0x00fe
-            || sd->status.inventory[idx].card[0] == (short) 0xff00)
-        {
-            WFIFOW (fd, 11) = sd->status.inventory[idx].card[0];  //card (4w)
-            WFIFOW (fd, 13) = sd->status.inventory[idx].card[1];  //card (4w)
-            WFIFOW (fd, 15) = sd->status.inventory[idx].card[2];  //card (4w)
-            WFIFOW (fd, 17) = sd->status.inventory[idx].card[3];  //card (4w)
-        }
-        else
-        {
-            if (sd->status.inventory[idx].card[0] > 0
-                && (j =
-                    itemdb_viewid (sd->status.inventory[idx].card[0])) > 0)
-                WFIFOW (fd, 11) = j;
-            else
-                WFIFOW (fd, 11) = sd->status.inventory[idx].card[0];
-            if (sd->status.inventory[idx].card[1] > 0
-                && (j =
-                    itemdb_viewid (sd->status.inventory[idx].card[1])) > 0)
-                WFIFOW (fd, 13) = j;
-            else
-                WFIFOW (fd, 13) = sd->status.inventory[idx].card[1];
-            if (sd->status.inventory[idx].card[2] > 0
-                && (j =
-                    itemdb_viewid (sd->status.inventory[idx].card[2])) > 0)
-                WFIFOW (fd, 15) = j;
-            else
-                WFIFOW (fd, 15) = sd->status.inventory[idx].card[2];
-            if (sd->status.inventory[idx].card[3] > 0
-                && (j =
-                    itemdb_viewid (sd->status.inventory[idx].card[3])) > 0)
-                WFIFOW (fd, 17) = j;
-            else
-                WFIFOW (fd, 17) = sd->status.inventory[idx].card[3];
-        }
+        WFIFOW (fd, 11) = sd->status.inventory[idx].card[0];
+        WFIFOW (fd, 13) = sd->status.inventory[idx].card[1];
+        WFIFOW (fd, 15) = sd->status.inventory[idx].card[2];
+        WFIFOW (fd, 17) = sd->status.inventory[idx].card[3];
     }
     WFIFOSET (fd, packet_len_table[0xe9]);
 
@@ -3094,7 +2900,7 @@ int clif_updatestorageamount (struct map_session_data *sd,
 int clif_storageitemadded (struct map_session_data *sd, struct storage *stor,
                            int idx, int amount)
 {
-    int  fd, j;
+    int  fd;
 
     nullpo_retr (0, sd);
     nullpo_retr (0, stor);
@@ -3113,38 +2919,10 @@ int clif_storageitemadded (struct map_session_data *sd, struct storage *stor,
     else
         WFIFOB (fd, 11) = stor->storage_[idx].attribute;  // attribute
     WFIFOB (fd, 12) = stor->storage_[idx].refine; //refine
-    if (stor->storage_[idx].card[0] == 0x00ff
-        || stor->storage_[idx].card[0] == 0x00fe
-        || stor->storage_[idx].card[0] == (short) 0xff00)
-    {
-        WFIFOW (fd, 13) = stor->storage_[idx].card[0];    //card (4w)
-        WFIFOW (fd, 15) = stor->storage_[idx].card[1];    //card (4w)
-        WFIFOW (fd, 17) = stor->storage_[idx].card[2];    //card (4w)
-        WFIFOW (fd, 19) = stor->storage_[idx].card[3];    //card (4w)
-    }
-    else
-    {
-        if (stor->storage_[idx].card[0] > 0
-            && (j = itemdb_viewid (stor->storage_[idx].card[0])) > 0)
-            WFIFOW (fd, 13) = j;
-        else
-            WFIFOW (fd, 13) = stor->storage_[idx].card[0];
-        if (stor->storage_[idx].card[1] > 0
-            && (j = itemdb_viewid (stor->storage_[idx].card[1])) > 0)
-            WFIFOW (fd, 15) = j;
-        else
-            WFIFOW (fd, 15) = stor->storage_[idx].card[1];
-        if (stor->storage_[idx].card[2] > 0
-            && (j = itemdb_viewid (stor->storage_[idx].card[2])) > 0)
-            WFIFOW (fd, 17) = j;
-        else
-            WFIFOW (fd, 17) = stor->storage_[idx].card[2];
-        if (stor->storage_[idx].card[3] > 0
-            && (j = itemdb_viewid (stor->storage_[idx].card[3])) > 0)
-            WFIFOW (fd, 19) = j;
-        else
-            WFIFOW (fd, 19) = stor->storage_[idx].card[3];
-    }
+    WFIFOW (fd, 13) = stor->storage_[idx].card[0];
+    WFIFOW (fd, 15) = stor->storage_[idx].card[1];
+    WFIFOW (fd, 17) = stor->storage_[idx].card[2];
+    WFIFOW (fd, 19) = stor->storage_[idx].card[3];
     WFIFOSET (fd, packet_len_table[0xf4]);
 
     return 0;
@@ -3428,7 +3206,7 @@ void clif_getareachar_mob (struct map_session_data *sd, struct mob_data *md)
 void clif_getareachar_item (struct map_session_data *sd,
                             struct flooritem_data *fitem)
 {
-    int  view, fd;
+    int fd;
 
     nullpo_retv (sd);
     nullpo_retv (fitem);
@@ -3437,10 +3215,7 @@ void clif_getareachar_item (struct map_session_data *sd,
     //009d <ID>.l <item ID>.w <identify flag>.B <X>.w <Y>.w <amount>.w <subX>.B <subY>.B
     WFIFOW (fd, 0) = 0x9d;
     WFIFOL (fd, 2) = fitem->bl.id;
-    if ((view = itemdb_viewid (fitem->item_data.nameid)) > 0)
-        WFIFOW (fd, 6) = view;
-    else
-        WFIFOW (fd, 6) = fitem->item_data.nameid;
+    WFIFOW (fd, 6) = fitem->item_data.nameid;
     WFIFOB (fd, 8) = fitem->item_data.identify;
     WFIFOW (fd, 9) = fitem->bl.x;
     WFIFOW (fd, 11) = fitem->bl.y;
@@ -4628,7 +4403,7 @@ int clif_item_skill (struct map_session_data *sd, int skillid, int skilllv,
 int clif_cart_additem (struct map_session_data *sd, int n, int amount,
                        int UNUSED)
 {
-    int  view, j, fd;
+    int fd;
     unsigned char *buf;
 
     nullpo_retr (0, sd);
@@ -4641,48 +4416,17 @@ int clif_cart_additem (struct map_session_data *sd, int n, int amount,
     WBUFW (buf, 0) = 0x124;
     WBUFW (buf, 2) = n + 2;
     WBUFL (buf, 4) = amount;
-    if ((view = itemdb_viewid (sd->status.cart[n].nameid)) > 0)
-        WBUFW (buf, 8) = view;
-    else
-        WBUFW (buf, 8) = sd->status.cart[n].nameid;
+    WBUFW (buf, 8) = sd->status.cart[n].nameid;
     WBUFB (buf, 10) = sd->status.cart[n].identify;
     if (sd->status.cart[n].broken == 1) //is weapon broken [Valaris]
         WBUFB (buf, 11) = 1;
     else
         WBUFB (buf, 11) = sd->status.cart[n].attribute;
     WBUFB (buf, 12) = sd->status.cart[n].refine;
-    if (sd->status.cart[n].card[0] == 0x00ff
-        || sd->status.cart[n].card[0] == 0x00fe
-        || sd->status.cart[n].card[0] == (short) 0xff00)
-    {
-        WBUFW (buf, 13) = sd->status.cart[n].card[0];
-        WBUFW (buf, 15) = sd->status.cart[n].card[1];
-        WBUFW (buf, 17) = sd->status.cart[n].card[2];
-        WBUFW (buf, 19) = sd->status.cart[n].card[3];
-    }
-    else
-    {
-        if (sd->status.cart[n].card[0] > 0
-            && (j = itemdb_viewid (sd->status.cart[n].card[0])) > 0)
-            WBUFW (buf, 13) = j;
-        else
-            WBUFW (buf, 13) = sd->status.cart[n].card[0];
-        if (sd->status.cart[n].card[1] > 0
-            && (j = itemdb_viewid (sd->status.cart[n].card[1])) > 0)
-            WBUFW (buf, 15) = j;
-        else
-            WBUFW (buf, 15) = sd->status.cart[n].card[1];
-        if (sd->status.cart[n].card[2] > 0
-            && (j = itemdb_viewid (sd->status.cart[n].card[2])) > 0)
-            WBUFW (buf, 17) = j;
-        else
-            WBUFW (buf, 17) = sd->status.cart[n].card[2];
-        if (sd->status.cart[n].card[3] > 0
-            && (j = itemdb_viewid (sd->status.cart[n].card[3])) > 0)
-            WBUFW (buf, 19) = j;
-        else
-            WBUFW (buf, 19) = sd->status.cart[n].card[3];
-    }
+    WBUFW (buf, 13) = sd->status.cart[n].card[0];
+    WBUFW (buf, 15) = sd->status.cart[n].card[1];
+    WBUFW (buf, 17) = sd->status.cart[n].card[2];
+    WBUFW (buf, 19) = sd->status.cart[n].card[3];
     WFIFOSET (fd, packet_len_table[0x124]);
     return 0;
 }
@@ -4731,10 +4475,7 @@ int clif_cart_itemlist (struct map_session_data *sd)
         if (itemdb_isequip2 (id))
             continue;
         WBUFW (buf, n * 18 + 4) = i + 2;
-        if (id->view_id > 0)
-            WBUFW (buf, n * 18 + 6) = id->view_id;
-        else
-            WBUFW (buf, n * 18 + 6) = sd->status.cart[i].nameid;
+        WBUFW (buf, n * 18 + 6) = sd->status.cart[i].nameid;
         WBUFB (buf, n * 18 + 8) = id->type;
         WBUFB (buf, n * 18 + 9) = sd->status.cart[i].identify;
         WBUFW (buf, n * 18 + 10) = sd->status.cart[i].amount;
@@ -4760,7 +4501,7 @@ int clif_cart_itemlist (struct map_session_data *sd)
 int clif_cart_equiplist (struct map_session_data *sd)
 {
     struct item_data *id;
-    int  i, j, n, fd;
+    int  i, n, fd;
     unsigned char *buf;
 
     nullpo_retr (0, sd);
@@ -4777,10 +4518,7 @@ int clif_cart_equiplist (struct map_session_data *sd)
         if (!itemdb_isequip2 (id))
             continue;
         WBUFW (buf, n * 20 + 4) = i + 2;
-        if (id->view_id > 0)
-            WBUFW (buf, n * 20 + 6) = id->view_id;
-        else
-            WBUFW (buf, n * 20 + 6) = sd->status.cart[i].nameid;
+        WBUFW (buf, n * 20 + 6) = sd->status.cart[i].nameid;
         WBUFB (buf, n * 20 + 8) = id->type;
         WBUFB (buf, n * 20 + 9) = sd->status.cart[i].identify;
         WBUFW (buf, n * 20 + 10) = id->equip;
@@ -4790,38 +4528,10 @@ int clif_cart_equiplist (struct map_session_data *sd)
         else
             WBUFB (buf, n * 20 + 14) = sd->status.cart[i].attribute;
         WBUFB (buf, n * 20 + 15) = sd->status.cart[i].refine;
-        if (sd->status.cart[i].card[0] == 0x00ff
-            || sd->status.cart[i].card[0] == 0x00fe
-            || sd->status.cart[i].card[0] == (short) 0xff00)
-        {
-            WBUFW (buf, n * 20 + 16) = sd->status.cart[i].card[0];
-            WBUFW (buf, n * 20 + 18) = sd->status.cart[i].card[1];
-            WBUFW (buf, n * 20 + 20) = sd->status.cart[i].card[2];
-            WBUFW (buf, n * 20 + 22) = sd->status.cart[i].card[3];
-        }
-        else
-        {
-            if (sd->status.cart[i].card[0] > 0
-                && (j = itemdb_viewid (sd->status.cart[i].card[0])) > 0)
-                WBUFW (buf, n * 20 + 16) = j;
-            else
-                WBUFW (buf, n * 20 + 16) = sd->status.cart[i].card[0];
-            if (sd->status.cart[i].card[1] > 0
-                && (j = itemdb_viewid (sd->status.cart[i].card[1])) > 0)
-                WBUFW (buf, n * 20 + 18) = j;
-            else
-                WBUFW (buf, n * 20 + 18) = sd->status.cart[i].card[1];
-            if (sd->status.cart[i].card[2] > 0
-                && (j = itemdb_viewid (sd->status.cart[i].card[2])) > 0)
-                WBUFW (buf, n * 20 + 20) = j;
-            else
-                WBUFW (buf, n * 20 + 20) = sd->status.cart[i].card[2];
-            if (sd->status.cart[i].card[3] > 0
-                && (j = itemdb_viewid (sd->status.cart[i].card[3])) > 0)
-                WBUFW (buf, n * 20 + 22) = j;
-            else
-                WBUFW (buf, n * 20 + 22) = sd->status.cart[i].card[3];
-        }
+        WBUFW (buf, n * 20 + 16) = sd->status.cart[i].card[0];
+        WBUFW (buf, n * 20 + 18) = sd->status.cart[i].card[1];
+        WBUFW (buf, n * 20 + 20) = sd->status.cart[i].card[2];
+        WBUFW (buf, n * 20 + 22) = sd->status.cart[i].card[3];
         n++;
     }
     if (n)
@@ -5147,7 +4857,7 @@ int clif_movetoattack (struct map_session_data *sd, struct block_list *bl)
  */
 int clif_produceeffect (struct map_session_data *sd, int flag, int nameid)
 {
-    int  view, fd;
+    int fd;
 
     nullpo_retr (0, sd);
 
@@ -5159,10 +4869,7 @@ int clif_produceeffect (struct map_session_data *sd, int flag, int nameid)
 
     WFIFOW (fd, 0) = 0x18f;
     WFIFOW (fd, 2) = flag;
-    if ((view = itemdb_viewid (nameid)) > 0)
-        WFIFOW (fd, 4) = view;
-    else
-        WFIFOW (fd, 4) = nameid;
+    WFIFOW (fd, 4) = nameid;
     WFIFOSET (fd, packet_len_table[0x18f]);
     return 0;
 }
@@ -5340,16 +5047,13 @@ int clif_mvp_effect (struct map_session_data *sd)
  */
 int clif_mvp_item (struct map_session_data *sd, int nameid)
 {
-    int  view, fd;
+    int fd;
 
     nullpo_retr (0, sd);
 
     fd = sd->fd;
     WFIFOW (fd, 0) = 0x10a;
-    if ((view = itemdb_viewid (nameid)) > 0)
-        WFIFOW (fd, 2) = view;
-    else
-        WFIFOW (fd, 2) = nameid;
+    WFIFOW (fd, 2) = nameid;
     WFIFOSET (fd, packet_len_table[0x10a]);
     return 0;
 }
@@ -5769,8 +5473,6 @@ void clif_parse_LoadEndAck (int UNUSED, struct map_session_data *sd)
     if (sd->state.connect_new)
     {
         sd->state.connect_new = 0;
-        if (sd->status.pc_class != sd->view_class)
-            clif_changelook (&sd->bl, LOOK_BASE, sd->view_class);
     }
 
     // view equipment item
@@ -6236,7 +5938,7 @@ void clif_parse_ActionRequest (int fd, struct map_session_data *sd)
     {
         case 0x00:             // once attack
         case 0x07:             // continuous attack
-            if (sd->sc_data[SC_WEDDING].timer != -1 || sd->view_class == 22
+            if (sd->sc_data[SC_WEDDING].timer != -1
                 || sd->status.option & OPTION_HIDE)
                 return;
             if (!battle_config.sdelay_attack_enable
@@ -6823,21 +6525,6 @@ void clif_parse_GetItemFromCart (int fd, struct map_session_data *sd)
  */
 void clif_parse_RemoveOption (int UNUSED, struct map_session_data *sd)
 {
-    if (pc_isriding (sd))
-    {                           // jobchange when removing peco [Valaris]
-        if (sd->status.pc_class == 13)
-            sd->status.pc_class = sd->view_class = 7;
-
-        if (sd->status.pc_class == 21)
-            sd->status.pc_class = sd->view_class = 14;
-
-        if (sd->status.pc_class == 4014)
-            sd->status.pc_class = sd->view_class = 4008;
-
-        if (sd->status.pc_class == 4022)
-            sd->status.pc_class = sd->view_class = 4015;
-    }
-
     pc_setoption (sd, 0);
 }
 
@@ -6902,7 +6589,7 @@ void clif_parse_UseSkillToId (int fd, struct map_session_data *sd)
     if ((sd->sc_data[SC_TRICKDEAD].timer != -1 && skillnum != NV_TRICKDEAD) ||
         sd->sc_data[SC_BERSERK].timer != -1
         || sd->sc_data[SC_NOCHAT].timer != -1
-        || sd->sc_data[SC_WEDDING].timer != -1 || sd->view_class == 22)
+        || sd->sc_data[SC_WEDDING].timer != -1)
         return;
     if (sd->invincible_timer != -1)
         pc_delinvincibletimer (sd);
@@ -6993,7 +6680,7 @@ void clif_parse_UseSkillToPos (int fd, struct map_session_data *sd)
     if ((sd->sc_data[SC_TRICKDEAD].timer != -1 && skillnum != NV_TRICKDEAD) ||
         sd->sc_data[SC_BERSERK].timer != -1
         || sd->sc_data[SC_NOCHAT].timer != -1
-        || sd->sc_data[SC_WEDDING].timer != -1 || sd->view_class == 22)
+        || sd->sc_data[SC_WEDDING].timer != -1)
         return;
     if (sd->invincible_timer != -1)
         pc_delinvincibletimer (sd);
@@ -7032,8 +6719,7 @@ void clif_parse_UseSkillMap (int fd, struct map_session_data *sd)
                             (sd->sc_data[SC_TRICKDEAD].timer != -1 ||
                              sd->sc_data[SC_BERSERK].timer != -1 ||
                              sd->sc_data[SC_NOCHAT].timer != -1 ||
-                             sd->sc_data[SC_WEDDING].timer != -1 ||
-                             sd->view_class == 22)))
+                             sd->sc_data[SC_WEDDING].timer != -1)))
         return;
 
     if (sd->invincible_timer != -1)
@@ -7898,28 +7584,16 @@ void clif_parse_sn_explosionspirits (int UNUSED, struct map_session_data *sd)
     if (sd)
     {
         int  nextbaseexp = pc_nextbaseexp (sd);
-        struct pc_base_job s_class = pc_calc_base_job (sd->status.pc_class);
         if (battle_config.etc_log)
         {
             if (nextbaseexp != 0)
                 printf ("SuperNovice explosionspirits!! %d %d %d %d\n",
-                        sd->bl.id, s_class.job, sd->status.base_exp,
+                        sd->bl.id, 0/*s_class.job*/, sd->status.base_exp,
                         (int) ((double) 1000 * sd->status.base_exp /
                                nextbaseexp));
             else
                 printf ("SuperNovice explosionspirits!! %d %d %d 000\n",
-                        sd->bl.id, s_class.job, sd->status.base_exp);
-        }
-        if (s_class.job == 23 && sd->status.base_exp > 0 && nextbaseexp > 0
-            && (int) ((double) 1000 * sd->status.base_exp / nextbaseexp) %
-            100 == 0)
-        {
-            clif_skill_nodamage (&sd->bl, &sd->bl, MO_EXPLOSIONSPIRITS, 5, 1);
-            skill_status_change_start (&sd->bl,
-                                       SkillStatusChangeTable
-                                       [MO_EXPLOSIONSPIRITS], 5, 0, 0, 0,
-                                       skill_get_time (MO_EXPLOSIONSPIRITS,
-                                                       5), 0);
+                        sd->bl.id, 0/*s_class.job*/, sd->status.base_exp);
         }
     }
     return;

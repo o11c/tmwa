@@ -113,7 +113,6 @@ int  buildin_areawarp (struct script_state *st);
 int  buildin_heal (struct script_state *st);
 int  buildin_itemheal (struct script_state *st);
 int  buildin_percentheal (struct script_state *st);
-int  buildin_jobchange (struct script_state *st);
 int  buildin_input (struct script_state *st);
 int  buildin_setlook (struct script_state *st);
 int  buildin_set (struct script_state *st);
@@ -213,7 +212,6 @@ int  buildin_debugmes (struct script_state *st);
 int  buildin_resetlvl (struct script_state *st);
 int  buildin_resetstatus (struct script_state *st);
 int  buildin_resetskill (struct script_state *st);
-int  buildin_changebase (struct script_state *st);
 int  buildin_changesex (struct script_state *st);
 int  buildin_waitingroom (struct script_state *st);
 int  buildin_delwaitingroom (struct script_state *st);
@@ -316,8 +314,6 @@ struct builtin_function
     buildin_return, "return", "*"},
     {
     buildin_getarg, "getarg", "i"},
-    {
-    buildin_jobchange, "jobchange", "i*"},
     {
     buildin_input, "input", "*"},
     {
@@ -536,8 +532,6 @@ struct builtin_function
     buildin_resetstatus, "resetstatus", ""},
     {
     buildin_resetskill, "resetskill", ""},
-    {
-    buildin_changebase, "changebase", "i"},
     {
     buildin_changesex, "changesex", ""},
     {
@@ -2214,24 +2208,6 @@ int buildin_percentheal (struct script_state *st)
     hp = conv_num (st, &(st->stack->stack_data[st->start + 2]));
     sp = conv_num (st, &(st->stack->stack_data[st->start + 3]));
     pc_percentheal (script_rid2sd (st), hp, sp);
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int buildin_jobchange (struct script_state *st)
-{
-    int  job, upper = -1;
-
-    job = conv_num (st, &(st->stack->stack_data[st->start + 2]));
-    if (st->end > st->start + 3)
-        upper = conv_num (st, &(st->stack->stack_data[st->start + 3]));
-
-    if ((job >= 0 && job < MAX_PC_CLASS))
-        pc_jobchange (script_rid2sd (st), job, upper);
-
     return 0;
 }
 
@@ -4786,37 +4762,6 @@ int buildin_resetskill (struct script_state *st)
 }
 
 /*==========================================
- *
- *------------------------------------------
- */
-int buildin_changebase (struct script_state *st)
-{
-    struct map_session_data *sd = NULL;
-    int  vclass;
-
-    if (st->end > st->start + 3)
-        sd = map_id2sd (conv_num
-                        (st, &(st->stack->stack_data[st->start + 3])));
-    else
-        sd = script_rid2sd (st);
-
-    if (sd == NULL)
-        return 0;
-
-    vclass = conv_num (st, &(st->stack->stack_data[st->start + 2]));
-    if (vclass == 22 && !battle_config.wedding_modifydisplay)
-        return 0;
-
-//  if(vclass==22) {
-//      pc_unequipitem(sd,sd->equip_index[9],0);    // 装備外
-//  }
-
-    sd->view_class = vclass;
-
-    return 0;
-}
-
-/*==========================================
  * 性別変換
  *------------------------------------------
  */
@@ -4829,15 +4774,11 @@ int buildin_changesex (struct script_state *st)
     {
         sd->status.sex = 1;
         sd->sex = 1;
-        if (sd->status.pc_class == 20 || sd->status.pc_class == 4021)
-            sd->status.pc_class -= 1;
     }
     else if (sd->status.sex == 1)
     {
         sd->status.sex = 0;
         sd->sex = 0;
-        if (sd->status.pc_class == 19 || sd->status.pc_class == 4020)
-            sd->status.pc_class += 1;
     }
     chrif_char_ask_name (-1, sd->status.name, 5, 0, 0, 0, 0, 0, 0); // type: 5 - changesex
     chrif_save (sd);

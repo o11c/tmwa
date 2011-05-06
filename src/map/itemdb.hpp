@@ -36,7 +36,6 @@ struct item_data
         unsigned no_drop:1;
         unsigned no_use:1;
     } flag;
-    int  view_id;
 };
 
 struct random_item_data

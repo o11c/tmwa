@@ -628,7 +628,6 @@ int chrif_changedsex (int fd)
 {
     int  acc, sex, i;
     struct map_session_data *sd;
-    struct pc_base_job s_class;
 
     acc = RFIFOL (fd, 2);
     sex = RFIFOL (fd, 6);
@@ -639,7 +638,6 @@ int chrif_changedsex (int fd)
     {
         if (sd != NULL && sd->status.sex != sex)
         {
-            s_class = pc_calc_base_job (sd->status.pc_class);
             if (sd->status.sex == 0)
             {
                 sd->status.sex = 1;
@@ -656,21 +654,6 @@ int chrif_changedsex (int fd)
                 if (sd->status.inventory[i].nameid
                     && sd->status.inventory[i].equip)
                     pc_unequipitem ((struct map_session_data *) sd, i, 0);
-            }
-            // reset skill of some job
-            if (s_class.job == 19 || s_class.job == 4020
-                || s_class.job == 4042 || s_class.job == 20
-                || s_class.job == 4021 || s_class.job == 4043)
-            {
-
-                clif_updatestatus (sd, SP_SKILLPOINT);
-                // change job if necessary
-                if (s_class.job == 20 || s_class.job == 4021
-                    || s_class.job == 4043)
-                    sd->status.pc_class -= 1;
-                else if (s_class.job == 19 || s_class.job == 4020
-                         || s_class.job == 4042)
-                    sd->status.pc_class += 1;
             }
             // save character
             chrif_save (sd);

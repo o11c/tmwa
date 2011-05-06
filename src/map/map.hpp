@@ -287,7 +287,6 @@ struct map_session_data
     int  berserkdamagetick;
     int  fame;
 
-    short view_class;
     short weapontype1, weapontype2;
     short disguiseflag, disguise;   // [Valaris]
     int  paramb[6], paramc[6], parame[6], paramcard[6];
@@ -324,6 +323,9 @@ struct map_session_data
         add_magic_damage_classid[10];
     int  add_damage_classrate[10], add_damage_classrate_[10],
         add_magic_damage_classrate[10];
+
+    // TODO see if I can remove these - they are no longer used for players
+    // but what about mob classes?
     short add_def_class_count, add_mdef_class_count;
     short add_def_classid[10], add_mdef_classid[10];
     int  add_def_classrate[10], add_mdef_classrate[10];

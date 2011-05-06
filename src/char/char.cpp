@@ -221,7 +221,7 @@ void mmo_char_tofile (FILE *fp, struct mmo_charstatus *p)
              "%s,%d,%d\t"
              "%s,%d,%d,%d\t",
              p->char_id,        p->account_id, p->char_num,
-             p->name,           p->pc_class, p->base_level, p->job_level,
+             p->name,           0/*pc_class*/, p->base_level, p->job_level,
              p->base_exp, p->job_exp, p->zeny,  p->hp, p->max_hp, p->sp, p->max_sp,
              p->str, p->agi, p->vit, p->int_, p->dex, p->luk,
              p->status_point, p->skill_point,   p->option, p->karma, p->manner,
@@ -291,7 +291,7 @@ int mmo_char_fromstr (char *str, struct mmo_charstatus *p)
     int ign, next;
     int set = sscanf (str,
                       "%u\t"            "%d,%hhu\t"
-                      "%[^\t]\t"        "%hu,%hhu,%hhu\t"
+                      "%[^\t]\t"        "%u,%hhu,%hhu\t"
                       "%d,%d,%d\t"      "%d,%d,%d,%d\t"
                       "%hd,%hd,%hd,%hd,%hd,%hd\t"
                       "%hd,%hd\t"       "%hd,%hd,%hd\t"
@@ -300,7 +300,7 @@ int mmo_char_fromstr (char *str, struct mmo_charstatus *p)
                       "%[^,],%hd,%hd\t"
                       "%[^,],%hd,%hd,%d" "%n",
                       &p->char_id,      &p->account_id, &p->char_num,
-                      p->name,          &p->pc_class, &p->base_level, &p->job_level,
+                      p->name,          &ign/*pc_class*/, &p->base_level, &p->job_level,
                       &p->base_exp, &p->job_exp, &p->zeny,      &p->hp, &p->max_hp, &p->sp, &p->max_sp,
                       &p->str, &p->agi, &p->vit, &p->int_, &p->dex, &p->luk,
                       &p->status_point, &p->skill_point,        &p->option, &p->karma, &p->manner,
@@ -1152,7 +1152,7 @@ void mmo_char_send006b (int fd, struct char_session_data *sd)
         WFIFOW (fd, j + 46) = MIN(p->sp, 0x7fff);
         WFIFOW (fd, j + 48) = MIN(p->max_sp, 0x7fff);
         WFIFOW (fd, j + 50) = DEFAULT_WALK_SPEED;   // p->speed;
-        WFIFOW (fd, j + 52) = p->pc_class;
+        WFIFOW (fd, j + 52) = 0; // p->pc_class;
         WFIFOW (fd, j + 54) = p->hair;
         // don't send weapon since TMW does not support it
         WFIFOW (fd, j + 56) = 0;    //p->weapon
@@ -2445,7 +2445,7 @@ void parse_char (int fd)
             WFIFOW (fd, 2 + 46) = MIN (chardat->sp, 0x7fff);
             WFIFOW (fd, 2 + 48) = MIN (chardat->max_sp, 0x7fff);
             WFIFOW (fd, 2 + 50) = DEFAULT_WALK_SPEED;   // chardat->speed;
-            WFIFOW (fd, 2 + 52) = chardat->pc_class;
+            WFIFOW (fd, 2 + 52) = 0; //chardat->pc_class;
             WFIFOW (fd, 2 + 54) = chardat->hair;
 
             WFIFOW (fd, 2 + 58) = chardat->base_level;

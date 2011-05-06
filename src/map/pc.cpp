@@ -68,6 +68,7 @@ static int aspd_base[MAX_PC_CLASS][20];
 static char job_bonus[3][MAX_PC_CLASS][MAX_LEVEL];
 static int exp_table[14][MAX_LEVEL];
 static char statp[255][7];
+// TODO eliminate the first 2 indices, they are always 0
 static struct
 {
     int  id;
@@ -311,12 +312,7 @@ int pc_delspiritball (struct map_session_data *sd, int count, int type)
 
 int pc_setrestartvalue (struct map_session_data *sd, int type)
 {
-    //転生や養子の場合の元の職業を算出する
-    struct pc_base_job s_class;
-
     nullpo_retr (0, sd);
-
-    s_class = pc_calc_base_job (sd->status.pc_class);
 
     //-----------------------
     // 死亡した
@@ -327,7 +323,7 @@ int pc_setrestartvalue (struct map_session_data *sd, int type)
     }
     else
     {
-        if (s_class.job == 0 && battle_config.restart_hp_rate < 50)
+        if (battle_config.restart_hp_rate < 50)
         {                       //ノビは半分回復
             sd->status.hp = (sd->status.max_hp) / 2;
         }
@@ -355,21 +351,6 @@ int pc_setrestartvalue (struct map_session_data *sd, int type)
     if (type & 1)
         clif_updatestatus (sd, SP_SP);
 
-    /* removed exp penalty on spawn [Valaris] */
-
-    if (type & 2 && sd->status.pc_class != 0 && battle_config.zeny_penalty > 0
-        && !maps[sd->bl.m].flag.nozenypenalty)
-    {
-        int  zeny =
-            (int) ((double) sd->status.zeny *
-                   (double) battle_config.zeny_penalty / 10000.);
-        if (zeny < 1)
-            zeny = 1;
-        sd->status.zeny -= zeny;
-        if (sd->status.zeny < 0)
-            sd->status.zeny = 0;
-        clif_updatestatus (sd, SP_ZENY);
-    }
     sd->heal_xp = 0;            // [Fate] Set gainable xp for healing this player to 0
 
     return 0;
@@ -502,22 +483,17 @@ int pc_setnewpc (struct map_session_data *sd, int account_id, int char_id,
 int pc_equippoint (struct map_session_data *sd, int n)
 {
     int  ep = 0;
-    //転生や養子の場合の元の職業を算出する
-    struct pc_base_job s_class;
-
     nullpo_retr (0, sd);
 
     if (!sd->inventory_data[n])
         return 0;
-
-    s_class = pc_calc_base_job (sd->status.pc_class);
 
     ep = sd->inventory_data[n]->equip;
     if ((sd->inventory_data[n]->look == 1 || sd->inventory_data[n]->look == 2
          || sd->inventory_data[n]->look == 6) && (ep == 2
                                                   &&
                                                   (pc_checkskill (sd, AS_LEFT)
-                                                   > 0 || s_class.job == 12)))
+                                                   > 0)))
     {
         return 34;
     }
@@ -782,7 +758,6 @@ int pc_authok (int id, int login_id2, time_t connect_until_time,
     sd->bl.prev = sd->bl.next = NULL;
 
     sd->weapontype1 = sd->weapontype2 = 0;
-    sd->view_class = sd->status.pc_class;
     sd->speed = DEFAULT_WALK_SPEED;
     sd->state.dead_sit = 0;
     sd->dir = 0;
@@ -1005,120 +980,7 @@ static int pc_calc_skillpoint (struct map_session_data *sd)
 int pc_calc_skilltree (struct map_session_data *sd)
 {
     int  i, id = 0, flag;
-    int  c = 0, s = 0;
-    //転生や養子の場合の元の職業を算出する
-    struct pc_base_job s_class;
-
     nullpo_retr (0, sd);
-
-    s_class = pc_calc_base_job (sd->status.pc_class);
-    c = s_class.job;
-    s = (s_class.upper == 1) ? 1 : 0;   //ｿ転生以外は通常のスキル？
-
-    if ((battle_config.skillup_limit)
-        && ((c >= 0 && c < 23) || (c >= 4001 && c < 4023)
-            || (c >= 4023 && c < 4045)))
-    {
-        int  skill_point = pc_calc_skillpoint (sd);
-        if (skill_point < 9)
-            c = 0;
-        else if ((sd->status.skill_point >= sd->status.job_level
-                  && skill_point < 58) && ((c > 6 && c < 23) || (c > 4007
-                                                                 && c < 4023)
-                                           || (c > 4029 && c < 4045)))
-        {
-            switch (c)
-            {
-                case 7:
-                case 14:
-                    c = 1;
-                    break;
-                case 8:
-                case 15:
-                    c = 4;
-                    break;
-                case 9:
-                case 16:
-                    c = 2;
-                    break;
-                case 10:
-                case 18:
-                    c = 5;
-                    break;
-                case 11:
-                case 19:
-                case 20:
-                    c = 3;
-                    break;
-                case 12:
-                case 17:
-                    c = 6;
-                    break;
-                case 4008:
-                case 4015:
-                    c = 4002;
-                    break;
-                case 4009:
-                case 4016:
-                    c = 4005;
-                    break;
-                case 4010:
-                case 4017:
-                    c = 4003;
-                    break;
-                case 4011:
-                case 4019:
-                    c = 4006;
-                    break;
-                case 4012:
-                case 4020:
-                case 4021:
-                    c = 4004;
-                    break;
-                case 4013:
-                case 4018:
-                    c = 4007;
-                    break;
-                case 4030:
-                case 4037:
-                    c = 4024;
-                    break;
-                case 4031:
-                case 4038:
-                    c = 4027;
-                    break;
-                case 4032:
-                case 4039:
-                    c = 4025;
-                    break;
-                case 4033:
-                case 4040:
-                    c = 4028;
-                    break;
-                case 4034:
-                case 4041:
-                case 4042:
-                    c = 4026;
-                    break;
-                case 4035:
-                case 4043:
-                    c = 4029;
-                    break;
-
-            }
-        }
-    }
-
-    /*Comment this out for now, as we manage skills differently
-     * for(i=0;i<MAX_SKILL;i++)
-     * if (i < TMW_MAGIC || i > TMW_MAGIC_END){ // [Fate] This hack gets TMW magic working and persisted without bothering about the skill tree.
-     * if (sd->status.skill[i].flag != 13) sd->status.skill[i].id=0;
-     * if (sd->status.skill[i].flag && sd->status.skill[i].flag != 13){ // cardスキルなら、
-     * sd->status.skill[i].lv=(sd->status.skill[i].flag==1)?0:sd->status.skill[i].flag-2;   // 本当のlvに
-     * sd->status.skill[i].flag=0;  // flagは0にしておく
-     * }
-     * }
-     */
 
     if (battle_config.gm_allskill > 0
         && pc_isGM (sd) >= battle_config.gm_allskill)
@@ -1143,17 +1005,17 @@ int pc_calc_skilltree (struct map_session_data *sd)
         do
         {
             flag = 0;
-            for (i = 0; (id = skill_tree[s][c][i].id) > 0; i++)
+            for (i = 0; (id = skill_tree[0][0][i].id) > 0; i++)
             {
                 int  j, f = 1;
                 if (!battle_config.skillfree)
                 {
                     for (j = 0; j < 5; j++)
                     {
-                        if (skill_tree[s][c][i].need[j].id &&
+                        if (skill_tree[0][0][i].need[j].id &&
                             pc_checkskill (sd,
-                                           skill_tree[s][c][i].need[j].id) <
-                            skill_tree[s][c][i].need[j].lv)
+                                           skill_tree[0][0][i].need[j].id) <
+                            skill_tree[0][0][i].need[j].lv)
                             f = 0;
                     }
                 }
@@ -1231,18 +1093,14 @@ int pc_calcstatus (struct map_session_data *sd, int first)
     int  b_speed, b_max_hp, b_max_sp, b_hp, b_sp, b_weight, b_max_weight,
         b_paramb[6], b_parame[6], b_hit, b_flee;
     int  b_aspd, b_watk, b_def, b_watk2, b_def2, b_flee2, b_critical,
-        b_attackrange, b_matk1, b_matk2, b_mdef, b_mdef2, b_class;
+        b_attackrange, b_matk1, b_matk2, b_mdef, b_mdef2;
     int  b_base_atk;
     struct skill b_skill[MAX_SKILL];
     int  i, bl, idx;
     int  skill, aspd_rate, wele, wele_, def_ele, refinedef = 0;
     int  str, dstr, dex;
-    struct pc_base_job s_class;
 
     nullpo_retr (0, sd);
-
-    //転生や養子の場合の元の職業を算出する
-    s_class = pc_calc_base_job (sd->status.pc_class);
 
     b_speed = sd->speed;
     b_max_hp = sd->status.max_hp;
@@ -1268,13 +1126,11 @@ int pc_calcstatus (struct map_session_data *sd, int first)
     b_matk2 = sd->matk2;
     b_mdef = sd->mdef;
     b_mdef2 = sd->mdef2;
-    b_class = sd->view_class;
-    sd->view_class = sd->status.pc_class;
     b_base_atk = sd->base_atk;
 
     pc_calc_skilltree (sd);     // スキルツリーの計算
 
-    sd->max_weight = max_weight_base[s_class.job] + sd->status.str * 300;
+    sd->max_weight = max_weight_base[0] + sd->status.str * 300;
 
     if (first & 1)
     {
@@ -1838,18 +1694,18 @@ int pc_calcstatus (struct map_session_data *sd, int first)
     // 二刀流 ASPD 修正
     if (sd->status.weapon <= 16)
         sd->aspd +=
-            aspd_base[s_class.job][sd->status.weapon] - (sd->paramc[1] * 4 +
+            aspd_base[0][sd->status.weapon] - (sd->paramc[1] * 4 +
                                                          sd->paramc[4]) *
-            aspd_base[s_class.job][sd->status.weapon] / 1000;
+            aspd_base[0][sd->status.weapon] / 1000;
     else
-        sd->aspd += ((aspd_base[s_class.job][sd->weapontype1] -
+        sd->aspd += ((aspd_base[0][sd->weapontype1] -
                       (sd->paramc[1] * 4 +
                        sd->paramc[4]) *
-                      aspd_base[s_class.job][sd->weapontype1] / 1000) +
-                     (aspd_base[s_class.job][sd->weapontype2] -
+                      aspd_base[0][sd->weapontype1] / 1000) +
+                     (aspd_base[0][sd->weapontype2] -
                       (sd->paramc[1] * 4 +
                        sd->paramc[4]) *
-                      aspd_base[s_class.job][sd->weapontype2] / 1000)) * 140 /
+                      aspd_base[0][sd->weapontype2] / 1000)) * 140 /
             200;
 
     aspd_rate = sd->aspd_rate;
@@ -1902,13 +1758,11 @@ int pc_calcstatus (struct map_session_data *sd, int first)
     bl = sd->status.base_level;
 
     sd->status.max_hp +=
-        (3500 + bl * hp_coefficient2[s_class.job] +
-         hp_sigma_val[s_class.job][(bl > 0) ? bl - 1 : 0]) / 100 * (100 +
+        (3500 + bl * hp_coefficient2[0] +
+         hp_sigma_val[0][(bl > 0) ? bl - 1 : 0]) / 100 * (100 +
                                                                     sd->paramc
                                                                     [2]) /
         100 + (sd->parame[2] - sd->paramcard[2]);
-    if (s_class.upper == 1)     // [MouseJstr]
-        sd->status.max_hp = sd->status.max_hp * 130 / 100;
     if (sd->hprate != 100)
         sd->status.max_hp = sd->status.max_hp * sd->hprate / 100;
 
@@ -1921,10 +1775,6 @@ int pc_calcstatus (struct map_session_data *sd, int first)
         if (sd->status.hp > battle_config.max_hp)   // removed negative max hp bug by Valaris
             sd->status.hp = battle_config.max_hp;
     }
-    if (s_class.job == 23 && sd->status.base_level >= 99)
-    {
-        sd->status.max_hp = sd->status.max_hp + 2000;
-    }
 
     if (sd->status.max_hp > battle_config.max_hp)   // removed negative max hp bug by Valaris
         sd->status.max_hp = battle_config.max_hp;
@@ -1933,11 +1783,9 @@ int pc_calcstatus (struct map_session_data *sd, int first)
 
     // 最大SP計算
     sd->status.max_sp +=
-        ((sp_coefficient[s_class.job] * bl) + 1000) / 100 * (100 +
+        ((sp_coefficient[0] * bl) + 1000) / 100 * (100 +
                                                              sd->paramc[3]) /
         100 + (sd->parame[3] - sd->paramcard[3]);
-    if (s_class.upper == 1)     // [MouseJstr]
-        sd->status.max_sp = sd->status.max_sp * 130 / 100;
     if (sd->sprate != 100)
         sd->status.max_sp = sd->status.max_sp * sd->sprate / 100;
 
@@ -2007,20 +1855,6 @@ int pc_calcstatus (struct map_session_data *sd, int first)
         sd->magic_subrace[9] -= skill;
     }
 
-    //Flee上昇
-    if ((skill = pc_checkskill (sd, TF_MISS)) > 0)
-    {                           // 回避率増加
-        if (sd->status.pc_class == 6 || sd->status.pc_class == 4007
-            || sd->status.pc_class == 23)
-        {
-            sd->flee += skill * 3;
-        }
-        if (sd->status.pc_class == 12 || sd->status.pc_class == 17
-            || sd->status.pc_class == 4013 || sd->status.pc_class == 4018)
-            sd->flee += skill * 4;
-        if (sd->status.pc_class == 12 || sd->status.pc_class == 4013)
-            sd->speed -= sd->speed * (skill * .5) / 100;
-    }
     if ((skill = pc_checkskill (sd, MO_DODGE)) > 0) // 見切り
         sd->flee += (skill * 3) >> 1;
 
@@ -2285,10 +2119,7 @@ int pc_calcstatus (struct map_session_data *sd, int first)
 
         if (sd->sc_data[SC_EXPLOSIONSPIRITS].timer != -1)
         {                       // 爆裂波動
-            if (s_class.job == 23)
-                sd->critical += sd->sc_data[SC_EXPLOSIONSPIRITS].val1 * 100;
-            else
-                sd->critical += sd->sc_data[SC_EXPLOSIONSPIRITS].val2;
+            sd->critical += sd->sc_data[SC_EXPLOSIONSPIRITS].val2;
         }
 
         if (sd->sc_data[SC_STEELBODY].timer != -1)
@@ -2373,12 +2204,6 @@ int pc_calcstatus (struct map_session_data *sd, int first)
             clif_updatestatus (sd, SP_SP);
         }
         return 0;
-    }
-
-    if (b_class != sd->view_class)
-    {
-        clif_changelook (&sd->bl, LOOK_BASE, sd->view_class);
-        clif_changelook (&sd->bl, LOOK_WEAPON, 0);
     }
 
     if (memcmp (b_skill, sd->status.skill, sizeof (sd->status.skill))
@@ -4715,56 +4540,6 @@ int pc_checkequip (struct map_session_data *sd, int pos)
 }
 
 /*==========================================
- * 転生職や養子職の元の職業を返す
- *------------------------------------------
- */
-struct pc_base_job pc_calc_base_job (int b_class)
-{
-    struct pc_base_job bj;
-    //転生や養子の場合の元の職業を算出する
-    if (b_class < MAX_PC_CLASS)
-    {                           //通常
-        bj.job = b_class;
-        bj.upper = 0;
-    }
-    else if (b_class >= 4001 && b_class < 4023)
-    {                           //転生職
-        bj.job = b_class - 4001;
-        bj.upper = 1;
-    }
-    else if (b_class == 23 + 4023 - 1)
-    {                           //養子スパノビ
-        bj.job = b_class - (4023 - 1);
-        bj.upper = 2;
-    }
-    else
-    {                           //養子スパノビ以外の養子
-        bj.job = b_class - 4023;
-        bj.upper = 2;
-    }
-
-    if (battle_config.enable_upper_class == 0)
-    {                           //confで無効になっていたらupper=0
-        bj.upper = 0;
-    }
-
-    if (bj.job == 0)
-    {
-        bj.type = 0;
-    }
-    else if (bj.job < 7)
-    {
-        bj.type = 1;
-    }
-    else
-    {
-        bj.type = 2;
-    }
-
-    return bj;
-}
-
-/*==========================================
  * PCの攻撃 (timer関数)
  *------------------------------------------
  */
@@ -5047,8 +4822,6 @@ int pc_checkbaselevelup (struct map_session_data *sd)
 
     if (sd->status.base_exp >= next && next > 0)
     {
-        struct pc_base_job s_class = pc_calc_base_job (sd->status.pc_class);
-
         // base側レベルアップ処理
         sd->status.base_exp -= next;
 
@@ -5059,30 +4832,6 @@ int pc_checkbaselevelup (struct map_session_data *sd)
         clif_updatestatus (sd, SP_NEXTBASEEXP);
         pc_calcstatus (sd, 0);
         pc_heal (sd, sd->status.max_hp, sd->status.max_sp);
-
-        //スパノビはキリエ、イムポ、マニピ、グロ、サフラLv1がかかる
-        if (s_class.job == 23)
-        {
-            skill_status_change_start (&sd->bl,
-                                       SkillStatusChangeTable[PR_KYRIE], 1, 0,
-                                       0, 0, skill_get_time (PR_KYRIE, 1), 0);
-            skill_status_change_start (&sd->bl,
-                                       SkillStatusChangeTable[PR_IMPOSITIO],
-                                       1, 0, 0, 0,
-                                       skill_get_time (PR_IMPOSITIO, 1), 0);
-            skill_status_change_start (&sd->bl,
-                                       SkillStatusChangeTable[PR_MAGNIFICAT],
-                                       1, 0, 0, 0,
-                                       skill_get_time (PR_MAGNIFICAT, 1), 0);
-            skill_status_change_start (&sd->bl,
-                                       SkillStatusChangeTable[PR_GLORIA], 1,
-                                       0, 0, 0, skill_get_time (PR_GLORIA, 1),
-                                       0);
-            skill_status_change_start (&sd->bl,
-                                       SkillStatusChangeTable[PR_SUFFRAGIUM],
-                                       1, 0, 0, 0,
-                                       skill_get_time (PR_SUFFRAGIUM, 1), 0);
-        }
 
         clif_misceffect (&sd->bl, 0);
         //レベルアップしたのでパーティー情報を更新する
@@ -5262,29 +5011,12 @@ int pc_extract_healer_exp (struct map_session_data *sd, int max)
  */
 int pc_nextbaseexp (struct map_session_data *sd)
 {
-    int  i;
-
     nullpo_retr (0, sd);
 
     if (sd->status.base_level >= MAX_LEVEL || sd->status.base_level <= 0)
         return 0;
 
-    if (sd->status.pc_class == 0)
-        i = 0;
-    else if (sd->status.pc_class <= 6)
-        i = 1;
-    else if (sd->status.pc_class <= 22)
-        i = 2;
-    else if (sd->status.pc_class == 23)
-        i = 3;
-    else if (sd->status.pc_class == 4001)
-        i = 4;
-    else if (sd->status.pc_class <= 4007)
-        i = 5;
-    else
-        i = 6;
-
-    return exp_table[i][sd->status.base_level - 1];
+    return exp_table[0][sd->status.base_level - 1];
 }
 
 /*==========================================
@@ -5307,29 +5039,12 @@ int pc_nextjobexp (struct map_session_data *sd)
  */
 int pc_nextbaseafter (struct map_session_data *sd)
 {
-    int  i;
-
     nullpo_retr (0, sd);
 
     if (sd->status.base_level >= MAX_LEVEL || sd->status.base_level <= 0)
         return 0;
 
-    if (sd->status.pc_class == 0)
-        i = 0;
-    else if (sd->status.pc_class <= 6)
-        i = 1;
-    else if (sd->status.pc_class <= 22)
-        i = 2;
-    else if (sd->status.pc_class == 23)
-        i = 3;
-    else if (sd->status.pc_class == 4001)
-        i = 4;
-    else if (sd->status.pc_class <= 4007)
-        i = 5;
-    else
-        i = 6;
-
-    return exp_table[i][sd->status.base_level];
+    return exp_table[0][sd->status.base_level];
 }
 
 /*==========================================
@@ -5338,29 +5053,12 @@ int pc_nextbaseafter (struct map_session_data *sd)
  */
 int pc_nextjobafter (struct map_session_data *sd)
 {
-    int  i;
-
     nullpo_retr (0, sd);
 
     if (sd->status.job_level >= MAX_LEVEL || sd->status.job_level <= 0)
         return 0;
 
-    if (sd->status.pc_class == 0)
-        i = 7;
-    else if (sd->status.pc_class <= 6)
-        i = 8;
-    else if (sd->status.pc_class <= 22)
-        i = 9;
-    else if (sd->status.pc_class == 23)
-        i = 10;
-    else if (sd->status.pc_class == 4001)
-        i = 11;
-    else if (sd->status.pc_class <= 4007)
-        i = 12;
-    else
-        i = 13;
-
-    return exp_table[i][sd->status.job_level];
+    return exp_table[7][sd->status.job_level];
 }
 
 /*==========================================
@@ -5574,15 +5272,8 @@ int pc_skillup (struct map_session_data *sd, int skill_num)
 int pc_allskillup (struct map_session_data *sd)
 {
     int  i, id;
-    int  c = 0, s = 0;
-    //転生や養子の場合の元の職業を算出する
-    struct pc_base_job s_class;
 
     nullpo_retr (0, sd);
-
-    s_class = pc_calc_base_job (sd->status.pc_class);
-    c = s_class.job;
-    s = (s_class.upper == 1) ? 1 : 0;   //転生以外は通常のスキル？
 
     for (i = 0; i < MAX_SKILL; i++)
         sd->status.skill[i].id = 0;
@@ -5600,7 +5291,7 @@ int pc_allskillup (struct map_session_data *sd)
     }
     else
     {
-        for (i = 0; (id = skill_tree[s][c][i].id) > 0; i++)
+        for (i = 0; (id = skill_tree[0][0][i].id) > 0; i++)
         {
             if (sd->status.skill[id].id == 0 && skill_get_inf2 (id) & 0x01)
                 sd->status.skill[id].lv = skill_get_max (id);
@@ -5642,8 +5333,6 @@ int pc_resetlvl (struct map_session_data *sd, int type)
         sd->status.int_ = 1;
         sd->status.dex = 1;
         sd->status.luk = 1;
-        if (sd->status.pc_class == 4001)
-            sd->status.status_point = 100;
     }
 
     if (type == 2)
@@ -5790,12 +5479,8 @@ int pc_damage (struct block_list *src, struct map_session_data *sd,
                int damage)
 {
     int  i = 0, j = 0;
-    struct pc_base_job s_class;
-
     nullpo_retr (0, sd);
 
-    //転生や養子の場合の元の職業を算出する
-    s_class = pc_calc_base_job (sd->status.pc_class);
     // 既に死んでいたら無効
     if (pc_isdead (sd))
         return 0;
@@ -6070,9 +5755,6 @@ int pc_damage (struct block_list *src, struct map_session_data *sd,
 int pc_readparam (struct map_session_data *sd, int type)
 {
     int  val = 0;
-    struct pc_base_job s_class;
-
-    s_class = pc_calc_base_job (sd->status.pc_class);
 
     nullpo_retr (0, sd);
 
@@ -6097,10 +5779,10 @@ int pc_readparam (struct map_session_data *sd, int type)
             if (val >= 24 && val < 45)
                 val += 3978;
             else
-                val = sd->status.pc_class;
+                val = 0; //sd->status.pc_class;
             break;
         case SP_UPPER:
-            val = s_class.upper;
+            val = 0; //s_class.upper;
             break;
         case SP_SEX:
             val = sd->sex;
@@ -6168,11 +5850,8 @@ int pc_readparam (struct map_session_data *sd, int type)
 int pc_setparam (struct map_session_data *sd, int type, int val)
 {
     int  i = 0, up_level = 50;
-    struct pc_base_job s_class;
 
     nullpo_retr (0, sd);
-
-    s_class = pc_calc_base_job (sd->status.pc_class);
 
     switch (type)
     {
@@ -6193,11 +5872,7 @@ int pc_setparam (struct map_session_data *sd, int type, int val)
             pc_heal (sd, sd->status.max_hp, sd->status.max_sp);
             break;
         case SP_JOBLEVEL:
-            if (sd->status.pc_class == 0)
-                up_level -= 40;
-            if ((sd->status.pc_class == 23)
-                || (sd->status.pc_class >= 4001 && sd->status.pc_class <= 4022))
-                up_level += 20;
+            up_level -= 40;
             if (val >= sd->status.job_level)
             {
                 if (val > up_level)
@@ -6571,96 +6246,6 @@ int pc_percentheal (struct map_session_data *sd, int hp, int sp)
     return 0;
 }
 
-/*==========================================
- * 職変更
- * 引数		job 職業 0〜23
- *		upper 通常 0, 転生 1, 養子 2, そのまま -1
- *------------------------------------------
- */
-int pc_jobchange (struct map_session_data *sd, int job, int upper)
-{
-    int  i;
-    int  b_class = 0;
-    //転生や養子の場合の元の職業を算出する
-    struct pc_base_job s_class = pc_calc_base_job (sd->status.pc_class);
-
-    nullpo_retr (0, sd);
-
-    if ((job > 23) && (job < 68))
-        job += 3977;
-
-    if ((job > 69) && (job < 4000))
-        return 1;
-
-    if (upper < 0)              //現在転生かどうかを判断する
-        upper = s_class.upper;
-
-    if (upper == 0)
-    {                           //通常職ならjobそのまんま
-        b_class = job;
-    }
-    else if (upper == 1)
-    {
-        if (job == 23)
-        {                       //転生にスパノビは存在しないのでお断り
-            return 1;
-        }
-        else
-        {
-            b_class = job + 4001;
-        }
-    }
-    else if (upper == 2)
-    {                           //養子に結婚はないけどどうせ次で蹴られるからいいや
-        b_class = (job == 23) ? job + 4022 : job + 4023;
-    }
-    else
-    {
-        return 1;
-    }
-
-    if ((sd->status.sex == 0 && job == 19) || (sd->status.sex == 1 && job == 20) ||
-            (sd->status.sex == 0 && job == 4020) || (sd->status.sex == 1 && job == 4021) ||
-            job == 22 || sd->status.pc_class == b_class)   //♀はバードになれない、♂はダンサーになれない、結婚衣裳もお断り
-        return 1;
-
-    sd->status.pc_class = sd->view_class = b_class;
-
-    sd->status.job_level = 1;
-    sd->status.job_exp = 0;
-    clif_updatestatus (sd, SP_JOBLEVEL);
-    clif_updatestatus (sd, SP_JOBEXP);
-    clif_updatestatus (sd, SP_NEXTJOBEXP);
-
-    for (i = 0; i < 11; i++)
-    {
-        if (sd->equip_index[i] >= 0)
-            if (!pc_isequip (sd, sd->equip_index[i]))
-                pc_unequipitem (sd, sd->equip_index[i], 1); // 装備外し
-    }
-
-    clif_changelook (&sd->bl, LOOK_BASE, sd->view_class);   // move sprite update to prevent client crashes with incompatible equipment [Valaris]
-    if (sd->status.clothes_color > 0)
-        clif_changelook (&sd->bl, LOOK_CLOTHES_COLOR,
-                         sd->status.clothes_color);
-    if (battle_config.muting_players && sd->status.manner < 0)
-        clif_changestatus (&sd->bl, SP_MANNER, sd->status.manner);
-
-    pc_calcstatus (sd, 0);
-    pc_checkallowskill (sd);
-    pc_equiplookall (sd);
-    clif_equiplist (sd);
-
-    if (pc_isriding (sd))
-    {                           // remove peco status if changing into invalid class [Valaris]
-        if (!(pc_checkskill (sd, KN_RIDING)))
-            pc_setoption (sd, sd->status.option | -0x0000);
-        if (pc_checkskill (sd, KN_RIDING) > 0)
-            pc_setriding (sd);
-    }
-
-    return 0;
-}
 
 /*==========================================
  * 見た目変更
@@ -6797,18 +6382,6 @@ int pc_setriding (struct map_session_data *sd)
     if ((pc_checkskill (sd, KN_RIDING) > 0))
     {                           // ライディングスキル所持
         pc_setoption (sd, sd->status.option | 0x0020);
-
-        if (sd->status.pc_class == 7)
-            sd->status.pc_class = sd->view_class = 13;
-
-        if (sd->status.pc_class == 14)
-            sd->status.pc_class = sd->view_class = 21;
-
-        if (sd->status.pc_class == 4008)
-            sd->status.pc_class = sd->view_class = 4014;
-
-        if (sd->status.pc_class == 4015)
-            sd->status.pc_class = sd->view_class = 4022;
     }
 
     return 0;
@@ -7333,7 +6906,7 @@ int pc_equipitem (struct map_session_data *sd, int n, int pos)
     // 二刀流処理
     if ((pos == 0x22)           // 一応、装備要求箇所が二刀流武器かチェックする
         && (id->equip == 2)     // 単 手武器
-        && (pc_checkskill (sd, AS_LEFT) > 0 || sd->status.pc_class == 12)) // 左手修錬有
+        && (pc_checkskill (sd, AS_LEFT) > 0)) // 左手修錬有
     {
         int  tpos = 0;
         if (sd->equip_index[8] >= 0)
@@ -8049,11 +7622,7 @@ static int pc_natural_heal_sp (struct map_session_data *sd)
         if (sd->inchealsptick >= battle_config.natural_heal_skill_interval
             && sd->status.sp < sd->status.max_sp)
         {
-            struct pc_base_job s_class = pc_calc_base_job (sd->status.pc_class);
-            if (sd->doridori_counter && s_class.job == 23)
-                bonus = sd->nshealsp * 2;
-            else
-                bonus = sd->nshealsp;
+            bonus = sd->nshealsp;
             sd->doridori_counter = 0;
             while (sd->inchealsptick >=
                    battle_config.natural_heal_skill_interval)

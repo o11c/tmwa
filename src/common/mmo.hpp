@@ -98,7 +98,6 @@ struct mmo_charstatus
 
     int  base_exp, job_exp, zeny;
 
-    short pc_class __attribute__((deprecated));
     short status_point, skill_point;
     int  hp, max_hp, sp, max_sp;
     short option, karma, manner;

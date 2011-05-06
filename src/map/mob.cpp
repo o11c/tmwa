@@ -2273,14 +2273,14 @@ static void mob_delay_item_drop (timer_id UNUSED, tick_t UNUSED, custom_id_t id,
             clif_additem (ditem->first_sd, 0, 0, flag);
             map_addflooritem (&temp_item, 1, ditem->m, ditem->x, ditem->y,
                               ditem->first_sd, ditem->second_sd,
-                              ditem->third_sd, 0);
+                              ditem->third_sd);
         }
         free (ditem);
         return;
     }
 
     map_addflooritem (&temp_item, 1, ditem->m, ditem->x, ditem->y,
-                      ditem->first_sd, ditem->second_sd, ditem->third_sd, 0);
+                      ditem->first_sd, ditem->second_sd, ditem->third_sd);
 
     free (ditem);
 }
@@ -2306,7 +2306,7 @@ static void mob_delay_item_drop2 (timer_id UNUSED, tick_t UNUSED, custom_id_t id
             clif_additem (ditem->first_sd, 0, 0, flag);
             map_addflooritem (&ditem->item_data, ditem->item_data.amount,
                               ditem->m, ditem->x, ditem->y, ditem->first_sd,
-                              ditem->second_sd, ditem->third_sd, 0);
+                              ditem->second_sd, ditem->third_sd);
         }
         free (ditem);
         return;
@@ -2314,7 +2314,7 @@ static void mob_delay_item_drop2 (timer_id UNUSED, tick_t UNUSED, custom_id_t id
 
     map_addflooritem (&ditem->item_data, ditem->item_data.amount, ditem->m,
                       ditem->x, ditem->y, ditem->first_sd, ditem->second_sd,
-                      ditem->third_sd, 0);
+                      ditem->third_sd);
 
     free (ditem);
 }
@@ -2827,6 +2827,7 @@ int mob_damage (struct block_list *src, struct mob_data *md, int damage,
             }
         }
 
+        // TODO remove support for this (after making sure it doesn't break anything)
         // mvp処理
         if (mvp_sd && mob_db[md->mob_class].mexp > 0)
         {
@@ -2862,13 +2863,13 @@ int mob_damage (struct block_list *src, struct mob_data *md, int damage,
                 if (mvp_sd->weight * 2 > mvp_sd->max_weight)
                     map_addflooritem (&item, 1, mvp_sd->bl.m, mvp_sd->bl.x,
                                       mvp_sd->bl.y, mvp_sd, second_sd,
-                                      third_sd, 1);
+                                      third_sd);
                 else if ((ret = pc_additem (mvp_sd, &item, 1)))
                 {
                     clif_additem (sd, 0, 0, ret);
                     map_addflooritem (&item, 1, mvp_sd->bl.m, mvp_sd->bl.x,
                                       mvp_sd->bl.y, mvp_sd, second_sd,
-                                      third_sd, 1);
+                                      third_sd);
                 }
                 break;
             }
@@ -4183,6 +4184,7 @@ static int mob_makedummymobdb (int mob_class)
  * db/mob_db.txt reading
  *------------------------------------------
  */
+// TODO remove support for MVP items
 static int mob_readdb (void)
 {
     FILE *fp;

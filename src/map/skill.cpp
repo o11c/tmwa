@@ -4270,7 +4270,7 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl,
                 {
                     clif_additem (sd, 0, 0, eflag);
                     map_addflooritem (&item_tmp, 1, sd->bl.m, sd->bl.x,
-                                      sd->bl.y, NULL, NULL, NULL, 0);
+                                      sd->bl.y, NULL, NULL, NULL);
                 }
             }
             break;
@@ -4292,7 +4292,7 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl,
                 {
                     clif_additem (sd, 0, 0, eflag);
                     map_addflooritem (&item_tmp, 1, sd->bl.m, sd->bl.x,
-                                      sd->bl.y, NULL, NULL, NULL, 0);
+                                      sd->bl.y, NULL, NULL, NULL);
                 }
             }
             break;
@@ -4971,8 +4971,7 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl,
                                                                    group->skill_id].amount
                                                           [i], sd->bl.m,
                                                           sd->bl.x, sd->bl.y,
-                                                          NULL, NULL, NULL,
-                                                          0);
+                                                          NULL, NULL, NULL);
                                     }
                                 }
                             }
@@ -4988,7 +4987,7 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl,
                                 clif_additem (sd, 0, 0, flg);
                                 map_addflooritem (&item_tmp, 1, sd->bl.m,
                                                   sd->bl.x, sd->bl.y, NULL,
-                                                  NULL, NULL, 0);
+                                                  NULL, NULL);
                             }
                         }
 
@@ -11401,7 +11400,7 @@ int skill_unit_timer_sub (struct block_list *bl, va_list ap)
                         memset (&item_tmp, 0, sizeof (item_tmp));
                         item_tmp.nameid = 1065;
                         item_tmp.identify = 1;
-                        map_addflooritem (&item_tmp, 1, bl->m, bl->x, bl->y, NULL, NULL, NULL, 0);  // 罠返還
+                        map_addflooritem (&item_tmp, 1, bl->m, bl->x, bl->y, NULL, NULL, NULL);  // 罠返還
                     }
                 }
             }

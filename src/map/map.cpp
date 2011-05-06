@@ -627,44 +627,44 @@ void map_clearflooritem_timer (timer_id tid, tick_t UNUSED, custom_id_t id, cust
     map_delobject (fitem->bl.id, BL_ITEM);
 }
 
-/*==========================================
- * (m,x,y)の周囲rangeマス内の空き(=侵入可能)cellの
- * 内から適当なマス目の座標をx+(y<<16)で返す
- *
- * 現状range=1でアイテムドロップ用途のみ
- *------------------------------------------
- */
-int map_searchrandfreecell (int m, int x, int y, int range)
+/// drop an object on a random point near the object
+// return (y << 16 ) | x for the chosen point
+// TODO rewrite this to avoid the double loop - use an LFSR?
+uint32_t map_searchrandfreecell (uint16_t m, uint16_t x, uint16_t y, int range)
 {
-    int  free_cell, i, j, c;
-
-    for (free_cell = 0, i = -range; i <= range; i++)
+    int free_cell = 0;
+    for (int i = -range; i <= range; i++)
     {
         if (i + y < 0 || i + y >= maps[m].ys)
             continue;
-        for (j = -range; j <= range; j++)
+        for (int j = -range; j <= range; j++)
         {
             if (j + x < 0 || j + x >= maps[m].xs)
                 continue;
-            if ((c = read_gat (m, j + x, i + y)) == 1 || c == 5)
+            int c = read_gat (m, j + x, i + y);
+            // must be walkable to drop stuff there
+            if (c & 1)
                 continue;
             free_cell++;
         }
     }
-    if (free_cell == 0)
+    if (!free_cell)
         return -1;
+    // choose a cell at random, and repeat the logic
     free_cell = MRAND (free_cell);
-    for (i = -range; i <= range; i++)
+    for (int i = -range; i <= range; i++)
     {
         if (i + y < 0 || i + y >= maps[m].ys)
             continue;
-        for (j = -range; j <= range; j++)
+        for (int j = -range; j <= range; j++)
         {
             if (j + x < 0 || j + x >= maps[m].xs)
                 continue;
-            if ((c = read_gat (m, j + x, i + y)) == 1 || c == 5)
+            int c = read_gat (m, j + x, i + y);
+            if (c & 1)
                 continue;
-            if (free_cell == 0)
+            // the chosen cell
+            if (!free_cell)
             {
                 x += j;
                 y += i;
@@ -678,26 +678,23 @@ int map_searchrandfreecell (int m, int x, int y, int range)
     return x + (y << 16);
 }
 
-/*==========================================
- * (m,x,y)を中心に3x3以内に床アイテム設置
- *
- * item_dataはamount以外をcopyする
- *------------------------------------------
- */
-int map_addflooritem_any (struct item *item_data, int amount, int m, int x,
-                          int y, struct map_session_data **owners,
+/// put items in a 3x3 square around the point
+// items may initially only be picked by the first owner
+// this decays with owner_protection
+// after lifetime it disapeears
+// dispersal: the actual range over which they may be scattered
+int map_addflooritem_any (struct item *item_data, int amount, uint16_t m, uint16_t x,
+                          uint16_t y, struct map_session_data **owners,
                           int *owner_protection, int lifetime, int dispersal)
 {
-    int  xy, r;
-    unsigned int tick;
-    struct flooritem_data *fitem = NULL;
-
     nullpo_retr (0, item_data);
 
-    if ((xy = map_searchrandfreecell (m, x, y, dispersal)) < 0)
+    uint32_t xy = map_searchrandfreecell (m, x, y, dispersal);
+    if (xy == -1)
         return 0;
-    r = mt_random ();
+    int r = mt_random ();
 
+    struct flooritem_data *fitem;
     CREATE (fitem, struct flooritem_data, 1);
     fitem->bl.type = BL_ITEM;
     fitem->bl.prev = fitem->bl.next = NULL;
@@ -711,14 +708,15 @@ int map_addflooritem_any (struct item *item_data, int amount, int m, int x,
     fitem->third_get_id = 0;
     fitem->third_get_tick = 0;
 
+    // this is kind of ugly
     fitem->bl.id = map_addobject (&fitem->bl);
-    if (fitem->bl.id == 0)
+    if (!fitem->bl.id)
     {
         free (fitem);
         return 0;
     }
 
-    tick = gettick ();
+    tick_t tick = gettick ();
 
     if (owners[0])
         fitem->first_get_id = owners[0]->bl.id;
@@ -732,13 +730,12 @@ int map_addflooritem_any (struct item *item_data, int amount, int m, int x,
         fitem->third_get_id = owners[2]->bl.id;
     fitem->third_get_tick = tick + owner_protection[2];
 
-    memcpy (&fitem->item_data, item_data, sizeof (*item_data));
+    fitem->item_data= *item_data;
     fitem->item_data.amount = amount;
     fitem->subx = (r & 3) * 3 + 3;
     fitem->suby = ((r >> 2) & 3) * 3 + 3;
-    fitem->cleartimer =
-        add_timer (gettick () + lifetime, map_clearflooritem_timer,
-                   fitem->bl.id, 0);
+    fitem->cleartimer = add_timer (gettick () + lifetime, map_clearflooritem_timer,
+                                   fitem->bl.id, 0);
 
     map_addblock (&fitem->bl);
     clif_dropflooritem (fitem);
@@ -746,99 +743,23 @@ int map_addflooritem_any (struct item *item_data, int amount, int m, int x,
     return fitem->bl.id;
 }
 
-int map_addflooritem (struct item *item_data, int amount, int m, int x, int y,
+/// Add an item such that only the given players can pick it up, at first
+int map_addflooritem (struct item *item_data, int amount, uint16_t m, uint16_t x, uint16_t y,
                       struct map_session_data *first_sd,
                       struct map_session_data *second_sd,
-                      struct map_session_data *third_sd, int type)
+                      struct map_session_data *third_sd)
 {
     struct map_session_data *owners[3] = { first_sd, second_sd, third_sd };
     int  owner_protection[3];
 
-    if (type)
-    {
-        owner_protection[0] = battle_config.mvp_item_first_get_time;
-        owner_protection[1] =
-            owner_protection[0] + battle_config.mvp_item_second_get_time;
-        owner_protection[2] =
-            owner_protection[1] + battle_config.mvp_item_third_get_time;
-    }
-    else
-    {
-        owner_protection[0] = battle_config.item_first_get_time;
-        owner_protection[1] =
-            owner_protection[0] + battle_config.item_second_get_time;
-        owner_protection[2] =
-            owner_protection[1] + battle_config.item_third_get_time;
-    }
+    owner_protection[0] = battle_config.item_first_get_time;
+    owner_protection[1] = owner_protection[0] + battle_config.item_second_get_time;
+    owner_protection[2] = owner_protection[1] + battle_config.item_third_get_time;
 
     return map_addflooritem_any (item_data, amount, m, x, y,
                                  owners, owner_protection,
                                  battle_config.flooritem_lifetime, 1);
 }
-
-/* 	int xy,r; */
-/* 	unsigned int tick; */
-/* 	struct flooritem_data *fitem=NULL; */
-
-/* 	nullpo_retr(0, item_data); */
-
-/* 	if((xy=map_searchrandfreecell(m,x,y,1))<0) */
-/* 		return 0; */
-/* 	r=rand(); */
-
-/* 	fitem = (struct flooritem_data *)aCalloc(1,sizeof(*fitem)); */
-/* 	fitem->bl.type=BL_ITEM; */
-/* 	fitem->bl.prev = fitem->bl.next = NULL; */
-/* 	fitem->bl.m=m; */
-/* 	fitem->bl.x=xy&0xffff; */
-/* 	fitem->bl.y=(xy>>16)&0xffff; */
-/* 	fitem->first_get_id = 0; */
-/* 	fitem->first_get_tick = 0; */
-/* 	fitem->second_get_id = 0; */
-/* 	fitem->second_get_tick = 0; */
-/* 	fitem->third_get_id = 0; */
-/* 	fitem->third_get_tick = 0; */
-
-/* 	fitem->bl.id = map_addobject(&fitem->bl); */
-/* 	if(fitem->bl.id==0){ */
-/* 		free(fitem); */
-/* 		return 0; */
-/* 	} */
-
-/* 	tick = gettick(); */
-/* 	if(first_sd) { */
-/* 		fitem->first_get_id = first_sd->bl.id; */
-/* 		if(type) */
-/* 			fitem->first_get_tick = tick + battle_config.mvp_item_first_get_time; */
-/* 		else */
-/* 			fitem->first_get_tick = tick + battle_config.item_first_get_time; */
-/* 	} */
-/* 	if(second_sd) { */
-/* 		fitem->second_get_id = second_sd->bl.id; */
-/* 		if(type) */
-/* 			fitem->second_get_tick = tick + battle_config.mvp_item_first_get_time + battle_config.mvp_item_second_get_time; */
-/* 		else */
-/* 			fitem->second_get_tick = tick + battle_config.item_first_get_time + battle_config.item_second_get_time; */
-/* 	} */
-/* 	if(third_sd) { */
-/* 		fitem->third_get_id = third_sd->bl.id; */
-/* 		if(type) */
-/* 			fitem->third_get_tick = tick + battle_config.mvp_item_first_get_time + battle_config.mvp_item_second_get_time + battle_config.mvp_item_third_get_time; */
-/* 		else */
-/* 			fitem->third_get_tick = tick + battle_config.item_first_get_time + battle_config.item_second_get_time + battle_config.item_third_get_time; */
-/* 	} */
-
-/* 	memcpy(&fitem->item_data,item_data,sizeof(*item_data)); */
-/* 	fitem->item_data.amount=amount; */
-/* 	fitem->subx=(r&3)*3+3; */
-/* 	fitem->suby=((r>>2)&3)*3+3; */
-/* 	fitem->cleartimer=add_timer(gettick()+battle_config.flooritem_lifetime,map_clearflooritem_timer,fitem->bl.id,0); */
-
-/* 	map_addblock(&fitem->bl); */
-/* 	clif_dropflooritem(fitem); */
-
-/* 	return fitem->bl.id; */
-/* } */
 
 /*==========================================
  * charid_dbへ追加(返信待ちがあれば返信)

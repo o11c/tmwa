@@ -755,14 +755,13 @@ void map_log (const char *format, ...) __attribute__((format(printf, 1, 2)));
 // 床アイテム関連
 void map_clearflooritem_timer (timer_id, tick_t, custom_id_t, custom_data_t);
 #define map_clearflooritem(id) map_clearflooritem_timer(0,0,id,1)
-int  map_addflooritem_any (struct item *, int amount, int m, int x, int y,
+int  map_addflooritem_any (struct item *, int amount, uint16_t m, uint16_t x, uint16_t y,
                            struct map_session_data **owners,
                            int *owner_protection,
                            int lifetime, int dispersal);
-int  map_addflooritem (struct item *, int, int, int, int,
+int  map_addflooritem (struct item *, int amount, uint16_t m, uint16_t x, uint16_t y,
                        struct map_session_data *, struct map_session_data *,
-                       struct map_session_data *, int);
-int  map_searchrandfreecell (int, int, int, int);
+                       struct map_session_data *);
 
 // キャラid＝＞キャラ名 変換関連
 void map_addchariddb (int charid, const char *name);

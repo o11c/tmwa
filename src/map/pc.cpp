@@ -3528,7 +3528,7 @@ int pc_dropitem (struct map_session_data *sd, int n, int amount)
         sd->trade_partner != 0 || sd->status.inventory[n].amount <= 0)
         return 1;
     map_addflooritem (&sd->status.inventory[n], amount, sd->bl.m, sd->bl.x,
-                      sd->bl.y, NULL, NULL, NULL, 0);
+                      sd->bl.y, NULL, NULL, NULL);
     pc_delitem (sd, n, amount, 0);
 
     return 0;

@@ -5367,9 +5367,6 @@ int battle_config_read (const char *cfgName)
         battle_config.item_first_get_time = 3000;
         battle_config.item_second_get_time = 1000;
         battle_config.item_third_get_time = 1000;
-        battle_config.mvp_item_first_get_time = 10000;
-        battle_config.mvp_item_second_get_time = 10000;
-        battle_config.mvp_item_third_get_time = 2000;
 
         battle_config.drop_rate0item = 0;
         battle_config.base_exp_rate = 100;
@@ -5607,15 +5604,6 @@ int battle_config_read (const char *cfgName)
             "item_second_get_time", &battle_config.item_second_get_time},
             {
             "item_third_get_time", &battle_config.item_third_get_time},
-            {
-            "mvp_item_first_get_time",
-                    &battle_config.mvp_item_first_get_time},
-            {
-            "mvp_item_second_get_time",
-                    &battle_config.mvp_item_second_get_time},
-            {
-            "mvp_item_third_get_time",
-                    &battle_config.mvp_item_third_get_time},
             {
             "item_rate", &battle_config.item_rate},
             {

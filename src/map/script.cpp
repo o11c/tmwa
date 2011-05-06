@@ -2790,7 +2790,7 @@ int buildin_getitem (struct script_state *st)
         {
             clif_additem (sd, 0, 0, flag);
             map_addflooritem (&item_tmp, amount, sd->bl.m, sd->bl.x, sd->bl.y,
-                              NULL, NULL, NULL, 0);
+                              NULL, NULL, NULL);
         }
     }
 
@@ -2880,7 +2880,7 @@ int buildin_getitem2 (struct script_state *st)
         {
             clif_additem (sd, 0, 0, flag);
             map_addflooritem (&item_tmp, amount, sd->bl.m, sd->bl.x, sd->bl.y,
-                              NULL, NULL, NULL, 0);
+                              NULL, NULL, NULL);
         }
     }
 
@@ -2941,7 +2941,7 @@ int buildin_makeitem (struct script_state *st)
             item_tmp.identify = !itemdb_isequip3 (nameid);
 
 //      clif_additem(sd,0,0,flag);
-        map_addflooritem (&item_tmp, amount, m, x, y, NULL, NULL, NULL, 0);
+        map_addflooritem (&item_tmp, amount, m, x, y, NULL, NULL, NULL);
     }
 
     return 0;
@@ -5429,7 +5429,7 @@ int buildin_successremovecards (struct script_state *st)
             {                   // 持てないならドロップ
                 clif_additem (sd, 0, 0, flag);
                 map_addflooritem (&item_tmp, 1, sd->bl.m, sd->bl.x, sd->bl.y,
-                                  NULL, NULL, NULL, 0);
+                                  NULL, NULL, NULL);
             }
         }
     }
@@ -5449,7 +5449,7 @@ int buildin_successremovecards (struct script_state *st)
         {                       // もてないならドロップ
             clif_additem (sd, 0, 0, flag);
             map_addflooritem (&item_tmp, 1, sd->bl.m, sd->bl.x, sd->bl.y,
-                              NULL, NULL, NULL, 0);
+                              NULL, NULL, NULL);
         }
         clif_misceffect (&sd->bl, 3);
         return 0;
@@ -5498,7 +5498,7 @@ int buildin_failedremovecards (struct script_state *st)
                 {
                     clif_additem (sd, 0, 0, flag);
                     map_addflooritem (&item_tmp, 1, sd->bl.m, sd->bl.x,
-                                      sd->bl.y, NULL, NULL, NULL, 0);
+                                      sd->bl.y, NULL, NULL, NULL);
                 }
             }
         }
@@ -5528,7 +5528,7 @@ int buildin_failedremovecards (struct script_state *st)
             {
                 clif_additem (sd, 0, 0, flag);
                 map_addflooritem (&item_tmp, 1, sd->bl.m, sd->bl.x, sd->bl.y,
-                                  NULL, NULL, NULL, 0);
+                                  NULL, NULL, NULL);
             }
         }
         clif_misceffect (&sd->bl, 2);

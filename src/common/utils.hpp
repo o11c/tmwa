@@ -101,4 +101,6 @@ static inline void log_time (FILE *fp)
 
 FILE *create_or_fake_or_die (const char *filename);
 
+/// Die, and hopefully generate a backtrace
+#define SEGFAULT() *((char *) 0) = 0
 #endif //UTILS_H

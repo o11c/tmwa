@@ -1094,7 +1094,7 @@ void ladmin_itemfrob (int fd)
     struct block_list *bl = (struct block_list *) map_get_first_session ();
 
     // flooritems
-    map_foreachobject (ladmin_itemfrob_c, 0 /* any object */ , source_id,
+    map_foreachobject (ladmin_itemfrob_c, BL_NUL /* any object */ , source_id,
                        dest_id);
 
     // player characters (and, hopefully, mobs)

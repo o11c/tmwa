@@ -735,11 +735,13 @@ void map_foreachinarea (int (*)(struct block_list *, va_list), int, int, int,
 void map_foreachinmovearea (int (*)(struct block_list *, va_list), int, int,
                             int, int, int, int, int, BlockType, ...);
 uint32_t  map_count_oncell (uint16_t m, uint16_t x, uint16_t y);
-// 一時的object関連
-int  map_addobject (struct block_list *);
-int  map_delobject (int, int type);
-int  map_delobjectnofree (int id, int type);
-void map_foreachobject (int (*)(struct block_list *, va_list), int, ...);
+
+/// Temporary objects (loot, etc)
+typedef uint32_t obj_id_t;
+obj_id_t map_addobject (struct block_list *);
+void map_delobject (obj_id_t, BlockType type);
+void map_delobjectnofree (obj_id_t id, BlockType type);
+void map_foreachobject (int (*)(struct block_list *, va_list), BlockType, ...);
 //
 int  map_quit (struct map_session_data *);
 // npc

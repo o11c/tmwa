@@ -37,7 +37,7 @@ static struct dbt *charid_db = NULL;
 
 static int users = 0;
 static struct block_list *object[MAX_FLOORITEM];
-static int first_free_object_id = 0, last_object_id = 0;
+obj_id_t first_free_object_id = 0, last_object_id = 0;
 
 #define block_free_max 1048576
 static void *block_free[block_free_max];
@@ -512,55 +512,42 @@ void map_foreachinmovearea (int (*func) (struct block_list *, va_list), int m,
     bl_list_count = blockcount;
 }
 
-/*==========================================
- * 床アイテムやエフェクト用の一時obj割り当て
- * object[]への保存とid_db登録まで
- *
- * bl->idもこの中で設定して問題無い?
- *------------------------------------------
- */
-int map_addobject (struct block_list *bl)
+/// Add a temporary object on the floor (loot, etc)
+obj_id_t map_addobject (struct block_list *bl)
 {
-    int  i;
-    if (bl == NULL)
+    if (!bl)
     {
-        printf ("map_addobject nullpo?\n");
+        map_log ("%s: nullpo!", __func__);
         return 0;
     }
     if (first_free_object_id < 2 || first_free_object_id >= MAX_FLOORITEM)
         first_free_object_id = 2;
-    for (i = first_free_object_id; i < MAX_FLOORITEM; i++)
-        if (object[i] == NULL)
+    for (; first_free_object_id < MAX_FLOORITEM; first_free_object_id++)
+        if (!object[first_free_object_id])
             break;
-    if (i >= MAX_FLOORITEM)
+    if (first_free_object_id >= MAX_FLOORITEM)
     {
-        if (battle_config.error_log)
-            printf ("no free object id\n");
+        map_log ("no free object id");
         return 0;
     }
-    first_free_object_id = i;
-    if (last_object_id < i)
-        last_object_id = i;
-    object[i] = bl;
-    numdb_insert (id_db, i, (void *)bl);
-    return i;
+    if (last_object_id < first_free_object_id)
+        last_object_id = first_free_object_id;
+    object[first_free_object_id] = bl;
+    numdb_insert (id_db, first_free_object_id, (void *)bl);
+    return first_free_object_id;
 }
 
-/*==========================================
- * 一時objectの解放
- *	map_delobjectのfreeしないバージョン
- *------------------------------------------
- */
-int map_delobjectnofree (int id, int type)
+// The only external use of this function is skill_delunit
+// TODO understand why that is
+void map_delobjectnofree (obj_id_t id, BlockType type)
 {
-    if (object[id] == NULL)
-        return 0;
+    if (!object[id])
+        return;
 
     if (object[id]->type != type)
     {
-        fprintf (stderr, "Incorrect type: expected %d, got %d\n", type,
-                 object[id]->type);
-        *((char *) 0) = 0;      // break for backtrace
+        map_log ("Incorrect type: expected %d, got %d", type, object[id]->type);
+        SEGFAULT();
     }
 
     map_delblock (object[id]);
@@ -573,59 +560,34 @@ int map_delobjectnofree (int id, int type)
 
     while (last_object_id > 2 && object[last_object_id] == NULL)
         last_object_id--;
-
-    return 0;
 }
 
-/*==========================================
- * 一時objectの解放
- * block_listからの削除、id_dbからの削除
- * object dataのfree、object[]へのNULL代入
- *
- * addとの対称性が無いのが気になる
- *------------------------------------------
- */
-int map_delobject (int id, int type)
+/// Free an object WITH deletion
+void map_delobject (obj_id_t id, BlockType type)
 {
     struct block_list *obj = object[id];
 
-    if (obj == NULL)
-        return 0;
+    if (!obj)
+        return;
 
     map_delobjectnofree (id, type);
-    if (obj->type == BL_PC)     // [Fate] Not sure where else to put this... I'm not sure where delobject for PCs is called from
-        pc_cleanup ((struct map_session_data *) obj);
-
     map_freeblock (obj);
-
-    return 0;
 }
 
-/*==========================================
- * 全一時obj相手にfuncを呼ぶ
- *
- *------------------------------------------
- */
-void map_foreachobject (int (*func) (struct block_list *, va_list), int type,
+/// Execute a function for each temporary object of the given type
+void map_foreachobject (int (*func) (struct block_list *, va_list), BlockType type,
                         ...)
 {
-    int  i;
     int  blockcount = bl_list_count;
-    va_list ap = NULL;
 
-    va_start (ap, type);
-
-    for (i = 2; i <= last_object_id; i++)
+    for (int i = 2; i <= last_object_id; i++)
     {
         if (object[i])
         {
             if (type && object[i]->type != type)
                 continue;
             if (bl_list_count >= BL_LIST_MAX)
-            {
-                if (battle_config.error_log)
-                    printf ("map_foreachobject: too many block !\n");
-            }
+                map_log ("%s: too many block !", __func__);
             else
                 bl_list[bl_list_count++] = object[i];
         }
@@ -633,36 +595,30 @@ void map_foreachobject (int (*func) (struct block_list *, va_list), int type,
 
     map_freeblock_lock ();
 
-    for (i = blockcount; i < bl_list_count; i++)
+    va_list ap;
+    va_start (ap, type);
+    for (int i = blockcount; i < bl_list_count; i++)
         if (bl_list[i]->prev || bl_list[i]->next)
             func (bl_list[i], ap);
+    va_end (ap);
 
     map_freeblock_unlock ();
 
-    va_end (ap);
     bl_list_count = blockcount;
 }
 
-/*==========================================
- * 床アイテムを消す
- *
- * data==0の時はtimerで消えた時
- * data!=0の時は拾う等で消えた時として動作
- *
- * 後者は、map_clearflooritem(id)へ
- * map.h内で#defineしてある
- *------------------------------------------
- */
+/// Delete floor items
 void map_clearflooritem_timer (timer_id tid, tick_t UNUSED, custom_id_t id, custom_data_t data)
 {
-    struct flooritem_data *fitem = NULL;
-
-    fitem = (struct flooritem_data *) object[id];
-    if (fitem == NULL || fitem->bl.type != BL_ITEM
-        || (!data && fitem->cleartimer != tid))
+    struct flooritem_data *fitem = (struct flooritem_data *) object[id];
+    if (!fitem || fitem->bl.type != BL_ITEM)
     {
-        if (battle_config.error_log)
-            printf ("map_clearflooritem_timer : error\n");
+        map_log ("%s: error: no such item", __func__);
+        return;
+    }
+    if (!data && fitem->cleartimer != tid)
+    {
+        map_log ("%s: error: bad data", __func__);
         return;
     }
     if (data)

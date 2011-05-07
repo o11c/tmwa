@@ -3698,6 +3698,4 @@ void do_init (int argc, char **argv)
     Iprintf ("Ladmin is \033[1;32mready\033[0m.\n\n");
 
     Connect_login_server ();
-
-    atexit (term_func);
 }

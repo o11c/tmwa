@@ -1287,11 +1287,10 @@ static void map_start_logfile (long suffix)
     free (filename_buf);
 }
 
-static void map_set_logfile (char *filename)
+static void map_set_logfile (const char *filename)
 {
-    struct timeval tv;
-
     map_logfile_name = strdup (filename);
+    struct timeval tv;
     gettimeofday (&tv, NULL);
 
     map_start_logfile (tv.tv_sec);
@@ -1323,123 +1322,125 @@ void map_log (const char *format, ...)
     va_end(args);
 }
 
-/*==========================================
- * 設定ファイルを読み込む
- *------------------------------------------
- */
-static int map_config_read (const char *cfgName)
+/// Read conf/map_athena.conf
+static void map_config_read (const char *cfgName)
 {
-    char line[1024], w1[1024], w2[1024];
-    FILE *fp;
-    struct hostent *h = NULL;
-
-    fp = fopen_ (cfgName, "r");
-    if (fp == NULL)
+    FILE *fp = fopen_ (cfgName, "r");
+    if (!fp)
     {
         printf ("Map configuration file not found at: %s\n", cfgName);
         exit (1);
     }
-    while (fgets (line, sizeof (line) - 1, fp))
+
+    char line[1024];
+    while (fgets (line, sizeof (line), fp))
     {
         if (line[0] == '/' && line[1] == '/')
             continue;
+        char w1[1024], w2[1024];
         if (sscanf (line, "%[^:]: %[^\r\n]", w1, w2) == 2)
         {
             if (strcasecmp (w1, "userid") == 0)
             {
                 chrif_setuserid (w2);
+                continue;
             }
-            else if (strcasecmp (w1, "passwd") == 0)
+            if (strcasecmp (w1, "passwd") == 0)
             {
                 chrif_setpasswd (w2);
+                continue;
             }
-            else if (strcasecmp (w1, "char_ip") == 0)
+            if (strcasecmp (w1, "char_ip") == 0)
             {
-                h = gethostbyname (w2);
-                if (h != NULL)
+                struct hostent *h = gethostbyname (w2);
+                if (h)
                 {
-                    printf
-                        ("Character server IP address : %s -> %d.%d.%d.%d\n",
-                         w2, (unsigned char) h->h_addr[0],
-                         (unsigned char) h->h_addr[1],
-                         (unsigned char) h->h_addr[2],
-                         (unsigned char) h->h_addr[3]);
-                    sprintf (w2, "%d.%d.%d.%d", (unsigned char) h->h_addr[0],
-                             (unsigned char) h->h_addr[1],
-                             (unsigned char) h->h_addr[2],
-                             (unsigned char) h->h_addr[3]);
+                    printf ("Character server IP address : %s -> %hhu.%hhu.%hhu.%hhu\n", w2,
+                            h->h_addr[0], h->h_addr[1],
+                            h->h_addr[2], h->h_addr[3]);
+                    sprintf (w2, "%hhu.%hhu.%hhu.%hhu",
+                             h->h_addr[0], h->h_addr[1],
+                             h->h_addr[2], h->h_addr[3]);
                 }
                 chrif_setip (w2);
+                continue;
             }
-            else if (strcasecmp (w1, "char_port") == 0)
+            if (strcasecmp (w1, "char_port") == 0)
             {
                 chrif_setport (atoi (w2));
+                continue;
             }
-            else if (strcasecmp (w1, "map_ip") == 0)
+            if (strcasecmp (w1, "map_ip") == 0)
             {
-                h = gethostbyname (w2);
-                if (h != NULL)
+                struct hostent *h = gethostbyname (w2);
+                if (h)
                 {
-                    printf ("Map server IP address : %s -> %d.%d.%d.%d\n", w2,
-                            (unsigned char) h->h_addr[0],
-                            (unsigned char) h->h_addr[1],
-                            (unsigned char) h->h_addr[2],
-                            (unsigned char) h->h_addr[3]);
-                    sprintf (w2, "%d.%d.%d.%d", (unsigned char) h->h_addr[0],
-                             (unsigned char) h->h_addr[1],
-                             (unsigned char) h->h_addr[2],
-                             (unsigned char) h->h_addr[3]);
+                    printf ("Map server IP address : %s -> %hhu.%hhu.%hhu.%hhu\n", w2,
+                            h->h_addr[0], h->h_addr[1],
+                            h->h_addr[2], h->h_addr[3]);
+                    sprintf (w2, "%hhu.%hhu.%hhu.%hhu",
+                             h->h_addr[0], h->h_addr[1],
+                             h->h_addr[2], h->h_addr[3]);
                 }
                 clif_setip (w2);
+                continue;
             }
-            else if (strcasecmp (w1, "map_port") == 0)
+            if (strcasecmp (w1, "map_port") == 0)
             {
                 map_port = atoi (w2);
                 clif_setport (map_port);
+                continue;
             }
-            else if (strcasecmp (w1, "map") == 0)
+            if (strcasecmp (w1, "map") == 0)
             {
                 map_addmap (w2);
+                continue;
             }
-            else if (strcasecmp (w1, "npc") == 0)
+            if (strcasecmp (w1, "npc") == 0)
             {
                 npc_addsrcfile (w2);
+                continue;
             }
-            else if (strcasecmp (w1, "autosave_time") == 0)
+            if (strcasecmp (w1, "autosave_time") == 0)
             {
                 autosave_interval = atoi (w2) * 1000;
                 if (autosave_interval <= 0)
                     autosave_interval = DEFAULT_AUTOSAVE_INTERVAL;
+                continue;
             }
-            else if (strcasecmp (w1, "motd_txt") == 0)
+            if (strcasecmp (w1, "motd_txt") == 0)
             {
                 strcpy (motd_txt, w2);
+                continue;
             }
-            else if (strcasecmp (w1, "help_txt") == 0)
+            if (strcasecmp (w1, "help_txt") == 0)
             {
                 strcpy (help_txt, w2);
+                continue;
             }
-            else if (strcasecmp (w1, "mapreg_txt") == 0)
+            if (strcasecmp (w1, "mapreg_txt") == 0)
             {
                 strcpy (mapreg_txt, w2);
+                continue;
             }
-            else if (strcasecmp (w1, "gm_log") == 0)
+            if (strcasecmp (w1, "gm_log") == 0)
             {
                 gm_logfile_name = strdup (w2);
+                continue;
             }
-            else if (strcasecmp (w1, "log_file") == 0)
+            if (strcasecmp (w1, "log_file") == 0)
             {
                 map_set_logfile (w2);
+                continue;
             }
-            else if (strcasecmp (w1, "import") == 0)
+            if (strcasecmp (w1, "import") == 0)
             {
                 map_config_read (w2);
+                continue;
             }
         }
     }
     fclose_ (fp);
-
-    return 0;
 }
 
 static int cleanup_sub (struct block_list *bl, va_list UNUSED)
@@ -1471,22 +1472,18 @@ static int cleanup_sub (struct block_list *bl, va_list UNUSED)
     return 0;
 }
 
-/*==========================================
- * map鯖終了時処理
- *------------------------------------------
- */
+/// server is shutting down
+// TODO: don't bother freeing anything as process is about to end
 static void do_final (void)
 {
-    int  map_id, i;
-
-    for (map_id = 0; map_id < map_num; map_id++)
+    for (int map_id = 0; map_id < map_num; map_id++)
     {
         if (maps[map_id].m)
             map_foreachinarea (cleanup_sub, map_id, 0, 0, maps[map_id].xs,
                                maps[map_id].ys, BL_NUL, 0);
     }
 
-    for (i = 0; i < fd_max; i++)
+    for (int i = 0; i < fd_max; i++)
         delete_session (i);
 
     numdb_final (id_db, NULL);
@@ -1520,25 +1517,22 @@ int compare_item (struct item *a, struct item *b)
 // TODO move shutdown stuff here
 void term_func (void)
 {
+    do_final();
 }
-/*======================================================
- * Map-Server Init and Command-line Arguments [Valaris]
- *------------------------------------------------------
- */
+
+/// parse command-line arguments
 void do_init (int argc, char *argv[])
 {
-    int  i;
-
     const char *MAP_CONF_NAME = "conf/map_athena.conf";
     const char *BATTLE_CONF_FILENAME = "conf/battle_athena.conf";
     const char *ATCOMMAND_CONF_FILENAME = "conf/atcommand_athena.conf";
     const char *SCRIPT_CONF_NAME = "conf/script_athena.conf";
 
-    for (i = 1; i < argc; i++)
+    for (int i = 1; i < argc; i++)
     {
 
-        if (strcmp (argv[i], "--help") == 0 || strcmp (argv[i], "--h") == 0
-            || strcmp (argv[i], "--?") == 0 || strcmp (argv[i], "/?") == 0)
+        if (strcmp (argv[i], "--help") == 0 || strcmp (argv[i], "-h") == 0
+            || strcmp (argv[i], "-?") == 0 || strcmp (argv[i], "/?") == 0)
             map_helpscreen ();
         else if (strcmp (argv[i], "--map_config") == 0)
             MAP_CONF_NAME = argv[i + 1];
@@ -1555,8 +1549,6 @@ void do_init (int argc, char *argv[])
     atcommand_config_read (ATCOMMAND_CONF_FILENAME);
     script_config_read (SCRIPT_CONF_NAME);
 
-    atexit (do_final);
-
     id_db = numdb_init ();
     map_db = strdb_init ();
     nick_db = strdb_init ();
@@ -1564,12 +1556,10 @@ void do_init (int argc, char *argv[])
 
     map_readallmap ();
 
-//    add_timer_func_list (map_clearflooritem_timer, "map_clearflooritem_timer");
-
     do_init_chrif ();
     do_init_clif ();
     do_init_itemdb ();
-    do_init_mob ();             // npcの初期化時内でmob_spawnして、mob_dbを参照するのでinit_npcより先
+    do_init_mob ();
     do_init_script ();
     do_init_npc ();
     do_init_pc ();
@@ -1578,14 +1568,14 @@ void do_init (int argc, char *argv[])
     do_init_skill ();
     do_init_magic ();
 
-    npc_event_do_oninit ();     // npcのOnInitイベント実行
+    // NPC::OnInit labels
+    npc_event_do_oninit ();
 
-    if (battle_config.pk_mode == 1)
+    if (battle_config.pk_mode)
         printf ("The server is running in \033[1;31mPK Mode\033[0m.\n");
 
-    printf
-        ("The map-server is \033[1;32mready\033[0m (Server is listening on the port %d).\n\n",
-         map_port);
+    printf ("The map-server is \033[1;32mready\033[0m (Server is listening on the port %d).\n\n",
+            map_port);
 }
 
 int map_scriptcont (struct map_session_data *sd, int id)

@@ -623,13 +623,6 @@ static void mmo_auth_sync (void)
     lock_fclose (fp, account_filename, &lock);
 }
 
-void term_func (void)
-{
-    // does this cause problem if it is already syncing in the child?
-    mmo_auth_sync ();
-}
-
-
 /// Timer to sync the DB to disk as little as possible
 // this is resource-intensive, so fork() if possible
 static void check_auth_sync (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
@@ -3794,7 +3787,7 @@ static void save_config_in_log (void)
 
 /// Function called at exit of the server
 // is all of this really needed?
-static void do_final (void)
+void term_func (void)
 {
     mmo_auth_sync ();
 
@@ -3849,6 +3842,4 @@ void do_init (int argc, char **argv)
 
     login_log ("The login-server is ready (Server is listening on the port %d).\n",
                login_port);
-
-    atexit (do_final);
 }

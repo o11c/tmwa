@@ -54,6 +54,7 @@ int main (int argc, char **argv)
 
     do_socket ();
 
+    atexit (term_func);
     compat_signal (SIGPIPE, SIG_IGN);
     compat_signal (SIGTERM, sig_proc);
     compat_signal (SIGINT, sig_proc);

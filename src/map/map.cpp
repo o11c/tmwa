@@ -1139,285 +1139,114 @@ void map_setcell (int m, int x, int y, uint8_t t)
     maps[m].gat[x + y * maps[m].xs] = t;
 }
 
-/*==========================================
- * 他鯖管理のマップをdbに追加
- *------------------------------------------
- */
-int map_setipport (const char *name, in_addr_t ip, in_port_t port)
+/// know what to do for maps on other map-servers
+bool map_setipport (const char *name, in_addr_t ip, in_port_t port)
 {
-    struct map_data *mdos = NULL;
-
     struct map_data *md = (struct map_data *)strdb_search (map_db, name).p;
-    if (md == NULL)
+    if (!md)
     {
         // not exist -> add new data
-        CREATE (mdos, struct map_data, 1);
-        STRZCPY (mdos->name, name);
-        mdos->gat = NULL;
-        mdos->ip = ip;
-        mdos->port = port;
-        strdb_insert (map_db, mdos->name, (void *)mdos);
+        CREATE (md, struct map_data, 1);
+        STRZCPY (md->name, name);
+        md->gat = NULL;
+        md->ip = ip;
+        md->port = port;
+        strdb_insert (map_db, md->name, (void *)md);
+        return 0;
     }
-    else
+    if (md->gat)
     {
-        if (md->gat)
-        {                       // local -> check data
-            if (ip != clif_getip () || port != clif_getport ())
-            {
-                printf ("from char server : %s -> %08x:%d\n", name, (unsigned int)ip,
-                        port);
-                return 1;
-            }
+        if (ip != clif_getip () || port != clif_getport ())
+        {
+            map_log ("%s: map server told us one of our maps is not ours!", __func__);
+            return 1;
         }
-        else
-        {                       // update
-            mdos = md;
-            mdos->ip = ip;
-            mdos->port = port;
-        }
+        return 0;
     }
+
+    md->ip = ip;
+    md->port = port;
     return 0;
 }
 
-// 初期化周り
-/*==========================================
- * 水場高さ設定
- *------------------------------------------
- */
-static struct Waterlist
+/// Read a map
+static bool map_readmap (int m, const char *filename)
 {
-    char mapname[24];
-    int  waterheight;
-}   *waterlist = NULL;
-
-#define NO_WATER 1000000
-
-static int map_waterheight (char *mapname)
-{
-    if (waterlist)
-    {
-        int  i;
-        for (i = 0; waterlist[i].mapname[0] && i < MAX_MAP_PER_SERVER; i++)
-            if (strcmp (waterlist[i].mapname, mapname) == 0)
-                return waterlist[i].waterheight;
-    }
-    return NO_WATER;
-}
-
-static void map_readwater (char *watertxt)
-{
-    char line[1024], w1[1024];
-    FILE *fp = NULL;
-    int  n = 0;
-
-    fp = fopen_ (watertxt, "r");
-    if (fp == NULL)
-    {
-        printf ("file not found: %s\n", watertxt);
-        return;
-    }
-    if (waterlist == NULL)
-    {
-        CREATE (waterlist, struct Waterlist, MAX_MAP_PER_SERVER);
-    }
-    while (fgets (line, 1020, fp) && n < MAX_MAP_PER_SERVER)
-    {
-        int  wh, count;
-        if (line[0] == '/' && line[1] == '/')
-            continue;
-        if ((count = sscanf (line, "%s%d", w1, &wh)) < 1)
-        {
-            continue;
-        }
-        strcpy (waterlist[n].mapname, w1);
-        if (count >= 2)
-            waterlist[n].waterheight = wh;
-        else
-            waterlist[n].waterheight = 3;
-        n++;
-    }
-    fclose_ (fp);
-}
-
-/*==========================================
- * マップ1枚読み込み
- *------------------------------------------
- */
-static int map_readmap (int m, char *fn, char *UNUSED)
-{
-    int  s;
-    int  x, y, xs, ys;
-    struct gat_1cell
-    {
-        char type;
-    }   *p;
-    size_t size;
-
-    // read & convert fn
-    uint8_t *gat = (uint8_t *)grfio_read (fn);
-    if (gat == NULL)
-        return -1;
-
-    printf ("\rLoading Maps [%d/%d]: %-50s  ", m, map_num, fn);
+    printf ("\rLoading Maps [%d/%d]: %-50s  ", m, map_num, filename);
     fflush (stdout);
 
+    // read & convert fn
+    uint8_t *gat = (uint8_t *)grfio_read (filename);
+    if (!gat)
+        return 0;
+
     maps[m].m = m;
-    xs = maps[m].xs = *(short *) (gat);
-    ys = maps[m].ys = *(short *) (gat + 2);
-    printf ("\n%i %i\n", xs, ys);
-    maps[m].gat = (uint8_t *)calloc (s = maps[m].xs * maps[m].ys, 1);
-    if (maps[m].gat == NULL)
-    {
-        printf ("out of memory : map_readmap gat\n");
-        exit (1);
-    }
+    int xs = maps[m].xs = *(uint16_t *) (gat);
+    int ys = maps[m].ys = *(uint16_t *) (gat + 2);
+    printf ("%i %i", xs, ys);
+    fflush (stdout);
 
     maps[m].npc_num = 0;
     maps[m].users = 0;
     memset (&maps[m].flag, 0, sizeof (maps[m].flag));
     if (battle_config.pk_mode)
-        maps[m].flag.pvp = 1;    // make all maps pvp for pk_mode [Valaris]
-    map_waterheight (maps[m].name);
-    for (y = 0; y < ys; y++)
-    {
-        p = (struct gat_1cell *) (gat + y * xs + 4);
-        for (x = 0; x < xs; x++)
-        {
-            /*if(wh!=NO_WATER && p->type==0){
-             * // 水場判定
-             * map[m].gat[x+y*xs]=(p->high[0]>wh || p->high[1]>wh || p->high[2]>wh || p->high[3]>wh) ? 3 : 0;
-             * } else { */
-            maps[m].gat[x + y * xs] = p->type;
-            //}
-            p++;
-        }
-    }
-    free (gat);
+        maps[m].flag.pvp = 1;
+
+    // instead of copying, just use it
+    maps[m].gat = gat + 4;
 
     maps[m].bxs = (xs + BLOCK_SIZE - 1) / BLOCK_SIZE;
     maps[m].bys = (ys + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    size = maps[m].bxs * maps[m].bys;
+
+    size_t size = maps[m].bxs * maps[m].bys;
 
     CREATE (maps[m].block, struct block_list *, size);
-
     CREATE (maps[m].block_mob, struct block_list *, size);
-
     CREATE (maps[m].block_count, int, size);
-
     CREATE (maps[m].block_mob_count, int, size);
 
     strdb_insert (map_db, maps[m].name, (void *)&maps[m]);
 
-//  printf("%s read done\n",fn);
-
-    return 0;
+    return 1;
 }
 
-/*==========================================
- * 全てのmapデータを読み込む
- *------------------------------------------
- */
-int map_readallmap (void)
+/// Read all maps
+void map_readallmap (void)
 {
-    int  i, maps_removed = 0;
+    int maps_removed = 0;
     char fn[256] = "";
 
-    // 先に全部のャbプの存在を確認
-    for (i = 0; i < map_num; i++)
+    for (int i = 0; i < map_num; i++)
     {
-        if (strstr (maps[i].name, ".gat") == NULL)
-            continue;
-        sprintf (fn, "data\\%s", maps[i].name);
-        // TODO - remove this, it is the last call to grfio_size, which is deprecated
-        if (!grfio_size (fn))
+        // if (strstr (maps[i].name, ".gat") != NULL)
+        sprintf (fn, "data/%s", maps[i].name);
+        if (!map_readmap (i, fn))
         {
-            map_delmap (maps[i].name);
+            i--;
             maps_removed++;
         }
     }
-    for (i = 0; i < map_num; i++)
-    {
-        if (strstr (maps[i].name, ".gat") != NULL)
-        {
-            char *p = strstr (maps[i].name, ">");    // [MouseJstr]
-            if (p != NULL)
-            {
-                char alias[64];
-                *p = '\0';
-                strcpy (alias, maps[i].name);
-                strcpy (maps[i].name, p + 1);
-                sprintf (fn, "data\\%s", maps[i].name);
-                if (map_readmap (i, fn, alias) == -1)
-                {
-                    map_delmap (maps[i].name);
-                    maps_removed++;
-                }
-            }
-            else
-            {
-                sprintf (fn, "data\\%s", maps[i].name);
-                if (map_readmap (i, fn, NULL) == -1)
-                {
-                    map_delmap (maps[i].name);
-                    maps_removed++;
-                }
-            }
-        }
-    }
 
-    free (waterlist);
     printf ("\rMaps Loaded: %d %60s\n", map_num, "");
-    printf ("\rMaps Removed: %d \n", maps_removed);
-    return 0;
+    printf ("Maps Removed: %d \n", maps_removed);
 }
 
-/*==========================================
- * 読み込むmapを追加する
- *------------------------------------------
- */
-int map_addmap (char *mapname)
+/// Add a map to load
+void map_addmap (const char *mapname)
 {
     if (strcasecmp (mapname, "clear") == 0)
     {
         map_num = 0;
-        return 0;
+        return;
     }
 
-    if (map_num >= MAX_MAP_PER_SERVER - 1)
+    if (map_num >= MAX_MAP_PER_SERVER)
     {
-        printf ("too many map\n");
-        return 1;
+        map_log ("%s: too many maps\n", __func__);
+        return;
     }
-    memcpy (maps[map_num].name, mapname, 24);
+    STRZCPY (maps[map_num].name, mapname);
     map_num++;
-    return 0;
-}
-
-/*==========================================
- * 読み込むmapを削除する
- *------------------------------------------
- */
-int map_delmap (const char *mapname)
-{
-    int  i;
-
-    if (strcasecmp (mapname, "all") == 0)
-    {
-        map_num = 0;
-        return 0;
-    }
-
-    for (i = 0; i < map_num; i++)
-    {
-        if (strcmp (maps[i].name, mapname) == 0)
-        {
-            printf ("Removing map [ %s ] from maplist\n", maps[i].name);
-            memmove (&maps[i], &maps[i + 1],
-                     sizeof (maps[0]) * (map_num - i - 1));
-            map_num--;
-        }
-    }
-    return 0;
 }
 
 extern char *gm_logfile_name;
@@ -1565,28 +1394,16 @@ int map_config_read (const char *cfgName)
             }
             else if (strcasecmp (w1, "map_port") == 0)
             {
-                clif_setport (atoi (w2));
-                map_port = (atoi (w2));
-            }
-            else if (strcasecmp (w1, "water_height") == 0)
-            {
-                map_readwater (w2);
+                map_port = atoi (w2);
+                clif_setport (map_port);
             }
             else if (strcasecmp (w1, "map") == 0)
             {
                 map_addmap (w2);
             }
-            else if (strcasecmp (w1, "delmap") == 0)
-            {
-                map_delmap (w2);
-            }
             else if (strcasecmp (w1, "npc") == 0)
             {
                 npc_addsrcfile (w2);
-            }
-            else if (strcasecmp (w1, "delnpc") == 0)
-            {
-                npc_delsrcfile (w2);
             }
             else if (strcasecmp (w1, "autosave_time") == 0)
             {
@@ -1677,14 +1494,6 @@ void do_final (void)
     strdb_final (nick_db, NULL);
     numdb_final (charid_db, NULL);
 
-    for (i = 0; i <= map_num; i++)
-    {
-        free (maps[i].gat);
-        free (maps[i].block);
-        free (maps[i].block_mob);
-        free (maps[i].block_count);
-        free (maps[i].block_mob_count);
-    }
     do_final_script ();
     do_final_itemdb ();
     do_final_storage ();

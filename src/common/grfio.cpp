@@ -161,37 +161,6 @@ void grfio_resnametable (const char *fname, char *lfname)
     return;
 }
 
-/// Size of resource
-size_t grfio_size (const char *fname)
-{
-    FILELIST *entry = filelist_find (fname);
-    if (entry)
-        return entry->declen;
-
-    char lfname[256];
-    FILELIST lentry;
-    struct stat st;
-
-    grfio_resnametable (fname, lfname);
-
-    for (char *p = lfname; *p; p++)
-        if (*p == '\\')
-            *p = '/';
-
-    if (stat (lfname, &st) == 0)
-    {
-        strncpy (lentry.fn, fname, sizeof (lentry.fn) - 1);
-        lentry.declen = st.st_size;
-        entry = filelist_modify (&lentry);
-    }
-    else
-    {
-        printf ("%s not found\n", fname);
-        return 0;
-    }
-    return entry->declen;
-}
-
 void *grfio_reads (const char *fname, size_t *size)
 {
     char lfname[256];

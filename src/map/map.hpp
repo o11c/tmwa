@@ -794,8 +794,8 @@ struct map_session_data *map_id2sd (unsigned int);
 struct block_list *map_id2bl (unsigned int);
 int  map_mapname2mapid (const char *);
 bool map_mapname2ipport (const char *, in_addr_t *, in_port_t *);
-int  map_setipport (const char *name, in_addr_t ip, in_port_t port);
-int  map_eraseipport (const char *name, in_addr_t ip, in_port_t port);
+bool map_setipport (const char *name, in_addr_t ip, in_port_t port);
+
 void map_addiddb (struct block_list *);
 void map_deliddb (struct block_list *bl);
 void map_foreachiddb (db_func_t, ...);
@@ -825,9 +825,6 @@ Direction map_calc_dir (struct block_list *src, int x, int y);
 int  path_search (struct walkpath_data *, int, int, int, int, int, int);
 int  path_blownpos (int m, int x_0, int y_0, int dx, int dy, int count);
 
-int  map_who (int fd);
-
 void map_helpscreen (void) __attribute__((noreturn));
-int  map_delmap (const char *mapname);
 
 #endif

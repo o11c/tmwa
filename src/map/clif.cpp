@@ -5718,7 +5718,7 @@ static void clif_parse_GlobalMessage (int fd, struct map_session_data *sd)
         return;
     }
 
-    if (is_atcommand (fd, sd, message, 0) != AtCommand_None
+    if (is_atcommand (fd, sd, message, 0)
             || (sd->sc_data && (sd->sc_data[SC_BERSERK].timer != -1 //バーサーク時は会話も不可
                                 || sd->sc_data[SC_NOCHAT].timer != -1)))//チャット禁止
     {
@@ -5772,34 +5772,6 @@ int clif_message (struct block_list *bl, char *msg)
     clif_send (buf, WBUFW (buf, 2), bl, AREA);
 
     return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-static void clif_parse_MapMove (int fd, struct map_session_data *sd)
-{
-// /m /mapmove (as @rura GM command)
-    char output[100];
-    char map_name[17];
-
-    nullpo_retv (sd);
-
-    memset (output, '\0', sizeof (output));
-    memset (map_name, '\0', sizeof (map_name));
-
-    if ((battle_config.atc_gmonly == 0 || pc_isGM (sd)) &&
-        (pc_isGM (sd) >= get_atcommand_level (AtCommand_MapMove)))
-    {
-        memcpy (map_name, RFIFOP (fd, 2), 16);
-        sprintf (output, "%s %d %d", map_name, RFIFOW (fd, 18),
-                 RFIFOW (fd, 20));
-        log_atcommand (sd, "@warp %s", output);
-        atcommand_warp (fd, sd, "@warp", output);
-    }
-
-    return;
 }
 
 /*==========================================
@@ -6000,7 +5972,7 @@ static void clif_parse_Wis (int fd, struct map_session_data *sd)
         return;
     }
 
-    if (is_atcommand (fd, sd, message, 0) != AtCommand_None
+    if (is_atcommand (fd, sd, message, 0)
             || (sd->sc_data && (sd->sc_data[SC_BERSERK].timer != -1
                                 || sd->sc_data[SC_NOCHAT].timer != -1)))
     {
@@ -6066,30 +6038,6 @@ static void clif_parse_Wis (int fd, struct map_session_data *sd)
     }
 
     free (buf);
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-static void clif_parse_GMmessage (int fd, struct map_session_data *sd)
-{
-    char m[512];
-    char output[200];
-    nullpo_retv (sd);
-
-    if ((battle_config.atc_gmonly == 0 || pc_isGM (sd)) &&
-        (pc_isGM (sd) >= get_atcommand_level (AtCommand_Broadcast)))
-    {
-        strncpy (m, (char *)RFIFOP (fd, 4), RFIFOW (fd, 2) - 4);
-        m[RFIFOW (fd, 2) - 4] = 0;
-        log_atcommand (sd, "/announce %s", m);
-
-        memset (output, '\0', sizeof (output));
-        snprintf (output, 199, "%s : %s", sd->status.name, m);
-
-        intif_GMmessage (output, strlen (output) + 1, 0);
-    }
 }
 
 /*==========================================
@@ -6826,54 +6774,6 @@ static void clif_parse_SolveCharName (int fd, struct map_session_data *sd)
 }
 
 /*==========================================
- * 0197 /resetskill /resetstate
- *------------------------------------------
- */
-static void clif_parse_ResetChar (int fd, struct map_session_data *sd)
-{
-    nullpo_retv (sd);
-
-    if (battle_config.atc_gmonly == 0 || pc_isGM (sd))
-    {
-        switch (RFIFOW (fd, 2))
-        {
-            case 0:
-                log_atcommand (sd, "@charstreset %s", sd->status.name);
-                if (pc_isGM (sd) >=
-                    get_atcommand_level (AtCommand_ResetState))
-                    pc_resetstate (sd);
-                break;
-            case 1:
-                log_atcommand (sd, "@charskreset %s", sd->status.name);
-                if (pc_isGM (sd) >=
-                    get_atcommand_level (AtCommand_ResetState))
-                    pc_resetskill (sd);
-                break;
-        }
-    }
-}
-
-/*==========================================
- * 019c /lb等
- *------------------------------------------
- */
-static void clif_parse_LGMmessage (int fd, struct map_session_data *sd)
-{
-    unsigned char buf[64];
-
-    nullpo_retv (sd);
-
-    if ((battle_config.atc_gmonly == 0 || pc_isGM (sd)) &&
-        (pc_isGM (sd) >= get_atcommand_level (AtCommand_LocalBroadcast)))
-    {
-        WBUFW (buf, 0) = 0x9a;
-        WBUFW (buf, 2) = RFIFOW (fd, 2);
-        memcpy (WBUFP (buf, 4), RFIFOP (fd, 4), RFIFOW (fd, 2) - 4);
-        clif_send (buf, RFIFOW (fd, 2), &sd->bl, ALL_SAMEMAP);
-    }
-}
-
-/*==========================================
  * カプラ倉庫へ入れる
  *------------------------------------------
  */
@@ -7080,7 +6980,7 @@ static void clif_parse_PartyMessage (int fd, struct map_session_data *sd)
         return;
     }
 
-    if (is_atcommand (fd, sd, message, 0) != AtCommand_None
+    if (is_atcommand (fd, sd, message, 0)
             || (sd->sc_data && (sd->sc_data[SC_BERSERK].timer != -1 //バーサーク時は会話も不可
                                 || sd->sc_data[SC_NOCHAT].timer != -1))) //チャット禁止
     {
@@ -7098,215 +6998,6 @@ static void clif_parse_PartyMessage (int fd, struct map_session_data *sd)
 
     party_send_message (sd, message, RFIFOW (fd, 2) - 4);
     free (buf);
-}
-
-/*==========================================
- * /monster /item rewriten by [Yor]
- *------------------------------------------
- */
-static void clif_parse_GM_Monster_Item (int fd, struct map_session_data *sd)
-{
-    char monster_item_name[25];
-
-    nullpo_retv (sd);
-
-    memset (monster_item_name, '\0', sizeof (monster_item_name));
-
-    if (battle_config.atc_gmonly == 0 || pc_isGM (sd))
-    {
-        memcpy (monster_item_name, RFIFOP (fd, 2), 24);
-
-        if (mobdb_searchname (monster_item_name) != 0)
-        {
-            if (pc_isGM (sd) >= get_atcommand_level (AtCommand_Monster))
-            {
-                log_atcommand (sd, "@spawn %s", monster_item_name);
-                atcommand_spawn (fd, sd, "@spawn", monster_item_name);  // as @spawn
-            }
-        }
-        else if (itemdb_searchname (monster_item_name) != NULL)
-        {
-            if (pc_isGM (sd) >= get_atcommand_level (AtCommand_Item))
-            {
-                log_atcommand (sd, "@item %s", monster_item_name);
-                atcommand_item (fd, sd, "@item", monster_item_name);    // as @item
-            }
-        }
-
-    }
-}
-
-// Kick (right click menu for GM "(name) force to quit")
-static void clif_parse_GMKick (int fd, struct map_session_data *sd)
-{
-    struct block_list *target;
-    int  tid = RFIFOL (fd, 2);
-
-    nullpo_retv (sd);
-
-    if ((battle_config.atc_gmonly == 0 || pc_isGM (sd)) &&
-        (pc_isGM (sd) >= get_atcommand_level (AtCommand_Kick)))
-    {
-        target = map_id2bl (tid);
-        if (target)
-        {
-            if (target->type == BL_PC)
-            {
-                struct map_session_data *tsd =
-                    (struct map_session_data *) target;
-                log_atcommand (sd, "@kick %s", tsd->status.name);
-                if (pc_isGM (sd) > pc_isGM (tsd))
-                    clif_GM_kick (sd, tsd, 1);
-                else
-                    clif_GM_kickack (sd, 0);
-            }
-            else if (target->type == BL_MOB)
-            {
-                struct mob_data *md = (struct mob_data *) target;
-                sd->state.attack_type = 0;
-                mob_damage (&sd->bl, md, md->hp, 2);
-            }
-            else
-                clif_GM_kickack (sd, 0);
-        }
-        else
-            clif_GM_kickack (sd, 0);
-    }
-}
-
-/*==========================================
- * /shift
- *------------------------------------------
- */
-static void clif_parse_Shift (int fd, struct map_session_data *sd)
-{                               // Rewriten by [Yor]
-    char player_name[25];
-
-    nullpo_retv (sd);
-
-    memset (player_name, '\0', sizeof (player_name));
-
-    if ((battle_config.atc_gmonly == 0 || pc_isGM (sd)) &&
-        (pc_isGM (sd) >= get_atcommand_level (AtCommand_Goto)))
-    {
-        memcpy (player_name, RFIFOP (fd, 2), 24);
-        log_atcommand (sd, "@goto %s", player_name);
-        atcommand_goto (fd, sd, "@goto", player_name);  // as @jumpto
-    }
-
-    return;
-}
-
-/*==========================================
- * /recall
- *------------------------------------------
- */
-static void clif_parse_Recall (int fd, struct map_session_data *sd)
-{                               // Added by RoVeRT
-    char player_name[25];
-
-    nullpo_retv (sd);
-
-    memset (player_name, '\0', sizeof (player_name));
-
-    if ((battle_config.atc_gmonly == 0 || pc_isGM (sd)) &&
-        (pc_isGM (sd) >= get_atcommand_level (AtCommand_Recall)))
-    {
-        memcpy (player_name, RFIFOP (fd, 2), 24);
-        log_atcommand (sd, "@recall %s", player_name);
-        atcommand_recall (fd, sd, "@recall", player_name);  // as @recall
-    }
-
-    return;
-}
-
-static void clif_parse_GMHide (int fd, struct map_session_data *sd)
-{                               // Modified by [Yor]
-    nullpo_retv (sd);
-
-    //printf("%2x %2x %2x\n", RFIFOW(fd,0), RFIFOW(fd,2), RFIFOW(fd,4)); // R 019d <Option_value>.2B <flag>.2B
-    if ((battle_config.atc_gmonly == 0 || pc_isGM (sd)) &&
-        (pc_isGM (sd) >= get_atcommand_level (AtCommand_Hide)))
-    {
-        log_atcommand (sd, "@hide");
-        if (sd->status.option & OPTION_HIDE)
-        {                       // OPTION_HIDE = 0x40
-            sd->status.option &= ~OPTION_HIDE;  // OPTION_HIDE = 0x40
-            clif_displaymessage (fd, "Invisible: Off.");
-        }
-        else
-        {
-            sd->status.option |= OPTION_HIDE;   // OPTION_HIDE = 0x40
-            clif_displaymessage (fd, "Invisible: On.");
-        }
-        clif_changeoption (&sd->bl);
-    }
-}
-
-/*==========================================
- * GMによるチャット禁止時間付与
- *------------------------------------------
- */
-static void clif_parse_GMReqNoChat (int fd, struct map_session_data *sd)
-{
-    int  tid = RFIFOL (fd, 2);
-    int  type = RFIFOB (fd, 6);
-    int  limit = RFIFOW (fd, 7);
-    struct block_list *bl = map_id2bl (tid);
-    struct map_session_data *dstsd;
-    int  dstfd;
-
-    nullpo_retv (sd);
-
-    if (!battle_config.muting_players)
-    {
-        clif_displaymessage (fd, "Muting is disabled.");
-        return;
-    }
-
-    if (type == 0)
-        limit = 0 - limit;
-    if (bl->type == BL_PC && (dstsd = (struct map_session_data *) bl))
-    {
-        if ((tid == bl->id && type == 2 && !pc_isGM (sd))
-            || (pc_isGM (sd) > pc_isGM (dstsd)))
-        {
-            dstfd = dstsd->fd;
-            WFIFOW (dstfd, 0) = 0x14b;
-            WFIFOB (dstfd, 2) = (type == 2) ? 1 : type;
-            memcpy (WFIFOP (dstfd, 3), sd->status.name, 24);
-            WFIFOSET (dstfd, packet_len_table[0x14b]);
-            dstsd->status.manner -= limit;
-            if (dstsd->status.manner < 0)
-                skill_status_change_start (bl, SC_NOCHAT, 0, 0, 0, 0, 0, 0);
-            else
-            {
-                dstsd->status.manner = 0;
-                skill_status_change_end (bl, SC_NOCHAT, -1);
-            }
-            printf ("name:%s type:%d limit:%d manner:%d\n",
-                    dstsd->status.name, type, limit, dstsd->status.manner);
-        }
-    }
-
-    return;
-}
-
-/*==========================================
- * GMによるチャット禁止時間参照（？）
- *------------------------------------------
- */
-static void clif_parse_GMReqNoChatCount (int fd, struct map_session_data *UNUSED)
-{
-    int  tid = RFIFOL (fd, 2);
-
-    WFIFOW (fd, 0) = 0x1e0;
-    WFIFOL (fd, 2) = tid;
-    sprintf ((char *)WFIFOP (fd, 6), "%d", tid);
-//  memcpy(WFIFOP(fd,6),"TESTNAME",24);
-    WFIFOSET (fd, packet_len_table[0x1e0]);
-
-    return;
 }
 
 static void clif_parse_PMIgnore (int fd, struct map_session_data *sd)
@@ -7535,558 +7226,556 @@ static void clif_parse_sn_explosionspirits (int UNUSED, struct map_session_data 
 // rate -1 is unlimited
 typedef struct func_table
 {
-	void (*func)(int fd, struct map_session_data *sd);
-	int rate;
+    int rate;
+    void (*func)(int fd, struct map_session_data *sd);
 } func_table;
-// *INDENT-OFF*
 func_table clif_parse_func_table[0x220] =
 {
-	{ NULL,					0	},	// 0
-	{ NULL,					0	},	// 1
-	{ NULL,					0	},	// 2
-	{ NULL,					0	},	// 3
-	{ NULL,					0	},	// 4
-	{ NULL,					0	},	// 5
-	{ NULL,					0	},	// 6
-	{ NULL,					0	},	// 7
-	{ NULL,					0	},	// 8
-	{ NULL,					0	},	// 9
-	{ NULL,					0	},	// a
-	{ NULL,					0	},	// b
-	{ NULL,					0	},	// c
-	{ NULL,					0	},	// d
-	{ NULL,					0	},	// e
-	{ NULL,					0	},	// f
-	{ NULL,					0	},	// 10
-	{ NULL,					0	},	// 11
-	{ NULL,					0	},	// 12
-	{ NULL,					0	},	// 13
-	{ NULL,					0	},	// 14
-	{ NULL,					0	},	// 15
-	{ NULL,					0	},	// 16
-	{ NULL,					0	},	// 17
-	{ NULL,					0	},	// 18
-	{ NULL,					0	},	// 19
-	{ NULL,					0	},	// 1a
-	{ NULL,					0	},	// 1b
-	{ NULL,					0	},	// 1c
-	{ NULL,					0	},	// 1d
-	{ NULL,					0	},	// 1e
-	{ NULL,					0	},	// 1f
-	{ NULL,					0	},	// 20
-	{ NULL,					0	},	// 21
-	{ NULL,					0	},	// 22
-	{ NULL,					0	},	// 23
-	{ NULL,					0	},	// 24
-	{ NULL,					0	},	// 25
-	{ NULL,					0	},	// 26
-	{ NULL,					0	},	// 27
-	{ NULL,					0	},	// 28
-	{ NULL,					0	},	// 29
-	{ NULL,					0	},	// 2a
-	{ NULL,					0	},	// 2b
-	{ NULL,					0	},	// 2c
-	{ NULL,					0	},	// 2d
-	{ NULL,					0	},	// 2e
-	{ NULL,					0	},	// 2f
-	{ NULL,					0	},	// 30
-	{ NULL,					0	},	// 31
-	{ NULL,					0	},	// 32
-	{ NULL,					0	},	// 33
-	{ NULL,					0	},	// 34
-	{ NULL,					0	},	// 35
-	{ NULL,					0	},	// 36
-	{ NULL,					0	},	// 37
-	{ NULL,					0	},	// 38
-	{ NULL,					0	},	// 39
-	{ NULL,					0	},	// 3a
-	{ NULL,					0	},	// 3b
-	{ NULL,					0	},	// 3c
-	{ NULL,					0	},	// 3d
-	{ NULL,					0	},	// 3e
-	{ NULL,					0	},	// 3f
-	{ NULL,					0	},	// 40
-	{ NULL,					0	},	// 41
-	{ NULL,					0	},	// 42
-	{ NULL,					0	},	// 43
-	{ NULL,					0	},	// 44
-	{ NULL,					0	},	// 45
-	{ NULL,					0	},	// 46
-	{ NULL,					0	},	// 47
-	{ NULL,					0	},	// 48
-	{ NULL,					0	},	// 49
-	{ NULL,					0	},	// 4a
-	{ NULL,					0	},	// 4b
-	{ NULL,					0	},	// 4c
-	{ NULL,					0	},	// 4d
-	{ NULL,					0	},	// 4e
-	{ NULL,					0	},	// 4f
-	{ NULL,					0	},	// 50
-	{ NULL,					0	},	// 51
-	{ NULL,					0	},	// 52
-	{ NULL,					0	},	// 53
-	{ NULL,					0	},	// 54
-	{ NULL,					0	},	// 55
-	{ NULL,					0	},	// 56
-	{ NULL,					0	},	// 57
-	{ NULL,					0	},	// 58
-	{ NULL,					0	},	// 59
-	{ NULL,					0	},	// 5a
-	{ NULL,					0	},	// 5b
-	{ NULL,					0	},	// 5c
-	{ NULL,					0	},	// 5d
-	{ NULL,					0	},	// 5e
-	{ NULL,					0	},	// 5f
-	{ NULL,					0	},	// 60
-	{ NULL,					0	},	// 61
-	{ NULL,					0	},	// 62
-	{ NULL,					0	},	// 63
-	{ NULL,					0	},	// 64
-	{ NULL,					0	},	// 65
-	{ NULL,					0	},	// 66
-	{ NULL,					0	},	// 67
-	{ NULL,					0	},	// 68
-	{ NULL,					0	},	// 69
-	{ NULL,					0	},	// 6a
-	{ NULL,					0	},	// 6b
-	{ NULL,					0	},	// 6c
-	{ NULL,					0	},	// 6d
-	{ NULL,					0	},	// 6e
-	{ NULL,					0	},	// 6f
-	{ NULL,					0	},	// 70
-	{ NULL,					0	},	// 71
-	{ clif_parse_WantToConnection,		0	},	// 72
-	{ NULL,					0	},	// 73
-	{ NULL,					0	},	// 74
-	{ NULL,					0	},	// 75
-	{ NULL,					0	},	// 76
-	{ NULL,					0	},	// 77
-	{ NULL,					0	},	// 78
-	{ NULL,					0	},	// 79
-	{ NULL,					0	},	// 7a
-	{ NULL,					0	},	// 7b
-	{ NULL,					0	},	// 7c
-	{ clif_parse_LoadEndAck,		-1	},	// 7d
-	{ clif_parse_TickSend,			0	},	// 7e
-	{ NULL,					0	},	// 7f
-	{ NULL,					0	},	// 80
-	{ NULL,					0	},	// 81
-	{ NULL,					0	},	// 82
-	{ NULL,					0	},	// 83
-	{ NULL,					0	},	// 84
-	{ clif_parse_WalkToXY,			-1	},	// 85 Walk code limits this on it's own
-	{ NULL,					0	},	// 86
-	{ NULL,					0	},	// 87
-	{ NULL,					0	},	// 88
-	{ clif_parse_ActionRequest,		1000	},	// 89 Special case - see below
-	{ NULL,					0	},	// 8a
-	{ NULL,					0	},	// 8b
-	{ clif_parse_GlobalMessage,		300	},	// 8c
-	{ NULL,					0	},	// 8d
-	{ NULL,					0	},	// 8e
-	{ NULL,					0	},	// 8f
-	{ clif_parse_NpcClicked,		500	},	// 90
-	{ NULL,					0	},	// 91
-	{ NULL,					0	},	// 92
-	{ NULL,					0	},	// 93
-	{ clif_parse_GetCharNameRequest,	-1	},	// 94
-	{ NULL,					0	},	// 95
-	{ clif_parse_Wis,			300	},	// 96
-	{ NULL,					0	},	// 97
-	{ NULL,					0	},	// 98
-	{ clif_parse_GMmessage,			300	},	// 99
-	{ NULL,					0	},	// 9a
-	{ clif_parse_ChangeDir,			-1	},	// 9b
-	{ NULL,					0	},	// 9c
-	{ NULL,					0	},	// 9d
-	{ NULL,					0	},	// 9e
-	{ clif_parse_TakeItem,			400	},	// 9f
-	{ NULL,					0	},	// a0
-	{ NULL,					0	},	// a1
-	{ clif_parse_DropItem,			50	},	// a2
-	{ NULL,					0	},	// a3
-	{ NULL,					0	},	// a4
-	{ NULL,					0	},	// a5
-	{ NULL,					0	},	// a6
-	{ clif_parse_UseItem,			0	},	// a7
-	{ NULL,					0	},	// a8
-	{ clif_parse_EquipItem,			-1	},	// a9 Special case - outfit window (not implemented yet - needs to allow bursts)
-	{ NULL,					0	},	// aa
-	{ clif_parse_UnequipItem,		-1	},	// ab Special case - outfit window (not implemented yet - needs to allow bursts)
-	{ NULL,					0	},	// ac
-	{ NULL,					0	},	// ad
-	{ NULL,					0	},	// ae
-	{ NULL,					0	},	// af
-	{ NULL,					0	},	// b0
-	{ NULL,					0	},	// b1
-	{ clif_parse_Restart,			0	},	// b2
-	{ NULL,					0	},	// b3
-	{ NULL,					0	},	// b4
-	{ NULL,					0	},	// b5
-	{ NULL,					0	},	// b6
-	{ NULL,					0	},	// b7
-	{ clif_parse_NpcSelectMenu,		0	},	// b8
-	{ clif_parse_NpcNextClicked,		-1	},	// b9
-	{ NULL,					0	},	// ba
-	{ clif_parse_StatusUp,			-1	},	// bb People click this very quickly
-	{ NULL,					0	},	// bc
-	{ NULL,					0	},	// bd
-	{ NULL,					0	},	// be
-	{ clif_parse_Emotion,			1000	},	// bf
-	{ NULL,					0	},	// c0
-	{ clif_parse_HowManyConnections,	0	},	// c1
-	{ NULL,					0	},	// c2
-	{ NULL,					0	},	// c3
-	{ NULL,					0	},	// c4
-	{ clif_parse_NpcBuySellSelected,	0	},	// c5
-	{ NULL,					0	},	// c6
-	{ NULL,					0	},	// c7
-	{ clif_parse_NpcBuyListSend,		-1	},	// c8
-	{ clif_parse_NpcSellListSend,		-1	},	// c9 Selling multiple 1-slot items
-	{ NULL,					0	},	// ca
-	{ NULL,					0	},	// cb
-	{ clif_parse_GMKick,			0	},	// cc
-	{ NULL,					0	},	// cd
-	{ NULL,					0	},	// ce
-	{ clif_parse_PMIgnore,			0	},	// cf
-	{ clif_parse_PMIgnoreAll,		0	},	// d0
-	{ NULL,					0	},	// d1
-	{ NULL,					0	},	// d2
-	{ NULL,					0	},	// d3
-	{ NULL,					0	},	// d4
-	{ clif_parse_CreateChatRoom,		1000	},	// d5
-	{ NULL,					0	},	// d6
-	{ NULL,					0	},	// d7
-	{ NULL,					0	},	// d8
-	{ clif_parse_ChatAddMember,		0	},	// d9
-	{ NULL,					0	},	// da
-	{ NULL,					0	},	// db
-	{ NULL,					0	},	// dc
-	{ NULL,					0	},	// dd
-	{ clif_parse_ChatRoomStatusChange,	0	},	// de
-	{ NULL,					0	},	// df
-	{ clif_parse_ChangeChatOwner,		0	},	// e0
-	{ NULL,					0	},	// e1
-	{ clif_parse_KickFromChat,		0	},	// e2
-	{ clif_parse_ChatLeave,			0	},	// e3
-	{ clif_parse_TradeRequest,		2000	},	// e4
-	{ NULL,					0	},	// e5
-	{ clif_parse_TradeAck,			0	},	// e6
-	{ NULL,					0	},	// e7
-	{ clif_parse_TradeAddItem,		0	},	// e8
-	{ NULL,					0	},	// e9
-	{ NULL,					0	},	// ea
-	{ clif_parse_TradeOk,			0	},	// eb
-	{ NULL,					0	},	// ec
-	{ clif_parse_TradeCansel,		0	},	// ed
-	{ NULL,					0	},	// ee
-	{ clif_parse_TradeCommit,		0	},	// ef
-	{ NULL,					0	},	// f0
-	{ NULL,					0	},	// f1
-	{ NULL,					0	},	// f2
-	{ clif_parse_MoveToKafra,		-1	},	// f3
-	{ NULL,					0	},	// f4
-	{ clif_parse_MoveFromKafra,		-1	},	// f5
-	{ NULL,					0	},	// f6
-	{ clif_parse_CloseKafra,		0	},	// f7
-	{ NULL,					0	},	// f8
-	{ clif_parse_CreateParty,		2000	},	// f9
-	{ NULL,					0	},	// fa
-	{ NULL,					0	},	// fb
-	{ clif_parse_PartyInvite,		2000	},	// fc
-	{ NULL,					0	},	// fd
-	{ NULL,					0	},	// fe
-	{ clif_parse_ReplyPartyInvite,		0	},	// ff
-	{ clif_parse_LeaveParty,		0	},	// 100
-	{ NULL,					0	},	// 101
-	{ clif_parse_PartyChangeOption,		0	},	// 102
-	{ clif_parse_RemovePartyMember,		0	},	// 103
-	{ NULL,					0	},	// 104
-	{ NULL,					0	},	// 105
-	{ NULL,					0	},	// 106
-	{ NULL,					0	},	// 107
-	{ clif_parse_PartyMessage,		300	},	// 108
-	{ NULL,					0	},	// 109
-	{ NULL,					0	},	// 10a
-	{ NULL,					0	},	// 10b
-	{ NULL,					0	},	// 10c
-	{ NULL,					0	},	// 10d
-	{ NULL,					0	},	// 10e
-	{ NULL,					0	},	// 10f
-	{ NULL,					0	},	// 110
-	{ NULL,					0	},	// 111
-	{ clif_parse_SkillUp,			-1	},	// 112
-	{ clif_parse_UseSkillToId,		0	},	// 113
-	{ NULL,					0	},	// 114
-	{ NULL,					0	},	// 115
-	{ clif_parse_UseSkillToPos,		0	},	// 116
-	{ NULL,					0	},	// 117
-	{ clif_parse_StopAttack,		0	},	// 118
-	{ NULL,					0	},	// 119
-	{ NULL,					0	},	// 11a
-	{ clif_parse_UseSkillMap,		0	},	// 11b
-	{ NULL,					0	},	// 11c
-	{ clif_parse_RequestMemo,		0	},	// 11d
-	{ NULL,					0	},	// 11e
-	{ NULL,					0	},	// 11f
-	{ NULL,					0	},	// 120
-	{ NULL,					0	},	// 121
-	{ NULL,					0	},	// 122
-	{ NULL,					0	},	// 123
-	{ NULL,					0	},	// 124
-	{ NULL,					0	},	// 125
-	{ clif_parse_PutItemToCart,		0	},	// 126
-	{ clif_parse_GetItemFromCart,		0	},	// 127
-	{ clif_parse_MoveFromKafraToCart,	0	},	// 128
-	{ clif_parse_MoveToKafraFromCart,	0	},	// 129
-	{ clif_parse_RemoveOption,		0	},	// 12a
-	{ NULL,					0	},	// 12b
-	{ NULL,					0	},	// 12c
-	{ NULL,					0	},	// 12d
-	{ NULL,					0	},	// 12e
-	{ NULL,					0	},	// 12f
-	{ NULL,					0	},	// 130
-	{ NULL,					0	},	// 131
-	{ NULL,					0	},	// 132
-	{ NULL,					0	},	// 133
-	{ NULL,					0	},	// 134
-	{ NULL,					0	},	// 135
-	{ NULL,					0	},	// 136
-	{ NULL,					0	},	// 137
-	{ NULL,					0	},	// 138
-	{ NULL,					0	},	// 139
-	{ NULL,					0	},	// 13a
-	{ NULL,					0	},	// 13b
-	{ NULL,					0	},	// 13c
-	{ NULL,					0	},	// 13d
-	{ NULL,					0	},	// 13e
-	{ clif_parse_GM_Monster_Item,		0	},	// 13f
-	{ clif_parse_MapMove,			0	},	// 140
-	{ NULL,					0	},	// 141
-	{ NULL,					0	},	// 142
-	{ clif_parse_NpcAmountInput,		300	},	// 143
-	{ NULL,					0	},	// 144
-	{ NULL,					0	},	// 145
-	{ clif_parse_NpcCloseClicked,		300	},	// 146
-	{ NULL,					0	},	// 147
-	{ NULL,					0	},	// 148
-	{ clif_parse_GMReqNoChat,		0	},	// 149
-	{ NULL,					0	},	// 14a
-	{ NULL,					0	},	// 14b
-	{ NULL,					0	},	// 14c
-	{ NULL,		0	},	// 14d
-	{ NULL,					0	},	// 14e
-	{ NULL,		0	},	// 14f
-	{ NULL,					0	},	// 150
-	{ NULL,	0	},	// 151
-	{ NULL,					0	},	// 152
-	{ NULL,		0	},	// 153
-	{ NULL,					0	},	// 154
-	{ NULL,	0	},	// 155
-	{ NULL,					0	},	// 156
-	{ NULL,					0	},	// 157
-	{ NULL,					0	},	// 158
-	{ NULL,		0	},	// 159
-	{ NULL,					0	},	// 15a
-	{ NULL,		0	},	// 15b
-	{ NULL,					0	},	// 15c
-	{ NULL,		0	},	// 15d
-	{ NULL,					0	},	// 15e
-	{ NULL,					0	},	// 15f
-	{ NULL,					0	},	// 160
-	{ NULL,	0	},	// 161
-	{ NULL,					0	},	// 162
-	{ NULL,					0	},	// 163
-	{ NULL,					0	},	// 164
-	{ NULL,		0	},	// 165
-	{ NULL,					0	},	// 166
-	{ NULL,					0	},	// 167
-	{ NULL,		2000	},	// 168
-	{ NULL,					0	},	// 169
-	{ NULL,					0	},	// 16a
-	{ NULL,		0	},	// 16b
-	{ NULL,					0	},	// 16c
-	{ NULL,					0	},	// 16d
-	{ NULL,		0	},	// 16e
-	{ NULL,					0	},	// 16f
-	{ NULL,	0	},	// 170
-	{ NULL,					0	},	// 171
-	{ NULL,	0	},	// 172
-	{ NULL,					0	},	// 173
-	{ NULL,					0	},	// 174
-	{ NULL,					0	},	// 175
-	{ NULL,					0	},	// 176
-	{ NULL,					0	},	// 177
-	{ clif_parse_ItemIdentify,		0	},	// 178
-	{ NULL,					0	},	// 179
-	{ clif_parse_UseCard,			0	},	// 17a
-	{ NULL,					0	},	// 17b
-	{ clif_parse_InsertCard,		0	},	// 17c
-	{ NULL,					0	},	// 17d
-	{ NULL,		300	},	// 17e
-	{ NULL,					0	},	// 17f
-	{ NULL,		0	},	// 180
-	{ NULL,					0	},	// 181
-	{ NULL,					0	},	// 182
-	{ NULL,		0	},	// 183
-	{ NULL,					0	},	// 184
-	{ NULL,					0	},	// 185
-	{ NULL,					0	},	// 186
-	{ NULL,					0	},	// 187
-	{ NULL,					0	},	// 188
-	{ NULL,					0	},	// 189
-	{ clif_parse_QuitGame,			0	},	// 18a
-	{ NULL,					0	},	// 18b
-	{ NULL,					0	},	// 18c
-	{ NULL,					0	},	// 18d
-	{ NULL,					0	},	// 18e
-	{ NULL,					0	},	// 18f
-	{ clif_parse_UseSkillToPos,		0	},	// 190
-	{ NULL,					0	},	// 191
-	{ NULL,					0	},	// 192
-	{ clif_parse_SolveCharName,		0	},	// 193
-	{ NULL,					0	},	// 194
-	{ NULL,					0	},	// 195
-	{ NULL,					0	},	// 196
-	{ clif_parse_ResetChar,			0	},	// 197
-	{ NULL,					0	},	// 198
-	{ NULL,					0	},	// 199
-	{ NULL,					0	},	// 19a
-	{ NULL,					0	},	// 19b
-	{ clif_parse_LGMmessage,		0	},	// 19c
-	{ clif_parse_GMHide,			300	},	// 19d
-	{ NULL,					0	},	// 19e
-	{ NULL,					0	},	// 19f
-	{ NULL,					0	},	// 1a0
-	{ NULL,					0	},	// 1a1
-	{ NULL,					0	},	// 1a2
-	{ NULL,					0	},	// 1a3
-	{ NULL,					0	},	// 1a4
-	{ NULL,					0	},	// 1a5
-	{ NULL,					0	},	// 1a6
-	{ NULL,					0	},	// 1a7
-	{ NULL,					0	},	// 1a8
-	{ NULL,					0	},	// 1a9
-	{ NULL,					0	},	// 1aa
-	{ NULL,					0	},	// 1ab
-	{ NULL,					0	},	// 1ac
-	{ NULL,					0	},	// 1ad
-	{ NULL,					0	},	// 1ae
-	{ clif_parse_ChangeCart,		0	},	// 1af
-	{ NULL,					0	},	// 1b0
-	{ NULL,					0	},	// 1b1
-	{ NULL,					0	},	// 1b2
-	{ NULL,					0	},	// 1b3
-	{ NULL,					0	},	// 1b4
-	{ NULL,					0	},	// 1b5
-	{ NULL,					0	},	// 1b6
-	{ NULL,					0	},	// 1b7
-	{ NULL,					0	},	// 1b8
-	{ NULL,					0	},	// 1b9
-	{ clif_parse_Shift,			300	},	// 1ba
-	{ clif_parse_Shift,			300	},	// 1bb
-	{ clif_parse_Recall,			300	},	// 1bc
-	{ clif_parse_Recall,			300	},	// 1bd
-	{ NULL,					0	},	// 1be
-	{ NULL,					0	},	// 1bf
-	{ NULL,					0	},	// 1c0
-	{ NULL,					0	},	// 1c1
-	{ NULL,					0	},	// 1c2
-	{ NULL,					0	},	// 1c3
-	{ NULL,					0	},	// 1c4
-	{ NULL,					0	},	// 1c5
-	{ NULL,					0	},	// 1c6
-	{ NULL,					0	},	// 1c7
-	{ NULL,					0	},	// 1c8
-	{ NULL,					0	},	// 1c9
-	{ NULL,					0	},	// 1ca
-	{ NULL,					0	},	// 1cb
-	{ NULL,					0	},	// 1cc
-	{ NULL,					0	},	// 1cd
-	{ clif_parse_AutoSpell,			0	},	// 1ce
-	{ NULL,					0	},	// 1cf
-	{ NULL,					0	},	// 1d0
-	{ NULL,					0	},	// 1d1
-	{ NULL,					0	},	// 1d2
-	{ NULL,					0	},	// 1d3
-	{ NULL,					0	},	// 1d4
-	{ clif_parse_NpcStringInput,		300	},	// 1d5
-	{ NULL,					0	},	// 1d6
-	{ NULL,					0	},	// 1d7
-	{ NULL,					0	},	// 1d8
-	{ NULL,					0	},	// 1d9
-	{ NULL,					0	},	// 1da
-	{ NULL,					0	},	// 1db
-	{ NULL,					0	},	// 1dc
-	{ NULL,					0	},	// 1dd
-	{ NULL,					0	},	// 1de
-	{ clif_parse_GMReqNoChatCount,		0	},	// 1df
-	{ NULL,					0	},	// 1e0
-	{ NULL,					0	},	// 1e1
-	{ NULL,					0	},	// 1e2
-	{ NULL,					0	},	// 1e3
-	{ NULL,					0	},	// 1e4
-	{ NULL,					0	},	// 1e5
-	{ NULL,					0	},	// 1e6
-	{ clif_parse_sn_doridori,		0	},	// 1e7
-	{ clif_parse_CreateParty2,		1000	},	// 1e8
-	{ NULL,					0	},	// 1e9
-	{ NULL,					0	},	// 1ea
-	{ NULL,					0	},	// 1eb
-	{ NULL,					0	},	// 1ec
-	{ clif_parse_sn_explosionspirits,	0	},	// 1ed
-	{ NULL,					0	},	// 1ee
-	{ NULL,					0	},	// 1ef
-	{ NULL,					0	},	// 1f0
-	{ NULL,					0	},	// 1f1
-	{ NULL,					0	},	// 1f2
-	{ NULL,					0	},	// 1f3
-	{ NULL,					0	},	// 1f4
-	{ NULL,					0	},	// 1f5
-	{ NULL,					0	},	// 1f6
-	{ NULL,					0	},	// 1f7
-	{ NULL,					0	},	// 1f8
-	{ NULL,					0	},	// 1f9
-	{ NULL,					0	},	// 1fa
-	{ NULL,					0	},	// 1fb
-	{ NULL,					0	},	// 1fc
-	{ NULL,					0	},	// 1fd
-	{ NULL,					0	},	// 1fe
-	{ NULL,					0	},	// 1ff
-	{ NULL,					0	},	// 200
-	{ NULL,					0	},	// 201
-	{ NULL,					0	},	// 202
-	{ NULL,					0	},	// 203
-	{ NULL,					0	},	// 204
-	{ NULL,					0	},	// 205
-	{ NULL,					0	},	// 206
-	{ NULL,					0	},	// 207
-	{ NULL,					0	},	// 208
-	{ NULL,					0	},	// 209
-	{ NULL,					0	},	// 20a
-	{ NULL,					0	},	// 20b
-	{ NULL,					0	},	// 20c
-	{ NULL,					0	},	// 20d
-	{ NULL,					0	},	// 20e
-	{ NULL,					0	},	// 20f
-	{ NULL,					0	},	// 210
-	{ NULL,					0	},	// 211
-	{ NULL,					0	},	// 212
-	{ NULL,					0	},	// 213
-	{ NULL,					0	},	// 214
-	{ NULL,					0	},	// 215
-	{ NULL,					0	},	// 216
-	{ NULL,					0	},	// 217
-	{ NULL,					0	},	// 218
-	{ NULL,					0	},	// 219
-	{ NULL,					0	},	// 21a
-	{ NULL,					0	},	// 21b
-	{ NULL,					0	},	// 21c
-	{ NULL,					0	},	// 21d
-	{ NULL,					0	},	// 21e
-	{ NULL,					0	},	// 21f
+    { 0, 0 }, // 0
+    { 0, 0 }, // 1
+    { 0, 0 }, // 2
+    { 0, 0 }, // 3
+    { 0, 0 }, // 4
+    { 0, 0 }, // 5
+    { 0, 0 }, // 6
+    { 0, 0 }, // 7
+    { 0, 0 }, // 8
+    { 0, 0 }, // 9
+    { 0, 0 }, // a
+    { 0, 0 }, // b
+    { 0, 0 }, // c
+    { 0, 0 }, // d
+    { 0, 0 }, // e
+    { 0, 0 }, // f
+    { 0, 0 }, // 10
+    { 0, 0 }, // 11
+    { 0, 0 }, // 12
+    { 0, 0 }, // 13
+    { 0, 0 }, // 14
+    { 0, 0 }, // 15
+    { 0, 0 }, // 16
+    { 0, 0 }, // 17
+    { 0, 0 }, // 18
+    { 0, 0 }, // 19
+    { 0, 0 }, // 1a
+    { 0, 0 }, // 1b
+    { 0, 0 }, // 1c
+    { 0, 0 }, // 1d
+    { 0, 0 }, // 1e
+    { 0, 0 }, // 1f
+    { 0, 0 }, // 20
+    { 0, 0 }, // 21
+    { 0, 0 }, // 22
+    { 0, 0 }, // 23
+    { 0, 0 }, // 24
+    { 0, 0 }, // 25
+    { 0, 0 }, // 26
+    { 0, 0 }, // 27
+    { 0, 0 }, // 28
+    { 0, 0 }, // 29
+    { 0, 0 }, // 2a
+    { 0, 0 }, // 2b
+    { 0, 0 }, // 2c
+    { 0, 0 }, // 2d
+    { 0, 0 }, // 2e
+    { 0, 0 }, // 2f
+    { 0, 0 }, // 30
+    { 0, 0 }, // 31
+    { 0, 0 }, // 32
+    { 0, 0 }, // 33
+    { 0, 0 }, // 34
+    { 0, 0 }, // 35
+    { 0, 0 }, // 36
+    { 0, 0 }, // 37
+    { 0, 0 }, // 38
+    { 0, 0 }, // 39
+    { 0, 0 }, // 3a
+    { 0, 0 }, // 3b
+    { 0, 0 }, // 3c
+    { 0, 0 }, // 3d
+    { 0, 0 }, // 3e
+    { 0, 0 }, // 3f
+    { 0, 0 }, // 40
+    { 0, 0 }, // 41
+    { 0, 0 }, // 42
+    { 0, 0 }, // 43
+    { 0, 0 }, // 44
+    { 0, 0 }, // 45
+    { 0, 0 }, // 46
+    { 0, 0 }, // 47
+    { 0, 0 }, // 48
+    { 0, 0 }, // 49
+    { 0, 0 }, // 4a
+    { 0, 0 }, // 4b
+    { 0, 0 }, // 4c
+    { 0, 0 }, // 4d
+    { 0, 0 }, // 4e
+    { 0, 0 }, // 4f
+    { 0, 0 }, // 50
+    { 0, 0 }, // 51
+    { 0, 0 }, // 52
+    { 0, 0 }, // 53
+    { 0, 0 }, // 54
+    { 0, 0 }, // 55
+    { 0, 0 }, // 56
+    { 0, 0 }, // 57
+    { 0, 0 }, // 58
+    { 0, 0 }, // 59
+    { 0, 0 }, // 5a
+    { 0, 0 }, // 5b
+    { 0, 0 }, // 5c
+    { 0, 0 }, // 5d
+    { 0, 0 }, // 5e
+    { 0, 0 }, // 5f
+    { 0, 0 }, // 60
+    { 0, 0 }, // 61
+    { 0, 0 }, // 62
+    { 0, 0 }, // 63
+    { 0, 0 }, // 64
+    { 0, 0 }, // 65
+    { 0, 0 }, // 66
+    { 0, 0 }, // 67
+    { 0, 0 }, // 68
+    { 0, 0 }, // 69
+    { 0, 0 }, // 6a
+    { 0, 0 }, // 6b
+    { 0, 0 }, // 6c
+    { 0, 0 }, // 6d
+    { 0, 0 }, // 6e
+    { 0, 0 }, // 6f
+    { 0, 0 }, // 70
+    { 0, 0 }, // 71
+    { 0, clif_parse_WantToConnection }, // 72
+    { 0, 0 }, // 73
+    { 0, 0 }, // 74
+    { 0, 0 }, // 75
+    { 0, 0 }, // 76
+    { 0, 0 }, // 77
+    { 0, 0 }, // 78
+    { 0, 0 }, // 79
+    { 0, 0 }, // 7a
+    { 0, 0 }, // 7b
+    { 0, 0 }, // 7c
+    { -1, clif_parse_LoadEndAck }, // 7d
+    { 0, clif_parse_TickSend }, // 7e
+    { 0, 0 }, // 7f
+    { 0, 0 }, // 80
+    { 0, 0 }, // 81
+    { 0, 0 }, // 82
+    { 0, 0 }, // 83
+    { 0, 0 }, // 84
+    { -1, clif_parse_WalkToXY }, // 85 Walk code limits this on it's own
+    { 0, 0 }, // 86
+    { 0, 0 }, // 87
+    { 0, 0 }, // 88
+    { 1000, clif_parse_ActionRequest }, // 89 Special case - see below
+    { 0, 0 }, // 8a
+    { 0, 0 }, // 8b
+    { 300, clif_parse_GlobalMessage }, // 8c
+    { 0, 0 }, // 8d
+    { 0, 0 }, // 8e
+    { 0, 0 }, // 8f
+    { 500, clif_parse_NpcClicked }, // 90
+    { 0, 0 }, // 91
+    { 0, 0 }, // 92
+    { 0, 0 }, // 93
+    { -1, clif_parse_GetCharNameRequest }, // 94
+    { 0, 0 }, // 95
+    { 300, clif_parse_Wis }, // 96
+    { 0, 0 }, // 97
+    { 0, 0 }, // 98
+    { 0, 0 }, // 99
+    { 0, 0 }, // 9a
+    { -1, clif_parse_ChangeDir }, // 9b
+    { 0, 0 }, // 9c
+    { 0, 0 }, // 9d
+    { 0, 0 }, // 9e
+    { 400, clif_parse_TakeItem }, // 9f
+    { 0, 0 }, // a0
+    { 0, 0 }, // a1
+    { 50, clif_parse_DropItem }, // a2
+    { 0, 0 }, // a3
+    { 0, 0 }, // a4
+    { 0, 0 }, // a5
+    { 0, 0 }, // a6
+    { 0, clif_parse_UseItem }, // a7
+    { 0, 0 }, // a8
+    { -1, clif_parse_EquipItem }, // a9 Special case - outfit window (not implemented yet - needs to allow bursts)
+    { 0, 0 }, // aa
+    { -1, clif_parse_UnequipItem }, // ab Special case - outfit window (not implemented yet - needs to allow bursts)
+    { 0, 0 }, // ac
+    { 0, 0 }, // ad
+    { 0, 0 }, // ae
+    { 0, 0 }, // af
+    { 0, 0 }, // b0
+    { 0, 0 }, // b1
+    { 0, clif_parse_Restart }, // b2
+    { 0, 0 }, // b3
+    { 0, 0 }, // b4
+    { 0, 0 }, // b5
+    { 0, 0 }, // b6
+    { 0, 0 }, // b7
+    { 0, clif_parse_NpcSelectMenu }, // b8
+    { -1, clif_parse_NpcNextClicked }, // b9
+    { 0, 0 }, // ba
+    { -1, clif_parse_StatusUp }, // bb People click this very quickly
+    { 0, 0 }, // bc
+    { 0, 0 }, // bd
+    { 0, 0 }, // be
+    { 1000, clif_parse_Emotion }, // bf
+    { 0, 0 }, // c0
+    { 0, clif_parse_HowManyConnections }, // c1
+    { 0, 0 }, // c2
+    { 0, 0 }, // c3
+    { 0, 0 }, // c4
+    { 0, clif_parse_NpcBuySellSelected }, // c5
+    { 0, 0 }, // c6
+    { 0, 0 }, // c7
+    { -1, clif_parse_NpcBuyListSend }, // c8
+    { -1, clif_parse_NpcSellListSend }, // c9 Selling multiple 1-slot items
+    { 0, 0 }, // ca
+    { 0, 0 }, // cb
+    { 0, 0 }, // cc
+    { 0, 0 }, // cd
+    { 0, 0 }, // ce
+    { 0, clif_parse_PMIgnore }, // cf
+    { 0, clif_parse_PMIgnoreAll }, // d0
+    { 0, 0 }, // d1
+    { 0, 0 }, // d2
+    { 0, 0 }, // d3
+    { 0, 0 }, // d4
+    { 1000, clif_parse_CreateChatRoom }, // d5
+    { 0, 0 }, // d6
+    { 0, 0 }, // d7
+    { 0, 0 }, // d8
+    { 0, clif_parse_ChatAddMember }, // d9
+    { 0, 0 }, // da
+    { 0, 0 }, // db
+    { 0, 0 }, // dc
+    { 0, 0 }, // dd
+    { 0, clif_parse_ChatRoomStatusChange }, // de
+    { 0, 0 }, // df
+    { 0, clif_parse_ChangeChatOwner }, // e0
+    { 0, 0 }, // e1
+    { 0, clif_parse_KickFromChat }, // e2
+    { 0, clif_parse_ChatLeave }, // e3
+    { 2000, clif_parse_TradeRequest }, // e4
+    { 0, 0 }, // e5
+    { 0, clif_parse_TradeAck }, // e6
+    { 0, 0 }, // e7
+    { 0, clif_parse_TradeAddItem }, // e8
+    { 0, 0 }, // e9
+    { 0, 0 }, // ea
+    { 0, clif_parse_TradeOk }, // eb
+    { 0, 0 }, // ec
+    { 0, clif_parse_TradeCansel }, // ed
+    { 0, 0 }, // ee
+    { 0, clif_parse_TradeCommit }, // ef
+    { 0, 0 }, // f0
+    { 0, 0 }, // f1
+    { 0, 0 }, // f2
+    { -1, clif_parse_MoveToKafra }, // f3
+    { 0, 0 }, // f4
+    { -1, clif_parse_MoveFromKafra }, // f5
+    { 0, 0 }, // f6
+    { 0, clif_parse_CloseKafra }, // f7
+    { 0, 0 }, // f8
+    { 2000, clif_parse_CreateParty }, // f9
+    { 0, 0 }, // fa
+    { 0, 0 }, // fb
+    { 2000, clif_parse_PartyInvite }, // fc
+    { 0, 0 }, // fd
+    { 0, 0 }, // fe
+    { 0, clif_parse_ReplyPartyInvite }, // ff
+    { 0, clif_parse_LeaveParty }, // 100
+    { 0, 0 }, // 101
+    { 0, clif_parse_PartyChangeOption }, // 102
+    { 0, clif_parse_RemovePartyMember }, // 103
+    { 0, 0 }, // 104
+    { 0, 0 }, // 105
+    { 0, 0 }, // 106
+    { 0, 0 }, // 107
+    { 300, clif_parse_PartyMessage }, // 108
+    { 0, 0 }, // 109
+    { 0, 0 }, // 10a
+    { 0, 0 }, // 10b
+    { 0, 0 }, // 10c
+    { 0, 0 }, // 10d
+    { 0, 0 }, // 10e
+    { 0, 0 }, // 10f
+    { 0, 0 }, // 110
+    { 0, 0 }, // 111
+    { -1, clif_parse_SkillUp }, // 112
+    { 0, clif_parse_UseSkillToId }, // 113
+    { 0, 0 }, // 114
+    { 0, 0 }, // 115
+    { 0, clif_parse_UseSkillToPos }, // 116
+    { 0, 0 }, // 117
+    { 0, clif_parse_StopAttack }, // 118
+    { 0, 0 }, // 119
+    { 0, 0 }, // 11a
+    { 0, clif_parse_UseSkillMap }, // 11b
+    { 0, 0 }, // 11c
+    { 0, clif_parse_RequestMemo }, // 11d
+    { 0, 0 }, // 11e
+    { 0, 0 }, // 11f
+    { 0, 0 }, // 120
+    { 0, 0 }, // 121
+    { 0, 0 }, // 122
+    { 0, 0 }, // 123
+    { 0, 0 }, // 124
+    { 0, 0 }, // 125
+    { 0, clif_parse_PutItemToCart }, // 126
+    { 0, clif_parse_GetItemFromCart }, // 127
+    { 0, clif_parse_MoveFromKafraToCart }, // 128
+    { 0, clif_parse_MoveToKafraFromCart }, // 129
+    { 0, clif_parse_RemoveOption }, // 12a
+    { 0, 0 }, // 12b
+    { 0, 0 }, // 12c
+    { 0, 0 }, // 12d
+    { 0, 0 }, // 12e
+    { 0, 0 }, // 12f
+    { 0, 0 }, // 130
+    { 0, 0 }, // 131
+    { 0, 0 }, // 132
+    { 0, 0 }, // 133
+    { 0, 0 }, // 134
+    { 0, 0 }, // 135
+    { 0, 0 }, // 136
+    { 0, 0 }, // 137
+    { 0, 0 }, // 138
+    { 0, 0 }, // 139
+    { 0, 0 }, // 13a
+    { 0, 0 }, // 13b
+    { 0, 0 }, // 13c
+    { 0, 0 }, // 13d
+    { 0, 0 }, // 13e
+    { 0, 0 }, // 13f
+    { 0, 0 }, // 140
+    { 0, 0 }, // 141
+    { 0, 0 }, // 142
+    { 300, clif_parse_NpcAmountInput }, // 143
+    { 0, 0 }, // 144
+    { 0, 0 }, // 145
+    { 300, clif_parse_NpcCloseClicked }, // 146
+    { 0, 0 }, // 147
+    { 0, 0 }, // 148
+    { 0, 0 }, // 149
+    { 0, 0 }, // 14a
+    { 0, 0 }, // 14b
+    { 0, 0 }, // 14c
+    { 0, 0 }, // 14d
+    { 0, 0 }, // 14e
+    { 0, 0 }, // 14f
+    { 0, 0 }, // 150
+    { 0, 0 }, // 151
+    { 0, 0 }, // 152
+    { 0, 0 }, // 153
+    { 0, 0 }, // 154
+    { 0, 0 }, // 155
+    { 0, 0 }, // 156
+    { 0, 0 }, // 157
+    { 0, 0 }, // 158
+    { 0, 0 }, // 159
+    { 0, 0 }, // 15a
+    { 0, 0 }, // 15b
+    { 0, 0 }, // 15c
+    { 0, 0 }, // 15d
+    { 0, 0 }, // 15e
+    { 0, 0 }, // 15f
+    { 0, 0 }, // 160
+    { 0, 0 }, // 161
+    { 0, 0 }, // 162
+    { 0, 0 }, // 163
+    { 0, 0 }, // 164
+    { 0, 0 }, // 165
+    { 0, 0 }, // 166
+    { 0, 0 }, // 167
+    { 0, 0 }, // 168
+    { 0, 0 }, // 169
+    { 0, 0 }, // 16a
+    { 0, 0 }, // 16b
+    { 0, 0 }, // 16c
+    { 0, 0 }, // 16d
+    { 0, 0 }, // 16e
+    { 0, 0 }, // 16f
+    { 0, 0 }, // 170
+    { 0, 0 }, // 171
+    { 0, 0 }, // 172
+    { 0, 0 }, // 173
+    { 0, 0 }, // 174
+    { 0, 0 }, // 175
+    { 0, 0 }, // 176
+    { 0, 0 }, // 177
+    { 0, clif_parse_ItemIdentify }, // 178
+    { 0, 0 }, // 179
+    { 0, clif_parse_UseCard }, // 17a
+    { 0, 0 }, // 17b
+    { 0, clif_parse_InsertCard }, // 17c
+    { 0, 0 }, // 17d
+    { 0, 0 }, // 17e
+    { 0, 0 }, // 17f
+    { 0, 0 }, // 180
+    { 0, 0 }, // 181
+    { 0, 0 }, // 182
+    { 0, 0 }, // 183
+    { 0, 0 }, // 184
+    { 0, 0 }, // 185
+    { 0, 0 }, // 186
+    { 0, 0 }, // 187
+    { 0, 0 }, // 188
+    { 0, 0 }, // 189
+    { 0, clif_parse_QuitGame }, // 18a
+    { 0, 0 }, // 18b
+    { 0, 0 }, // 18c
+    { 0, 0 }, // 18d
+    { 0, 0 }, // 18e
+    { 0, 0 }, // 18f
+    { 0, clif_parse_UseSkillToPos }, // 190
+    { 0, 0 }, // 191
+    { 0, 0 }, // 192
+    { 0, clif_parse_SolveCharName }, // 193
+    { 0, 0 }, // 194
+    { 0, 0 }, // 195
+    { 0, 0 }, // 196
+    { 0, 0 }, // 197
+    { 0, 0 }, // 198
+    { 0, 0 }, // 199
+    { 0, 0 }, // 19a
+    { 0, 0 }, // 19b
+    { 0, 0 }, // 19c
+    { 0, 0 }, // 19d
+    { 0, 0 }, // 19e
+    { 0, 0 }, // 19f
+    { 0, 0 }, // 1a0
+    { 0, 0 }, // 1a1
+    { 0, 0 }, // 1a2
+    { 0, 0 }, // 1a3
+    { 0, 0 }, // 1a4
+    { 0, 0 }, // 1a5
+    { 0, 0 }, // 1a6
+    { 0, 0 }, // 1a7
+    { 0, 0 }, // 1a8
+    { 0, 0 }, // 1a9
+    { 0, 0 }, // 1aa
+    { 0, 0 }, // 1ab
+    { 0, 0 }, // 1ac
+    { 0, 0 }, // 1ad
+    { 0, 0 }, // 1ae
+    { 0, clif_parse_ChangeCart }, // 1af
+    { 0, 0 }, // 1b0
+    { 0, 0 }, // 1b1
+    { 0, 0 }, // 1b2
+    { 0, 0 }, // 1b3
+    { 0, 0 }, // 1b4
+    { 0, 0 }, // 1b5
+    { 0, 0 }, // 1b6
+    { 0, 0 }, // 1b7
+    { 0, 0 }, // 1b8
+    { 0, 0 }, // 1b9
+    { 0, 0 }, // 1ba
+    { 0, 0 }, // 1bb
+    { 0, 0 }, // 1bc
+    { 0, 0 }, // 1bd
+    { 0, 0 }, // 1be
+    { 0, 0 }, // 1bf
+    { 0, 0 }, // 1c0
+    { 0, 0 }, // 1c1
+    { 0, 0 }, // 1c2
+    { 0, 0 }, // 1c3
+    { 0, 0 }, // 1c4
+    { 0, 0 }, // 1c5
+    { 0, 0 }, // 1c6
+    { 0, 0 }, // 1c7
+    { 0, 0 }, // 1c8
+    { 0, 0 }, // 1c9
+    { 0, 0 }, // 1ca
+    { 0, 0 }, // 1cb
+    { 0, 0 }, // 1cc
+    { 0, 0 }, // 1cd
+    { 0, clif_parse_AutoSpell }, // 1ce
+    { 0, 0 }, // 1cf
+    { 0, 0 }, // 1d0
+    { 0, 0 }, // 1d1
+    { 0, 0 }, // 1d2
+    { 0, 0 }, // 1d3
+    { 0, 0 }, // 1d4
+    { 300, clif_parse_NpcStringInput }, // 1d5
+    { 0, 0 }, // 1d6
+    { 0, 0 }, // 1d7
+    { 0, 0 }, // 1d8
+    { 0, 0 }, // 1d9
+    { 0, 0 }, // 1da
+    { 0, 0 }, // 1db
+    { 0, 0 }, // 1dc
+    { 0, 0 }, // 1dd
+    { 0, 0 }, // 1de
+    { 0, 0 }, // 1df
+    { 0, 0 }, // 1e0
+    { 0, 0 }, // 1e1
+    { 0, 0 }, // 1e2
+    { 0, 0 }, // 1e3
+    { 0, 0 }, // 1e4
+    { 0, 0 }, // 1e5
+    { 0, 0 }, // 1e6
+    { 0, clif_parse_sn_doridori }, // 1e7
+    { 1000, clif_parse_CreateParty2 }, // 1e8
+    { 0, 0 }, // 1e9
+    { 0, 0 }, // 1ea
+    { 0, 0 }, // 1eb
+    { 0, 0 }, // 1ec
+    { 0, clif_parse_sn_explosionspirits }, // 1ed
+    { 0, 0 }, // 1ee
+    { 0, 0 }, // 1ef
+    { 0, 0 }, // 1f0
+    { 0, 0 }, // 1f1
+    { 0, 0 }, // 1f2
+    { 0, 0 }, // 1f3
+    { 0, 0 }, // 1f4
+    { 0, 0 }, // 1f5
+    { 0, 0 }, // 1f6
+    { 0, 0 }, // 1f7
+    { 0, 0 }, // 1f8
+    { 0, 0 }, // 1f9
+    { 0, 0 }, // 1fa
+    { 0, 0 }, // 1fb
+    { 0, 0 }, // 1fc
+    { 0, 0 }, // 1fd
+    { 0, 0 }, // 1fe
+    { 0, 0 }, // 1ff
+    { 0, 0 }, // 200
+    { 0, 0 }, // 201
+    { 0, 0 }, // 202
+    { 0, 0 }, // 203
+    { 0, 0 }, // 204
+    { 0, 0 }, // 205
+    { 0, 0 }, // 206
+    { 0, 0 }, // 207
+    { 0, 0 }, // 208
+    { 0, 0 }, // 209
+    { 0, 0 }, // 20a
+    { 0, 0 }, // 20b
+    { 0, 0 }, // 20c
+    { 0, 0 }, // 20d
+    { 0, 0 }, // 20e
+    { 0, 0 }, // 20f
+    { 0, 0 }, // 210
+    { 0, 0 }, // 211
+    { 0, 0 }, // 212
+    { 0, 0 }, // 213
+    { 0, 0 }, // 214
+    { 0, 0 }, // 215
+    { 0, 0 }, // 216
+    { 0, 0 }, // 217
+    { 0, 0 }, // 218
+    { 0, 0 }, // 219
+    { 0, 0 }, // 21a
+    { 0, 0 }, // 21b
+    { 0, 0 }, // 21c
+    { 0, 0 }, // 21d
+    { 0, 0 }, // 21e
+    { 0, 0 }, // 21f
 };
-// *INDENT-ON*
 
 // Checks for packet flooding
 static int clif_check_packet_flood(int fd, int cmd)

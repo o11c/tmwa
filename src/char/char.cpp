@@ -446,6 +446,7 @@ static void mmo_char_init (void)
     {
         char_log ("Characters file not found: %s.\n", char_txt);
         char_log ("Id for the next created character: %d.\n", char_id_count);
+        return;
     }
 
     char line[65536];

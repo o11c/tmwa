@@ -820,11 +820,8 @@ int pc_authok (int id, int login_id2, time_t connect_until_time,
             sd->sc_data[i].val4 = 0;
     }
     sd->sc_count = 0;
-    if ((battle_config.atc_gmonly == 0 || pc_isGM (sd)) &&
-        (pc_isGM (sd) >= get_atcommand_level (AtCommand_Hide)))
-        sd->status.option &= (OPTION_MASK | OPTION_HIDE);
-    else
-        sd->status.option &= OPTION_MASK;
+
+    sd->status.option &= OPTION_MASK;
 
     // スキルユニット関係の初期化
     memset (sd->skillunit, 0, sizeof (sd->skillunit));

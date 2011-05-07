@@ -1413,11 +1413,6 @@ static void map_config_read (const char *cfgName)
                 strcpy (motd_txt, w2);
                 continue;
             }
-            if (strcasecmp (w1, "help_txt") == 0)
-            {
-                strcpy (help_txt, w2);
-                continue;
-            }
             if (strcasecmp (w1, "mapreg_txt") == 0)
             {
                 strcpy (mapreg_txt, w2);

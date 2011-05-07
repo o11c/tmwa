@@ -35,9 +35,7 @@
 
 #define STATE_BLIND 0x10
 
-static char command_symbol = '@';   // first char of the commands (by [Yor])
-
-#define ATCOMMAND_FUNC(x) int atcommand_ ## x (const int fd, struct map_session_data* sd, const char* command, const char* message)
+#define ATCOMMAND_FUNC(x) static int atcommand_ ## x (const int fd, struct map_session_data* sd, const char* command, const char* message)
 ATCOMMAND_FUNC (setup);
 ATCOMMAND_FUNC (broadcast);
 ATCOMMAND_FUNC (localbroadcast);
@@ -76,7 +74,6 @@ ATCOMMAND_FUNC (go);
 // ATCOMMAND_FUNC (spawn);
 ATCOMMAND_FUNC (killmonster);
 ATCOMMAND_FUNC (killmonster2);
-ATCOMMAND_FUNC (refine);
 ATCOMMAND_FUNC (produce);
 ATCOMMAND_FUNC (memo);
 ATCOMMAND_FUNC (gat);
@@ -164,9 +161,6 @@ ATCOMMAND_FUNC (npcmove);       // by MouseJstr
 ATCOMMAND_FUNC (killable);      // by MouseJstr
 ATCOMMAND_FUNC (charkillable);  // by MouseJstr
 ATCOMMAND_FUNC (chareffect);    // by MouseJstr
-ATCOMMAND_FUNC (chardye);       // by MouseJstr
-ATCOMMAND_FUNC (charhairstyle); // by MouseJstr
-ATCOMMAND_FUNC (charhaircolor); // by MouseJstr
 ATCOMMAND_FUNC (dropall);       // by MouseJstr
 ATCOMMAND_FUNC (chardropall);   // by MouseJstr
 ATCOMMAND_FUNC (storeall);      // by MouseJstr
@@ -208,203 +202,354 @@ ATCOMMAND_FUNC (ipcheck);
 // First char of commands is configured in atcommand_athena.conf. Leave @ in this list for default value.
 // to set default level, read atcommand_athena.conf first please.
 static AtCommandInfo atcommand_info[] = {
-    {AtCommand_Setup, "@setup", 40, atcommand_setup},
-    {AtCommand_CharWarp, "@charwarp", 60, atcommand_charwarp},
-    {AtCommand_Warp, "@warp", 40, atcommand_warp},
-    {AtCommand_Where, "@where", 1, atcommand_where},
-    {AtCommand_Goto, "@goto", 20, atcommand_goto},
-    {AtCommand_Jump, "@jump", 40, atcommand_jump},
-    {AtCommand_Who, "@who", 20, atcommand_who},
-    {AtCommand_WhoGroup, "@whogroup", 20, atcommand_whogroup},
-    {AtCommand_WhoMap, "@whomap", 20, atcommand_whomap},
-    {AtCommand_WhoMapGroup, "@whomapgroup", 20, atcommand_whomapgroup},
-    {AtCommand_WhoGM, "@whogm", 20, atcommand_whogm},   // by Yor
-    {AtCommand_Save, "@save", 40, atcommand_save},
-    {AtCommand_Load, "@return", 40, atcommand_load},
-    {AtCommand_Load, "@load", 40, atcommand_load},
-    {AtCommand_Speed, "@speed", 40, atcommand_speed},
-    {AtCommand_Storage, "@storage", 1, atcommand_storage},
-    {AtCommand_Option, "@option", 40, atcommand_option},
-    {AtCommand_Hide, "@hide", 40, atcommand_hide},  // + /hide
-    {AtCommand_Die, "@die", 1, atcommand_die},
-    {AtCommand_Kill, "@kill", 60, atcommand_kill},
-    {AtCommand_Alive, "@alive", 60, atcommand_alive},
-    {AtCommand_Kami, "@kami", 40, atcommand_kami},
-    {AtCommand_Heal, "@heal", 40, atcommand_heal},
-    {AtCommand_Item, "@item", 60, atcommand_item},
-    {AtCommand_ItemReset, "@itemreset", 40, atcommand_itemreset},
-    {AtCommand_ItemCheck, "@itemcheck", 60, atcommand_itemcheck},
-    {AtCommand_BaseLevelUp, "@blvl", 60, atcommand_baselevelup},
-    {AtCommand_JobLevelUp, "@jlvl", 60, atcommand_joblevelup},
-    {AtCommand_Help, "@help", 20, atcommand_help},
-    {AtCommand_GM, "@gm", 100, atcommand_gm},
-    {AtCommand_PvPOff, "@pvpoff", 40, atcommand_pvpoff},
-    {AtCommand_PvPOn, "@pvpon", 40, atcommand_pvpon},
-    {AtCommand_Model, "@model", 20, atcommand_model},
-    {AtCommand_Go, "@go", 10, atcommand_go},
-    {AtCommand_Spawn, "@spawn", 50, atcommand_spawn},
-    {AtCommand_KillMonster, "@killmonster", 60, atcommand_killmonster},
-    {AtCommand_KillMonster2, "@killmonster2", 40, atcommand_killmonster2},
-    {AtCommand_Produce, "@produce", 60, atcommand_produce},
-    {AtCommand_Memo, "@memo", 40, atcommand_memo},
-    {AtCommand_GAT, "@gat", 99, atcommand_gat}, // debug function
-    {AtCommand_Packet, "@packet", 99, atcommand_packet},    // debug function
-    {AtCommand_StatusPoint, "@stpoint", 60, atcommand_statuspoint},
-    {AtCommand_SkillPoint, "@skpoint", 60, atcommand_skillpoint},
-    {AtCommand_Zeny, "@zeny", 60, atcommand_zeny},
-    {AtCommand_Strength, "@str", 60, atcommand_param},
-    {AtCommand_Agility, "@agi", 60, atcommand_param},
-    {AtCommand_Vitality, "@vit", 60, atcommand_param},
-    {AtCommand_Intelligence, "@int", 60, atcommand_param},
-    {AtCommand_Dexterity, "@dex", 60, atcommand_param},
-    {AtCommand_Luck, "@luk", 60, atcommand_param},
-    {AtCommand_Recall, "@recall", 60, atcommand_recall},    // + /recall
-    {AtCommand_Revive, "@revive", 60, atcommand_revive},
-    {AtCommand_CharacterStats, "@charstats", 40, atcommand_character_stats},
-    {AtCommand_CharacterStatsAll, "@charstatsall", 40,
-     atcommand_character_stats_all},
-    {AtCommand_CharacterOption, "@charoption", 60,
-     atcommand_character_option},
-    {AtCommand_CharacterSave, "@charsave", 60, atcommand_character_save},
-    {AtCommand_Night, "@night", 80, atcommand_night},
-    {AtCommand_Day, "@day", 80, atcommand_day},
-    {AtCommand_Doom, "@doom", 80, atcommand_doom},
-    {AtCommand_DoomMap, "@doommap", 80, atcommand_doommap},
-    {AtCommand_Raise, "@raise", 80, atcommand_raise},
-    {AtCommand_RaiseMap, "@raisemap", 80, atcommand_raisemap},
-    {AtCommand_CharacterBaseLevel, "@charbaselvl", 60,
-     atcommand_character_baselevel},
-    {AtCommand_CharacterJobLevel, "@charjlvl", 60,
-     atcommand_character_joblevel},
-    {AtCommand_Kick, "@kick", 20, atcommand_kick},  // + right click menu for GM "(name) force to quit"
-    {AtCommand_KickAll, "@kickall", 99, atcommand_kickall},
-    {AtCommand_AllSkills, "@allskills", 60, atcommand_allskills},
-    {AtCommand_QuestSkill, "@questskill", 40, atcommand_questskill},
-    {AtCommand_CharQuestSkill, "@charquestskill", 60,
-     atcommand_charquestskill},
-    {AtCommand_LostSkill, "@lostskill", 40, atcommand_lostskill},
-    {AtCommand_CharLostSkill, "@charlostskill", 60, atcommand_charlostskill},
-    {AtCommand_Party, "@party", 1, atcommand_party},
-    {AtCommand_MapExit, "@mapexit", 99, atcommand_mapexit},
-    {AtCommand_IDSearch, "@idsearch", 60, atcommand_idsearch},
-    {AtCommand_MapMove, "@mapmove", 40, atcommand_warp},    // /mm command
-    {AtCommand_Broadcast, "@broadcast", 40, atcommand_broadcast},   // /b and /nb command
-    {AtCommand_LocalBroadcast, "@localbroadcast", 40, atcommand_localbroadcast},    // /lb and /nlb command
-    {AtCommand_RecallAll, "@recallall", 80, atcommand_recallall},
-    {AtCommand_CharSkReset, "@charskreset", 60, atcommand_charskreset},
-    {AtCommand_CharStReset, "@charstreset", 60, atcommand_charstreset},
-    {AtCommand_ReloadItemDB, "@reloaditemdb", 99, atcommand_reloaditemdb},  // admin command
-    {AtCommand_ReloadMobDB, "@reloadmobdb", 99, atcommand_reloadmobdb}, // admin command
-    {AtCommand_ReloadSkillDB, "@reloadskilldb", 99, atcommand_reloadskilldb},   // admin command
-    {AtCommand_ReloadScript, "@reloadscript", 99, atcommand_reloadscript},  // admin command
-    {AtCommand_ReloadGMDB, "@reloadgmdb", 99, atcommand_reloadgmdb},    // admin command
-    {AtCommand_CharReset, "@charreset", 60, atcommand_charreset},
-    {AtCommand_CharModel, "@charmodel", 50, atcommand_charmodel},
-    {AtCommand_CharSKPoint, "@charskpoint", 60, atcommand_charskpoint},
-    {AtCommand_CharSTPoint, "@charstpoint", 60, atcommand_charstpoint},
-    {AtCommand_CharZeny, "@charzeny", 60, atcommand_charzeny},
-    {AtCommand_MapInfo, "@mapinfo", 99, atcommand_mapinfo},
-    {AtCommand_Dye, "@dye", 40, atcommand_dye}, // by fritz
-    {AtCommand_Dye, "@ccolor", 40, atcommand_dye},  // by fritz
-    {AtCommand_HairStyle, "@hairstyle", 40, atcommand_hair_style},  // by fritz
-    {AtCommand_HairColor, "@haircolor", 40, atcommand_hair_color},  // by fritz
-    {AtCommand_AllStats, "@allstats", 60, atcommand_all_stats}, // by fritz
-    {AtCommand_CharChangeSex, "@charchangesex", 60, atcommand_char_change_sex}, // by Yor
-    {AtCommand_CharBlock, "@block", 60, atcommand_char_block},  // by Yor
-    {AtCommand_CharUnBlock, "@unblock", 60, atcommand_char_unblock},    // by Yor
-    {AtCommand_CharBan, "@ban", 60, atcommand_char_ban},    // by Yor
-    {AtCommand_CharUnBan, "@unban", 60, atcommand_char_unban},  // by Yor
-    {AtCommand_MountPeco, "@mountpeco", 20, atcommand_mount_peco},  // by Valaris
-    {AtCommand_CharMountPeco, "@charmountpeco", 50, atcommand_char_mount_peco}, // by Yor
-    {AtCommand_PartySpy, "@partyspy", 60, atcommand_partyspy},  // [Syrus22]
-    {AtCommand_PartyRecall, "@partyrecall", 60, atcommand_partyrecall}, // by Yor
-    {AtCommand_Enablenpc, "@enablenpc", 80, atcommand_enablenpc},   // []
-    {AtCommand_Disablenpc, "@disablenpc", 80, atcommand_disablenpc},    // []
-    {AtCommand_ServerTime, "@servertime", 0, atcommand_servertime}, // by Yor
-    {AtCommand_CharDelItem, "@chardelitem", 60, atcommand_chardelitem}, // by Yor
-    {AtCommand_ListNearby, "@listnearby", 40, atcommand_list_nearby},   // by Yor
-    {AtCommand_Jail, "@jail", 60, atcommand_jail},  // by Yor
-    {AtCommand_UnJail, "@unjail", 60, atcommand_unjail},    // by Yor
-    {AtCommand_Disguise, "@disguise", 20, atcommand_disguise},  // [Valaris]
-    {AtCommand_UnDisguise, "@undisguise", 20, atcommand_undisguise},    // by Yor
-    {AtCommand_IgnoreList, "@ignorelist", 0, atcommand_ignorelist}, // by Yor
-    {AtCommand_CharIgnoreList, "@charignorelist", 20, atcommand_charignorelist},    // by Yor
-    {AtCommand_IgnoreList, "@inall", 20, atcommand_inall},  // by Yor
-    {AtCommand_ExAll, "@exall", 20, atcommand_exall},   // by Yor
-    {AtCommand_CharDisguise, "@chardisguise", 60, atcommand_chardisguise},  // Kalaspuff
-    {AtCommand_CharUnDisguise, "@charundisguise", 60, atcommand_charundisguise},    // Kalaspuff
-    {AtCommand_EMail, "@email", 0, atcommand_email},    // by Yor
-    {AtCommand_Effect, "@effect", 40, atcommand_effect},    // by Apple
-    {AtCommand_Char_Item_List, "@charitemlist", 40, atcommand_character_item_list}, // by Yor
-    {AtCommand_Char_Storage_List, "@charstoragelist", 40, atcommand_character_storage_list},    // by Yor
-    {AtCommand_Char_Cart_List, "@charcartlist", 40, atcommand_character_cart_list}, // by Yor
-    {AtCommand_Follow, "@follow", 10, atcommand_follow},    // by MouseJstr
-    {AtCommand_AddWarp, "@addwarp", 20, atcommand_addwarp}, // by MouseJstr
-    {AtCommand_SkillOn, "@skillon", 20, atcommand_skillon}, // by MouseJstr
-    {AtCommand_SkillOff, "@skilloff", 20, atcommand_skilloff},  // by MouseJstr
-    {AtCommand_Killer, "@killer", 60, atcommand_killer},    // by MouseJstr
-    {AtCommand_NpcMove, "@npcmove", 20, atcommand_npcmove}, // by MouseJstr
-    {AtCommand_Killable, "@killable", 40, atcommand_killable},  // by MouseJstr
-    {AtCommand_CharKillable, "@charkillable", 40, atcommand_charkillable},  // by MouseJstr
-    {AtCommand_Chareffect, "@chareffect", 40, atcommand_chareffect},    // MouseJstr
-    //{ AtCommand_Chardye,  "@chardye",  40, atcommand_chardye }, // MouseJstr
-    //{ AtCommand_Charhairstyle,  "@charhairstyle",  40, atcommand_charhairstyle }, // MouseJstr
-    //{ AtCommand_Charhaircolor,  "@charhaircolor",  40, atcommand_charhaircolor }, // MouseJstr
-    {AtCommand_Dropall, "@dropall", 40, atcommand_dropall}, // MouseJstr
-    {AtCommand_Chardropall, "@chardropall", 40, atcommand_chardropall}, // MouseJstr
-    {AtCommand_Storeall, "@storeall", 40, atcommand_storeall},  // MouseJstr
-    {AtCommand_Charstoreall, "@charstoreall", 40, atcommand_charstoreall},  // MouseJstr
-    {AtCommand_Skillid, "@skillid", 40, atcommand_skillid}, // MouseJstr
-    {AtCommand_Useskill, "@useskill", 40, atcommand_useskill},  // MouseJstr
-    {AtCommand_Rain, "@rain", 99, atcommand_rain},
-    {AtCommand_Snow, "@snow", 99, atcommand_snow},
-    {AtCommand_Sakura, "@sakura", 99, atcommand_sakura},
-    {AtCommand_Fog, "@fog", 99, atcommand_fog},
-    {AtCommand_Leaves, "@leaves", 99, atcommand_leaves},
-    //{ AtCommand_Shuffle,         "@shuffle",  99, atcommand_shuffle },
-    //{ AtCommand_Maintenance, "@maintenance", 99, atcommand_maintenance },
-    //{ AtCommand_Misceffect,    "@misceffect", 60, atcommand_misceffect },
-    {AtCommand_Summon, "@summon", 60, atcommand_summon},
-    {AtCommand_AdjGmLvl, "@adjgmlvl", 99, atcommand_adjgmlvl},
-    {AtCommand_AdjCmdLvl, "@adjcmdlvl", 99, atcommand_adjcmdlvl},
-    {AtCommand_Trade, "@trade", 60, atcommand_trade},
-    {AtCommand_UnMute, "@unmute", 60, atcommand_unmute},    // [Valaris]
-    {AtCommand_UnMute, "@charwipe", 60, atcommand_char_wipe},   // [Fate]
-    {AtCommand_SetMagic, "@setmagic", 99, atcommand_set_magic}, // [Fate]
-    {AtCommand_MagicInfo, "@magicinfo", 60, atcommand_magic_info},  // [Fate]
-    {AtCommand_Log, "@log", 60, atcommand_log}, // [Fate]
-    {AtCommand_Log, "@l", 60, atcommand_log},   // [Fate]
-    {AtCommand_Tee, "@tee", 60, atcommand_tee}, // [Fate]
-    {AtCommand_Tee, "@t", 60, atcommand_tee},   // [Fate]
-    {AtCommand_Invisible, "@invisible", 60, atcommand_invisible},   // [Fate]
-    {AtCommand_Visible, "@visible", 60, atcommand_visible}, // [Fate]
-    {AtCommand_IterateForward, "@hugo", 60, atcommand_iterate_forward_over_players},    // [Fate]
-    {AtCommand_IterateBackward, "@linus", 60, atcommand_iterate_backwards_over_players},    // [Fate]
-    {AtCommand_IterateBackward, "@sp-info", 40, atcommand_skillpool_info},  // [Fate]
-    {AtCommand_IterateBackward, "@sp-focus", 80, atcommand_skillpool_focus},    // [Fate]
-    {AtCommand_IterateBackward, "@sp-unfocus", 80, atcommand_skillpool_unfocus},    // [Fate]
-    {AtCommand_IterateBackward, "@skill-learn", 80, atcommand_skill_learn}, // [Fate]
-    {AtCommand_Wgm, "@wgm", 0, atcommand_wgm},
-    {AtCommand_IpCheck, "@ipcheck", 60, atcommand_ipcheck},
-
-// add new commands before this line
-    {AtCommand_Unknown, NULL, 1, NULL}
+    {"@help", 0,        atcommand_help,         ATCC_MISC,
+    "[@cmd | cat]",     "Get help about @commands"},
+    {"@setup", 40,      atcommand_setup,        ATCC_UNK,
+    "",                 "??"},
+    {"@charwarp", 60,   atcommand_charwarp,     ATCC_CHAR,
+    "map x y charname", "Warp a char to a location"},
+    {"@warp", 40,       atcommand_warp,         ATCC_SELF,
+    "map x y",          "Warp yourself to a location"},
+    {"@where", 1,       atcommand_where,        ATCC_INFO,
+    "[charname]",       "Tells you the location of a character"},
+    {"@goto", 20,       atcommand_goto,         ATCC_SELF,
+    "charname",         "Warp you to a character"},
+    {"@jump", 40,       atcommand_jump,         ATCC_SELF,
+    "[x [y]]",          "Warp within a map (randomly if args omitted)"},
+    {"@who", 20,        atcommand_who,          ATCC_INFO,
+    "[substring]",      "List online characters with location"},
+    {"@whogroup", 20,   atcommand_whogroup,     ATCC_INFO,
+    "[substring]",      "List online characters with party"},
+    {"@whomap", 20,     atcommand_whomap,       ATCC_INFO,
+    "[map]",            "List characters on a map with location"},
+    {"@whomapgroup", 20, atcommand_whomapgroup, ATCC_INFO,
+    "[map]",            "List characters on a map with party"},
+    {"@whogm", 20,      atcommand_whogm,        ATCC_INFO,
+    "[substring]",      "List online GMs"},
+    {"@save", 40,       atcommand_save,         ATCC_SELF,
+    "",                 "Set your respawn point at your current location"},
+    {"@return", 40,     atcommand_load,         ATCC_SELF,
+    "",                 "Warp to your respawn point"},
+    {"@load", 40,       atcommand_load,         ATCC_SELF,
+    "",                 "Warp to your respawn point"},
+    {"@speed", 40,      atcommand_speed,        ATCC_SELF,
+    "[1-1000]",         "Set your walk delay (milliseconds). Default 150"},
+    {"@storage", 1,     atcommand_storage,      ATCC_ITEM,
+    "",                 "Open your storage"},
+    {"@option", 40,     atcommand_option,       ATCC_SELF,
+    "param1 p2 p3",
+    "    <param1>      <param2>      <p3>(stackable)   <param3>               <param3>\n"
+    "    1 Petrified   (stackable)   01 Sight           32 Peco Peco riding   2048 Orc Head\n"
+    "    2 Frozen      01 Poison     02 Hide            64 GM Perfect Hide    4096 Wedding Sprites\n"
+    "    3 Stunned     02 Cursed     04 Cloak          128 Level 2 Cart       8192 Ruwach\n"
+    "    4 Sleeping    04 Silenced   08 Level 1 Cart   256 Level 3 Cart\n"
+    "    6 darkness    08 ???        16 Falcon         512 Level 4 Cart\n"
+    "                  16 darkness                    1024 Level 5 Cart"},
+    {"@hide", 40,       atcommand_hide,         ATCC_SELF,
+    "",                 "toggle invisibility to monsters and scripts"},
+    {"@die", 1,         atcommand_die,          ATCC_SELF,
+    "",                 "suicide"},
+    {"@kill", 60,       atcommand_kill,         ATCC_CHAR,
+    "charname",         "kill a player"},
+    {"@alive", 60,      atcommand_alive,        ATCC_SELF,
+    "",                 "resurrect yourself"},
+    {"@kami", 40,       atcommand_kami,         ATCC_MSG,
+    "message",          "broadcast a message without GM name"},
+    {"@heal", 40,       atcommand_heal,         ATCC_SELF,
+    "[hp [sp]]",        "restore your HP/SP by the amount, or all"},
+    {"@item", 60,       atcommand_item,         ATCC_ITEM,
+    "name|ID qty",      "Add items to your inventory"},
+    {"@itemreset", 40,  atcommand_itemreset,    ATCC_ITEM,
+    "",                 "remove all items from your inventory"},
+    {"@itemcheck", 60,  atcommand_itemcheck,    ATCC_ITEM,
+    "",                 "check authorization of your inventory"},
+    {"@blvl", 60,       atcommand_baselevelup,  ATCC_SELF,
+    "count",            "increase your base level"},
+    {"@jlvl", 60,       atcommand_joblevelup,   ATCC_SELF,
+    "count",            "increase your job level"},
+    {"@gm", 100,        atcommand_gm,           ATCC_ADMIN,
+    "password",         "become a GM"},
+    {"@pvpoff", 40,     atcommand_pvpoff,       ATCC_GROUP,
+    "",                 "Disable PvP on current map"},
+    {"@pvpon", 40,      atcommand_pvpon,        ATCC_GROUP,
+    "",                 "Enable PvP on current map"},
+    {"@model", 20,      atcommand_model,        ATCC_SELF,
+    "hairstyle haircolor clothescolor",
+                        "Change your appearance"},
+    {"@go", 10,         atcommand_go,           ATCC_SELF,
+    "number|name",      "warp to a city or memo point. WARNING does not have TMW maps!"},
+    {"@spawn", 50,      atcommand_spawn,        ATCC_MOB,
+    "name|ID [count [x [y]]]",
+                        "spawn monsters"},
+    {"@killmonster", 60, atcommand_killmonster, ATCC_MOB,
+    "[map]",            "Kill all monsters, with drops"},
+    {"@killmonster2", 40, atcommand_killmonster2, ATCC_MOB,
+    "",                 "Kill all monsters, without drops"},
+    {"@produce", 60,    atcommand_produce,      ATCC_ITEM,
+    "name|ID element strength",
+                        "manufacture an item (probably doesn't work)"},
+    {"@memo", 40,       atcommand_memo,         ATCC_SELF,
+    "[pos]",            "set a memo point (no arg: list points)"},
+    {"@gat", 99,        atcommand_gat,          ATCC_ADMIN,
+    "",                 "Display collision info of the map"},
+    {"@packet", 99,     atcommand_packet,       ATCC_ADMIN,
+    "",                 "Display packet info?"},
+    {"@stpoint", 60,    atcommand_statuspoint,  ATCC_SELF,
+    "count",            "Give yourself status points"},
+    {"@skpoint", 60,    atcommand_skillpoint,   ATCC_SELF,
+    "count",            "Give yourself skill points"},
+    {"@zeny", 60,       atcommand_zeny,         ATCC_SELF,
+    "count",            "Give yourself some gold"},
+    {"@str", 60,        atcommand_param,        ATCC_SELF,
+    "count",            "Increase your strength"},
+    {"@agi", 60,        atcommand_param,        ATCC_SELF,
+    "count",            "Increase your agility"},
+    {"@vit", 60,        atcommand_param,        ATCC_SELF,
+    "count",            "Increase your vitality"},
+    {"@int", 60,        atcommand_param,        ATCC_SELF,
+    "count",            "Increase your intelligence"},
+    {"@dex", 60,        atcommand_param,        ATCC_SELF,
+    "count",            "Increase your dexterity"},
+    {"@luk", 60,        atcommand_param,        ATCC_SELF,
+    "count",            "Increase your luck"},
+    {"@recall", 60,     atcommand_recall,       ATCC_CHAR,
+    "charname",         "warp a player to you"},
+    {"@revive", 60,     atcommand_revive,       ATCC_CHAR,
+    "charname",         "resurrent someone else"},
+    {"@charstats", 40,  atcommand_character_stats, ATCC_CHAR,
+    "charname",         "display stats of a character"},
+    {"@charstatsall", 40, atcommand_character_stats_all, ATCC_CHAR,
+    "",                 "display stats of all characters"},
+    {"@charoption", 60, atcommand_character_option, ATCC_CHAR,
+    "param1 param2 param3 charname",
+                        "set display options of a character"},
+    {"@charsave", 60,   atcommand_character_save, ATCC_CHAR,
+    "map x y charname", "changes somebody's respawn point"},
+    {"@night", 80,      atcommand_night,        ATCC_ENV,
+    "",                 "sets all players the darkness option"},
+    {"@day", 80,        atcommand_day,          ATCC_ENV,
+    "",                 "unsets all players the darkness option"},
+    {"@doom", 80,       atcommand_doom,         ATCC_CHAR,
+    "",                 "kill all non-GM players on the server"},
+    {"@doommap", 80,    atcommand_doommap,      ATCC_CHAR,
+    "",                 "kill all non-GM players on the map"},
+    {"@raise", 80,      atcommand_raise,        ATCC_CHAR,
+    "",                 "resurrect all players on the server"},
+    {"@raisemap", 80,   atcommand_raisemap,     ATCC_CHAR,
+    "",                 "resurrect all players on the map"},
+    {"@charbaselvl", 60, atcommand_character_baselevel, ATCC_CHAR,
+    "num charname",     "increase a players's level"},
+    {"@charjlvl", 60,   atcommand_character_joblevel, ATCC_CHAR,
+    "num charname",     "increase a player's job level"},
+    {"@kick", 20,       atcommand_kick,         ATCC_CHAR,
+    "charname",         "temporarily disconnect a player"},
+    {"@kickall", 99,    atcommand_kickall,      ATCC_CHAR,
+    "",                 "temporarily disconnect all players"},
+    {"@allskills", 60,  atcommand_allskills,    ATCC_SELF,
+    "",                 "give you all skills"},
+    {"@questskill", 40, atcommand_questskill,   ATCC_SELF,
+    "num",              "give you specified skill"},
+    {"@charquestskill", 60, atcommand_charquestskill, ATCC_CHAR,
+    "num charname",     "give a player a skill"},
+    {"@lostskill", 40,  atcommand_lostskill,    ATCC_SELF,
+    "num",              "take away a skill"},
+    {"@charlostskill", 60, atcommand_charlostskill, ATCC_CHAR,
+    "num charname",     "take away a skill from a player"},
+    {"@party", 1,       atcommand_party,        ATCC_GROUP,
+    "name",             "create a party"},
+    {"@mapexit", 99,    atcommand_mapexit,      ATCC_ADMIN,
+    "",                 "shutdown the map server"},
+    {"@idsearch", 60,   atcommand_idsearch,     ATCC_ITEM,
+    "name",             "list items by substring"},
+    {"@broadcast", 40,  atcommand_broadcast,    ATCC_MSG,
+    "message",          "do an announcement to all servers"},
+    {"@localbroadcast", 40, atcommand_localbroadcast, ATCC_MSG,
+    "message",          "do an announcement to current server"},
+    {"@recallall", 80,  atcommand_recallall,    ATCC_CHAR,
+    "",                 "warp all players to you"},
+    {"@charskreset", 60, atcommand_charskreset, ATCC_CHAR,
+    "charname",         "reset skills of a player"},
+    {"@charstreset", 60, atcommand_charstreset, ATCC_CHAR,
+    "charname",         "reset stats of a player"},
+    {"@reloaditemdb", 99, atcommand_reloaditemdb, ATCC_ADMIN,
+    "",                 "reload items (might cause problems)"},
+    {"@reloadmobdb", 99, atcommand_reloadmobdb, ATCC_ADMIN,
+    "",                 "reload mobs (might cause problems)"},
+    {"@reloadskilldb", 99, atcommand_reloadskilldb, ATCC_ADMIN,
+    "",                 "reload skills (might cause problems)"},
+    {"@reloadscript", 99, atcommand_reloadscript, ATCC_ADMIN,
+    "",                 "reload scripts (likely to cause problems)"},
+    {"@reloadgmdb", 99, atcommand_reloadgmdb,   ATCC_ADMIN,
+    "",                 "reload GMs (this shouldn't be needed)"},
+    {"@charreset", 60,  atcommand_charreset,    ATCC_CHAR,
+    "charname",         "reset stats and skills of a player"},
+    {"@charmodel", 50,  atcommand_charmodel,    ATCC_CHAR,
+    "hairstyle haircolor clothescolor charname",
+                        "change appearance of someone else"},
+    {"@charskpoint", 60, atcommand_charskpoint, ATCC_CHAR,
+    "num charname",     "give player some skill points"},
+    {"@charstpoint", 60, atcommand_charstpoint, ATCC_CHAR,
+    "num charname",     "give player some stat points"},
+    {"@charzeny", 60,   atcommand_charzeny,     ATCC_CHAR,
+    "amount charname",  "give player some gold"},
+    {"@mapinfo", 99,    atcommand_mapinfo,      ATCC_INFO,
+    "[type [map]]",     "information about a map. type 1 add players, type 2 add NPCs, type 3 add shops/chat"},
+    {"@dye", 40,        atcommand_dye,          ATCC_SELF,
+    "",                 "change your appearance (unimplemented)"},
+    {"@ccolor", 40,     atcommand_dye,          ATCC_SELF,
+    "",                 "change your appearance (unimplemented)"},
+    {"@hairstyle", 40,  atcommand_hair_style,   ATCC_SELF,
+    "",                 "change your hairstyle"},
+    {"@haircolor", 40,  atcommand_hair_color,   ATCC_SELF,
+    "",                 "change your haircolor"},
+    {"@allstats", 60,   atcommand_all_stats,    ATCC_SELF,
+    "[num]",            "increase all stats by num, or to maximum"},
+    {"@charchangesex", 60, atcommand_char_change_sex, ATCC_CHAR,
+    "name",             "toggle someone's gender"},
+    {"@block", 60,      atcommand_char_block,   ATCC_CHAR,
+    "charname",         "permanently block an account"},
+    {"@unblock", 60,    atcommand_char_unblock, ATCC_CHAR,
+    "charname",         "remove a permanent block"},
+    {"@ban", 60,        atcommand_char_ban,     ATCC_CHAR,
+    "time charname",    "temporary ban for +-#y|m|d|h|mn|s"},
+    {"@unban", 60,      atcommand_char_unban,   ATCC_CHAR,
+    "charname",         "remove a temporary ban"},
+    {"@mountpeco", 20,  atcommand_mount_peco,   ATCC_SELF,
+    "",                 "probably doesn't work"},
+    {"@charmountpeco", 50, atcommand_char_mount_peco, ATCC_CHAR,
+    "charname",         "probably doesn't work"},
+    {"@partyspy", 60,   atcommand_partyspy,     ATCC_GROUP,
+    "partyname",        "listen in on a party's chat"},
+    {"@partyrecall", 60, atcommand_partyrecall, ATCC_GROUP,
+    "partyname",        "warp all members of a party to you"},
+    {"@enablenpc", 80,  atcommand_enablenpc,    ATCC_ADMIN,
+    "npcname",          "Enable an NPC"},
+    {"@disablenpc", 80, atcommand_disablenpc,   ATCC_ADMIN,
+    "npcname",          "Disable an NPC"},
+    {"@servertime", 0,  atcommand_servertime,   ATCC_INFO,
+    "",                 "get the time of the server (usually UTC)"},
+    {"@chardelitem", 60, atcommand_chardelitem, ATCC_CHAR,
+    "name|ID qty charname",
+                        "remove items from player's inventory"},
+    {"@listnearby", 40, atcommand_list_nearby,  ATCC_UNK,
+    "",                 "??"},
+    {"@jail", 60,       atcommand_jail,         ATCC_CHAR,
+    "charname",         "put player in prison"},
+    {"@unjail", 60,     atcommand_unjail,       ATCC_CHAR,
+    "charname",         "release a player from prison"},
+    {"@disguise", 20,   atcommand_disguise,     ATCC_SELF,
+    "name|ID",          "look like a monster"},
+    {"@undisguise", 20, atcommand_undisguise,   ATCC_SELF,
+    "",                 "look like yourself"},
+    {"@ignorelist", 0,  atcommand_ignorelist,   ATCC_SELF,
+    "",                 "display your ignore list"},
+    {"@charignorelist", 20, atcommand_charignorelist, ATCC_CHAR,
+    "charname",         "display someone's ignore list"},
+    {"@inall", 20,      atcommand_inall,        ATCC_CHAR,
+    "charname",         "allow all whispers to a player"},
+    {"@exall", 20,      atcommand_exall,        ATCC_CHAR,
+    "charname",         "deny all whispers to a player"},
+    {"@chardisguise", 60, atcommand_chardisguise, ATCC_CHAR,
+    "name|ID charname", "make a player look like a monster"},
+    {"@charundisguise", 60, atcommand_charundisguise, ATCC_CHAR,
+    "charname",         "make a player look like him/her self"},
+    {"@email", 0,       atcommand_email,        ATCC_MISC,
+    "old@e.mail new@e.mail",
+                        "change stored email"},
+    {"@effect", 40,     atcommand_effect,       ATCC_SELF,
+    "ID [flag]",        "give an effect to your character"},
+    {"@charitemlist", 40, atcommand_character_item_list, ATCC_CHAR,
+    "charname",         "list cart of a player"},
+    {"@charstoragelist", 40, atcommand_character_storage_list, ATCC_CHAR,
+    "charname",         "list cart of a player"},
+    {"@charcartlist", 40, atcommand_character_cart_list, ATCC_CHAR,
+    "charname",         "list cart of a player"},
+    {"@follow", 10,     atcommand_follow,       ATCC_SELF,
+    "charname",         "automatically follow somebody"},
+    {"@addwarp", 20,    atcommand_addwarp,      ATCC_ENV,
+    "map x y",          "create a semipermant warp from your current location"},
+    {"@skillon", 20,    atcommand_skillon,      ATCC_ENV,
+    "",                 "turn on skills for a map"},
+    {"@skilloff", 20,   atcommand_skilloff,     ATCC_ENV,
+    "",                 "turn on skills for a map"},
+    {"@killer", 60,     atcommand_killer,       ATCC_SELF,
+    "",                 "allow you to kill attack players outside PvP"},
+    {"@npcmove", 20,    atcommand_npcmove,      ATCC_ADMIN,
+    "",                 "??"},
+    {"@killable", 40,   atcommand_killable,     ATCC_SELF,
+    "",                 "make yourself vulnerable outside PvP"},
+    {"@charkillable", 40, atcommand_charkillable, ATCC_CHAR,
+    "charname",         "make someone vulnerable outside PvP"},
+    {"@chareffect", 40, atcommand_chareffect,   ATCC_CHAR,
+    "",                 "??"},
+    {"@dropall", 40,    atcommand_dropall,      ATCC_SELF,
+    "",                 "put all your inventory on the ground"},
+    {"@chardropall", 40, atcommand_chardropall, ATCC_CHAR,
+    "charname",         "put someone's inventory on the ground"},
+    {"@storeall", 40,   atcommand_storeall,     ATCC_SELF,
+    "",                 "put all your inventory in storage"},
+    {"@charstoreall", 40, atcommand_charstoreall, ATCC_CHAR,
+    "charname",         "put someone's inventory in storage"},
+    {"@skillid", 40,    atcommand_skillid,      ATCC_INFO,
+    "name",             "get ID of a skill"},
+    {"@useskill", 40,   atcommand_useskill,     ATCC_SELF,
+    "ID lvl target",    "apply a skill"},
+    {"@rain", 99,       atcommand_rain,         ATCC_ENV,
+    "",                 "??"},
+    {"@snow", 99,       atcommand_snow,         ATCC_ENV,
+    "",                 "??"},
+    {"@sakura", 99,     atcommand_sakura,       ATCC_ENV,
+    "",                 "??"},
+    {"@fog", 99,        atcommand_fog,          ATCC_ENV,
+    "",                 "??"},
+    {"@leaves", 99,     atcommand_leaves,       ATCC_ENV,
+    "",                 "??"},
+    {"@summon", 60,     atcommand_summon,       ATCC_MOB,
+    "name|ID [num [desired name [x [y]]]]",
+                        "summon monsters"},
+    {"@adjgmlvl", 99,   atcommand_adjgmlvl,     ATCC_ADMIN,
+    "",                 "temporarily adjust the GM level of a character"},
+    {"@adjcmdlvl", 99,  atcommand_adjcmdlvl,    ATCC_ADMIN,
+    "",                 "temporarily adjust the level of a @command"},
+    {"@trade", 60,      atcommand_trade,        ATCC_CHAR,
+    "charname",         "open a trade window with anyone"},
+    {"@unmute", 60,     atcommand_unmute,       ATCC_CHAR,
+    "",                 "??"},
+    {"@charwipe", 60,   atcommand_char_wipe,    ATCC_CHAR,
+    "",                 "??"},
+    {"@setmagic", 99,   atcommand_set_magic,    ATCC_MISC,
+    "",                 "??"},
+    {"@magicinfo", 60,  atcommand_magic_info,   ATCC_MISC,
+    "",                 "??"},
+    {"@log", 60,        atcommand_log,          ATCC_MISC,
+    "message",          "Do nothing (just log it like all commands)"},
+    {"@l", 60,          atcommand_log,          ATCC_MISC,
+    "message",          "Do nothing (just log it like all commands)"},
+    {"@tee", 60,        atcommand_tee,          ATCC_MISC,
+    "",                 "Say something (and log it)"},
+    {"@t", 60,          atcommand_tee,          ATCC_MISC,
+    "",                 "Say something (and log it)"},
+    {"@invisible", 60,  atcommand_invisible,    ATCC_SELF,
+    "",                 "hide from players"},
+    {"@visible", 60,    atcommand_visible,      ATCC_SELF,
+    "",                 "hide from players"},
+    {"@hugo", 60,       atcommand_iterate_forward_over_players, ATCC_SELF,
+    "",                 "go to next player"},
+    {"@linus", 60,      atcommand_iterate_backwards_over_players, ATCC_SELF,
+    "",                 "go to previous player"},
+    {"@sp-info", 40,    atcommand_skillpool_info, ATCC_SELF,
+    "",                 "??"},
+    {"@sp-focus", 80,   atcommand_skillpool_focus, ATCC_SELF,
+    "",                 "??"},
+    {"@sp-unfocus", 80, atcommand_skillpool_unfocus, ATCC_SELF,
+    "",                 "??"},
+    {"@skill-learn", 80, atcommand_skill_learn, ATCC_SELF,
+    "",                 "??"},
+    {"@wgm", 0,         atcommand_wgm,          ATCC_MISC,
+    "message",          "report something to the GM team"},
+    {"@ipcheck", 60,    atcommand_ipcheck,      ATCC_ADMIN,
+    "charname",         "Display all players from the same IP"},
 };
-
-/*==========================================
- * get_atcommand_level @コマンドの必要レベルを取得
- *------------------------------------------
- */
-int get_atcommand_level (const AtCommandType type)
-{
-    int  i;
-
-    for (i = 0; atcommand_info[i].type != AtCommand_None; i++)
-        if (atcommand_info[i].type == type)
-            return atcommand_info[i].level;
-
-    return 100;                 // 100: command can not be used
-}
 
 /*========================================
  * At-command logging
@@ -415,7 +560,7 @@ void log_atcommand (struct map_session_data *sd, const char *fmt, ...)
     va_list ap;
 
     va_start (ap, fmt);
-    vsnprintf (message, 511, fmt, ap);
+    vsnprintf (message, sizeof (message), fmt, ap);
     va_end (ap);
 
     gm_log ("%s(%d,%d) %s(%d) : %s", maps[sd->bl.m].name, sd->bl.x,
@@ -477,26 +622,23 @@ void gm_log (const char *fmt, ...)
     fflush (gm_logfile);
 }
 
-/*==========================================
- *is_atcommand @コマンドに存在するかどうか確認する
- *------------------------------------------
- */
-AtCommandType
-is_atcommand (const int fd, struct map_session_data *sd, const char *message,
-              int gmlvl)
+
+bool atcommand (gm_level_t level, const char *message, AtCommandInfo *info);
+
+bool is_atcommand (const int fd, struct map_session_data *sd, const char *message,
+                   gm_level_t gmlvl)
 {
     AtCommandInfo info;
-    AtCommandType type;
 
-    nullpo_retr (AtCommand_None, sd);
+    nullpo_ret (sd);
 
     if (!message || !*message)
-        return AtCommand_None;
+        return 0;
 
     memset (&info, 0, sizeof (info));
 
-    type = atcommand (gmlvl > 0 ? gmlvl : pc_isGM (sd), message, &info);
-    if (type != AtCommand_None)
+    bool type = atcommand (gmlvl ? gmlvl : pc_isGM (sd), message, &info);
+    if (type)
     {
         char command[100];
         char output[200];
@@ -507,12 +649,12 @@ is_atcommand (const int fd, struct map_session_data *sd, const char *message,
         while (*p && !isspace (*p))
             p++;
         if (p - str >= sizeof (command))    // too long
-            return AtCommand_Unknown;
+            return 0;
         strncpy (command, str, p - str);
         while (isspace (*p))
             p++;
 
-        if (type == AtCommand_Unknown || info.proc == NULL)
+        if (!type || !info.proc)
         {
             sprintf (output, "%s is Unknown Command.", command);
             clif_displaymessage (fd, output);
@@ -527,37 +669,33 @@ is_atcommand (const int fd, struct map_session_data *sd, const char *message,
             }
             else
             {
-                if (get_atcommand_level (type) != 0)    // Don't log level 0 commands
+                if (info.level)    // Don't log level 0 commands
                     log_atcommand (sd, "%s %s", command, p);
             }
         }
 
-        return info.type;
+        return true;
     }
 
-    return AtCommand_None;
+    return false;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-AtCommandType atcommand (const int level, const char *message,
-                         struct AtCommandInfo * info)
+/// get info about command
+bool atcommand (gm_level_t level, const char *message, AtCommandInfo *info)
 {
-    char *p = (char *) message; // it's 'char' and not 'const char' to have possibility to modify the first character if necessary
+    const char *p = message;
 
     if (!info)
-        return AtCommand_None;
-    if (battle_config.atc_gmonly != 0 && !level)    // level = pc_isGM(sd)
-        return AtCommand_None;
+        return false;
+    if (battle_config.atc_gmonly && !level)    // level = pc_isGM(sd)
+        return false;
     if (!p || !*p)
     {
         fprintf (stderr, "at command message is empty\n");
-        return AtCommand_None;
+        return false;
     }
 
-    if (*p == command_symbol)
+    if (*p == '@')
     {                           // check first char.
         char command[101];
         int  i = 0;
@@ -565,33 +703,22 @@ AtCommandType atcommand (const int level, const char *message,
         sscanf (p, "%100s", command);
         command[sizeof (command) - 1] = '\0';
 
-        while (atcommand_info[i].type != AtCommand_Unknown)
+        while (i < ARRAY_SIZEOF(atcommand_info))
         {
-            if (strcasecmp (command + 1, atcommand_info[i].command + 1) == 0
+            if (strcasecmp (command, atcommand_info[i].command) == 0
                 && level >= atcommand_info[i].level)
-            {
-                p[0] = atcommand_info[i].command[0];    // set correct first symbol for after.
                 break;
-            }
             i++;
         }
 
-        if (atcommand_info[i].type == AtCommand_Unknown)
-        {
-            // doesn't return Unknown if player is normal player (display the text, not display: unknown command)
-            if (level == 0)
-                return AtCommand_None;
-            else
-                return AtCommand_Unknown;
-        }
-        memcpy (info, &atcommand_info[i], sizeof atcommand_info[i]);
+        if (i == ARRAY_SIZEOF(atcommand_info))
+            return false;
+        *info = atcommand_info[i];
     }
     else
-    {
-        return AtCommand_None;
-    }
+        return false;
 
-    return info->type;
+    return true;
 }
 
 /*==========================================
@@ -619,9 +746,7 @@ static int atkillmonster_sub (struct block_list *bl, va_list ap)
  */
 static AtCommandInfo *get_atcommandinfo_byname (const char *name)
 {
-    int  i;
-
-    for (i = 0; atcommand_info[i].type != AtCommand_Unknown; i++)
+    for (int i = 0; i < ARRAY_SIZEOF (atcommand_info); i++)
         if (strcasecmp (atcommand_info[i].command + 1, name) == 0)
             return &atcommand_info[i];
 
@@ -657,15 +782,10 @@ int atcommand_config_read (const char *cfgName)
             p->level = atoi (w2);
             if (p->level > 100)
                 p->level = 100;
-            else if (p->level < 0)
-                p->level = 0;
         }
 
         if (strcasecmp (w1, "import") == 0)
             atcommand_config_read (w2);
-        else if (strcasecmp (w1, "command_symbol") == 0 && w2[0] > 31 && w2[0] != '/' &&   // symbol of standard ragnarok GM commands
-                 w2[0] != '%')  // symbol of party chat speaking
-            command_symbol = w2[0];
     }
     fclose_ (fp);
 
@@ -1942,48 +2062,160 @@ int atcommand_joblevelup (const int fd, struct map_session_data *sd,
     return 0;
 }
 
+
+static void atcommand_help_cat_name(int fd, AtCommandCategory cat)
+{
+    switch (cat)
+    {
+    case ATCC_UNK:      clif_displaymessage (fd, "-- Unknown Commands --"); return;
+    case ATCC_MISC:     clif_displaymessage (fd, "-- Miscellaneous Commands --"); return;
+    case ATCC_INFO:     clif_displaymessage (fd, "-- Information Commands --"); return;
+    case ATCC_MSG:      clif_displaymessage (fd, "-- Message Commands --"); return;
+    case ATCC_SELF:     clif_displaymessage (fd, "-- Self Char Commands --"); return;
+    case ATCC_MOB:      clif_displaymessage (fd, "-- Mob Commands --"); return;
+    case ATCC_ITEM:     clif_displaymessage (fd, "-- Item Commands --"); return;
+    case ATCC_GROUP:    clif_displaymessage (fd, "-- Group Commands --"); return;
+    case ATCC_CHAR:     clif_displaymessage (fd, "-- Other Char Commands --"); return;
+    case ATCC_ENV:      clif_displaymessage (fd, "-- Environment Commands --"); return;
+    case ATCC_ADMIN:    clif_displaymessage (fd, "-- Admin Commands --"); return;
+    default: abort();
+    }
+}
+
+static void atcommand_help_brief(int fd, const AtCommandInfo& info)
+{
+    size_t command_len = strlen(info.command);
+    size_t arg_help_len = strlen(info.arg_help);
+    char buf[command_len + arg_help_len + 2];
+    memcpy (buf, info.command, command_len);
+    buf[command_len] = ' ';
+    memcpy (buf + command_len + 1, info.arg_help, arg_help_len);
+    buf[command_len + arg_help_len + 1] = '\0';
+    clif_displaymessage (fd, buf);
+}
+
+static void atcommand_help_long(int fd, const AtCommandInfo& info)
+{
+    atcommand_help_brief(fd, info);
+    clif_displaymessage(fd, info.long_help);
+}
+
+static void atcommand_help_all(int fd, gm_level_t gm_level)
+{
+    AtCommandCategory cat = atcommand_info[0].cat;
+    atcommand_help_cat_name(fd, cat);
+    for (int i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
+        if (gm_level >= atcommand_info[i].level)
+        {
+            if (cat != atcommand_info[i].cat)
+            {
+                cat = atcommand_info[i].cat;
+                atcommand_help_cat_name(fd, cat);
+            }
+            atcommand_help_brief(fd, atcommand_info[i]);
+        }
+}
+
+static void atcommand_help_cat(int fd, gm_level_t gm_level, AtCommandCategory cat)
+{
+    atcommand_help_cat_name (fd, cat);
+    for (int i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
+        if (gm_level >= atcommand_info[i].level && atcommand_info[i].cat == cat)
+            atcommand_help_brief(fd, atcommand_info[i]);
+}
+
 /*==========================================
  *
  *------------------------------------------
  */
 int atcommand_help (const int fd, struct map_session_data *sd,
-                    const char *UNUSED, const char *UNUSED)
+                    const char *UNUSED, const char *message)
 {
-    char buf[2048], w1[2048], w2[2048];
-    int  i, gm_level;
-    FILE *fp;
-
-    memset (buf, '\0', sizeof (buf));
-
-    if ((fp = fopen_ (help_txt, "r")) != NULL)
+    gm_level_t gm_level = pc_isGM (sd);
+    if (message[0] == '@')
     {
-        clif_displaymessage (fd, "Help commands:");
-        gm_level = pc_isGM (sd);
-        while (fgets (buf, sizeof (buf) - 1, fp) != NULL)
+        for (int i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
         {
-            if (buf[0] == '/' && buf[1] == '/')
-                continue;
-            for (i = 0; buf[i] != '\0'; i++)
+            if (strcasecmp(message, atcommand_info[i].command) == 0)
             {
-                if (buf[i] == '\r' || buf[i] == '\n')
-                {
-                    buf[i] = '\0';
+                if (atcommand_info[i].level > gm_level)
                     break;
-                }
+                atcommand_help_long(fd, atcommand_info[i]);
+                return 0;
             }
-            if (sscanf (buf, "%2047[^:]:%2047[^\n]", w1, w2) < 2)
-                clif_displaymessage (fd, buf);
-            else if (gm_level >= atoi (w1))
-                clif_displaymessage (fd, w2);
         }
-        fclose_ (fp);
+        clif_displaymessage (fd, "No such command or level too low");
+        return 0;
     }
-    else
+    if (!*message)
     {
-        clif_displaymessage (fd, "File help.txt not found.");
-        return -1;
+        clif_displaymessage (fd, "You must specify a @command or a category.");
+        clif_displaymessage (fd, "Categories: all unk misc info msg self char env admin");
+        return 0;
+    }
+    if (strcasecmp(message, "all") == 0)
+    {
+        atcommand_help_all (fd, gm_level);
+        return 0;
+    }
+    if (strcasecmp(message, "unk") == 0 || strcasecmp(message, "unknown") == 0)
+    {
+        atcommand_help_cat (fd, gm_level, ATCC_UNK);
+        return 0;
+    }
+    if (strcasecmp(message, "misc") == 0 || strcasecmp(message, "miscellaneous") == 0)
+    {
+        atcommand_help_cat (fd, gm_level, ATCC_MISC);
+        return 0;
+    }
+    if (strcasecmp(message, "info") == 0 || strcasecmp(message, "information") == 0)
+    {
+        atcommand_help_cat (fd, gm_level, ATCC_INFO);
+        return 0;
+    }
+    if (strcasecmp(message, "msg") == 0 || strcasecmp(message, "message") == 0 || strcasecmp(message, "messaging") == 0)
+    {
+        atcommand_help_cat (fd, gm_level, ATCC_MSG);
+        return 0;
+    }
+    if (strcasecmp(message, "self") == 0)
+    {
+        atcommand_help_cat (fd, gm_level, ATCC_SELF);
+        return 0;
+    }
+    if (strcasecmp(message, "monster") == 0 || strcasecmp(message, "monsters") == 0 ||
+            strcasecmp(message, "mob") == 0 || strcasecmp(message, "mobs") == 0)
+    {
+        atcommand_help_cat (fd, gm_level, ATCC_MOB);
+        return 0;
+    }
+    if (strcasecmp(message, "item") == 0 || strcasecmp(message, "items") == 0)
+    {
+        atcommand_help_cat (fd, gm_level, ATCC_ITEM);
+        return 0;
+    }
+    if (strcasecmp(message, "group") == 0 || strcasecmp(message, "groups") == 0 || strcasecmp(message, "pvp") == 0)
+    {
+        atcommand_help_cat (fd, gm_level, ATCC_GROUP);
+        return 0;
+    }
+    if (strcasecmp(message, "char") == 0)
+    {
+        atcommand_help_cat (fd, gm_level, ATCC_CHAR);
+        return 0;
+    }
+    if (strcasecmp(message, "env") == 0 ||strcasecmp(message, "environment") == 0)
+    {
+        atcommand_help_cat (fd, gm_level, ATCC_ENV);
+        return 0;
+    }
+    if (strcasecmp(message, "admin") == 0 || strcasecmp(message, "admininstration") == 0)
+    {
+        atcommand_help_cat (fd, gm_level, ATCC_ADMIN);
+        return 0;
     }
 
+    clif_displaymessage (fd, "No such category");
     return 0;
 }
 
@@ -2190,17 +2422,6 @@ int atcommand_dye (const int fd, struct map_session_data *sd,
 }
 
 /*==========================================
- * @chardye by [MouseJstr]
- *------------------------------------------
- */
-int
-atcommand_chardye (const int UNUSED, struct map_session_data *UNUSED,
-                   const char *UNUSED, const char *UNUSED)
-{
-    return 0;
-}
-
-/*==========================================
  * @hairstyle && @hstyle
  *------------------------------------------
  */
@@ -2235,16 +2456,6 @@ int atcommand_hair_style (const int fd, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- * @charhairstyle by [MouseJstr]
- *------------------------------------------
- */
-int
-atcommand_charhairstyle (const int UNUSED, struct map_session_data *UNUSED,
-                         const char *UNUSED, const char *UNUSED)
-{
-    return 0;
-}
 
 /*==========================================
  * @haircolor && @hcolor
@@ -2281,16 +2492,6 @@ int atcommand_hair_color (const int fd, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- * @charhaircolor by [MouseJstr]
- *------------------------------------------
- */
-int
-atcommand_charhaircolor (const int UNUSED, struct map_session_data *UNUSED,
-                         const char *UNUSED, const char *UNUSED)
-{
-    return 0;
-}
 
 /*==========================================
  * @go [city_number/city_name]: improved by [yor] to add city names and help
@@ -7371,7 +7572,7 @@ int
 atcommand_adjcmdlvl (const int fd, struct map_session_data *UNUSED,
                      const char *UNUSED, const char *message)
 {
-    int  i, newlev;
+    int newlev;
     char cmd[100];
 
     if (!message || !*message || sscanf (message, "%d %s", &newlev, cmd) != 2)
@@ -7380,7 +7581,7 @@ atcommand_adjcmdlvl (const int fd, struct map_session_data *UNUSED,
         return -1;
     }
 
-    for (i = 0; atcommand_info[i].type != AtCommand_None; i++)
+    for (int i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
         if (strcasecmp (cmd, atcommand_info[i].command + 1) == 0)
         {
             atcommand_info[i].level = newlev;

@@ -5847,12 +5847,10 @@ void clif_parse_MapMove (int fd, struct map_session_data *sd)
 void clif_parse_ChangeDir (int fd, struct map_session_data *sd)
 {
     unsigned char buf[64];
-    short dir;
 
     nullpo_retv (sd);
 
-//  RFIFOW(fd,2); // Apparently does nothing?
-    dir = RFIFOB (fd, 4);
+    Direction dir = (Direction)RFIFOB (fd, 4);
 
     if (dir == sd->dir)
         return;

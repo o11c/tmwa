@@ -1127,7 +1127,7 @@ int mob_spawn (int id)
 
     md->to_x = md->bl.x = x;
     md->to_y = md->bl.y = y;
-    md->dir = 0;
+    md->dir = DIR_S;
 
     map_addblock (&md->bl);
 
@@ -3088,7 +3088,7 @@ int mob_warp (struct mob_data *md, int m, int x, int y, int type)
             y = MPRAND (1, (maps[m].ys - 2));
         }
     }
-    md->dir = 0;
+    md->dir = DIR_S;
     if (i < 1000)
     {
         md->bl.x = md->to_x = x;
@@ -3382,10 +3382,10 @@ void mobskill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data
     }
     else if (md->skillid == RG_BACKSTAP)
     {
-        int  dir = map_calc_dir (&md->bl, bl->x, bl->y), t_dir =
+        Direction dir = map_calc_dir (&md->bl, bl->x, bl->y), t_dir =
             battle_get_dir (bl);
         int  dist = distance (md->bl.x, md->bl.y, bl->x, bl->y);
-        if (bl->type != BL_SKILL && (dist == 0 || map_check_dir (dir, t_dir)))
+        if (bl->type != BL_SKILL && (dist == 0 || !map_check_dir (dir, t_dir)))
             return;
     }
     if (((skill_get_inf (md->skillid) & 1) || (skill_get_inf2 (md->skillid) & 4)) &&    // 彼我敵対関係チェック

@@ -2635,10 +2635,10 @@ int skill_castend_damage_id (struct block_list *src, struct block_list *bl,
             break;
         case RG_BACKSTAP:      /* バックスタブ */
         {
-            int  dir = map_calc_dir (src, bl->x, bl->y), t_dir =
+            Direction dir = map_calc_dir (src, bl->x, bl->y), t_dir =
                 battle_get_dir (bl);
             int  dist = distance (src->x, src->y, bl->x, bl->y);
-            if ((dist > 0 && !map_check_dir (dir, t_dir))
+            if ((dist > 0 && map_check_dir (dir, t_dir))
                 || bl->type == BL_SKILL)
             {
                 struct status_change *sc_data = battle_get_sc_data (src);
@@ -5169,10 +5169,10 @@ void skill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data_t 
     }
     else if (sd->skillid == RG_BACKSTAP)
     {
-        int  dir = map_calc_dir (&sd->bl, bl->x, bl->y), t_dir =
+        Direction dir = map_calc_dir (&sd->bl, bl->x, bl->y), t_dir =
             battle_get_dir (bl);
         int  dist = distance (sd->bl.x, sd->bl.y, bl->x, bl->y);
-        if (bl->type != BL_SKILL && (dist == 0 || map_check_dir (dir, t_dir)))
+        if (bl->type != BL_SKILL && (dist == 0 || !map_check_dir (dir, t_dir)))
         {
             clif_skill_fail (sd, sd->skillid, 0, 0);
             sd->canact_tick = tick;

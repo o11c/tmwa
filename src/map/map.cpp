@@ -1008,36 +1008,29 @@ struct block_list *map_id2bl (unsigned int id)
     return (struct block_list *)numdb_search (id_db, id).p;
 }
 
-/*==========================================
- * id_db内の全てにfuncを実行
- *------------------------------------------
- */
-int map_foreachiddb (db_func_t func, ...)
+/// Run func for whole ID db
+void map_foreachiddb (db_func_t func, ...)
 {
-    va_list ap = NULL;
-
+    va_list ap;
     va_start (ap, func);
     numdb_foreach (id_db, func, ap);
     va_end (ap);
-    return 0;
 }
 
-/*==========================================
- * map.npcへ追加 (warp等の領域持ちのみ)
- *------------------------------------------
- */
+/// Add an NPC to a map
+// there was some Japanese comment about warps
+// return the index within that maps NPC list
 int map_addnpc (int m, struct npc_data *nd)
 {
-    int  i;
     if (m < 0 || m >= map_num)
         return -1;
+    int i;
     for (i = 0; i < maps[m].npc_num && i < MAX_NPC_PER_MAP; i++)
-        if (maps[m].npc[i] == NULL)
+        if (!maps[m].npc[i])
             break;
     if (i == MAX_NPC_PER_MAP)
     {
-        if (battle_config.error_log)
-            printf ("too many NPCs in one map %s\n", maps[m].name);
+        map_log ("too many NPCs in one map %s\n", maps[m].name);
         return -1;
     }
     if (i == maps[m].npc_num)
@@ -1054,37 +1047,7 @@ int map_addnpc (int m, struct npc_data *nd)
     return i;
 }
 
-void map_removenpc (void)
-{
-    int  i, m, n = 0;
-
-    for (m = 0; m < map_num; m++)
-    {
-        for (i = 0; i < maps[m].npc_num && i < MAX_NPC_PER_MAP; i++)
-        {
-            if (maps[m].npc[i] != NULL)
-            {
-                clif_clearchar_area (&maps[m].npc[i]->bl, 2);
-                map_delblock (&maps[m].npc[i]->bl);
-                numdb_erase (id_db, maps[m].npc[i]->bl.id);
-                if (maps[m].npc[i]->bl.subtype == SCRIPT)
-                {
-//                    free(map[m].npc[i]->u.scr.script);
-//                    free(map[m].npc[i]->u.scr.label_list);
-                }
-                free (maps[m].npc[i]);
-                maps[m].npc[i] = NULL;
-                n++;
-            }
-        }
-    }
-    printf ("%d NPCs removed.\n", n);
-}
-
-/*==========================================
- * map名からmap番号へ変換
- *------------------------------------------
- */
+// get a map index from map name
 int map_mapname2mapid (const char *name)
 {
     struct map_data *md = (struct map_data *)strdb_search (map_db, name).p;
@@ -1093,116 +1056,73 @@ int map_mapname2mapid (const char *name)
     return md->m;
 }
 
-/*==========================================
- * 他鯖map名からip,port変換
- *------------------------------------------
- */
-int map_mapname2ipport (const char *name, in_addr_t *ip, in_port_t *port)
+/// Get IP/port of a map on another server
+bool map_mapname2ipport (const char *name, in_addr_t *ip, in_port_t *port)
 {
-    struct map_data_other_server *mdos = (struct map_data_other_server *)strdb_search (map_db, name).p;
+    struct map_data *mdos = (struct map_data *)strdb_search (map_db, name).p;
     if (mdos == NULL || mdos->gat)
-        return -1;
+        return 0;
     *ip = mdos->ip;
     *port = mdos->port;
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int map_check_dir (int s_dir, int t_dir)
-{
-    if (s_dir == t_dir)
-        return 0;
-    switch (s_dir)
-    {
-        case 0:
-            if (t_dir == 7 || t_dir == 1 || t_dir == 0)
-                return 0;
-            break;
-        case 1:
-            if (t_dir == 0 || t_dir == 2 || t_dir == 1)
-                return 0;
-            break;
-        case 2:
-            if (t_dir == 1 || t_dir == 3 || t_dir == 2)
-                return 0;
-            break;
-        case 3:
-            if (t_dir == 2 || t_dir == 4 || t_dir == 3)
-                return 0;
-            break;
-        case 4:
-            if (t_dir == 3 || t_dir == 5 || t_dir == 4)
-                return 0;
-            break;
-        case 5:
-            if (t_dir == 4 || t_dir == 6 || t_dir == 5)
-                return 0;
-            break;
-        case 6:
-            if (t_dir == 5 || t_dir == 7 || t_dir == 6)
-                return 0;
-            break;
-        case 7:
-            if (t_dir == 6 || t_dir == 0 || t_dir == 7)
-                return 0;
-            break;
-    }
     return 1;
 }
 
-/*==========================================
- * 彼我の方向を計算
- *------------------------------------------
- */
-int map_calc_dir (struct block_list *src, int x, int y)
+/// Check whether directions are semicompatible
+bool map_check_dir (Direction s_dir, Direction t_dir)
 {
-    int  dir = 0;
-    int  dx, dy;
+    return ((s_dir - t_dir + 1) % 8) <= 2;
+    if (s_dir == t_dir)
+        return 1;
+    if (s_dir == (t_dir + 1) % 8)
+        return 1;
+    if ((s_dir + 1) % 8 == t_dir % 8)
+        return 1;
+    return 0;
+}
 
-    nullpo_retr (0, src);
+Direction map_calc_dir (struct block_list *src, int x, int y)
+{
+    nullpo_retr (DIR_S, src);
 
-    dx = x - src->x;
-    dy = y - src->y;
+    int dx = x - src->x;
+    int dy = y - src->y;
     if (dx == 0 && dy == 0)
-    {                           // 彼我の場所一致
-        dir = 0;                // 上
-    }
-    else if (dx >= 0 && dy >= 0)
-    {                           // 方向的に右上
-        dir = 7;                // 右上
+        // 0
+        return DIR_S;
+    if (dx >= 0 && dy >= 0)
+    {
         if (dx * 3 - 1 < dy)
-            dir = 0;            // 上
+            return DIR_S;
         if (dx > dy * 3)
-            dir = 6;            // 右
+            return DIR_E;
+        return DIR_SE;
     }
-    else if (dx >= 0 && dy <= 0)
-    {                           // 方向的に右下
-        dir = 5;                // 右下
+    if (dx >= 0 && dy <= 0)
+    {
         if (dx * 3 - 1 < -dy)
-            dir = 4;            // 下
+            return DIR_N;
         if (dx > -dy * 3)
-            dir = 6;            // 右
+            return DIR_E;
+        return DIR_NE;
     }
-    else if (dx <= 0 && dy <= 0)
-    {                           // 方向的に左下
-        dir = 3;                // 左下
+    if (dx <= 0 && dy <= 0)
+    {
         if (dx * 3 + 1 > dy)
-            dir = 4;            // 下
+            return DIR_N;
         if (dx < dy * 3)
-            dir = 2;            // 左
+            return DIR_W;
+        return DIR_NW;
     }
-    else
-    {                           // 方向的に左上
-        dir = 1;                // 左上
+    if (dx <= 0 && dy >= 0)
+    {
         if (-dx * 3 - 1 < dy)
-            dir = 0;            // 上
+            return DIR_S;
         if (-dx > dy * 3)
-            dir = 2;            // 左
+            return DIR_W;
+        return DIR_SW;
     }
-    return dir;
+    // unreachable
+    return DIR_S;
 }
 
 uint8_t map_getcell (int m, int x, int y)
@@ -1225,13 +1145,14 @@ void map_setcell (int m, int x, int y, uint8_t t)
  */
 int map_setipport (const char *name, in_addr_t ip, in_port_t port)
 {
-    struct map_data_other_server *mdos = NULL;
+    struct map_data *mdos = NULL;
 
     struct map_data *md = (struct map_data *)strdb_search (map_db, name).p;
     if (md == NULL)
-    {                           // not exist -> add new data
-        CREATE (mdos, struct map_data_other_server, 1);
-        memcpy (mdos->name, name, 24);
+    {
+        // not exist -> add new data
+        CREATE (mdos, struct map_data, 1);
+        STRZCPY (mdos->name, name);
         mdos->gat = NULL;
         mdos->ip = ip;
         mdos->port = port;
@@ -1250,7 +1171,7 @@ int map_setipport (const char *name, in_addr_t ip, in_port_t port)
         }
         else
         {                       // update
-            mdos = (struct map_data_other_server *) md;
+            mdos = md;
             mdos->ip = ip;
             mdos->port = port;
         }
@@ -1750,8 +1671,6 @@ void do_final (void)
 
     for (i = 0; i < fd_max; i++)
         delete_session (i);
-
-    map_removenpc ();
 
     numdb_final (id_db, NULL);
     strdb_final (map_db, NULL);

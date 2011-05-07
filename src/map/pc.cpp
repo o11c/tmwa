@@ -760,8 +760,8 @@ int pc_authok (int id, int login_id2, time_t connect_until_time,
     sd->weapontype1 = sd->weapontype2 = 0;
     sd->speed = DEFAULT_WALK_SPEED;
     sd->state.dead_sit = 0;
-    sd->dir = 0;
-    sd->head_dir = 0;
+    sd->dir = DIR_S;
+    sd->head_dir = DIR_S;
     sd->state.auth = 1;
     sd->walktimer = -1;
     sd->attacktimer = -1;
@@ -3921,7 +3921,7 @@ int pc_setpos (struct map_session_data *sd, const char *mapname_org, int x, int 
         {
             in_addr_t ip;
             in_port_t port;
-            if (map_mapname2ipport (mapname, &ip, &port) == 0)
+            if (map_mapname2ipport (mapname, &ip, &port))
             {
                 skill_stop_dancing (&sd->bl, 1);
                 skill_unit_out_all (&sd->bl, gettick (), 1);

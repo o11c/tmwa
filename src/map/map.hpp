@@ -66,6 +66,18 @@
 #define CLIF_OPTION_SC_INVISIBILITY	(CLIF_OPTION_SC_BASE)
 #define CLIF_OPTION_SC_SCRIBE		(CLIF_OPTION_SC_BASE + 1)
 
+enum Direction
+{
+    DIR_S,
+    DIR_SW,
+    DIR_W,
+    DIR_NW,
+    DIR_N,
+    DIR_NE,
+    DIR_E,
+    DIR_SE,
+};
+
 enum BlockType
 { BL_NUL, BL_PC, BL_NPC, BL_MOB, BL_ITEM, BL_CHAT, BL_SKILL, BL_SPELL };
 enum
@@ -83,7 +95,7 @@ struct block_list
 struct walkpath_data
 {
     uint8_t path_len, path_pos, path_half;
-    uint8_t path[MAX_WALKPATH];
+    Direction path[MAX_WALKPATH];
 };
 struct script_reg
 {
@@ -218,7 +230,7 @@ struct map_session_data
     short to_x, to_y;
     short speed, prev_speed;
     short opt1, opt2, opt3;
-    char dir, head_dir;
+    Direction dir, head_dir;
     unsigned int client_tick, server_tick;
     struct walkpath_data walkpath;
     int  walktimer;
@@ -487,7 +499,8 @@ struct mob_data
 {
     struct block_list bl;
     short n;
-    short base_class, mob_class, dir, mode;
+    short base_class, mob_class, mode;
+    Direction dir;
     short m, x_0, y_0, xs, ys;
     char name[24];
     int  spawndelay_1, spawndelay2;
@@ -558,12 +571,25 @@ enum
 struct map_data
 {
     char name[24];
-    // NULL for maps on other map servers?
+    // NULL for maps on other map servers
     uint8_t *gat;
-    struct block_list **block;
-    struct block_list **block_mob;
+    union
+    {
+        struct
+        {
+            in_addr_t ip;
+            in_port_t port;
+        };
+        // actually, all the remaining fields are only for maps on this server
+        // but I don't want to make the indentation too big
+        struct
+        {
+            struct block_list **block;
+            struct block_list **block_mob;
+        };
+    };
     int *block_count, *block_mob_count;
-    int  m __attribute__((deprecated));
+    int  m;
     short xs, ys;
     short bxs, bys;
     int  npc_num;
@@ -605,15 +631,6 @@ struct map_data
         int  drop_type;
         int  drop_per;
     } drop_list[MAX_DROP_PER_MAP];
-};
-// TODO unionize this
-struct map_data_other_server
-{
-    char name[24];
-    // NULL to determine that this is used
-    uint8_t *gat;
-    in_addr_t ip;
-    in_port_t port;
 };
 #define read_gat(m,x,y) (maps[m].gat[(x)+(y)*maps[m].xs])
 #define read_gatp(m,x,y) (m->gat[(x)+(y)*m->xs])
@@ -776,12 +793,12 @@ const char *map_charid2nick (charid_t);
 struct map_session_data *map_id2sd (unsigned int);
 struct block_list *map_id2bl (unsigned int);
 int  map_mapname2mapid (const char *);
-int  map_mapname2ipport (const char *, in_addr_t *, in_port_t *);
+bool map_mapname2ipport (const char *, in_addr_t *, in_port_t *);
 int  map_setipport (const char *name, in_addr_t ip, in_port_t port);
 int  map_eraseipport (const char *name, in_addr_t ip, in_port_t port);
 void map_addiddb (struct block_list *);
 void map_deliddb (struct block_list *bl);
-int  map_foreachiddb (db_func_t, ...);
+void map_foreachiddb (db_func_t, ...);
 void map_addnickdb (struct map_session_data *);
 int  map_scriptcont (struct map_session_data *sd, int id);  /* Continues a script either on a spell or on an NPC */
 struct map_session_data *map_nick2sd (const char *);
@@ -799,11 +816,12 @@ struct map_session_data *map_get_prev_session (struct map_session_data
 uint8_t map_getcell (int, int, int);
 void map_setcell (int, int, int, uint8_t);
 
-// その他
-int  map_check_dir (int s_dir, int t_dir);
-int  map_calc_dir (struct block_list *src, int x, int y);
+// check if directions are mostly equal
+bool map_check_dir (Direction s_dir, Direction t_dir);
+// get the general direction from block's location to the coordinates
+Direction map_calc_dir (struct block_list *src, int x, int y);
 
-// path.cより
+// in path.cpp
 int  path_search (struct walkpath_data *, int, int, int, int, int, int);
 int  path_blownpos (int m, int x_0, int y_0, int dx, int dy, int count);
 

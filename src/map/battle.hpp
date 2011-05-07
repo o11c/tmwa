@@ -1,6 +1,8 @@
 #ifndef BATTLE_H
 #define BATTLE_H
 
+#include "map.hpp"
+
 // ダメージ
 struct Damage
 {
@@ -79,7 +81,7 @@ int  battle_counttargeted (struct block_list *bl, struct block_list *src,
                            int target_lv);
 int  battle_is_unarmed (struct block_list *bl);
 int  battle_get_class (struct block_list *bl);
-int  battle_get_dir (struct block_list *bl);
+Direction battle_get_dir (struct block_list *bl);
 int  battle_get_lv (struct block_list *bl);
 int  battle_get_range (struct block_list *bl);
 int  battle_get_hp (struct block_list *bl);

@@ -47,15 +47,6 @@
 #define TY_INVOCATION	9
 #define TY_FAIL		127
 
-#define DIR_S	0
-#define DIR_SW	1
-#define DIR_W	2
-#define DIR_NW	3
-#define DIR_N	4
-#define DIR_NE	5
-#define DIR_E	6
-#define DIR_SE	7
-
 struct expr;
 struct val;
 struct location;

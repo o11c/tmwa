@@ -68,20 +68,16 @@ int battle_get_class (struct block_list *bl)
         return 0;
 }
 
-/*==========================================
- * 対象の方向を返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
-int battle_get_dir (struct block_list *bl)
+/// which way the object is facing
+Direction battle_get_dir (struct block_list *bl)
 {
-    nullpo_retr (0, bl);
+    nullpo_retr (DIR_S, bl);
     if (bl->type == BL_MOB && (struct mob_data *) bl)
         return ((struct mob_data *) bl)->dir;
     else if (bl->type == BL_PC && (struct map_session_data *) bl)
         return ((struct map_session_data *) bl)->dir;
     else
-        return 0;
+        return DIR_S;
 }
 
 /*==========================================
@@ -1992,10 +1988,10 @@ static struct Damage battle_calc_mob_weapon_attack (struct block_list *src,
         if (skill_num != CR_GRANDCROSS && t_sc_data
             && t_sc_data[SC_AUTOCOUNTER].timer != -1)
         {
-            int  dir = map_calc_dir (src, target->x, target->y), t_dir =
+            Direction dir = map_calc_dir (src, target->x, target->y), t_dir =
                 battle_get_dir (target);
             int  dist = distance (src->x, src->y, target->x, target->y);
-            if (dist <= 0 || map_check_dir (dir, t_dir))
+            if (dist <= 0 || !map_check_dir (dir, t_dir))
             {
                 memset (&wd, 0, sizeof (wd));
                 t_sc_data[SC_AUTOCOUNTER].val3 = 0;
@@ -2660,10 +2656,10 @@ static struct Damage battle_calc_pc_weapon_attack (struct block_list *src,
         if (skill_num != CR_GRANDCROSS && t_sc_data
             && t_sc_data[SC_AUTOCOUNTER].timer != -1)
         {                       //グランドクロスでなく、対象がオートカウンター状態の場合
-            int  dir = map_calc_dir (src, target->x, target->y), t_dir =
+            Direction dir = map_calc_dir (src, target->x, target->y), t_dir =
                 battle_get_dir (target);
             int  dist = distance (src->x, src->y, target->x, target->y);
-            if (dist <= 0 || map_check_dir (dir, t_dir))
+            if (dist <= 0 || !map_check_dir (dir, t_dir))
             {                   //対象との距離が0以下、または対象の正面？
                 memset (&wd, 0, sizeof (wd));
                 t_sc_data[SC_AUTOCOUNTER].val3 = 0;

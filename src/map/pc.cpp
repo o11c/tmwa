@@ -7391,11 +7391,10 @@ int pc_divorce (struct map_session_data *sd)
 struct map_session_data *pc_get_partner (struct map_session_data *sd)
 {
     struct map_session_data *p_sd = NULL;
-    char *nick;
     if (sd == NULL || !pc_ismarried (sd))
         return NULL;
 
-    nick = map_charid2nick (sd->status.partner_id);
+    const char *nick = map_charid2nick (sd->status.partner_id);
 
     if (nick == NULL)
         return NULL;

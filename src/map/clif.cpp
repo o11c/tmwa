@@ -4192,7 +4192,7 @@ int clif_wis_end (int fd, int flag) // R 0098 <type>.B: 0: success to send wispe
  */
 int clif_solved_charname (struct map_session_data *sd, int char_id)
 {
-    char *p = map_charid2nick (char_id);
+    const char *p = map_charid2nick (char_id);
     int  fd;
 
     nullpo_retr (0, sd);

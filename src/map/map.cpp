@@ -58,7 +58,8 @@ bool night_flag = 0;
 struct charid2nick
 {
     char nick[24];
-    int  req_id;
+    // who wants to know the nick
+    struct map_session_data *req_id;
 };
 
 char motd_txt[256] = "conf/motd.txt";
@@ -761,114 +762,91 @@ int map_addflooritem (struct item *item_data, int amount, uint16_t m, uint16_t x
                                  battle_config.flooritem_lifetime, 1);
 }
 
-/*==========================================
- * charid_dbへ追加(返信待ちがあれば返信)
- *------------------------------------------
- */
-void map_addchariddb (int charid, const char *name)
+/// Add an charid->charname mapping
+// if it is already in the table and flagged as "please reply"
+// then send the reply to that session
+void map_addchariddb (charid_t charid, const char *name)
 {
     struct charid2nick *p = (struct charid2nick *)numdb_search (charid_db, charid).p;
-    if (p == NULL)
-    {                           // データベースにない
+    if (!p)
+    {
+        // if not in the database, it will need to be added it
         CREATE (p, struct charid2nick, 1);
         p->req_id = 0;
     }
     else
+        // is this really necessary?
         numdb_erase (charid_db, charid);
 
-    int req = p->req_id;
-    memcpy (p->nick, name, 24);
+    struct map_session_data *req = p->req_id;
+    STRZCPY (p->nick, name);
     p->req_id = 0;
     numdb_insert (charid_db, charid, (void *)p);
     if (req)
-    {                           // 返信待ちがあれば返信
-        struct map_session_data *sd = map_id2sd (req);
-        if (sd != NULL)
-            clif_solved_charname (sd, charid);
-    }
+        clif_solved_charname (req, charid);
 }
 
-/*==========================================
- * charid_dbへ追加（返信要求のみ）
- *------------------------------------------
- */
-int map_reqchariddb (struct map_session_data *sd, int charid)
-{
-    nullpo_retr (0, sd);
-
-    struct charid2nick *p = (struct charid2nick *)numdb_search (charid_db, charid).p;
-    if (p != NULL)              // データベースにすでにある
-        return 0;
-    CREATE (p, struct charid2nick, 1);
-    p->req_id = sd->bl.id;
-    numdb_insert (charid_db, charid, (void *)p);
-    return 0;
-}
-
-/*==========================================
- * id_dbへblを追加
- *------------------------------------------
- */
-void map_addiddb (struct block_list *bl)
-{
-    nullpo_retv (bl);
-
-    numdb_insert (id_db, bl->id, (void *)bl);
-}
-
-/*==========================================
- * id_dbからblを削除
- *------------------------------------------
- */
-void map_deliddb (struct block_list *bl)
-{
-    nullpo_retv (bl);
-
-    numdb_erase (id_db, bl->id);
-}
-
-/*==========================================
- * nick_dbへsdを追加
- *------------------------------------------
- */
-void map_addnickdb (struct map_session_data *sd)
+/// Put char id request in the db
+void map_reqchariddb (struct map_session_data *sd, charid_t charid)
 {
     nullpo_retv (sd);
 
+    struct charid2nick *p = (struct charid2nick *)numdb_search (charid_db, charid).p;
+    if (p)
+        // I'm pretty sure this shouldn't happen
+        return;
+    CREATE (p, struct charid2nick, 1);
+    p->req_id = sd;
+    numdb_insert (charid_db, charid, (void *)p);
+}
+
+/// Add block to DB
+void map_addiddb (struct block_list *bl)
+{
+    nullpo_retv (bl);
+    numdb_insert (id_db, bl->id, (void *)bl);
+}
+
+/// Delete block from DB
+void map_deliddb (struct block_list *bl)
+{
+    nullpo_retv (bl);
+    numdb_erase (id_db, bl->id);
+}
+
+/// Add mapping name to session
+void map_addnickdb (struct map_session_data *sd)
+{
+    nullpo_retv (sd);
     strdb_insert (nick_db, sd->status.name, (void *)sd);
 }
 
-/*==========================================
- * PCのquit処理 map.c内分
- *
- * quit処理の主体が違うような気もしてきた
- *------------------------------------------
- */
-int map_quit (struct map_session_data *sd)
+/// A player quits from the map server
+void map_quit (struct map_session_data *sd)
 {
-    nullpo_retr (0, sd);
+    nullpo_retv (sd);
 
-    if (sd->chatID)             // チャットから出る
+    if (sd->chatID)
         chat_leavechat (sd);
 
-    if (sd->trade_partner)      // 取引を中断する
+    if (sd->trade_partner)
         trade_tradecancel (sd);
 
-    if (sd->party_invite > 0)   // パーティ勧誘を拒否する
+    if (sd->party_invite)
         party_reply_invite (sd, sd->party_invite_account, 0);
 
-    party_send_logout (sd);     // パーティのログアウトメッセージ送信
+    party_send_logout (sd);
 
-    pc_cleareventtimer (sd);    // イベントタイマを破棄する
+    pc_cleareventtimer (sd);
 
-    skill_castcancel (&sd->bl, 0);  // 詠唱を中断する
-    skill_stop_dancing (&sd->bl, 1);    // ダンス/演奏中断
+    skill_castcancel (&sd->bl, 0);
+    skill_stop_dancing (&sd->bl, 1);
 
-    if (sd->sc_data && sd->sc_data[SC_BERSERK].timer != -1) //バーサーク中の終了はHPを100に
+    if (sd->sc_data && sd->sc_data[SC_BERSERK].timer != -1)
         sd->status.hp = 100;
 
-    skill_status_change_clear (&sd->bl, 1); // ステータス異常を解除する
-    skill_clear_unitgroup (&sd->bl);    // スキルユニットグループの削除
+    skill_status_change_clear (&sd->bl, 1);
+    skill_clear_unitgroup (&sd->bl);
     skill_cleartimerskill (&sd->bl);
     pc_stop_walking (sd, 0);
     pc_stopattack (sd);
@@ -883,7 +861,6 @@ int map_quit (struct map_session_data *sd)
     if (pc_isdead (sd))
         pc_setrestartvalue (sd, 2);
     pc_makesavestatus (sd);
-    //クローンスキルで覚えたスキルは消す
 
     //The storage closing routines will save the char if needed. [Skotlex]
     if (!sd->state.storage_flag)
@@ -891,72 +868,51 @@ int map_quit (struct map_session_data *sd)
     else if (sd->state.storage_flag == 1)
         storage_storage_quit (sd);
 
-    if (sd->npc_stackbuf && sd->npc_stackbuf != NULL)
-        free (sd->npc_stackbuf);
+    free (sd->npc_stackbuf);
 
     map_delblock (&sd->bl);
 
     numdb_erase (id_db, sd->bl.id);
     strdb_erase (nick_db, sd->status.name);
     numdb_erase (charid_db, (numdb_key_t)sd->status.char_id);
-
-    return 0;
 }
 
-/*==========================================
- * id番号のPCを探す。居なければNULL
- *------------------------------------------
- */
-struct map_session_data *map_id2sd (int id)
+// return the session of the given id
+// TODO figure out what kind of ID it is and use a typedef
+// I think it might be a charid_t but I'm not sure
+struct map_session_data *map_id2sd (unsigned int id)
 {
-// remove search from db, because:
-// 1 - all players, npc, items and mob are in this db (to search, it's not speed, and search in session is more sure)
-// 2 - DB seems not always correct. Sometimes, when a player disconnects, its id (account value) is not removed and structure
-//     point to a memory area that is not more a session_data and value are incorrect (or out of available memory) -> crash
-// replaced by searching in all session.
-// by searching in session, we are sure that fd, session, and account exist.
-/*
-	struct block_list *bl;
-
-	bl=numdb_search(id_db,id);
-	if(bl && bl->type==BL_PC)
-		return (struct map_session_data*)bl;
-	return NULL;
-*/
-    int  i;
-    struct map_session_data *sd = NULL;
-
-    for (i = 0; i < fd_max; i++)
-        if (session[i] && (sd = (struct map_session_data *)session[i]->session_data) && sd->bl.id == id)
+    for (int i = 0; i < fd_max; i++)
+    {
+        if (!session[i])
+            continue;
+        struct map_session_data *sd = (struct map_session_data *)session[i]->session_data;
+        if (sd && sd->bl.id == id)
             return sd;
-
+    }
     return NULL;
 }
 
-/*==========================================
- * char_id番号の名前を探す
- *------------------------------------------
- */
-char *map_charid2nick (int id)
+/// get name of a character
+const char *map_charid2nick (charid_t id)
 {
     struct charid2nick *p = (struct charid2nick *)numdb_search (charid_db, id).p;
 
-    if (p == NULL)
+    if (!p)
         return NULL;
-    if (p->req_id != 0)
+    if (p->req_id)
         return NULL;
     return p->nick;
 }
 
-/*========================================*/
-/* [Fate] Operations to iterate over active map sessions */
+/// Operations to iterate over active map sessions
 
 static struct map_session_data *map_get_session (int i)
 {
-    struct map_session_data *d;
-
-    if (i >= 0 && i < fd_max
-        && session[i] && (d = (struct map_session_data *)session[i]->session_data) && d->state.auth)
+    if (i < 0 || i > fd_max || !session[i])
+        return NULL;
+    struct map_session_data *d = (struct map_session_data *)session[i]->session_data;
+    if (d && d->state.auth)
         return d;
 
     return NULL;
@@ -964,8 +920,8 @@ static struct map_session_data *map_get_session (int i)
 
 static struct map_session_data *map_get_session_forward (int start)
 {
-    int  i;
-    for (i = start; i < fd_max; i++)
+    // this loop usually isn't traversed many times
+    for (int i = start; i < fd_max; i++)
     {
         struct map_session_data *d = map_get_session (i);
         if (d)
@@ -977,8 +933,8 @@ static struct map_session_data *map_get_session_forward (int start)
 
 static struct map_session_data *map_get_session_backward (int start)
 {
-    int  i;
-    for (i = start; i >= 0; i--)
+    // this loop usually isn't traversed many times
+    for (int i = start; i >= 0; i--)
     {
         struct map_session_data *d = map_get_session (i);
         if (d)
@@ -1008,27 +964,22 @@ struct map_session_data *map_get_prev_session (struct map_session_data *d)
     return map_get_session_backward (d->fd - 1);
 }
 
-/*==========================================
- * Search session data from a nick name
- * (without sensitive case if necessary)
- * return map_session_data pointer or NULL
- *------------------------------------------
- */
+/// get session by name
 struct map_session_data *map_nick2sd (const char *nick)
 {
-    int  i, quantity = 0, nicklen;
-    struct map_session_data *sd = NULL;
-    struct map_session_data *pl_sd = NULL;
-
-    if (nick == NULL)
+    if (!nick)
         return NULL;
+    size_t nicklen = strlen (nick);
 
-    nicklen = strlen (nick);
+    int quantity = 0;
+    struct map_session_data *sd = NULL;
 
-    for (i = 0; i < fd_max; i++)
+    for (int i = 0; i < fd_max; i++)
     {
-        if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-            && pl_sd->state.auth)
+        if (!session[i])
+            continue;
+        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        if (pl_sd && pl_sd->state.auth)
         {
             // Without case sensitive check (increase the number of similar character names found)
             if (strncasecmp (pl_sd->status.name, nick, nicklen) == 0)
@@ -1050,20 +1001,11 @@ struct map_session_data *map_nick2sd (const char *nick)
     return NULL;
 }
 
-/*==========================================
- * id番号の物を探す
- * 一時objectの場合は配列を引くのみ
- *------------------------------------------
- */
-struct block_list *map_id2bl (int id)
+struct block_list *map_id2bl (unsigned int id)
 {
-    struct block_list *bl = NULL;
-    if (id < sizeof (object) / sizeof (object[0]))
-        bl = object[id];
-    else
-        bl = (struct block_list *)numdb_search (id_db, id).p;
-
-    return bl;
+    if (id < ARRAY_SIZEOF(object))
+        return object[id];
+    return (struct block_list *)numdb_search (id_db, id).p;
 }
 
 /*==========================================
@@ -1263,27 +1205,18 @@ int map_calc_dir (struct block_list *src, int x, int y)
     return dir;
 }
 
-// gat系
-/*==========================================
- * (m,x,y)の状態を調べる
- *------------------------------------------
- */
-int map_getcell (int m, int x, int y)
+uint8_t map_getcell (int m, int x, int y)
 {
     if (x < 0 || x >= maps[m].xs - 1 || y < 0 || y >= maps[m].ys - 1)
         return 1;
     return maps[m].gat[x + y * maps[m].xs];
 }
 
-/*==========================================
- * (m,x,y)の状態をtにする
- *------------------------------------------
- */
-int map_setcell (int m, int x, int y, int t)
+void map_setcell (int m, int x, int y, uint8_t t)
 {
     if (x < 0 || x >= maps[m].xs || y < 0 || y >= maps[m].ys)
-        return t;
-    return maps[m].gat[x + y * maps[m].xs] = t;
+        return;
+    maps[m].gat[x + y * maps[m].xs] = t;
 }
 
 /*==========================================

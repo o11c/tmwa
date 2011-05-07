@@ -558,12 +558,12 @@ enum
 struct map_data
 {
     char name[24];
-    char alias[24];             // [MouseJstr]
-    unsigned char *gat;         // NULLなら下のmap_data_other_serverとして扱う
+    // NULL for maps on other map servers?
+    uint8_t *gat;
     struct block_list **block;
     struct block_list **block_mob;
     int *block_count, *block_mob_count;
-    int  m;
+    int  m __attribute__((deprecated));
     short xs, ys;
     short bxs, bys;
     int  npc_num;
@@ -606,12 +606,14 @@ struct map_data
         int  drop_per;
     } drop_list[MAX_DROP_PER_MAP];
 };
+// TODO unionize this
 struct map_data_other_server
 {
     char name[24];
-    unsigned char *gat;         // NULL固定にして判断
-    unsigned long ip;
-    unsigned int port;
+    // NULL to determine that this is used
+    uint8_t *gat;
+    in_addr_t ip;
+    in_port_t port;
 };
 #define read_gat(m,x,y) (maps[m].gat[(x)+(y)*maps[m].xs])
 #define read_gatp(m,x,y) (m->gat[(x)+(y)*m->xs])
@@ -722,14 +724,14 @@ extern char talkie_mes[];
 
 extern char wisp_server_name[];
 
-// 鯖全体情報
+// global information
 void map_setusers (int);
 int  map_getusers (void);
-// block削除関連
+// block freeing
 int  map_freeblock (void *bl);
 int  map_freeblock_lock (void);
 int  map_freeblock_unlock (void);
-// block関連
+// block related
 bool map_addblock (struct block_list *);
 int  map_delblock (struct block_list *);
 void map_foreachinarea (int (*)(struct block_list *, va_list), int, int, int,
@@ -744,8 +746,8 @@ obj_id_t map_addobject (struct block_list *);
 void map_delobject (obj_id_t, BlockType type);
 void map_delobjectnofree (obj_id_t id, BlockType type);
 void map_foreachobject (int (*)(struct block_list *, va_list), BlockType, ...);
-//
-int  map_quit (struct map_session_data *);
+
+void map_quit (struct map_session_data *);
 // npc
 int  map_addnpc (int, struct npc_data *);
 
@@ -754,7 +756,7 @@ void map_log (const char *format, ...) __attribute__((format(printf, 1, 2)));
 
 #define MAP_LOG_PC(sd, fmt, args...) map_log("PC%d %d:%d,%d " fmt, sd->status.char_id, sd->bl.m, sd->bl.x, sd->bl.y, ## args)
 
-// 床アイテム関連
+// floor item methods
 void map_clearflooritem_timer (timer_id, tick_t, custom_id_t, custom_data_t);
 #define map_clearflooritem(id) map_clearflooritem_timer(0,0,id,1)
 int  map_addflooritem_any (struct item *, int amount, uint16_t m, uint16_t x, uint16_t y,
@@ -765,14 +767,14 @@ int  map_addflooritem (struct item *, int amount, uint16_t m, uint16_t x, uint16
                        struct map_session_data *, struct map_session_data *,
                        struct map_session_data *);
 
-// キャラid＝＞キャラ名 変換関連
-void map_addchariddb (int charid, const char *name);
-void map_delchariddb (int charid);
-int  map_reqchariddb (struct map_session_data *sd, int charid);
-char *map_charid2nick (int);
+// mappings between character id and names
+void map_addchariddb (charid_t charid, const char *name);
+void map_delchariddb (charid_t charid);
+void map_reqchariddb (struct map_session_data *sd, charid_t charid);
+const char *map_charid2nick (charid_t);
 
-struct map_session_data *map_id2sd (int);
-struct block_list *map_id2bl (int);
+struct map_session_data *map_id2sd (unsigned int);
+struct block_list *map_id2bl (unsigned int);
 int  map_mapname2mapid (const char *);
 int  map_mapname2ipport (const char *, in_addr_t *, in_port_t *);
 int  map_setipport (const char *name, in_addr_t ip, in_port_t port);
@@ -785,6 +787,7 @@ int  map_scriptcont (struct map_session_data *sd, int id);  /* Continues a scrip
 struct map_session_data *map_nick2sd (const char *);
 int  compare_item (struct item *a, struct item *b);
 
+// iterate over players
 struct map_session_data *map_get_first_session (void);
 struct map_session_data *map_get_last_session (void);
 struct map_session_data *map_get_next_session (struct map_session_data
@@ -792,9 +795,9 @@ struct map_session_data *map_get_next_session (struct map_session_data
 struct map_session_data *map_get_prev_session (struct map_session_data
                                                *current);
 
-// gat関連
-int  map_getcell (int, int, int);
-int  map_setcell (int, int, int, int);
+// edit the gat data
+uint8_t map_getcell (int, int, int);
+void map_setcell (int, int, int, uint8_t);
 
 // その他
 int  map_check_dir (int s_dir, int t_dir);

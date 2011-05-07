@@ -2111,8 +2111,8 @@ int do_init_npc (void)
     char line[1024];
     int  m, lines;
 
-    ev_db = strdb_init (24);
-    npcname_db = strdb_init (24);
+    ev_db = strdb_init ();
+    npcname_db = strdb_init ();
 
     ev_db->release = ev_release;
 

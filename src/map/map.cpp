@@ -1558,8 +1558,8 @@ void do_init (int argc, char *argv[])
     atexit (do_final);
 
     id_db = numdb_init ();
-    map_db = strdb_init (16);
-    nick_db = strdb_init (24);
+    map_db = strdb_init ();
+    nick_db = strdb_init ();
     charid_db = numdb_init ();
 
     map_readallmap ();

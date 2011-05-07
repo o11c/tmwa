@@ -22,11 +22,16 @@
 #  error "please compile with -m32"
 # endif
 
+# ifdef __cplusplus
+#  define UNUSED
+# else
 /// A name for unused function arguments - can be repeated
-# define UNUSED UNUSED_IMPL(__COUNTER__)
+#  define UNUSED UNUSED_IMPL(__COUNTER__)
 // Don't you just love the hoops the preprocessor makes you go through?
 #  define UNUSED_IMPL(arg) UNUSED_IMPL2(arg)
 #  define UNUSED_IMPL2(suffix) unused_ ## suffix __attribute__((unused))
+#endif
+
 /// Convert conditions to use the bool type
 # include <stdbool.h>
 /// Convert type assumptions to use the standard types here

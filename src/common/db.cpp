@@ -8,33 +8,27 @@
 
 #define ROOT_SIZE 4096
 
-static int strdb_cmp (struct dbt *table, const char *a, const char* b)
+static int strdb_cmp (const char *a, const char* b)
 {
-    if (table->maxlen)
-        return strncmp (a, b, table->maxlen);
     return strcmp (a, b);
 }
 
-static hash_t strdb_hash (struct dbt *table, const char *a)
+static hash_t strdb_hash (const char *a)
 {
-    size_t i = table->maxlen;
-    if (i == 0)
-        i = (size_t)-1;
     hash_t h = 0;
     const unsigned char *p = (const unsigned char*)a;
-    while (*p && i--)
+    while (*p)
     {
         h = (h * 33 + *p++) ^ (h >> 24);
     }
     return h;
 }
 
-struct dbt *strdb_init (size_t maxlen)
+struct dbt *strdb_init ()
 {
     struct dbt *table;
     CREATE (table, struct dbt, 1);
     table->type = DB_STRING;
-    table->maxlen = maxlen;
     return table;
 }
 
@@ -65,7 +59,7 @@ static int table_cmp (struct dbt *table, db_key_t a, db_key_t b)
     switch(table->type)
     {
     case DB_NUMBER: return numdb_cmp (a.i, b.i);
-    case DB_STRING: return strdb_cmp (table, a.s, b.s);
+    case DB_STRING: return strdb_cmp (a.s, b.s);
     }
     abort();
 }
@@ -75,7 +69,7 @@ static hash_t table_hash (struct dbt *table, db_key_t key)
     switch(table->type)
     {
     case DB_NUMBER: return numdb_hash (key.i);
-    case DB_STRING: return strdb_hash (table, key.s);
+    case DB_STRING: return strdb_hash (key.s);
     }
     abort();
 }

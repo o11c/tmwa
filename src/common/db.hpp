@@ -62,8 +62,6 @@ struct dbt
     /// Note, before replacement, key/values to be replaced
     // TODO refactor to decrease/eliminate the uses of this?
     void (*release) (db_key_t, db_val_t) __attribute__((deprecated));
-    /// Maximum length of a string key - TODO refactor to ensure all strings are NUL-terminated
-    size_t maxlen __attribute__((deprecated));
     /// The root trees
     struct dbn *ht[HASH_SIZE];
 };
@@ -79,8 +77,8 @@ struct dbt
 # define numdb_foreach       db_foreach
 # define numdb_final         db_final
 
-/// Create a map from char* to void*, with strings possibly not null-terminated
-struct dbt *strdb_init (size_t maxlen);
+/// Create a map from char* to void*, with strings always nul-terminated
+struct dbt *strdb_init ();
 /// Create a map from int to void*
 struct dbt *numdb_init (void);
 /// Return the value corresponding to the key, or NULL if not found

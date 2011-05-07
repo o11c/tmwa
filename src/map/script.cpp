@@ -68,7 +68,7 @@ struct dbt *script_get_label_db (void)
 struct dbt *script_get_userfunc_db (void)
 {
     if (!userfunc_db)
-        userfunc_db = strdb_init (50);
+        userfunc_db = strdb_init ();
     return userfunc_db;
 }
 
@@ -1391,7 +1391,7 @@ unsigned char *parse_script (unsigned char *src, int line)
     // 外部用label dbの初期化
     if (scriptlabel_db != NULL)
         strdb_final (scriptlabel_db, NULL);
-    scriptlabel_db = strdb_init (50);
+    scriptlabel_db = strdb_init ();
 
     // for error message
     startptr = src;
@@ -7272,6 +7272,6 @@ int do_init_script (void)
                         script_autosave_mapreg, 0, 0,
                         MAPREG_AUTOSAVE_INTERVAL);
 
-    scriptlabel_db = strdb_init (50);
+    scriptlabel_db = strdb_init ();
     return 0;
 }

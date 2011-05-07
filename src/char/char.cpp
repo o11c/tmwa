@@ -161,7 +161,7 @@ void char_log (const char *fmt, ...)
 }
 
 ///Return level of a GM (0 if not a GM)
-gm_level_t isGM (int account_id)
+static gm_level_t isGM (int account_id)
 {
     for (int i = 0; i < GM_num; i++)
         if (gm_account[i].account_id == account_id)
@@ -203,7 +203,7 @@ const char *get_character_name (int idx)
 }
 
 /// Write a line of character data
-void mmo_char_tofile (FILE *fp, struct mmo_charstatus *p)
+static void mmo_char_tofile (FILE *fp, struct mmo_charstatus *p)
 {
     // on multi-map server, sometimes it's posssible that last_point become void. (reason???)
     // We check that to not lost character at restart.
@@ -284,7 +284,7 @@ void mmo_char_tofile (FILE *fp, struct mmo_charstatus *p)
 
 ///Read character information from a line
 // return 0 or negative for errors, positive for OK
-int mmo_char_fromstr (char *str, struct mmo_charstatus *p)
+static int mmo_char_fromstr (char *str, struct mmo_charstatus *p)
 {
     memset (p, '\0', sizeof (struct mmo_charstatus));
 
@@ -432,7 +432,7 @@ int mmo_char_fromstr (char *str, struct mmo_charstatus *p)
 }
 
 /// Read and parse the characters file (athena.txt)
-void mmo_char_init (void)
+static void mmo_char_init (void)
 {
     char_max = 256;
     CREATE (char_dat, struct mmo_charstatus, 256);
@@ -536,7 +536,7 @@ void mmo_char_init (void)
 }
 
 /// Save characters in athena.txt
-void mmo_char_sync (void)
+static void mmo_char_sync (void)
 {
     int  id[char_num];
     /// Sort before save
@@ -575,7 +575,7 @@ void mmo_char_sync (void)
 //----------------------------------------------------
 // Function to save (in a periodic way) datas in files
 //----------------------------------------------------
-void mmo_char_sync_timer (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void mmo_char_sync_timer (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
 {
     if (pid && !waitpid (pid, NULL, WNOHANG))
         // still running
@@ -618,7 +618,7 @@ struct new_char_dat
 };
 
 /// Create a new character, from
-struct mmo_charstatus *make_new_char (int fd, uint8_t *raw_dat)
+static struct mmo_charstatus *make_new_char (int fd, uint8_t *raw_dat)
 {
     struct new_char_dat dat = *(struct new_char_dat *) raw_dat;
     struct char_session_data *sd = (struct char_session_data *)session[fd]->session_data;
@@ -808,7 +808,7 @@ struct mmo_charstatus *make_new_char (int fd, uint8_t *raw_dat)
 
 /// Generate online.txt and online.html
 // These files should be served in the root of the domain.
-void create_online_files (void)
+static void create_online_files (void)
 {
     if (!online_display_option)
         return;
@@ -1103,7 +1103,7 @@ static int find_equip_view (struct mmo_charstatus *p, unsigned int equipmask)
 }
 
 /// List slots
-void mmo_char_send006b (int fd, struct char_session_data *sd)
+static void mmo_char_send006b (int fd, struct char_session_data *sd)
 {
     int found_num = 0;
     for (int i = 0; i < char_num; i++)
@@ -1182,7 +1182,7 @@ void mmo_char_send006b (int fd, struct char_session_data *sd)
 
 /// Set a permanent variable on an account, rather than on a character
 // TODO inline this ?
-void set_account_reg2 (account_t acc, size_t num, struct global_reg *reg)
+static void set_account_reg2 (account_t acc, size_t num, struct global_reg *reg)
 {
     for (int i = 0; i < char_num; i++)
     {
@@ -1197,7 +1197,7 @@ void set_account_reg2 (account_t acc, size_t num, struct global_reg *reg)
 }
 
 /// Divorce a character from it's partner and let the map server know
-void char_divorce (struct mmo_charstatus *cs)
+static void char_divorce (struct mmo_charstatus *cs)
 {
     if (!cs)
         return;
@@ -1243,7 +1243,7 @@ void char_divorce (struct mmo_charstatus *cs)
 
 /// Forcibly disconnect an online player, by account (from login server)
 // called when sex changed, account deleted, or banished
-void disconnect_player (account_t account_id)
+static void disconnect_player (account_t account_id)
 {
     // disconnect player if online on char-server
     for (int i = 0; i < fd_max; i++)
@@ -1277,7 +1277,7 @@ static void char_delete (struct mmo_charstatus *cs)
     mapif_sendall (buf, 6);
 }
 
-void parse_tologin (int fd)
+static void parse_tologin (int fd)
 {
     if (fd != login_fd)
     {
@@ -1697,7 +1697,7 @@ void parse_tologin (int fd)
 }
 
 /// Map-server anti-freeze system
-void map_anti_freeze_system (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void map_anti_freeze_system (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
 {
     for (int i = 0; i < MAX_MAP_SERVERS; i++)
     {
@@ -1712,7 +1712,7 @@ void map_anti_freeze_system (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED,
     }
 }
 
-void parse_frommap (int fd)
+static void parse_frommap (int fd)
 {
     int id;
     for (id = 0; id < MAX_MAP_SERVERS; id++)
@@ -2180,7 +2180,7 @@ void parse_frommap (int fd)
 }
 
 /// Return index of the server with the given map
-int search_mapserver (const char *map)
+static int search_mapserver (const char *map)
 {
     char temp_map[16];
     STRZCPY (temp_map, map);
@@ -2202,15 +2202,9 @@ int search_mapserver (const char *map)
     return -1;
 }
 
-/// Currently just calls inter_mapif_init
-static void char_mapif_init (int fd)
-{
-    inter_mapif_init (fd);
-}
-
 /// Check if IP is LAN instead of WAN
 // (send alternate map IP)
-bool lan_ip_check (uint8_t *p)
+static bool lan_ip_check (uint8_t *p)
 {
     bool lancheck = 1;
     for (int i = 0; i < 4; i++)
@@ -2226,7 +2220,7 @@ bool lan_ip_check (uint8_t *p)
     return lancheck;
 }
 
-void parse_char (int fd)
+static void parse_char (int fd)
 {
     if (fd == login_fd)
     {
@@ -2574,7 +2568,6 @@ void parse_char (int fd)
             WFIFOSET (fd, 3);
             RFIFOSKIP (fd, 60);
             realloc_fifo (fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
-            char_mapif_init (fd);
             // send gm acccounts level to map-servers
             int len = 4;
             WFIFOW (fd, 0) = 0x2b15;
@@ -2662,7 +2655,7 @@ void mapif_send (int fd, const uint8_t *buf, unsigned int len)
 }
 
 /// Report number of users on maps to login server and all map servers
-void send_users_tologin (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void send_users_tologin (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
 {
     int  users = count_users ();
     uint8_t buf[16];
@@ -2680,7 +2673,7 @@ void send_users_tologin (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, cus
     mapif_sendall (buf, 6);
 }
 
-void check_connect_login_server (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void check_connect_login_server (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
 {
     // can both conditions really happen?
     if (login_fd >= 0 && session[login_fd])
@@ -2710,7 +2703,7 @@ void check_connect_login_server (timer_id UNUSED, tick_t UNUSED, custom_id_t UNU
 // This file is to give a different IP for connections from the LAN
 // Note: it assumes that all map-servers have the same IP, just different ports
 // if this isn't how it is set up, you'll have to do some port-forwarding
-void lan_config_read (const char *lancfgName)
+static void lan_config_read (const char *lancfgName)
 {
     // set default configuration
     STRZCPY (lan_map_ip, "127.0.0.1");
@@ -2814,7 +2807,7 @@ void lan_config_read (const char *lancfgName)
     printf ("---End reading of Lan Support configuration...\n");
 }
 
-void char_config_read (const char *cfgName)
+static void char_config_read (const char *cfgName)
 {
     FILE *fp = fopen_ (cfgName, "r");
 

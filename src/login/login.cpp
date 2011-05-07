@@ -161,7 +161,7 @@ pid_t pid = 0; // For forked DB writes
 #define VERSION_2_UPDATEHOST 0x01   // client supports updatehost
 #define VERSION_2_SERVERORDER 0x02  // send servers in forward order
 
-const char *ip_of (int fd)
+static const char *ip_of (int fd)
 {
     static char out[16];
     ip_to_str (session[fd]->client_addr.sin_addr.s_addr, out);
@@ -171,7 +171,7 @@ const char *ip_of (int fd)
 /// Sort accounts before saving or sending to ladmin
 // currently uses a bubble-sort - TODO replace with something better
 // FIXME - does this even need to be done at all?
-void sort_accounts (int id[])
+static void sort_accounts (int id[])
 {
     for (int i = 0; i < auth_num; i++)
     {
@@ -221,7 +221,7 @@ void login_log (const char *fmt, ...)
 }
 
 /// Determine GM level of account (0 is not a GM)
-gm_level_t isGM (account_t account_id)
+static gm_level_t isGM (account_t account_id)
 {
     struct gm_account *p = (struct gm_account*) numdb_search (gm_account_db, (numdb_key_t)account_id).p;
     if (!p)
@@ -230,7 +230,7 @@ gm_level_t isGM (account_t account_id)
 }
 
 /// Read GM accounts file
-void read_gm_account (void)
+static void read_gm_account (void)
 {
     if (gm_account_db)
         numdb_final(gm_account_db, NULL);
@@ -288,7 +288,7 @@ void read_gm_account (void)
 /// Check whether an IP is allowed by a mask
 // ip: IP address, network byte order
 // str: prefix x[.y[.z[.w]]] or mask x.x.x.x/# or x.x.x.x/y.y.y.y)
-bool check_ipmask (in_addr_t ip, const char *str)
+static bool check_ipmask (in_addr_t ip, const char *str)
 {
     uint8_t p[4];
     int offset = 0;
@@ -327,7 +327,7 @@ bool check_ipmask (in_addr_t ip, const char *str)
 // deny,allow      N       Y       N       Y
 // mutual-failure  N       Y       N       N
 
-bool check_ip (in_addr_t ip)
+static bool check_ip (in_addr_t ip)
 {
     if (access_allownum == 0 && access_denynum == 0)
         return 1;               // When there is no restriction, all IP are authorised.
@@ -356,7 +356,7 @@ bool check_ip (in_addr_t ip)
 
 /// Check whether an IP is allowed for ladmin
 // ip: IP address, network byte order
-bool check_ladminip (in_addr_t ip)
+static bool check_ladminip (in_addr_t ip)
 {
     if (access_ladmin_allownum == 0)
         return 1;
@@ -374,7 +374,7 @@ bool check_ladminip (in_addr_t ip)
 //   and returns index if only 1 account is found
 //   and similar to the searched name.
 //-----------------------------------------------
-struct auth_dat *account_by_name (char *account_name)
+static struct auth_dat *account_by_name (char *account_name)
 {
     int quantity = 0;
     struct auth_dat *loose = NULL;
@@ -392,7 +392,7 @@ struct auth_dat *account_by_name (char *account_name)
     return quantity == 1 ? loose : NULL;
 }
 
-struct auth_dat *account_by_id (account_t acc)
+static struct auth_dat *account_by_id (account_t acc)
 {
     for (int i = 0; i < auth_num; i++)
         if (auth_dat[i].account_id == acc)
@@ -401,7 +401,7 @@ struct auth_dat *account_by_id (account_t acc)
 }
 
 /// Save an auth to file
-void mmo_auth_to_file (FILE *fp, struct auth_dat *p)
+static void mmo_auth_to_file (FILE *fp, struct auth_dat *p)
 {
     fprintf (fp, "%u\t" "%s\t" "%s\t" "%s\t"
                  "%c\t" "%u\t" "%d\t" "%s\t"
@@ -424,7 +424,7 @@ void mmo_auth_to_file (FILE *fp, struct auth_dat *p)
 }
 
 /// Read save/account.txt
-void mmo_auth_init (void)
+static void mmo_auth_init (void)
 {
     int  GM_count = 0;
     int  server_count = 0;
@@ -586,7 +586,7 @@ void mmo_auth_init (void)
 
 /// Save accounts to database file (text)
 // usually called in a forked child, as it may take a while
-void mmo_auth_sync (void)
+static void mmo_auth_sync (void)
 {
     // Note: this is a vla
     int  id[auth_num];
@@ -632,7 +632,7 @@ void term_func (void)
 
 /// Timer to sync the DB to disk as little as possible
 // this is resource-intensive, so fork() if possible
-void check_auth_sync (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void check_auth_sync (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
 {
     if (pid && !waitpid (pid, NULL, WNOHANG))
         // if already running
@@ -652,7 +652,7 @@ void check_auth_sync (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom
 
 /// Send a packet to all char servers, excluding sfd
 // often called with sfd == -1 to not exclude anything
-void charif_sendallwos (int sfd, unsigned char *buf, unsigned int len)
+static void charif_sendallwos (int sfd, unsigned char *buf, unsigned int len)
 {
     for (int i = 0; i < MAX_SERVERS; i++)
     {
@@ -666,7 +666,7 @@ void charif_sendallwos (int sfd, unsigned char *buf, unsigned int len)
 }
 
 /// Send GM accounts to all char servers
-void send_GM_accounts (void)
+static void send_GM_accounts (void)
 {
     uint8_t buf[32000];
     int  len = 4;
@@ -688,7 +688,7 @@ void send_GM_accounts (void)
 
 /// Timer to check if GM file account have been changed
 // TODO replace this with inotify on systems where it is available
-void check_GM_file (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED,
+static void check_GM_file (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED,
                     custom_data_t UNUSED)
 {
     // if checking is disabled
@@ -709,7 +709,7 @@ void check_GM_file (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED,
 }
 
 /// Create a new account from the given connection
-account_t mmo_auth_new (struct mmo_account *account, const char *email)
+static account_t mmo_auth_new (struct mmo_account *account, const char *email)
 {
     if (auth_num >= auth_max)
     {
@@ -758,7 +758,7 @@ account_t mmo_auth_new (struct mmo_account *account, const char *email)
 }
 
 /// Try to authenticate a connection
-enum auth_failure mmo_auth (struct mmo_account *account, int fd)
+static enum auth_failure mmo_auth (struct mmo_account *account, int fd)
 {
     char ip[16];
     ip_to_str (session[fd]->client_addr.sin_addr.s_addr, ip);
@@ -864,7 +864,7 @@ enum auth_failure mmo_auth (struct mmo_account *account, int fd)
 }
 
 /// Kill char servers that don't send the common packet after 5 calls
-void char_anti_freeze_system (timer_id UNUSED, tick_t UNUSED,
+static void char_anti_freeze_system (timer_id UNUSED, tick_t UNUSED,
                               custom_id_t UNUSED, custom_data_t UNUSED)
 {
     for (int i = 0; i < MAX_SERVERS; i++)
@@ -885,7 +885,7 @@ void char_anti_freeze_system (timer_id UNUSED, tick_t UNUSED,
 /// Reload GM accounts
 /// Forwarded from map-server
 // uint16_t packet
-void x2709(int fd, int id)
+static void x2709(int fd, int id)
 {
     login_log ("Char-server '%s': Request to re-load GM configuration file (ip: %s).\n",
                server[id].name, ip_of (fd));
@@ -896,7 +896,7 @@ void x2709(int fd, int id)
 
 /// authenticate an account to the char-server
 // uint16_t packet, uint32_t acc, uint32_t login_id[2], char sex, uint32_t ip
-void x2712(int fd, int id)
+static void x2712(int fd, int id)
 {
     account_t acc = RFIFOL (fd, 2);
     for (int i = 0; i < AUTH_FIFO_SIZE; i++)
@@ -953,7 +953,7 @@ void x2712(int fd, int id)
 
 /// Report of number of users on the server
 // uint16_t packet, uint32_t usercount
-void x2714(int fd, int id)
+static void x2714(int fd, int id)
 {
     server[id].users = RFIFOL (fd, 2);
     if (anti_freeze_enable)
@@ -962,7 +962,7 @@ void x2714(int fd, int id)
 
 /// Request initial setting of email (no answer, but may fail)
 // uint16_t packet, uint32_t acc, char email[40]
-void x2715(int fd, int id)
+static void x2715(int fd, int id)
 {
     account_t acc = RFIFOL (fd, 2);
     char email[40];
@@ -994,7 +994,7 @@ void x2715(int fd, int id)
 
 /// Request email and expiration time
 // uint16_t packet, uint32_t account
-void x2716 (int fd, int id)
+static void x2716 (int fd, int id)
 {
     account_t acc = RFIFOL (fd, 2);
     struct auth_dat *auth = account_by_id (acc);
@@ -1015,7 +1015,7 @@ void x2716 (int fd, int id)
 
 /// Request to become GM
 // uint16_t packet, uint16_t len, char gm_pass[len]
-void x2720 (int fd, int id)
+static void x2720 (int fd, int id)
 {
     unsigned char buf[10];
     account_t acc = RFIFOL (fd, 4);
@@ -1061,7 +1061,7 @@ void x2720 (int fd, int id)
 
 /// Map server request (via char-server) to change an email
 // uint16_t packet, uint32_t acc, char email[40], char new_email[40]
-void x2722 (int fd, int id)
+static void x2722 (int fd, int id)
 {
     account_t acc = RFIFOL (fd, 2);
     char actual_email[40];
@@ -1112,7 +1112,7 @@ void x2722 (int fd, int id)
 
 /// change state of a player (only used for block/unblock)
 // uint16_t packet, uint32_t acc, uint32_t state (0 or 5)
-void x2724 (int fd, int id)
+static void x2724 (int fd, int id)
 {
     account_t acc = RFIFOL (fd, 2);
     enum auth_failure state = (enum auth_failure) RFIFOL (fd, 6);
@@ -1150,7 +1150,7 @@ void x2724 (int fd, int id)
 
 /// ban request from map-server (via char-server)
 // uint16_t packet, uint32_t acc, uint16_t Y,M,D,h,m,s
-void x2725 (int fd, int id)
+static void x2725 (int fd, int id)
 {
     account_t acc = RFIFOL (fd, 2);
     struct auth_dat *auth = account_by_id (acc);
@@ -1203,7 +1203,7 @@ void x2725 (int fd, int id)
 
 /// Request for sex change
 // uint16_t packet, uint32_t acc
-void x2727 (int fd, int id)
+static void x2727 (int fd, int id)
 {
     account_t acc = RFIFOL (fd, 2);
     struct auth_dat *auth = account_by_id (acc);
@@ -1238,7 +1238,7 @@ void x2727 (int fd, int id)
 /// Receive ## variables a char-server, and forward them to other char-servers
 // uint16_t packet, uint16_t len, {char[32] name, int32_t val}[]
 // note - this code assumes that len is proper, i.e len % 36 == 4
-void x2728 (int fd, int id)
+static void x2728 (int fd, int id)
 {
     account_t acc = RFIFOL (fd, 4);
     struct auth_dat *auth = account_by_id (acc);
@@ -1269,7 +1269,7 @@ void x2728 (int fd, int id)
 
 /// unban request
 // uint16_t packet, uint32_t acc
-void x272a (int fd, int id)
+static void x272a (int fd, int id)
 {
     account_t acc = RFIFOL (fd, 2);
     struct auth_dat *auth = account_by_id (acc);
@@ -1292,7 +1292,7 @@ void x272a (int fd, int id)
 
 /// request to change account password
 // uint16_t packet, uint32_t acc, char old[24], char new[24]
-void x2740 (int fd, int id)
+static void x2740 (int fd, int id)
 {
     account_t acc = RFIFOL (fd, 2);
     char actual_pass[24];
@@ -1334,7 +1334,7 @@ send_x272a_reply:
 
 
 /// Parse packets from a char server
-void parse_fromchar (int fd)
+static void parse_fromchar (int fd)
 {
     int id;
     for (id = 0; id < MAX_SERVERS; id++)
@@ -1507,7 +1507,7 @@ void parse_fromchar (int fd)
 
 /// Server version
 // uint16_t packet
-void x7530 (int fd, bool ladmin)
+static void x7530 (int fd, bool ladmin)
 {
     login_log ("%sRequest server version (ip: %s)\n", ladmin ? "'ladmin': " : "", ip_of (fd));
     WFIFOW (fd, 0) = 0x7531;
@@ -1535,7 +1535,7 @@ void x7530 (int fd, bool ladmin)
 
 /// Request of end of connection
 // uint16_t packet
-void x7532 (int fd, const char *pfx)
+static void x7532 (int fd, const char *pfx)
 {
     login_log ("%sEnd of connection (ip: %s)\n", pfx, ip_of (fd));
     session[fd]->eof = 1;
@@ -1543,7 +1543,7 @@ void x7532 (int fd, const char *pfx)
 
 /// Request list of accounts
 // uint16_t packet, uint32_t start, uint32_t end
-void x7920 (int fd)
+static void x7920 (int fd)
 {
     account_t st = RFIFOL (fd, 2);
     account_t ed = RFIFOL (fd, 6);
@@ -1582,7 +1582,7 @@ void x7920 (int fd)
 
 /// Itemfrob: change ID of an existing item
 // uint16_t packet, uint32_t old_id, uint32_t new_id
-void x7924 (int fd)
+static void x7924 (int fd)
 {
     charif_sendallwos (-1, RFIFOP (fd, 0), 10); // forward package to char servers
     WFIFOW (fd, 0) = 0x7925;
@@ -1591,7 +1591,7 @@ void x7924 (int fd)
 
 /// Request for account creation
 // uint16_t packet, char userid[24], char passwd[24], char sex, char email[40]
-void x7930 (int fd)
+static void x7930 (int fd)
 {
     struct mmo_account ma;
     ma.userid = (char *)RFIFOP (fd, 2);
@@ -1641,7 +1641,7 @@ void x7930 (int fd)
 
 /// Request for an account deletion
 // uint16_t packet, char userid[24]
-void x7932 (int fd)
+static void x7932 (int fd)
 {
     WFIFOW (fd, 0) = 0x7933;
     WFIFOL (fd, 2) = -1;
@@ -1675,7 +1675,7 @@ void x7932 (int fd)
 
 /// Request to change password
 // uint16_t packet, char userid[24], char passwd[24]
-void x7934 (int fd)
+static void x7934 (int fd)
 {
     WFIFOW (fd, 0) = 0x7935;
     WFIFOL (fd, 2) = -1;
@@ -1700,7 +1700,7 @@ void x7934 (int fd)
 /// Modify a state
 // uint16_t packet, char userid[24], uint32_t state, char error_message[20]
 // error_message is usually the date of the end of banishment
-void x7936 (int fd)
+static void x7936 (int fd)
 {
     WFIFOW (fd, 0) = 0x7937;
     WFIFOL (fd, 2) = -1;
@@ -1757,7 +1757,7 @@ void x7936 (int fd)
 
 /// Request for servers list and # of online players
 // uint32_t packet
-void x7938 (int fd)
+static void x7938 (int fd)
 {
     login_log ("'ladmin': Sending of servers list (ip: %s)\n", ip_of (fd));
     int server_num = 0;
@@ -1780,7 +1780,7 @@ void x7938 (int fd)
 
 /// Request to check password
 // uint16_t packet, char userid[24], char passwd[24]
-void x793a (int fd)
+static void x793a (int fd)
 {
     WFIFOW (fd, 0) = 0x793b;
     WFIFOL (fd, 2) = -1;
@@ -1814,7 +1814,7 @@ void x793a (int fd)
 
 /// Request to modify sex
 // uint32_t packet, char userid[24], char sex
-void x793c (int fd)
+static void x793c (int fd)
 {
     WFIFOW (fd, 0) = 0x793d;
     WFIFOL (fd, 2) = -1;
@@ -1865,7 +1865,7 @@ void x793c (int fd)
 
 /// Request to modify GM level
 // uint16_t packet, char userid[24], uint8_t new_gm_level
-void x793e (int fd)
+static void x793e (int fd)
 {
     WFIFOW (fd, 0) = 0x793f;
     WFIFOL (fd, 2) = -1;
@@ -1977,7 +1977,7 @@ end_x793e_lock:
 
 /// Request to modify e-mail
 // uint16_t packet, char userid[24], char email[40]
-void x7940 (int fd)
+static void x7940 (int fd)
 {
     WFIFOW (fd, 0) = 0x7941;
     WFIFOL (fd, 2) = -1;
@@ -2010,7 +2010,7 @@ void x7940 (int fd)
 
 /// Request to modify memo field
 // uint16_t packet, char usercount[24], uint16_t msglen, char msg[msglen]
-void x7942 (int fd)
+static void x7942 (int fd)
 {
     WFIFOW (fd, 0) = 0x7943;
     WFIFOL (fd, 2) = -1;
@@ -2038,7 +2038,7 @@ void x7942 (int fd)
 
 /// Find account id from name
 // uint16_t packet, char userid[24]
-void x7944 (int fd)
+static void x7944 (int fd)
 {
     WFIFOW (fd, 0) = 0x7945;
     WFIFOL (fd, 2) = -1;
@@ -2061,7 +2061,7 @@ void x7944 (int fd)
 
 /// Find an account name from id
 // uint16_t packet, uint32_t acc
-void x7946 (int fd)
+static void x7946 (int fd)
 {
     WFIFOW (fd, 0) = 0x7947;
     WFIFOL (fd, 2) = RFIFOL (fd, 2);
@@ -2081,7 +2081,7 @@ void x7946 (int fd)
 
 /// Set the validity timestamp
 // uint16_t packet, char userid[24], uint32_t timestamp
-void x7948 (int fd)
+static void x7948 (int fd)
 {
     WFIFOW (fd, 0) = 0x7949;
     WFIFOL (fd, 2) = -1;
@@ -2109,7 +2109,7 @@ void x7948 (int fd)
 
 /// Set the banishment timestamp
 // uint16_t packet, char userid[24], uint32_t timestamp
-void x794a (int fd)
+static void x794a (int fd)
 {
     WFIFOW (fd, 0) = 0x794b;
     WFIFOL (fd, 2) = -1;
@@ -2154,7 +2154,7 @@ void x794a (int fd)
 
 /// Adjust the banishment end timestamp
 // uint16_t packet, char userid[24], int16_t year,mon,day,hr,min,sec
-void x794c (int fd)
+static void x794c (int fd)
 {
     WFIFOW (fd, 0) = 0x794d;
     WFIFOL (fd, 2) = -1;
@@ -2217,7 +2217,7 @@ void x794c (int fd)
 /// Broadcast a message
 // uint16_t packet, uint16_t color, uint32_t msglen, char msg[msglen]
 // color is not with TMW client, but eA had yellow == 0, else blue
-void x794e (int fd)
+static void x794e (int fd)
 {
     WFIFOW (fd, 0) = 0x794f;
     WFIFOW (fd, 2) = -1;
@@ -2253,7 +2253,7 @@ void x794e (int fd)
 
 /// Adjust the validity timestamp
 // uint16_t packet, char userid[24], int16_t year,mon,day,hr,min,sec
-void x7950 (int fd)
+static void x7950 (int fd)
 {
     WFIFOW (fd, 0) = 0x7951;
     WFIFOL (fd, 2) = -1;
@@ -2315,7 +2315,7 @@ void x7950 (int fd)
     auth->connect_until_time = timestamp;
 }
 
-void ladmin_reply_account_info (int fd, struct auth_dat *auth)
+static void ladmin_reply_account_info (int fd, struct auth_dat *auth)
 {
     WFIFOL (fd, 2) = auth->account_id;
     WFIFOB (fd, 6) = isGM (auth->account_id);
@@ -2338,7 +2338,7 @@ void ladmin_reply_account_info (int fd, struct auth_dat *auth)
 /// Account information by name
 // uint16_t packet, char userid[24]
 // FIXME reduce duplication
-void x7952 (int fd)
+static void x7952 (int fd)
 {
     WFIFOW (fd, 0) = 0x7953;
     WFIFOL (fd, 2) = -1;
@@ -2363,7 +2363,7 @@ void x7952 (int fd)
 /// Account information by id
 // uint16_t packet, uint32_t acc
 // FIXME reduce duplication
-void x7954 (int fd)
+static void x7954 (int fd)
 {
     WFIFOW (fd, 0) = 0x7953;
     WFIFOL (fd, 2) = RFIFOL (fd, 2);
@@ -2384,7 +2384,7 @@ void x7954 (int fd)
 
 /// Request to reload GM file (no answer)
 // uint16_t packet
-void x7955 (int fd)
+static void x7955 (int fd)
 {
     login_log ("'ladmin': Request to re-load GM configuration file (ip: %s).\n",
                ip_of (fd));
@@ -2395,7 +2395,7 @@ void x7955 (int fd)
 
 
 /// Parse packets from an administration login
-void parse_admin (int fd)
+static void parse_admin (int fd)
 {
     if (session[fd]->eof)
     {
@@ -2665,7 +2665,7 @@ void parse_admin (int fd)
 
 /// Check if IP is LAN instead of WAN
 // (send alternate char IP)
-bool lan_ip_check (uint8_t *p)
+static bool lan_ip_check (uint8_t *p)
 {
     bool lancheck = 1;
     for (int i = 0; i < 4; i++)
@@ -2687,7 +2687,7 @@ bool lan_ip_check (uint8_t *p)
 /// Client is alive
 // uint16_t packet, char userid[24]
 // this packet is not sent by any known TMW server/client
-void x200(int UNUSED)
+static void x200(int UNUSED)
 {
 }
 
@@ -2695,13 +2695,13 @@ void x200(int UNUSED)
 // uint16_t packet, char crypted_userid[16]
 // (new ragexe from 22 june 2004)
 // this packet is not sent by any known TMW server/client
-void x204 (int UNUSED)
+static void x204 (int UNUSED)
 {
 }
 
 /// Client connect
 // uint16_t packet, uint8_t unk[4], char userid[24], char passwd[24], uint8_t version_2_flags
-void x64 (int fd)
+static void x64 (int fd)
 {
     struct mmo_account account;
     account.userid = (char *)RFIFOP (fd, 6);
@@ -2852,7 +2852,7 @@ void x64 (int fd)
 
 /// Sending request of the coding key (ladmin packet)
 // uint16_t packet
-void x791a (int fd)
+static void x791a (int fd)
 {
     if (session[fd]->session_data)
     {
@@ -2880,7 +2880,7 @@ void x791a (int fd)
 // uint16_t packet, char userid[24], char passwd[24], char unk[4],
 //   uint32_t ip, uint16_t port, char server_name[20],
 //   char unk[2], uint16_t maintenance, uint16_t is_new
-void x2710 (int fd)
+static void x2710 (int fd)
 {
     struct mmo_account account;
     account.userid = (char *)RFIFOP (fd, 2);
@@ -2962,7 +2962,7 @@ char_server_ok:
 /// Request for administation login
 // uint16_t packet, uint16_t type = {0,1,2}, char passwd[24] (if type 0) or uint8_t hash[16] otherwise
 // ladmin always sends the encrypted form
-void x7918 (int fd)
+static void x7918 (int fd)
 {
     WFIFOW (fd, 0) = 0x7919;
     WFIFOB (fd, 2) = 1;
@@ -3028,7 +3028,7 @@ void x7918 (int fd)
 /// Default packet parsing
 // * normal players
 // * administation/char-server before authenticated
-void parse_login (int fd)
+static void parse_login (int fd)
 {
     if (session[fd]->eof)
     {
@@ -3164,7 +3164,7 @@ void parse_login (int fd)
 // This file is to give a different IP for connections from the LAN
 // Note: it assumes that all char-servers have the same IP, just different ports
 // if this isn't how it it set up, you'll have to do some port-forwarding
-void login_lan_config_read (const char *lancfgName)
+static void login_lan_config_read (const char *lancfgName)
 {
     // set default configuration
     STRZCPY (lan_char_ip, "127.0.0.1");
@@ -3279,7 +3279,7 @@ void login_lan_config_read (const char *lancfgName)
 /// Read general configuration file
 // Note: DO NOT call login_log in here; its name is an option!
 //-----------------------------------
-void login_config_read (const char *cfgName)
+static void login_config_read (const char *cfgName)
 {
     char line[1024], w1[1024], w2[1024];
     FILE *fp = fopen_ (cfgName, "r");
@@ -3528,7 +3528,7 @@ void login_config_read (const char *cfgName)
 /// Displaying of configuration warnings
 // this is not done while parsing because the log filename might change
 // TODO merge it anyways, since this isn't logged :/
-void display_conf_warnings (void)
+static void display_conf_warnings (void)
 {
     if (admin_state)
     {
@@ -3627,7 +3627,7 @@ void display_conf_warnings (void)
 //-------------------------------
 // Save configuration in log file
 //-------------------------------
-void save_config_in_log (void)
+static void save_config_in_log (void)
 {
     login_log ("\nThe login-server starting...\n");
 
@@ -3794,7 +3794,7 @@ void save_config_in_log (void)
 
 /// Function called at exit of the server
 // is all of this really needed?
-void do_final (void)
+static void do_final (void)
 {
     mmo_auth_sync ();
 

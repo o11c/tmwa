@@ -15,7 +15,7 @@ char storage_txt[1024] = "save/storage.txt";
 static struct dbt *storage_db;
 
 /// Store items for one account, IF it is not empty
-void storage_tofile (FILE *fp, struct storage *p)
+static void storage_tofile (FILE *fp, struct storage *p)
 {
     for (int i = 0; i < MAX_STORAGE; i++)
         if (p->storage_[i].nameid && p->storage_[i].amount)
@@ -41,7 +41,7 @@ actually_store:
 }
 
 /// Load somebody's storage
-bool storage_fromstr (const char *str, struct storage *p)
+static bool storage_fromstr (const char *str, struct storage *p)
 {
     int next;
     if (sscanf (str, "%u,%hd%n", &p->account_id, &p->storage_amount, &next) != 2)
@@ -125,7 +125,7 @@ bool inter_storage_init (void)
     return 0;
 }
 
-void storage_db_final (db_key_t UNUSED, db_val_t data, va_list UNUSED)
+static void storage_db_final (db_key_t UNUSED, db_val_t data, va_list UNUSED)
 {
     free (data.p);
 }
@@ -133,11 +133,10 @@ void storage_db_final (db_key_t UNUSED, db_val_t data, va_list UNUSED)
 void inter_storage_final (void)
 {
     numdb_final (storage_db, storage_db_final);
-    return;
 }
 
 /// Save somebody's storage
-void inter_storage_save_sub (db_key_t UNUSED, db_val_t data, va_list ap)
+static void inter_storage_save_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
     FILE *fp = va_arg (ap, FILE *);
     storage_tofile (fp, (struct storage *) data.p);
@@ -175,7 +174,7 @@ void inter_storage_delete (account_t account_id)
 
 
 /// Give map server the storage info
-void mapif_load_storage (int fd)
+static void mapif_load_storage (int fd)
 {
     account_t account_id = WFIFOL (fd, 2);
     struct storage *s = account2storage (account_id);
@@ -189,7 +188,7 @@ void mapif_load_storage (int fd)
 
 
 /// The map server updates storage
-void mapif_parse_save_storage (int fd)
+static void mapif_parse_save_storage (int fd)
 {
     uint16_t len = RFIFOW (fd, 2);
     if (sizeof (struct storage) != len - 8)

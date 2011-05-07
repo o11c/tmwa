@@ -31,7 +31,7 @@ static void sig_proc (int UNUSED)
 // Programming in the UNIX Environment_.
 //
 typedef void (*sigfunc)(int);
-sigfunc compat_signal (int signo, sigfunc func)
+static sigfunc compat_signal (int signo, sigfunc func)
 {
     struct sigaction sact, oact;
 

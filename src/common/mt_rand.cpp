@@ -70,7 +70,7 @@ void mt_seed (uint32_t seed)
     for (int j = N; *s++ = x, --j; x *= 69069U);
 }
 
-void mt_reload (void)
+static void mt_reload (void)
 {
     // if mt_seed has never been called
     if (left < -1)

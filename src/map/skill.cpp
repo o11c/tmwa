@@ -824,7 +824,7 @@ int skill_get_mhp (int id, int lv)
     return (lv <= 0) ? 0 : skill_db[id].mhp[lv - 1];
 }
 
-int skill_get_castnodex (int id, int lv)
+static int skill_get_castnodex (int id, int lv)
 {
     return (lv <= 0) ? 0 : skill_db[id].castnodex[lv - 1];
 }
@@ -834,9 +834,6 @@ struct skill_unit_group *skill_unitsetting (struct block_list *src,
                                             int skillid, int skilllv, int x,
                                             int y, int flag);
 int  skill_check_condition (struct map_session_data *sd, int type);
-int  skill_castend_damage_id (struct block_list *src, struct block_list *bl,
-                              int skillid, int skilllv, unsigned int tick,
-                              int flag);
 int  skill_frostjoke_scream (struct block_list *bl, va_list ap);
 int  skill_status_change_timer_sub (struct block_list *bl, va_list ap);
 int  skill_attack_area (struct block_list *bl, va_list ap);
@@ -1525,7 +1522,7 @@ int skill_additional_effect (struct block_list *src, struct block_list *bl,
 /*=========================================================================
  スキル攻撃吹き飛ばし処理
 -------------------------------------------------------------------------*/
-int skill_blown (struct block_list *src, struct block_list *target, int count)
+static int skill_blown (struct block_list *src, struct block_list *target, int count)
 {
     int  dx = 0, dy = 0, nx, ny;
     int  x = target->x, y = target->y;
@@ -2079,7 +2076,7 @@ int skill_attack (int attack_type, struct block_list *src,
 static int skill_area_temp[8];  /* 一時変数。必要なら使う。 */
 typedef int (*SkillFunc) (struct block_list *, struct block_list *, int, int,
                           unsigned int, int);
-int skill_area_sub (struct block_list *bl, va_list ap)
+static int skill_area_sub (struct block_list *bl, va_list ap)
 {
     struct block_list *src;
     int  skill_id, skill_lv, flag;
@@ -2225,7 +2222,7 @@ int skill_check_unit_range2 (int m, int x, int y, int range)
  * 範囲スキル使用処理小分けここから
  */
 /* 対象の数をカウントする。（skill_area_temp[0]を初期化しておくこと） */
-int skill_area_sub_count (struct block_list *UNUSED, struct block_list *UNUSED,
+static int skill_area_sub_count (struct block_list *UNUSED, struct block_list *UNUSED,
                           int UNUSED, int UNUSED, unsigned int UNUSED,
                           int UNUSED)
 {
@@ -5115,7 +5112,7 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl,
  * スキル使用（詠唱完了、ID指定）
  *------------------------------------------
  */
-void skill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data_t UNUSED)
+static void skill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data_t UNUSED)
 {
     struct map_session_data *sd = map_id2sd (id) /*,*target_sd=NULL */ ;
     struct block_list *bl;
@@ -6228,7 +6225,7 @@ struct skill_unit_group *skill_unitsetting (struct block_list *src,
  * スキルユニットの発動イベント
  *------------------------------------------
  */
-int skill_unit_onplace (struct skill_unit *src, struct block_list *bl,
+static int skill_unit_onplace (struct skill_unit *src, struct block_list *bl,
                         unsigned int tick)
 {
     struct skill_unit_group *sg;
@@ -6686,7 +6683,7 @@ int skill_unit_onplace (struct skill_unit *src, struct block_list *bl,
  * スキルユニットから離脱する(もしくはしている)場合
  *------------------------------------------
  */
-int skill_unit_onout (struct skill_unit *src, struct block_list *bl,
+static int skill_unit_onout (struct skill_unit *src, struct block_list *bl,
                       unsigned int tick)
 {
     struct skill_unit_group *sg;
@@ -6815,7 +6812,7 @@ int skill_unit_onout (struct skill_unit *src, struct block_list *bl,
  * スキルユニットの削除イベント
  *------------------------------------------
  */
-int skill_unit_ondelete (struct skill_unit *src, struct block_list *bl,
+static int skill_unit_ondelete (struct skill_unit *src, struct block_list *bl,
                          unsigned int tick)
 {
     struct skill_unit_group *sg;
@@ -6872,7 +6869,7 @@ int skill_unit_ondelete (struct skill_unit *src, struct block_list *bl,
  * スキルユニットの限界イベント
  *------------------------------------------
  */
-int skill_unit_onlimit (struct skill_unit *src, unsigned int UNUSED)
+static int skill_unit_onlimit (struct skill_unit *src, unsigned int UNUSED)
 {
     struct skill_unit_group *sg;
 
@@ -6952,7 +6949,7 @@ int skill_unit_ondamaged (struct skill_unit *src, struct block_list *bl,
  * スキル使用（詠唱完了、場所指定）
  *------------------------------------------
  */
-void skill_castend_pos (timer_id tid, tick_t tick, custom_id_t id, custom_data_t UNUSED)
+static void skill_castend_pos (timer_id tid, tick_t tick, custom_id_t id, custom_data_t UNUSED)
 {
     struct map_session_data *sd = map_id2sd (id) /*,*target_sd=NULL */ ;
     int  range, maxcount;
@@ -8820,7 +8817,7 @@ int skill_landprotector (struct block_list *bl, va_list ap)
  * イドゥンの林檎の回復処理(foreachinarea)
  *------------------------------------------
  */
-int skill_idun_heal (struct block_list *bl, va_list ap)
+static int skill_idun_heal (struct block_list *bl, va_list ap)
 {
     struct skill_unit *unit;
     struct skill_unit_group *sg;
@@ -11172,7 +11169,7 @@ int skill_unitgrouptickset_delete (struct block_list *bl, int group_id)
  * スキルユニットタイマー発動処理用(foreachinarea)
  *------------------------------------------
  */
-int skill_unit_timer_sub_onplace (struct block_list *bl, va_list ap)
+static int skill_unit_timer_sub_onplace (struct block_list *bl, va_list ap)
 {
     struct block_list *src;
     struct skill_unit *su;
@@ -11226,7 +11223,7 @@ int skill_unit_timer_sub_ondelete (struct block_list *bl, va_list ap)
  * スキルユニットタイマー処理用(foreachobject)
  *------------------------------------------
  */
-int skill_unit_timer_sub (struct block_list *bl, va_list ap)
+static int skill_unit_timer_sub (struct block_list *bl, va_list ap)
 {
     struct skill_unit *unit;
     struct skill_unit_group *group;
@@ -11316,7 +11313,7 @@ int skill_unit_timer_sub (struct block_list *bl, va_list ap)
  * スキルユニットタイマー処理
  *------------------------------------------
  */
-void skill_unit_timer (timer_id UNUSED, tick_t tick, custom_id_t UNUSED, custom_data_t UNUSED)
+static void skill_unit_timer (timer_id UNUSED, tick_t tick, custom_id_t UNUSED, custom_data_t UNUSED)
 {
     map_freeblock_lock ();
 
@@ -11329,7 +11326,7 @@ void skill_unit_timer (timer_id UNUSED, tick_t tick, custom_id_t UNUSED, custom_
  * スキルユニット移動時処理用(foreachinarea)
  *------------------------------------------
  */
-int skill_unit_out_all_sub (struct block_list *bl, va_list ap)
+static int skill_unit_out_all_sub (struct block_list *bl, va_list ap)
 {
     struct skill_unit *unit;
     struct skill_unit_group *group;
@@ -11384,7 +11381,7 @@ int skill_unit_out_all (struct block_list *bl, unsigned int tick, int range)
  * スキルユニット移動時処理用(foreachinarea)
  *------------------------------------------
  */
-int skill_unit_move_sub (struct block_list *bl, va_list ap)
+static int skill_unit_move_sub (struct block_list *bl, va_list ap)
 {
     struct skill_unit *unit;
     struct skill_unit_group *group;
@@ -11442,7 +11439,7 @@ int skill_unit_move (struct block_list *bl, unsigned int tick, int range)
  * スキルユニット自体の移動時処理(foreachinarea)
  *------------------------------------------
  */
-int skill_unit_move_unit_group_sub (struct block_list *bl, va_list ap)
+static int skill_unit_move_unit_group_sub (struct block_list *bl, va_list ap)
 {
     struct skill_unit *unit;
     struct skill_unit_group *group;
@@ -11655,15 +11652,13 @@ static int scan_stat (char *statname)
     return 0;
 }
 
-extern void skill_pool_register (int id);   // [Fate] Remember that a certain skill ID belongs to a pool skill
-
 /*==========================================
  * スキル関係ファイル読み込み
  * skill_db.txt スキルデータ
  * skill_cast_db.txt スキルの詠唱時間とディレイデータ
  *------------------------------------------
  */
-int skill_readdb (void)
+static int skill_readdb (void)
 {
     int  i, j, k, l;
     FILE *fp;

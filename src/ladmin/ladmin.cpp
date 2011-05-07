@@ -285,7 +285,7 @@ int ladmin_log (const char *fmt, ...)
 //---------------------------------------------
 // Function to return ordonal text of a number.
 //---------------------------------------------
-const char *makeordinal (int number)
+static const char *makeordinal (int number)
 {
     if ((number % 10) < 4 && (number % 10) != 0
         && (number < 10 || number > 20))
@@ -306,7 +306,7 @@ const char *makeordinal (int number)
 //-----------------------------------------------------------------------------------------
 // Function to test of the validity of an account name (return 0 if incorrect, and 1 if ok)
 //-----------------------------------------------------------------------------------------
-int verify_accountname (char *account_name)
+static int verify_accountname (char *account_name)
 {
     int  i;
 
@@ -342,7 +342,7 @@ int verify_accountname (char *account_name)
 //----------------------------------
 // Sub-function: Input of a password
 //----------------------------------
-int typepasswd (char *password)
+static int typepasswd (char *password)
 {
     char password1[1023], password2[1023];
     int  letter;
@@ -381,7 +381,7 @@ int typepasswd (char *password)
 //------------------------------------------------------------------------------------
 // Sub-function: Test of the validity of password (return 0 if incorrect, and 1 if ok)
 //------------------------------------------------------------------------------------
-int verify_password (char *password)
+static int verify_password (char *password)
 {
     int  i;
 
@@ -417,7 +417,7 @@ int verify_password (char *password)
 //------------------------------------------------------------------
 // Sub-function: Check the name of a command (return complete name)
 //-----------------------------------------------------------------
-int check_command (char *command)
+static int check_command (char *command)
 {
 // help
     if (strncmp (command, "aide", 2) == 0 && strncmp (command, "aide", strlen (command)) == 0)  // not 1 letter command: 'aide' or 'add'?
@@ -544,7 +544,7 @@ int check_command (char *command)
 //-----------------------------------------
 // Sub-function: Display commands of ladmin
 //-----------------------------------------
-void display_help (char *param)
+static void display_help (char *param)
 {
     char command[1023];
     int  i;
@@ -891,7 +891,7 @@ void display_help (char *param)
 //-----------------------------
 // Sub-function: add an account
 //-----------------------------
-int addaccount (char *param, int emailflag)
+static int addaccount (char *param, int emailflag)
 {
     char name[1023], sex[1023], email[1023], password[1023];
 //  int i;
@@ -1002,7 +1002,7 @@ int addaccount (char *param, int emailflag)
 //---------------------------------------------------------------------------------
 // Sub-function: Add/substract time to the final date of a banishment of an account
 //---------------------------------------------------------------------------------
-int banaddaccount (char *param)
+static int banaddaccount (char *param)
 {
     char name[1023], modif[1023];
     int  year, month, day, hour, minute, second;
@@ -1168,7 +1168,7 @@ int banaddaccount (char *param)
 // Sub-function of sub-function banaccount, unbanaccount or bansetaccount
 // Set the final date of a banishment of an account
 //-----------------------------------------------------------------------
-int bansetaccountsub (char *name, const char *date, const char *time_)
+static int bansetaccountsub (char *name, const char *date, const char *time_)
 {
     int  year, month, day, hour, minute, second;
     time_t ban_until_time;      // # of seconds 1/1/1970 (timestamp): ban time limit of the account (0 = no ban)
@@ -1280,7 +1280,7 @@ int bansetaccountsub (char *name, const char *date, const char *time_)
 //---------------------------------------------------------------------
 // Sub-function: Set the final date of a banishment of an account (ban)
 //---------------------------------------------------------------------
-int banaccount (char *param)
+static int banaccount (char *param)
 {
     char name[1023], date[1023], time_[1023];
 
@@ -1308,7 +1308,7 @@ int banaccount (char *param)
 //------------------------------------------------------------------------
 // Sub-function: Set the final date of a banishment of an account (banset)
 //------------------------------------------------------------------------
-int bansetaccount (char *param)
+static int bansetaccount (char *param)
 {
     char name[1023], date[1023], time_[1023];
 
@@ -1339,7 +1339,7 @@ int bansetaccount (char *param)
 //-------------------------------------------------
 // Sub-function: unbanishment of an account (unban)
 //-------------------------------------------------
-int unbanaccount (char *param)
+static int unbanaccount (char *param)
 {
     char name[1023];
 
@@ -1367,7 +1367,7 @@ int unbanaccount (char *param)
 // Sub-function: Asking to check the validity of a password
 // (Note: never send back a password with login-server!! security of passwords)
 //---------------------------------------------------------
-int checkaccount (char *param)
+static int checkaccount (char *param)
 {
     char name[1023], password[1023];
 
@@ -1411,7 +1411,7 @@ int checkaccount (char *param)
 //------------------------------------------------
 // Sub-function: Asking for deletion of an account
 //------------------------------------------------
-int delaccount (char *param)
+static int delaccount (char *param)
 {
     char name[1023];
     char letter;
@@ -1467,7 +1467,7 @@ int delaccount (char *param)
 //----------------------------------------------------------
 // Sub-function: Asking to modification of an account e-mail
 //----------------------------------------------------------
-int changeemail (char *param)
+static int changeemail (char *param)
 {
     char name[1023], email[1023];
 
@@ -1528,7 +1528,7 @@ int changeemail (char *param)
 //-----------------------------------------------------
 // Sub-function: Asking of the number of online players
 //-----------------------------------------------------
-int getlogincount (void)
+static int getlogincount (void)
 {
     ladmin_log ("Request to login-server to obtain the # of online players.\n");
 
@@ -1542,7 +1542,7 @@ int getlogincount (void)
 //----------------------------------------------------------
 // Sub-function: Asking to modify the GM level of an account
 //----------------------------------------------------------
-int changegmlevel (char *param)
+static int changegmlevel (char *param)
 {
     char name[1023];
     int  GM_level;
@@ -1588,7 +1588,7 @@ int changegmlevel (char *param)
 //---------------------------------------------
 // Sub-function: Asking to obtain an account id
 //---------------------------------------------
-int idaccount (char *param)
+static int idaccount (char *param)
 {
     char name[1023];
 
@@ -1623,7 +1623,7 @@ int idaccount (char *param)
 //----------------------------------------------------------------------------
 // Sub-function: Asking to displaying information about an account (by its id)
 //----------------------------------------------------------------------------
-int infoaccount (int account_id)
+static int infoaccount (int account_id)
 {
     if (account_id < 0)
     {
@@ -1645,7 +1645,7 @@ int infoaccount (int account_id)
 //---------------------------------------
 // Sub-function: Send a broadcast message
 //---------------------------------------
-int sendbroadcast (short type, char *message)
+static int sendbroadcast (short type, char *message)
 {
     if (strlen (message) == 0)
     {
@@ -1675,7 +1675,7 @@ int sendbroadcast (short type, char *message)
 //--------------------------------------------------------
 // Sub-function: Asking to Displaying of the accounts list
 //--------------------------------------------------------
-int listaccount (char *param, int type)
+static int listaccount (char *param, int type)
 {
 //int list_first, list_last, list_type; // parameter to display a list of accounts
     int  i;
@@ -1743,7 +1743,7 @@ int listaccount (char *param, int type)
 //--------------------------------------------------------
 // Sub-function: Frobnicate items
 //--------------------------------------------------------
-int itemfrob (char *param)
+static int itemfrob (char *param)
 {
     int  source_id, dest_id;
 
@@ -1765,7 +1765,7 @@ int itemfrob (char *param)
 //--------------------------------------------
 // Sub-function: Asking to modify a memo field
 //--------------------------------------------
-int changememo (char *param)
+static int changememo (char *param)
 {
     char name[1023], memo[1023];
 
@@ -1812,7 +1812,7 @@ int changememo (char *param)
 //-----------------------------------------------
 // Sub-function: Asking to obtain an account name
 //-----------------------------------------------
-int nameaccount (int id)
+static int nameaccount (int id)
 {
     if (id < 0)
     {
@@ -1835,7 +1835,7 @@ int nameaccount (int id)
 // Sub-function: Asking to modify a password
 // (Note: never send back a password with login-server!! security of passwords)
 //------------------------------------------
-int changepasswd (char *param)
+static int changepasswd (char *param)
 {
     char name[1023], password[1023];
 
@@ -1880,7 +1880,7 @@ int changepasswd (char *param)
 // Sub-function: Request to login-server to reload GM configuration file
 // this function have no answer
 //----------------------------------------------------------------------
-int reloadGM (void)
+static int reloadGM (void)
 {
     WFIFOW (login_fd, 0) = 0x7955;
     WFIFOSET (login_fd, 2);
@@ -1897,7 +1897,7 @@ int reloadGM (void)
 //-----------------------------------------------------
 // Sub-function: Asking to modify the sex of an account
 //-----------------------------------------------------
-int changesex (char *param)
+static int changesex (char *param)
 {
     char name[1023], sex[1023];
 
@@ -1942,7 +1942,7 @@ int changesex (char *param)
 // Sub-function of sub-function changestate, blockaccount or unblockaccount
 // Asking to modify the state of an account
 //-------------------------------------------------------------------------
-int changestatesub (char *name, int state, const char *error_message7)
+static int changestatesub (char *name, int state, const char *error_message7)
 {
     char error_message[1023];   // need to use, because we can modify error_message7
 
@@ -2006,7 +2006,7 @@ int changestatesub (char *name, int state, const char *error_message7)
 //-------------------------------------------------------
 // Sub-function: Asking to modify the state of an account
 //-------------------------------------------------------
-int changestate (char *param)
+static int changestate (char *param)
 {
     char name[1023], error_message[1023];
     int  state;
@@ -2035,7 +2035,7 @@ int changestate (char *param)
 //-------------------------------------------
 // Sub-function: Asking to unblock an account
 //-------------------------------------------
-int unblockaccount (char *param)
+static int unblockaccount (char *param)
 {
     char name[1023];
 
@@ -2061,7 +2061,7 @@ int unblockaccount (char *param)
 //-------------------------------------------
 // Sub-function: Asking to unblock an account
 //-------------------------------------------
-int blockaccount (char *param)
+static int blockaccount (char *param)
 {
     char name[1023];
 
@@ -2087,7 +2087,7 @@ int blockaccount (char *param)
 //---------------------------------------------------------------------
 // Sub-function: Add/substract time to the validity limit of an account
 //---------------------------------------------------------------------
-int timeaddaccount (char *param)
+static int timeaddaccount (char *param)
 {
     char name[1023], modif[1023];
     int  year, month, day, hour, minute, second;
@@ -2252,7 +2252,7 @@ int timeaddaccount (char *param)
 //-------------------------------------------------
 // Sub-function: Set a validity limit of an account
 //-------------------------------------------------
-int timesetaccount (char *param)
+static int timesetaccount (char *param)
 {
     char name[1023], date[1023], time_[1023];
     int  year, month, day, hour, minute, second;
@@ -2381,7 +2381,7 @@ int timesetaccount (char *param)
 //------------------------------------------------------------------------------
 // Sub-function: Asking to displaying information about an account (by its name)
 //------------------------------------------------------------------------------
-int whoaccount (char *param)
+static int whoaccount (char *param)
 {
     char name[1023];
 
@@ -2415,7 +2415,7 @@ int whoaccount (char *param)
 //--------------------------------------------------------
 // Sub-function: Asking of the version of the login-server
 //--------------------------------------------------------
-int checkloginversion (void)
+static int checkloginversion (void)
 {
     ladmin_log ("Request to login-server to obtain its version.\n");
 
@@ -2431,7 +2431,7 @@ int checkloginversion (void)
 // this function wait until user type a command
 // and analyse the command.
 //---------------------------------------------
-int prompt (void)
+static int prompt (void)
 {
     int  i, j;
     char buf[1024];
@@ -2706,7 +2706,7 @@ int prompt (void)
 //-------------------------------------------------------------
 // Function: Parse receiving informations from the login-server
 //-------------------------------------------------------------
-void parse_fromlogin (int fd)
+static void parse_fromlogin (int fd)
 {
     if (session[fd]->eof)
     {
@@ -3541,7 +3541,7 @@ void parse_fromlogin (int fd)
 //------------------------------------
 // Function to connect to login-server
 //------------------------------------
-int Connect_login_server (void)
+static int Connect_login_server (void)
 {
     Iprintf ("Attempt to connect to login-server...\n");
     ladmin_log ("Attempt to connect to login-server...\n");
@@ -3575,7 +3575,7 @@ int Connect_login_server (void)
 //-----------------------------------
 // Reading general configuration file
 //-----------------------------------
-int ladmin_config_read (const char *cfgName)
+static int ladmin_config_read (const char *cfgName)
 {
     char line[1024], w1[1024], w2[1024];
     FILE *fp;

@@ -246,8 +246,6 @@ int  buildin_get_unactivated_pool_skills (struct script_state *st);   // [PO]
 int  buildin_activate_pool_skill (struct script_state *st); // [fate]
 int  buildin_deactivate_pool_skill (struct script_state *st);   // [fate]
 int  buildin_check_pool_skill (struct script_state *st);    // [fate]
-int  buildin_getskilllist (struct script_state *st);
-int  buildin_getskilllist (struct script_state *st);
 int  buildin_clearitem (struct script_state *st);
 int  buildin_classchange (struct script_state *st);
 int  buildin_misceffect (struct script_state *st);
@@ -667,8 +665,6 @@ struct builtin_function
     {
 NULL, NULL, NULL},};
 
-int  buildin_message (struct script_state *st); // [MouseJstr]
-
 enum
 {
     C_NOP, C_POS, C_INT, C_PARAM, C_FUNC, C_STR, C_CONSTSTR, C_ARG,
@@ -872,7 +868,7 @@ static void add_scriptl (int l)
  * ラベルを解決する
  *------------------------------------------
  */
-void set_label (int l, int pos)
+static void set_label (int l, int pos)
 {
     int  i, next;
 
@@ -998,7 +994,7 @@ static void disp_error_message (const char *mes, script_ptr pos)
  * 項の解析
  *------------------------------------------
  */
-unsigned char *parse_simpleexpr (unsigned char *p)
+static unsigned char *parse_simpleexpr (unsigned char *p)
 {
     int  i;
     p = skip_space (p);
@@ -1218,7 +1214,7 @@ unsigned char *parse_subexpr (unsigned char *p, int limit)
  * 式の評価
  *------------------------------------------
  */
-unsigned char *parse_expr (unsigned char *p)
+static unsigned char *parse_expr (unsigned char *p)
 {
     switch (*p)
     {
@@ -1239,7 +1235,7 @@ unsigned char *parse_expr (unsigned char *p)
  * 行の解析
  *------------------------------------------
  */
-unsigned char *parse_line (unsigned char *p)
+static unsigned char *parse_line (unsigned char *p)
 {
     int  i = 0, cmd;
     script_ptr plist[128];
@@ -1482,7 +1478,7 @@ enum
  * ridからsdへの解決
  *------------------------------------------
  */
-struct map_session_data *script_rid2sd (struct script_state *st)
+static struct map_session_data *script_rid2sd (struct script_state *st)
 {
     struct map_session_data *sd = map_id2sd (st->rid);
     if (!sd)
@@ -1496,7 +1492,7 @@ struct map_session_data *script_rid2sd (struct script_state *st)
  * 変数の読み取り
  *------------------------------------------
  */
-int get_val (struct script_state *st, struct script_data *data)
+static int get_val (struct script_state *st, struct script_data *data)
 {
     struct map_session_data *sd = NULL;
     if (data->type == C_NAME)
@@ -1584,7 +1580,7 @@ int get_val (struct script_state *st, struct script_data *data)
  * 変数の読み取り2
  *------------------------------------------
  */
-void *get_val2 (struct script_state *st, int num)
+static void *get_val2 (struct script_state *st, int num)
 {
     struct script_data dat;
     dat.type = C_NAME;
@@ -1656,7 +1652,7 @@ static int set_reg (struct map_session_data *sd, int num, const char *name, cons
  * 文字列への変換
  *------------------------------------------
  */
-const char *conv_str (struct script_state *st, struct script_data *data)
+static const char *conv_str (struct script_state *st, struct script_data *data)
 {
     get_val (st, data);
     if (data->type == C_INT)
@@ -1682,7 +1678,7 @@ const char *conv_str (struct script_state *st, struct script_data *data)
  * 数値へ変換
  *------------------------------------------
  */
-int conv_num (struct script_state *st, struct script_data *data)
+static int conv_num (struct script_state *st, struct script_data *data)
 {
     const char *p;
     get_val (st, data);
@@ -1723,7 +1719,7 @@ void push_val (struct script_stack *stack, int type, int val)
  * スタックへ文字列をプッシュ
  *------------------------------------------
  */
-void push_str (struct script_stack *stack, int type, const char *str)
+static void push_str (struct script_stack *stack, int type, const char *str)
 {
     if (stack->sp >= stack->sp_max)
     {
@@ -1745,7 +1741,7 @@ void push_str (struct script_stack *stack, int type, const char *str)
  * スタックへ複製をプッシュ
  *------------------------------------------
  */
-void push_copy (struct script_stack *stack, int pos)
+static void push_copy (struct script_stack *stack, int pos)
 {
     switch (stack->stack_data[pos].type)
     {
@@ -1766,7 +1762,7 @@ void push_copy (struct script_stack *stack, int pos)
  * スタックからポップ
  *------------------------------------------
  */
-void pop_stack (struct script_stack *stack, int start, int end)
+static void pop_stack (struct script_stack *stack, int start, int end)
 {
     int  i;
     for (i = start; i < end; i++)
@@ -2131,7 +2127,7 @@ int buildin_warp (struct script_state *st)
  * エリア指定ワープ
  *------------------------------------------
  */
-int buildin_areawarp_sub (struct block_list *bl, va_list ap)
+static int buildin_areawarp_sub (struct block_list *bl, va_list ap)
 {
     int  x, y;
     char *map;
@@ -3050,7 +3046,7 @@ int buildin_getcharid (struct script_state *st)
  *指定IDのPT名取得
  *------------------------------------------
  */
-char *buildin_getpartyname_sub (int party_id)
+static char *buildin_getpartyname_sub (int party_id)
 {
     struct party *p;
 
@@ -4066,7 +4062,7 @@ int buildin_areamonster (struct script_state *st)
  * モンスター削除
  *------------------------------------------
  */
-int buildin_killmonster_sub (struct block_list *bl, va_list ap)
+static int buildin_killmonster_sub (struct block_list *bl, va_list ap)
 {
     char *event = va_arg (ap, char *);
     int  allflag = va_arg (ap, int);
@@ -4103,7 +4099,7 @@ int buildin_killmonster (struct script_state *st)
     return 0;
 }
 
-int buildin_killmonsterall_sub (struct block_list *bl, va_list UNUSED)
+static int buildin_killmonsterall_sub (struct block_list *bl, va_list UNUSED)
 {
     mob_delete ((struct mob_data *) bl);
     return 0;
@@ -4314,7 +4310,7 @@ int buildin_announce (struct script_state *st)
  * 天の声アナウンス（特定マップ）
  *------------------------------------------
  */
-int buildin_mapannounce_sub (struct block_list *bl, va_list ap)
+static int buildin_mapannounce_sub (struct block_list *bl, va_list ap)
 {
     char *str;
     int  len, flag;
@@ -4413,7 +4409,7 @@ int buildin_getmapusers (struct script_state *st)
  * エリア指定ユーザー数所得
  *------------------------------------------
  */
-int buildin_getareausers_sub (struct block_list *UNUSED, va_list ap)
+static int buildin_getareausers_sub (struct block_list *UNUSED, va_list ap)
 {
     int *users = va_arg (ap, int *);
     (*users)++;
@@ -4444,7 +4440,7 @@ int buildin_getareausers (struct script_state *st)
  * エリア指定ドロップアイテム数所得
  *------------------------------------------
  */
-int buildin_getareadropitem_sub (struct block_list *bl, va_list ap)
+static int buildin_getareadropitem_sub (struct block_list *bl, va_list ap)
 {
     int  item = va_arg (ap, int);
     int *amount = va_arg (ap, int *);
@@ -4456,7 +4452,7 @@ int buildin_getareadropitem_sub (struct block_list *bl, va_list ap)
     return 0;
 }
 
-int buildin_getareadropitem_sub_anddelete (struct block_list *bl, va_list ap)
+static int buildin_getareadropitem_sub_anddelete (struct block_list *bl, va_list ap)
 {
     int  item = va_arg (ap, int);
     int *amount = va_arg (ap, int *);
@@ -4839,28 +4835,6 @@ int buildin_delwaitingroom (struct script_state *st)
     else
         nd = (struct npc_data *) map_id2bl (st->oid);
     chat_deletenpcchat (nd);
-    return 0;
-}
-
-/*==========================================
- * npcチャット全員蹴り出す
- *------------------------------------------
- */
-int buildin_waitingroomkickall (struct script_state *st)
-{
-    struct npc_data *nd;
-    struct chat_data *cd;
-
-    if (st->end > st->start + 2)
-        nd = npc_name2id (conv_str
-                          (st, &(st->stack->stack_data[st->start + 2])));
-    else
-        nd = (struct npc_data *) map_id2bl (st->oid);
-
-    if (nd == NULL
-        || (cd = (struct chat_data *) map_id2bl (nd->chat_id)) == NULL)
-        return 0;
-    chat_npckickall (cd);
     return 0;
 }
 
@@ -5533,7 +5507,7 @@ int buildin_stoptimer (struct script_state *st) // Added by RoVeRT
     return 0;
 }
 
-int buildin_mobcount_sub (struct block_list *bl, va_list ap)    // Added by RoVeRT
+static int buildin_mobcount_sub (struct block_list *bl, va_list ap)    // Added by RoVeRT
 {
     char *event = va_arg (ap, char *);
     int *c = va_arg (ap, int *);
@@ -6353,7 +6327,7 @@ int buildin_getsavepoint (struct script_state *st)
  *     areatimer
  *------------------------------------------
  */
-int buildin_areatimer_sub (struct block_list *bl, va_list ap)
+static int buildin_areatimer_sub (struct block_list *bl, va_list ap)
 {
     int  tick;
     char *event;
@@ -6502,16 +6476,9 @@ int buildin_gety (struct script_state *st)
  * コマンドの読み取り
  *------------------------------------------
  */
-static int unget_com_data = -1;
-int get_com (unsigned char *script, int *pos)
+static int get_com (unsigned char *script, int *pos)
 {
     int  i, j;
-    if (unget_com_data >= 0)
-    {
-        i = unget_com_data;
-        unget_com_data = -1;
-        return i;
-    }
     if (script[*pos] >= 0x80)
     {
         return C_INT;
@@ -6526,25 +6493,12 @@ int get_com (unsigned char *script, int *pos)
     return i + (script[(*pos)++] << j);
 }
 
-/*==========================================
- * コマンドのプッシュバック
- *------------------------------------------
- */
-void unget_com (int c)
-{
-    if (unget_com_data != -1)
-    {
-        if (battle_config.error_log)
-            printf ("unget_com can back only 1 data\n");
-    }
-    unget_com_data = c;
-}
 
 /*==========================================
  * 数値の所得
  *------------------------------------------
  */
-int get_num (unsigned char *script, int *pos)
+static int get_num (unsigned char *script, int *pos)
 {
     int  i, j;
     i = 0;
@@ -6561,7 +6515,7 @@ int get_num (unsigned char *script, int *pos)
  * スタックから値を取り出す
  *------------------------------------------
  */
-int pop_val (struct script_state *st)
+static int pop_val (struct script_state *st)
 {
     if (st->stack->sp <= 0)
         return 0;
@@ -6578,7 +6532,7 @@ int pop_val (struct script_state *st)
  * 加算演算子
  *------------------------------------------
  */
-void op_add (struct script_state *st)
+static void op_add (struct script_state *st)
 {
     st->stack->sp--;
     get_val (st, &(st->stack->stack_data[st->stack->sp]));
@@ -6617,7 +6571,7 @@ void op_add (struct script_state *st)
  * 二項演算子(文字列)
  *------------------------------------------
  */
-void op_2str (struct script_state *st, int op, int sp1, int sp2)
+static void op_2str (struct script_state *st, int op, int sp1, int sp2)
 {
     const char *s1 = st->stack->stack_data[sp1].u.str,
         *s2 = st->stack->stack_data[sp2].u.str;
@@ -6660,7 +6614,7 @@ void op_2str (struct script_state *st, int op, int sp1, int sp2)
  * 二項演算子(数値)
  *------------------------------------------
  */
-void op_2num (struct script_state *st, int op, int i1, int i2)
+static void op_2num (struct script_state *st, int op, int i1, int i2)
 {
     switch (op)
     {
@@ -6723,7 +6677,7 @@ void op_2num (struct script_state *st, int op, int i1, int i2)
  * 二項演算子
  *------------------------------------------
  */
-void op_2 (struct script_state *st, int op)
+static void op_2 (struct script_state *st, int op)
 {
     int  i1, i2;
     const char *s1 = NULL, *s2 = NULL;
@@ -6758,7 +6712,7 @@ void op_2 (struct script_state *st, int op)
  * 単項演算子
  *------------------------------------------
  */
-void op_1num (struct script_state *st, int op)
+static void op_1num (struct script_state *st, int op)
 {
     int  i1;
     i1 = pop_val (st);
@@ -6856,7 +6810,7 @@ int run_func (struct script_state *st)
  * スクリプトの実行メイン部分
  *------------------------------------------
  */
-int run_script_main (script_ptr script, int pos, int UNUSED, int UNUSED,
+static int run_script_main (script_ptr script, int pos, int UNUSED, int UNUSED,
                      struct script_state *st, script_ptr rootscript)
 {
     int  c, rerun_pos;

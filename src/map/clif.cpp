@@ -216,7 +216,7 @@ static uint8_t *clif_validate_chat (struct map_session_data *sd, int type,
  * clif_sendでAREA*指定時用
  *------------------------------------------
  */
-int clif_send_sub (struct block_list *bl, va_list ap)
+static int clif_send_sub (struct block_list *bl, va_list ap)
 {
     unsigned char *buf;
     int  len;
@@ -289,7 +289,7 @@ int clif_send_sub (struct block_list *bl, va_list ap)
  *
  *------------------------------------------
  */
-int clif_send (unsigned char *buf, int len, struct block_list *bl, int type)
+static int clif_send (unsigned char *buf, int len, struct block_list *bl, int type)
 {
     int  i;
     struct chat_data *cd;
@@ -1238,7 +1238,7 @@ int clif_spawnmob (struct mob_data *md)
  *
  *------------------------------------------
  */
-int clif_servertick (struct map_session_data *sd)
+static int clif_servertick (struct map_session_data *sd)
 {
     int  fd;
 
@@ -1304,7 +1304,7 @@ int clif_movechar (struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_quitsave (int UNUSED, struct map_session_data *sd)
+static void clif_quitsave (int UNUSED, struct map_session_data *sd)
 {
     map_quit (sd);
 }
@@ -2242,7 +2242,7 @@ int clif_changelook_towards (struct block_list *bl, int type, int val,
  *
  *------------------------------------------
  */
-int clif_initialstatus (struct map_session_data *sd)
+static int clif_initialstatus (struct map_session_data *sd)
 {
     int  fd;
     unsigned char *buf;
@@ -2982,7 +2982,7 @@ clif_changelook_accessories (struct block_list *bl,
  * PC表示
  *------------------------------------------
  */
-void clif_getareachar_pc (struct map_session_data *sd,
+static void clif_getareachar_pc (struct map_session_data *sd,
                           struct map_session_data *dstsd)
 {
     int  len;
@@ -3031,7 +3031,7 @@ void clif_getareachar_pc (struct map_session_data *sd,
  * NPC表示
  *------------------------------------------
  */
-void clif_getareachar_npc (struct map_session_data *sd, struct npc_data *nd)
+static void clif_getareachar_npc (struct map_session_data *sd, struct npc_data *nd)
 {
     int  len;
 
@@ -3178,7 +3178,7 @@ int clif_damage (struct block_list *src, struct block_list *dst,
  *
  *------------------------------------------
  */
-void clif_getareachar_mob (struct map_session_data *sd, struct mob_data *md)
+static void clif_getareachar_mob (struct map_session_data *sd, struct mob_data *md)
 {
     int  len;
     nullpo_retv (sd);
@@ -3203,7 +3203,7 @@ void clif_getareachar_mob (struct map_session_data *sd, struct mob_data *md)
  *
  *------------------------------------------
  */
-void clif_getareachar_item (struct map_session_data *sd,
+static void clif_getareachar_item (struct map_session_data *sd,
                             struct flooritem_data *fitem)
 {
     int fd;
@@ -3230,7 +3230,7 @@ void clif_getareachar_item (struct map_session_data *sd,
  * 場所スキルエフェクトが視界に入る
  *------------------------------------------
  */
-int clif_getareachar_skillunit (struct map_session_data *sd,
+static int clif_getareachar_skillunit (struct map_session_data *sd,
                                 struct skill_unit *unit)
 {
     int  fd;
@@ -3291,7 +3291,7 @@ int clif_getareachar_skillunit (struct map_session_data *sd,
  * 場所スキルエフェクトが視界から消える
  *------------------------------------------
  */
-int clif_clearchar_skillunit (struct skill_unit *unit, int fd)
+static int clif_clearchar_skillunit (struct skill_unit *unit, int fd)
 {
     nullpo_retr (0, unit);
 
@@ -3325,7 +3325,7 @@ int clif_01ac (struct block_list *bl)
  *
  *------------------------------------------
  */
-int clif_getareachar (struct block_list *bl, va_list ap)
+static int clif_getareachar (struct block_list *bl, va_list ap)
 {
     struct map_session_data *sd;
 
@@ -5243,44 +5243,6 @@ int clif_GM_kick (struct map_session_data *sd, struct map_session_data *tsd,
 }
 
 /*==========================================
- * Wis拒否許可応答
- *------------------------------------------
- */
-int clif_wisexin (struct map_session_data *sd, int type, int flag)
-{
-    int  fd;
-
-    nullpo_retr (0, sd);
-
-    fd = sd->fd;
-    WFIFOW (fd, 0) = 0xd1;
-    WFIFOB (fd, 2) = type;
-    WFIFOB (fd, 3) = flag;
-    WFIFOSET (fd, packet_len_table[0xd1]);
-
-    return 0;
-}
-
-/*==========================================
- * Wis全拒否許可応答
- *------------------------------------------
- */
-int clif_wisall (struct map_session_data *sd, int type, int flag)
-{
-    int  fd;
-
-    nullpo_retr (0, sd);
-
-    fd = sd->fd;
-    WFIFOW (fd, 0) = 0xd2;
-    WFIFOB (fd, 2) = type;
-    WFIFOB (fd, 3) = flag;
-    WFIFOSET (fd, packet_len_table[0xd2]);
-
-    return 0;
-}
-
-/*==========================================
  * サウンドエフェクト
  *------------------------------------------
  */
@@ -5345,7 +5307,7 @@ int clif_specialeffect (struct block_list *bl, int type, int flag)
  *
  *------------------------------------------
  */
-void clif_parse_WantToConnection (int fd, struct map_session_data *sd)
+static void clif_parse_WantToConnection (int fd, struct map_session_data *sd)
 {
     struct map_session_data *old_sd;
     int  account_id;            // account_id in the packet
@@ -5398,7 +5360,7 @@ void clif_parse_WantToConnection (int fd, struct map_session_data *sd)
  * map侵入時に必要なデータを全て送りつける
  *------------------------------------------
  */
-void clif_parse_LoadEndAck (int UNUSED, struct map_session_data *sd)
+static void clif_parse_LoadEndAck (int UNUSED, struct map_session_data *sd)
 {
 //  struct item_data* item;
     int  i;
@@ -5529,7 +5491,7 @@ void clif_parse_LoadEndAck (int UNUSED, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_TickSend (int fd, struct map_session_data *sd)
+static void clif_parse_TickSend (int fd, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -5542,7 +5504,7 @@ void clif_parse_TickSend (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_WalkToXY (int fd, struct map_session_data *sd)
+static void clif_parse_WalkToXY (int fd, struct map_session_data *sd)
 {
     int  x, y;
 
@@ -5634,7 +5596,7 @@ void clif_parse_QuitGame (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_GetCharNameRequest (int fd, struct map_session_data *sd)
+static void clif_parse_GetCharNameRequest (int fd, struct map_session_data *sd)
 {
     struct block_list *bl;
     int  account_id;
@@ -5741,7 +5703,7 @@ void clif_parse_GetCharNameRequest (int fd, struct map_session_data *sd)
  * (S 008c <len>.w <message>.?B)
  *------------------------------------------
  */
-void clif_parse_GlobalMessage (int fd, struct map_session_data *sd)
+static void clif_parse_GlobalMessage (int fd, struct map_session_data *sd)
 {
     int msg_len = RFIFOW (fd, 2) - 4; /* Header (2) + length (2). */
     size_t message_len = 0;
@@ -5816,7 +5778,7 @@ int clif_message (struct block_list *bl, char *msg)
  *
  *------------------------------------------
  */
-void clif_parse_MapMove (int fd, struct map_session_data *sd)
+static void clif_parse_MapMove (int fd, struct map_session_data *sd)
 {
 // /m /mapmove (as @rura GM command)
     char output[100];
@@ -5844,7 +5806,7 @@ void clif_parse_MapMove (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_ChangeDir (int fd, struct map_session_data *sd)
+static void clif_parse_ChangeDir (int fd, struct map_session_data *sd)
 {
     unsigned char buf[64];
 
@@ -5872,7 +5834,7 @@ void clif_parse_ChangeDir (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_Emotion (int fd, struct map_session_data *sd)
+static void clif_parse_Emotion (int fd, struct map_session_data *sd)
 {
     unsigned char buf[64];
 
@@ -5894,7 +5856,7 @@ void clif_parse_Emotion (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_HowManyConnections (int fd, struct map_session_data *UNUSED)
+static void clif_parse_HowManyConnections (int fd, struct map_session_data *UNUSED)
 {
     WFIFOW (fd, 0) = 0xc2;
     WFIFOL (fd, 2) = map_getusers ();
@@ -5905,7 +5867,7 @@ void clif_parse_HowManyConnections (int fd, struct map_session_data *UNUSED)
  *
  *------------------------------------------
  */
-void clif_parse_ActionRequest (int fd, struct map_session_data *sd)
+static void clif_parse_ActionRequest (int fd, struct map_session_data *sd)
 {
     unsigned int tick;
     unsigned char buf[64];
@@ -5975,7 +5937,7 @@ void clif_parse_ActionRequest (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_Restart (int fd, struct map_session_data *sd)
+static void clif_parse_Restart (int fd, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -6023,7 +5985,7 @@ void clif_parse_Restart (int fd, struct map_session_data *sd)
  * [remoitnane]
  *------------------------------------------
  */
-void clif_parse_Wis (int fd, struct map_session_data *sd)
+static void clif_parse_Wis (int fd, struct map_session_data *sd)
 {
     size_t message_len = 0;
     uint8_t *buf = NULL;
@@ -6110,7 +6072,7 @@ void clif_parse_Wis (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_GMmessage (int fd, struct map_session_data *sd)
+static void clif_parse_GMmessage (int fd, struct map_session_data *sd)
 {
     char m[512];
     char output[200];
@@ -6134,7 +6096,7 @@ void clif_parse_GMmessage (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_TakeItem (int fd, struct map_session_data *sd)
+static void clif_parse_TakeItem (int fd, struct map_session_data *sd)
 {
     struct flooritem_data *fitem;
     int  map_object_id;
@@ -6174,7 +6136,7 @@ void clif_parse_TakeItem (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_DropItem (int fd, struct map_session_data *sd)
+static void clif_parse_DropItem (int fd, struct map_session_data *sd)
 {
     int  item_index, item_amount;
 
@@ -6201,7 +6163,7 @@ void clif_parse_DropItem (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_UseItem (int fd, struct map_session_data *sd)
+static void clif_parse_UseItem (int fd, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -6227,7 +6189,7 @@ void clif_parse_UseItem (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_EquipItem (int fd, struct map_session_data *sd)
+static void clif_parse_EquipItem (int fd, struct map_session_data *sd)
 {
     int  idx;
 
@@ -6267,7 +6229,7 @@ void clif_parse_EquipItem (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_UnequipItem (int fd, struct map_session_data *sd)
+static void clif_parse_UnequipItem (int fd, struct map_session_data *sd)
 {
     int  idx;
 
@@ -6299,7 +6261,7 @@ void clif_parse_UnequipItem (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_NpcClicked (int fd, struct map_session_data *sd)
+static void clif_parse_NpcClicked (int fd, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -6317,7 +6279,7 @@ void clif_parse_NpcClicked (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_NpcBuySellSelected (int fd, struct map_session_data *sd)
+static void clif_parse_NpcBuySellSelected (int fd, struct map_session_data *sd)
 {
     npc_buysellsel (sd, RFIFOL (fd, 2), RFIFOB (fd, 6));
 }
@@ -6326,7 +6288,7 @@ void clif_parse_NpcBuySellSelected (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_NpcBuyListSend (int fd, struct map_session_data *sd)
+static void clif_parse_NpcBuyListSend (int fd, struct map_session_data *sd)
 {
     int  fail = 0, n;
     unsigned short *item_list;
@@ -6345,7 +6307,7 @@ void clif_parse_NpcBuyListSend (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_NpcSellListSend (int fd, struct map_session_data *sd)
+static void clif_parse_NpcSellListSend (int fd, struct map_session_data *sd)
 {
     int  fail = 0, n;
     unsigned short *item_list;
@@ -6364,7 +6326,7 @@ void clif_parse_NpcSellListSend (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_CreateChatRoom (int fd, struct map_session_data *sd)
+static void clif_parse_CreateChatRoom (int fd, struct map_session_data *sd)
 {
     chat_createchat (sd, RFIFOW (fd, 4), RFIFOB (fd, 6), (char *)RFIFOP (fd, 7),
                      (char *)RFIFOP (fd, 15), RFIFOW (fd, 2) - 15);
@@ -6374,7 +6336,7 @@ void clif_parse_CreateChatRoom (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_ChatAddMember (int fd, struct map_session_data *sd)
+static void clif_parse_ChatAddMember (int fd, struct map_session_data *sd)
 {
     chat_joinchat (sd, RFIFOL (fd, 2), (char *)RFIFOP (fd, 6));
 }
@@ -6383,7 +6345,7 @@ void clif_parse_ChatAddMember (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_ChatRoomStatusChange (int fd, struct map_session_data *sd)
+static void clif_parse_ChatRoomStatusChange (int fd, struct map_session_data *sd)
 {
     chat_changechatstatus (sd, RFIFOW (fd, 4), RFIFOB (fd, 6), (char *)WFIFOP (fd, 7),
                            (char *)RFIFOP (fd, 15), RFIFOW (fd, 2) - 15);
@@ -6393,7 +6355,7 @@ void clif_parse_ChatRoomStatusChange (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_ChangeChatOwner (int fd, struct map_session_data *sd)
+static void clif_parse_ChangeChatOwner (int fd, struct map_session_data *sd)
 {
     chat_changechatowner (sd, (char *)RFIFOP (fd, 6));
 }
@@ -6402,7 +6364,7 @@ void clif_parse_ChangeChatOwner (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_KickFromChat (int fd, struct map_session_data *sd)
+static void clif_parse_KickFromChat (int fd, struct map_session_data *sd)
 {
     chat_kickchat (sd, (char *)RFIFOP (fd, 2));
 }
@@ -6411,7 +6373,7 @@ void clif_parse_KickFromChat (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_ChatLeave (int UNUSED, struct map_session_data *sd)
+static void clif_parse_ChatLeave (int UNUSED, struct map_session_data *sd)
 {
     chat_leavechat (sd);
 }
@@ -6420,7 +6382,7 @@ void clif_parse_ChatLeave (int UNUSED, struct map_session_data *sd)
  * 取引要請を相手に送る
  *------------------------------------------
  */
-void clif_parse_TradeRequest (int UNUSED, struct map_session_data *sd)
+static void clif_parse_TradeRequest (int UNUSED, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -6437,7 +6399,7 @@ void clif_parse_TradeRequest (int UNUSED, struct map_session_data *sd)
  * 取引要請
  *------------------------------------------
  */
-void clif_parse_TradeAck (int UNUSED, struct map_session_data *sd)
+static void clif_parse_TradeAck (int UNUSED, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -6448,7 +6410,7 @@ void clif_parse_TradeAck (int UNUSED, struct map_session_data *sd)
  * アイテム追加
  *------------------------------------------
  */
-void clif_parse_TradeAddItem (int UNUSED, struct map_session_data *sd)
+static void clif_parse_TradeAddItem (int UNUSED, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -6459,7 +6421,7 @@ void clif_parse_TradeAddItem (int UNUSED, struct map_session_data *sd)
  * アイテム追加完了(ok押し)
  *------------------------------------------
  */
-void clif_parse_TradeOk (int UNUSED, struct map_session_data *sd)
+static void clif_parse_TradeOk (int UNUSED, struct map_session_data *sd)
 {
     trade_tradeok (sd);
 }
@@ -6468,7 +6430,7 @@ void clif_parse_TradeOk (int UNUSED, struct map_session_data *sd)
  * 取引キャンセル
  *------------------------------------------
  */
-void clif_parse_TradeCansel (int UNUSED, struct map_session_data *sd)
+static void clif_parse_TradeCansel (int UNUSED, struct map_session_data *sd)
 {
     trade_tradecancel (sd);
 }
@@ -6477,7 +6439,7 @@ void clif_parse_TradeCansel (int UNUSED, struct map_session_data *sd)
  * 取引許諾(trade押し)
  *------------------------------------------
  */
-void clif_parse_TradeCommit (int UNUSED, struct map_session_data *sd)
+static void clif_parse_TradeCommit (int UNUSED, struct map_session_data *sd)
 {
     trade_tradecommit (sd);
 }
@@ -6486,7 +6448,7 @@ void clif_parse_TradeCommit (int UNUSED, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_StopAttack (int UNUSED, struct map_session_data *sd)
+static void clif_parse_StopAttack (int UNUSED, struct map_session_data *sd)
 {
     pc_stopattack (sd);
 }
@@ -6495,7 +6457,7 @@ void clif_parse_StopAttack (int UNUSED, struct map_session_data *sd)
  * カートへアイテムを移す
  *------------------------------------------
  */
-void clif_parse_PutItemToCart (int fd, struct map_session_data *sd)
+static void clif_parse_PutItemToCart (int fd, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -6508,7 +6470,7 @@ void clif_parse_PutItemToCart (int fd, struct map_session_data *sd)
  * カートからアイテムを出す
  *------------------------------------------
  */
-void clif_parse_GetItemFromCart (int fd, struct map_session_data *sd)
+static void clif_parse_GetItemFromCart (int fd, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -6521,7 +6483,7 @@ void clif_parse_GetItemFromCart (int fd, struct map_session_data *sd)
  * 付属品(鷹,ペコ,カート)をはずす
  *------------------------------------------
  */
-void clif_parse_RemoveOption (int UNUSED, struct map_session_data *sd)
+static void clif_parse_RemoveOption (int UNUSED, struct map_session_data *sd)
 {
     pc_setoption (sd, 0);
 }
@@ -6530,7 +6492,7 @@ void clif_parse_RemoveOption (int UNUSED, struct map_session_data *sd)
  * チェンジカート
  *------------------------------------------
  */
-void clif_parse_ChangeCart (int fd, struct map_session_data *sd)
+static void clif_parse_ChangeCart (int fd, struct map_session_data *sd)
 {
     pc_setcart (sd, RFIFOW (fd, 2));
 }
@@ -6539,7 +6501,7 @@ void clif_parse_ChangeCart (int fd, struct map_session_data *sd)
  * ステータスアップ
  *------------------------------------------
  */
-void clif_parse_StatusUp (int fd, struct map_session_data *sd)
+static void clif_parse_StatusUp (int fd, struct map_session_data *sd)
 {
     pc_statusup (sd, RFIFOW (fd, 2));
 }
@@ -6548,7 +6510,7 @@ void clif_parse_StatusUp (int fd, struct map_session_data *sd)
  * スキルレベルアップ
  *------------------------------------------
  */
-void clif_parse_SkillUp (int fd, struct map_session_data *sd)
+static void clif_parse_SkillUp (int fd, struct map_session_data *sd)
 {
     pc_skillup (sd, RFIFOW (fd, 2));
 }
@@ -6557,7 +6519,7 @@ void clif_parse_SkillUp (int fd, struct map_session_data *sd)
  * スキル使用（ID指定）
  *------------------------------------------
  */
-void clif_parse_UseSkillToId (int fd, struct map_session_data *sd)
+static void clif_parse_UseSkillToId (int fd, struct map_session_data *sd)
 {
     int  skillnum, skilllv, lv, target_id;
     unsigned int tick = gettick ();
@@ -6634,7 +6596,7 @@ void clif_parse_UseSkillToId (int fd, struct map_session_data *sd)
  * スキル使用（場所指定）
  *------------------------------------------
  */
-void clif_parse_UseSkillToPos (int fd, struct map_session_data *sd)
+static void clif_parse_UseSkillToPos (int fd, struct map_session_data *sd)
 {
     int  skillnum, skilllv, lv, x, y;
     unsigned int tick = gettick ();
@@ -6704,7 +6666,7 @@ void clif_parse_UseSkillToPos (int fd, struct map_session_data *sd)
  * スキル使用（map指定）
  *------------------------------------------
  */
-void clif_parse_UseSkillMap (int fd, struct map_session_data *sd)
+static void clif_parse_UseSkillMap (int fd, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -6730,7 +6692,7 @@ void clif_parse_UseSkillMap (int fd, struct map_session_data *sd)
  * メモ要求
  *------------------------------------------
  */
-void clif_parse_RequestMemo (int UNUSED, struct map_session_data *sd)
+static void clif_parse_RequestMemo (int UNUSED, struct map_session_data *sd)
 {
     pc_memo (sd, -1);
 }
@@ -6739,7 +6701,7 @@ void clif_parse_RequestMemo (int UNUSED, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_NpcSelectMenu (int fd, struct map_session_data *sd)
+static void clif_parse_NpcSelectMenu (int fd, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -6751,7 +6713,7 @@ void clif_parse_NpcSelectMenu (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_NpcNextClicked (int fd, struct map_session_data *sd)
+static void clif_parse_NpcNextClicked (int fd, struct map_session_data *sd)
 {
     map_scriptcont (sd, RFIFOL (fd, 2));
 }
@@ -6760,7 +6722,7 @@ void clif_parse_NpcNextClicked (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_NpcAmountInput (int fd, struct map_session_data *sd)
+static void clif_parse_NpcAmountInput (int fd, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -6779,7 +6741,7 @@ void clif_parse_NpcAmountInput (int fd, struct map_session_data *sd)
  * (S 01d5 <len>.w <npc_ID>.l <message>.?B)
  *------------------------------------------
  */
-void clif_parse_NpcStringInput (int fd, struct map_session_data *sd)
+static void clif_parse_NpcStringInput (int fd, struct map_session_data *sd)
 {
     int  len;
     nullpo_retv (sd);
@@ -6810,7 +6772,7 @@ void clif_parse_NpcStringInput (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-void clif_parse_NpcCloseClicked (int fd, struct map_session_data *sd)
+static void clif_parse_NpcCloseClicked (int fd, struct map_session_data *sd)
 {
     map_scriptcont (sd, RFIFOL (fd, 2));
 }
@@ -6819,7 +6781,7 @@ void clif_parse_NpcCloseClicked (int fd, struct map_session_data *sd)
  * アイテム鑑定
  *------------------------------------------
  */
-void clif_parse_ItemIdentify (int fd, struct map_session_data *sd)
+static void clif_parse_ItemIdentify (int fd, struct map_session_data *sd)
 {
     pc_item_identify (sd, RFIFOW (fd, 2) - 2);
 }
@@ -6828,7 +6790,7 @@ void clif_parse_ItemIdentify (int fd, struct map_session_data *sd)
  * オートスペル受信
  *------------------------------------------
  */
-void clif_parse_AutoSpell (int fd, struct map_session_data *sd)
+static void clif_parse_AutoSpell (int fd, struct map_session_data *sd)
 {
     skill_autospell (sd, RFIFOW (fd, 2));
 }
@@ -6837,7 +6799,7 @@ void clif_parse_AutoSpell (int fd, struct map_session_data *sd)
  * カード使用
  *------------------------------------------
  */
-void clif_parse_UseCard (int fd, struct map_session_data *sd)
+static void clif_parse_UseCard (int fd, struct map_session_data *sd)
 {
     clif_use_card (sd, RFIFOW (fd, 2) - 2);
 }
@@ -6846,7 +6808,7 @@ void clif_parse_UseCard (int fd, struct map_session_data *sd)
  * カード挿入装備選択
  *------------------------------------------
  */
-void clif_parse_InsertCard (int fd, struct map_session_data *sd)
+static void clif_parse_InsertCard (int fd, struct map_session_data *sd)
 {
     pc_insert_card (sd, RFIFOW (fd, 2) - 2, RFIFOW (fd, 4) - 2);
 }
@@ -6855,7 +6817,7 @@ void clif_parse_InsertCard (int fd, struct map_session_data *sd)
  * 0193 キャラID名前引き
  *------------------------------------------
  */
-void clif_parse_SolveCharName (int fd, struct map_session_data *sd)
+static void clif_parse_SolveCharName (int fd, struct map_session_data *sd)
 {
     int  char_id;
 
@@ -6867,7 +6829,7 @@ void clif_parse_SolveCharName (int fd, struct map_session_data *sd)
  * 0197 /resetskill /resetstate
  *------------------------------------------
  */
-void clif_parse_ResetChar (int fd, struct map_session_data *sd)
+static void clif_parse_ResetChar (int fd, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -6895,7 +6857,7 @@ void clif_parse_ResetChar (int fd, struct map_session_data *sd)
  * 019c /lb等
  *------------------------------------------
  */
-void clif_parse_LGMmessage (int fd, struct map_session_data *sd)
+static void clif_parse_LGMmessage (int fd, struct map_session_data *sd)
 {
     unsigned char buf[64];
 
@@ -6915,7 +6877,7 @@ void clif_parse_LGMmessage (int fd, struct map_session_data *sd)
  * カプラ倉庫へ入れる
  *------------------------------------------
  */
-void clif_parse_MoveToKafra (int fd, struct map_session_data *sd)
+static void clif_parse_MoveToKafra (int fd, struct map_session_data *sd)
 {
     int  item_index, item_amount;
 
@@ -6936,7 +6898,7 @@ void clif_parse_MoveToKafra (int fd, struct map_session_data *sd)
  * カプラ倉庫から出す
  *------------------------------------------
  */
-void clif_parse_MoveFromKafra (int fd, struct map_session_data *sd)
+static void clif_parse_MoveFromKafra (int fd, struct map_session_data *sd)
 {
     int  item_index, item_amount;
 
@@ -6957,7 +6919,7 @@ void clif_parse_MoveFromKafra (int fd, struct map_session_data *sd)
  * カプラ倉庫へカートから入れる
  *------------------------------------------
  */
-void clif_parse_MoveToKafraFromCart (int fd, struct map_session_data *sd)
+static void clif_parse_MoveToKafraFromCart (int fd, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -6972,7 +6934,7 @@ void clif_parse_MoveToKafraFromCart (int fd, struct map_session_data *sd)
  * カプラ倉庫から出す
  *------------------------------------------
  */
-void clif_parse_MoveFromKafraToCart (int fd, struct map_session_data *sd)
+static void clif_parse_MoveFromKafraToCart (int fd, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -6987,7 +6949,7 @@ void clif_parse_MoveFromKafraToCart (int fd, struct map_session_data *sd)
  * カプラ倉庫を閉じる
  *------------------------------------------
  */
-void clif_parse_CloseKafra (int UNUSED, struct map_session_data *sd)
+static void clif_parse_CloseKafra (int UNUSED, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -7002,7 +6964,7 @@ void clif_parse_CloseKafra (int UNUSED, struct map_session_data *sd)
  * (S 00f9 <party_name>.24B)
  *------------------------------------------
  */
-void clif_parse_CreateParty (int fd, struct map_session_data *sd)
+static void clif_parse_CreateParty (int fd, struct map_session_data *sd)
 {
     if (battle_config.basic_skill_check == 0
         || pc_checkskill (sd, NV_PARTY) >= 2)
@@ -7025,7 +6987,7 @@ void clif_parse_CreateParty (int fd, struct map_session_data *sd)
  *       incomplete here.
  *------------------------------------------
  */
-void clif_parse_CreateParty2 (int fd, struct map_session_data *sd)
+static void clif_parse_CreateParty2 (int fd, struct map_session_data *sd)
 {
     if (battle_config.basic_skill_check == 0
         || pc_checkskill (sd, NV_PARTY) >= 2)
@@ -7043,7 +7005,7 @@ void clif_parse_CreateParty2 (int fd, struct map_session_data *sd)
  * (S 00fc <account_ID>.l)
  *------------------------------------------
  */
-void clif_parse_PartyInvite (int fd, struct map_session_data *sd)
+static void clif_parse_PartyInvite (int fd, struct map_session_data *sd)
 {
     party_invite (sd, RFIFOL (fd, 2));
 }
@@ -7055,7 +7017,7 @@ void clif_parse_PartyInvite (int fd, struct map_session_data *sd)
  * (S 00ff <account_ID>.l <flag>.l)
  *------------------------------------------
  */
-void clif_parse_ReplyPartyInvite (int fd, struct map_session_data *sd)
+static void clif_parse_ReplyPartyInvite (int fd, struct map_session_data *sd)
 {
     if (battle_config.basic_skill_check == 0
         || pc_checkskill (sd, NV_PARTY) >= 1)
@@ -7073,7 +7035,7 @@ void clif_parse_ReplyPartyInvite (int fd, struct map_session_data *sd)
  * パーティ脱退要求
  *------------------------------------------
  */
-void clif_parse_LeaveParty (int UNUSED, struct map_session_data *sd)
+static void clif_parse_LeaveParty (int UNUSED, struct map_session_data *sd)
 {
     party_leave (sd);
 }
@@ -7082,7 +7044,7 @@ void clif_parse_LeaveParty (int UNUSED, struct map_session_data *sd)
  * パーティ除名要求
  *------------------------------------------
  */
-void clif_parse_RemovePartyMember (int fd, struct map_session_data *sd)
+static void clif_parse_RemovePartyMember (int fd, struct map_session_data *sd)
 {
     party_removemember (sd, RFIFOL (fd, 2), (char *)RFIFOP (fd, 6));
 }
@@ -7091,7 +7053,7 @@ void clif_parse_RemovePartyMember (int fd, struct map_session_data *sd)
  * パーティ設定変更要求
  *------------------------------------------
  */
-void clif_parse_PartyChangeOption (int fd, struct map_session_data *sd)
+static void clif_parse_PartyChangeOption (int fd, struct map_session_data *sd)
 {
     party_changeoption (sd, RFIFOW (fd, 2), RFIFOW (fd, 4));
 }
@@ -7104,7 +7066,7 @@ void clif_parse_PartyChangeOption (int fd, struct map_session_data *sd)
  * (S 0108 <len>.w <message>.?B)
  *------------------------------------------
  */
-void clif_parse_PartyMessage (int fd, struct map_session_data *sd)
+static void clif_parse_PartyMessage (int fd, struct map_session_data *sd)
 {
     size_t message_len = 0;
     uint8_t *buf = NULL;
@@ -7142,7 +7104,7 @@ void clif_parse_PartyMessage (int fd, struct map_session_data *sd)
  * /monster /item rewriten by [Yor]
  *------------------------------------------
  */
-void clif_parse_GM_Monster_Item (int fd, struct map_session_data *sd)
+static void clif_parse_GM_Monster_Item (int fd, struct map_session_data *sd)
 {
     char monster_item_name[25];
 
@@ -7175,7 +7137,7 @@ void clif_parse_GM_Monster_Item (int fd, struct map_session_data *sd)
 }
 
 // Kick (right click menu for GM "(name) force to quit")
-void clif_parse_GMKick (int fd, struct map_session_data *sd)
+static void clif_parse_GMKick (int fd, struct map_session_data *sd)
 {
     struct block_list *target;
     int  tid = RFIFOL (fd, 2);
@@ -7216,7 +7178,7 @@ void clif_parse_GMKick (int fd, struct map_session_data *sd)
  * /shift
  *------------------------------------------
  */
-void clif_parse_Shift (int fd, struct map_session_data *sd)
+static void clif_parse_Shift (int fd, struct map_session_data *sd)
 {                               // Rewriten by [Yor]
     char player_name[25];
 
@@ -7239,7 +7201,7 @@ void clif_parse_Shift (int fd, struct map_session_data *sd)
  * /recall
  *------------------------------------------
  */
-void clif_parse_Recall (int fd, struct map_session_data *sd)
+static void clif_parse_Recall (int fd, struct map_session_data *sd)
 {                               // Added by RoVeRT
     char player_name[25];
 
@@ -7258,7 +7220,7 @@ void clif_parse_Recall (int fd, struct map_session_data *sd)
     return;
 }
 
-void clif_parse_GMHide (int fd, struct map_session_data *sd)
+static void clif_parse_GMHide (int fd, struct map_session_data *sd)
 {                               // Modified by [Yor]
     nullpo_retv (sd);
 
@@ -7285,7 +7247,7 @@ void clif_parse_GMHide (int fd, struct map_session_data *sd)
  * GMによるチャット禁止時間付与
  *------------------------------------------
  */
-void clif_parse_GMReqNoChat (int fd, struct map_session_data *sd)
+static void clif_parse_GMReqNoChat (int fd, struct map_session_data *sd)
 {
     int  tid = RFIFOL (fd, 2);
     int  type = RFIFOB (fd, 6);
@@ -7334,7 +7296,7 @@ void clif_parse_GMReqNoChat (int fd, struct map_session_data *sd)
  * GMによるチャット禁止時間参照（？）
  *------------------------------------------
  */
-void clif_parse_GMReqNoChatCount (int fd, struct map_session_data *UNUSED)
+static void clif_parse_GMReqNoChatCount (int fd, struct map_session_data *UNUSED)
 {
     int  tid = RFIFOL (fd, 2);
 
@@ -7347,7 +7309,7 @@ void clif_parse_GMReqNoChatCount (int fd, struct map_session_data *UNUSED)
     return;
 }
 
-void clif_parse_PMIgnore (int fd, struct map_session_data *sd)
+static void clif_parse_PMIgnore (int fd, struct map_session_data *sd)
 {                               // Rewritten by [Yor]
     char output[1024];
     char *nick;                 // S 00cf <nick>.24B <type>.B: 00 (/ex nick) deny speech from nick, 01 (/in nick) allow speech from nick
@@ -7486,7 +7448,7 @@ void clif_parse_PMIgnore (int fd, struct map_session_data *sd)
     return;
 }
 
-void clif_parse_PMIgnoreAll (int fd, struct map_session_data *sd)
+static void clif_parse_PMIgnoreAll (int fd, struct map_session_data *sd)
 {                               // Rewritten by [Yor]
     //printf("Ignore all: state: %d\n", RFIFOB(fd,2));
     if (RFIFOB (fd, 2) == 0)
@@ -7531,41 +7493,11 @@ void clif_parse_PMIgnoreAll (int fd, struct map_session_data *sd)
     return;
 }
 
-void clif_parse_skillMessage (int fd, struct map_session_data *UNUSED)
-{                               // Added by RoVeRT
-    int  skillid, skilllv, x, y;
-    char *mes;
-
-    skilllv = RFIFOW (fd, 2);
-    skillid = RFIFOW (fd, 4);
-
-    y = RFIFOB (fd, 6);
-    x = RFIFOB (fd, 8);
-
-    mes = (char *)RFIFOP (fd, 10);
-
-    // skill 220 = graffiti
-//  printf("skill: %d %d location: %3d %3d message: %s\n", skillid, skilllv, x, y, (char*)mes);
-}
-
-int monk (struct map_session_data *sd, struct block_list *target, int type)
-{
-//R 01d1 <Monk id>L <Target monster id>L <Bool>L
-    int  fd = sd->fd;
-    WFIFOW (fd, 0) = 0x1d1;
-    WFIFOL (fd, 2) = sd->bl.id;
-    WFIFOL (fd, 6) = target->id;
-    WFIFOL (fd, 10) = type;
-    WFIFOSET (fd, packet_len_table[0x1d1]);
-
-    return 0;
-}
-
 /*==========================================
  * スパノビの/doridoriによるSPR2倍
  *------------------------------------------
  */
-void clif_parse_sn_doridori (int UNUSED, struct map_session_data *sd)
+static void clif_parse_sn_doridori (int UNUSED, struct map_session_data *sd)
 {
     if (sd)
         sd->doridori_counter = 1;
@@ -7577,7 +7509,7 @@ void clif_parse_sn_doridori (int UNUSED, struct map_session_data *sd)
  * スパノビの爆裂波動
  *------------------------------------------
  */
-void clif_parse_sn_explosionspirits (int UNUSED, struct map_session_data *sd)
+static void clif_parse_sn_explosionspirits (int UNUSED, struct map_session_data *sd)
 {
     if (sd)
     {
@@ -8157,7 +8089,7 @@ func_table clif_parse_func_table[0x220] =
 // *INDENT-ON*
 
 // Checks for packet flooding
-int clif_check_packet_flood(int fd, int cmd)
+static int clif_check_packet_flood(int fd, int cmd)
 {
     struct map_session_data *sd = (struct map_session_data *)session[fd]->session_data;
     unsigned int rate, tick = gettick();

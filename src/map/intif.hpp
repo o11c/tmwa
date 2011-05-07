@@ -1,5 +1,5 @@
 #ifndef INTIF_H
-#define INFIF_H
+#define INTIF_H
 
 #include "../common/mmo.hpp"
 

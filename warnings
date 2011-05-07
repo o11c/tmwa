@@ -13,7 +13,6 @@
 -Wshadow
 -Werror=strict-prototypes
 -Werror=old-style-definition
--Wno-missing-declarations
 -Wvla
 -Wstack-protector
 -Wno-conversion
@@ -27,7 +26,8 @@
 -Wtrampolines
 -Wfloat-equal
 -Wmissing-format-attribute
--Wno-redundant-decls
+-Wredundant-decls
 -Wno-sign-compare
 
 -Wno-switch
+-Wmissing-declarations

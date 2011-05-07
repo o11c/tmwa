@@ -116,8 +116,6 @@ int magic_message (character_t * caster, uint8_t *spell_, size_t UNUSED)
     return 0;                   /* Not a spell */
 }
 
-int  magic_init (const char *conffile);   // must be called after itemdb initialisation
-
 void do_init_magic (void)
 {
     magic_init (MAGIC_CONFIG_FILE);

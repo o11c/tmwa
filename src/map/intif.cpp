@@ -80,7 +80,7 @@ int intif_wis_message (struct map_session_data *sd, char *nick, char *mes,
 }
 
 // The reply of Wisp/page
-int intif_wis_replay (int id, int flag)
+static int intif_wis_replay (int id, int flag)
 {
     WFIFOW (inter_fd, 0) = 0x3002;
     WFIFOL (inter_fd, 2) = id;
@@ -291,7 +291,7 @@ int intif_party_checkconflict (int party_id, int account_id, char *nick)
 // Packets receive from inter server
 
 // Wisp/Page reception
-int intif_parse_WisMessage (int fd)
+static int intif_parse_WisMessage (int fd)
 {                               // rewritten by [Yor]
     struct map_session_data *sd;
     int  i;
@@ -334,7 +334,7 @@ int intif_parse_WisMessage (int fd)
 }
 
 // Wisp/page transmission result reception
-int intif_parse_WisEnd (int fd)
+static int intif_parse_WisEnd (int fd)
 {
     struct map_session_data *sd;
 
@@ -348,7 +348,7 @@ int intif_parse_WisEnd (int fd)
 }
 
 // Received wisp message from map-server via char-server for ALL gm
-int mapif_parse_WisToGM (int fd)
+static int mapif_parse_WisToGM (int fd)
 {                               // 0x3003/0x3803 <packet_len>.w <wispname>.24B <min_gm_level>.w <message>.?B
     int  i, min_gm_level, len;
     struct map_session_data *pl_sd;
@@ -381,7 +381,7 @@ int mapif_parse_WisToGM (int fd)
 }
 
 // アカウント変数通知
-int intif_parse_AccountReg (int fd)
+static int intif_parse_AccountReg (int fd)
 {
     int  j, p;
     struct map_session_data *sd;
@@ -401,7 +401,7 @@ int intif_parse_AccountReg (int fd)
 }
 
 // 倉庫データ受信
-int intif_parse_LoadStorage (int fd)
+static int intif_parse_LoadStorage (int fd)
 {
     struct storage *stor;
     struct map_session_data *sd;
@@ -453,7 +453,7 @@ int intif_parse_LoadStorage (int fd)
 }
 
 // 倉庫データ送信成功
-int intif_parse_SaveStorage (int fd)
+static int intif_parse_SaveStorage (int fd)
 {
     if (battle_config.save_log)
         printf ("intif_savestorage: done %d %d\n", RFIFOL (fd, 2),
@@ -462,7 +462,7 @@ int intif_parse_SaveStorage (int fd)
     return 0;
 }
 // パーティ作成可否
-int intif_parse_PartyCreated (int fd)
+static int intif_parse_PartyCreated (int fd)
 {
     if (battle_config.etc_log)
         printf ("intif: party created\n");
@@ -472,7 +472,7 @@ int intif_parse_PartyCreated (int fd)
 }
 
 // パーティ情報
-int intif_parse_PartyInfo (int fd)
+static int intif_parse_PartyInfo (int fd)
 {
     if (RFIFOW (fd, 2) == 8)
     {
@@ -495,7 +495,7 @@ int intif_parse_PartyInfo (int fd)
 }
 
 // パーティ追加通知
-int intif_parse_PartyMemberAdded (int fd)
+static int intif_parse_PartyMemberAdded (int fd)
 {
     if (battle_config.etc_log)
         printf ("intif: party member added %d %d %d\n", RFIFOL (fd, 2),
@@ -505,7 +505,7 @@ int intif_parse_PartyMemberAdded (int fd)
 }
 
 // パーティ設定変更通知
-int intif_parse_PartyOptionChanged (int fd)
+static int intif_parse_PartyOptionChanged (int fd)
 {
     party_optionchanged (RFIFOL (fd, 2), RFIFOL (fd, 6), RFIFOW (fd, 10),
                          RFIFOW (fd, 12), RFIFOB (fd, 14));
@@ -513,7 +513,7 @@ int intif_parse_PartyOptionChanged (int fd)
 }
 
 // パーティ脱退通知
-int intif_parse_PartyMemberLeaved (int fd)
+static int intif_parse_PartyMemberLeaved (int fd)
 {
     if (battle_config.etc_log)
         printf ("intif: party member left %d %d %s\n", RFIFOL (fd, 2),
@@ -523,14 +523,14 @@ int intif_parse_PartyMemberLeaved (int fd)
 }
 
 // パーティ解散通知
-int intif_parse_PartyBroken (int fd)
+static int intif_parse_PartyBroken (int fd)
 {
     party_broken (RFIFOL (fd, 2));
     return 0;
 }
 
 // パーティ移動通知
-int intif_parse_PartyMove (int fd)
+static int intif_parse_PartyMove (int fd)
 {
 //  if(battle_config.etc_log)
 //      printf("intif: party move %d %d %s %d %d\n",RFIFOL(fd,2),RFIFOL(fd,6),RFIFOP(fd,10),RFIFOB(fd,26),RFIFOW(fd,27));
@@ -540,7 +540,7 @@ int intif_parse_PartyMove (int fd)
 }
 
 // パーティメッセージ
-int intif_parse_PartyMessage (int fd)
+static int intif_parse_PartyMessage (int fd)
 {
 //  if(battle_config.etc_log)
 //      printf("intif_parse_PartyMessage: %s\n",RFIFOP(fd,12));

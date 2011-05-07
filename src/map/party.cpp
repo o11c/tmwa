@@ -51,7 +51,7 @@ struct party *party_search (int party_id)
     return (struct party *)numdb_search (party_db, party_id).p;
 }
 
-void party_searchname_sub (db_key_t UNUSED, db_val_t data, va_list ap)
+static void party_searchname_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
     struct party *p = (struct party *) data.p, **dst;
     char *str;
@@ -134,7 +134,7 @@ int party_request_info (int party_id)
 }
 
 // 所属キャラの確認
-int party_check_member (struct party *p)
+static int party_check_member (struct party *p)
 {
     int  i;
     struct map_session_data *sd;
@@ -637,7 +637,7 @@ int party_check_conflict (struct map_session_data *sd)
 }
 
 // 位置やＨＰ通知用
-void party_send_xyhp_timer_sub (db_key_t UNUSED, db_val_t data, va_list UNUSED)
+static void party_send_xyhp_timer_sub (db_key_t UNUSED, db_val_t data, va_list UNUSED)
 {
     struct party *p = (struct party *) data.p;
     int  i;

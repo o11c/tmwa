@@ -182,7 +182,7 @@ static void intify (val_t * v)
     v->v.v_int = 1;
 }
 
-area_t *area_new (int ty)
+static area_t *area_new (int ty)
 {
     area_t *retval;
     CREATE (retval, area_t, 1);
@@ -190,7 +190,7 @@ area_t *area_new (int ty)
     return retval;
 }
 
-area_t *area_union (area_t * area, area_t * other_area)
+static area_t *area_union (area_t * area, area_t * other_area)
 {
     area_t *retval = area_new (AREA_UNION);
     retval->a.a_union[0] = area;
@@ -1248,7 +1248,7 @@ static fun_t functions[] = {
 
 static int functions_are_sorted = 0;
 
-int compare_fun (const void *lhs, const void *rhs)
+static int compare_fun (const void *lhs, const void *rhs)
 {
     return strcmp (((fun_t *) lhs)->name, ((fun_t *) rhs)->name);
 }

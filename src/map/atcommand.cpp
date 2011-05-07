@@ -42,9 +42,9 @@ ATCOMMAND_FUNC (setup);
 ATCOMMAND_FUNC (broadcast);
 ATCOMMAND_FUNC (localbroadcast);
 ATCOMMAND_FUNC (charwarp);
-ATCOMMAND_FUNC (warp);
+// ATCOMMAND_FUNC (warp);
 ATCOMMAND_FUNC (where);
-ATCOMMAND_FUNC (goto);
+// ATCOMMAND_FUNC (goto);
 ATCOMMAND_FUNC (jump);
 ATCOMMAND_FUNC (who);
 ATCOMMAND_FUNC (whogroup);
@@ -62,7 +62,7 @@ ATCOMMAND_FUNC (kill);
 ATCOMMAND_FUNC (alive);
 ATCOMMAND_FUNC (kami);
 ATCOMMAND_FUNC (heal);
-ATCOMMAND_FUNC (item);
+// ATCOMMAND_FUNC (item);
 ATCOMMAND_FUNC (itemreset);
 ATCOMMAND_FUNC (itemcheck);
 ATCOMMAND_FUNC (baselevelup);
@@ -73,7 +73,7 @@ ATCOMMAND_FUNC (pvpoff);
 ATCOMMAND_FUNC (pvpon);
 ATCOMMAND_FUNC (model);
 ATCOMMAND_FUNC (go);
-ATCOMMAND_FUNC (spawn);
+// ATCOMMAND_FUNC (spawn);
 ATCOMMAND_FUNC (killmonster);
 ATCOMMAND_FUNC (killmonster2);
 ATCOMMAND_FUNC (refine);
@@ -85,7 +85,7 @@ ATCOMMAND_FUNC (statuspoint);
 ATCOMMAND_FUNC (skillpoint);
 ATCOMMAND_FUNC (zeny);
 ATCOMMAND_FUNC (param);
-ATCOMMAND_FUNC (recall);
+// ATCOMMAND_FUNC (recall);
 ATCOMMAND_FUNC (recallall);
 ATCOMMAND_FUNC (revive);
 ATCOMMAND_FUNC (character_stats);
@@ -2638,7 +2638,7 @@ int atcommand_spawn (const int fd, struct map_session_data *sd,
  *
  *------------------------------------------
  */
-void atcommand_killmonster_sub (const int fd, struct map_session_data *sd,
+static void atcommand_killmonster_sub (const int fd, struct map_session_data *sd,
                                 const char *message, const int drop)
 {
     int  map_id;
@@ -2788,7 +2788,7 @@ int atcommand_produce (const int fd, struct map_session_data *sd,
  * Sub-function to display actual memo points
  *------------------------------------------
  */
-void atcommand_memo_sub (struct map_session_data *sd)
+static void atcommand_memo_sub (struct map_session_data *sd)
 {
     int  i;
     char output[200];
@@ -5507,7 +5507,7 @@ int atcommand_disablenpc (const int fd, struct map_session_data *UNUSED,
  * time in txt for time command (by [Yor])
  *------------------------------------------
  */
-char *txt_time (unsigned int duration)
+static char *txt_time (unsigned int duration)
 {
     int  days, hours, minutes, seconds;
     char temp[256];
@@ -7622,7 +7622,7 @@ atcommand_visible (const int UNUSED, struct map_session_data *sd,
     return 0;
 }
 
-int atcommand_jump_iterate (const int fd, struct map_session_data *sd,
+static int atcommand_jump_iterate (const int fd, struct map_session_data *sd,
                             const char *UNUSED, const char *UNUSED,
                             struct map_session_data *(*get_start) (void),
                             struct map_session_data *(*get_next) (struct

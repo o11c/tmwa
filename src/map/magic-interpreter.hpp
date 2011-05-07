@@ -486,4 +486,6 @@ typedef struct
     effect_t *body;
 } proc_t;
 
+void spell_update_location (invocation_t * invocation);
+
 #endif // MAGIC_INTERPRETER_H

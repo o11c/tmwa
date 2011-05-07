@@ -501,7 +501,7 @@ int pc_equippoint (struct map_session_data *sd, int n)
     return ep;
 }
 
-int pc_setinventorydata (struct map_session_data *sd)
+static int pc_setinventorydata (struct map_session_data *sd)
 {
     int  i, id;
 
@@ -515,7 +515,7 @@ int pc_setinventorydata (struct map_session_data *sd)
     return 0;
 }
 
-int pc_calcweapontype (struct map_session_data *sd)
+static int pc_calcweapontype (struct map_session_data *sd)
 {
     nullpo_retr (0, sd);
 
@@ -541,7 +541,7 @@ int pc_calcweapontype (struct map_session_data *sd)
     return 0;
 }
 
-int pc_setequipindex (struct map_session_data *sd)
+static int pc_setequipindex (struct map_session_data *sd)
 {
     int  i, j;
 
@@ -977,7 +977,7 @@ static int pc_calc_skillpoint (struct map_session_data *sd)
  * 覚えられるスキルの計算
  *------------------------------------------
  */
-int pc_calc_skilltree (struct map_session_data *sd)
+static int pc_calc_skilltree (struct map_session_data *sd)
 {
     int  i, id = 0, flag;
     nullpo_retr (0, sd);
@@ -1072,7 +1072,7 @@ int pc_checkweighticon (struct map_session_data *sd)
     return 0;
 }
 
-void pc_set_weapon_look (struct map_session_data *sd)
+static void pc_set_weapon_look (struct map_session_data *sd)
 {
     if (sd->attack_spell_override)
         clif_changelook (&sd->bl, LOOK_WEAPON,
@@ -3457,7 +3457,7 @@ int pc_takeitem (struct map_session_data *sd, struct flooritem_data *fitem)
     return 0;
 }
 
-int pc_isUseitem (struct map_session_data *sd, int n)
+static int pc_isUseitem (struct map_session_data *sd, int n)
 {
     struct item_data *item;
     int  nameid;
@@ -3716,7 +3716,7 @@ int pc_item_identify (struct map_session_data *sd, int idx)
  * スティル品公開
  *------------------------------------------
  */
-int pc_show_steal (struct block_list *bl, va_list ap)
+static int pc_show_steal (struct block_list *bl, va_list ap)
 {
     struct map_session_data *sd;
     int  itemid;
@@ -4543,7 +4543,7 @@ int pc_checkequip (struct map_session_data *sd, int pos)
  * PCの攻撃 (timer関数)
  *------------------------------------------
  */
-void pc_attack_timer (timer_id tid, tick_t tick, custom_id_t id, custom_data_t UNUSED)
+static void pc_attack_timer (timer_id tid, tick_t tick, custom_id_t id, custom_data_t UNUSED)
 {
     struct map_session_data *sd;
     struct block_list *bl;
@@ -4748,7 +4748,7 @@ int pc_stopattack (struct map_session_data *sd)
     return 0;
 }
 
-void pc_follow_timer (timer_id tid, tick_t tick, custom_id_t id, custom_data_t UNUSED)
+static void pc_follow_timer (timer_id tid, tick_t tick, custom_id_t id, custom_data_t UNUSED)
 {
     struct map_session_data *sd, *bl;
 
@@ -4848,7 +4848,7 @@ int pc_checkbaselevelup (struct map_session_data *sd)
  * Compute the maximum for sd->skill_point, i.e., the max. number of skill points that can still be filled in
  *----------------------------------------
  */
-int pc_skillpt_potential (struct map_session_data *sd)
+static int pc_skillpt_potential (struct map_session_data *sd)
 {
     int  skill_id;
     int  potential = 0;
@@ -6715,7 +6715,7 @@ int pc_percentrefinery (struct map_session_data *sd, struct item *item)
  * イベントタイマー処理
  *------------------------------------------
  */
-void pc_eventtimer (timer_id tid, tick_t UNUSED, custom_id_t id, custom_data_t data)
+static void pc_eventtimer (timer_id tid, tick_t UNUSED, custom_id_t id, custom_data_t data)
 {
     struct map_session_data *sd = map_id2sd (id);
     int  i;
@@ -7263,7 +7263,7 @@ int pc_checkoversp (struct map_session_data *sd)
  * PVP順位計算用(foreachinarea)
  *------------------------------------------
  */
-int pc_calc_pvprank_sub (struct block_list *bl, va_list ap)
+static int pc_calc_pvprank_sub (struct block_list *bl, va_list ap)
 {
     struct map_session_data *sd1, *sd2 = NULL;
 
@@ -7748,12 +7748,6 @@ static int pc_spirit_heal_sp (struct map_session_data *sd, int UNUSED)
     return 0;
 }
 
-/*==========================================
- * HP/SP 自然回復 各クライアント
- *------------------------------------------
- */
-static int pc_itemheal_effect (struct map_session_data *sd, int hp, int sp);
-
 static int
 pc_quickregenerate_effect (struct quick_regeneration *quick_regen,
                            int heal_speed)
@@ -7855,7 +7849,7 @@ static int pc_natural_heal_sub (struct map_session_data *sd, va_list UNUSED)
  * HP/SP自然回復 (interval timer関数)
  *------------------------------------------
  */
-void pc_natural_heal (timer_id UNUSED, tick_t tick, custom_id_t UNUSED, custom_data_t UNUSED)
+static void pc_natural_heal (timer_id UNUSED, tick_t tick, custom_id_t UNUSED, custom_data_t UNUSED)
 {
     natural_heal_tick = tick;
     natural_heal_diff_tick =
@@ -7906,7 +7900,7 @@ static int pc_autosave_sub (struct map_session_data *sd, va_list UNUSED)
  * 自動セーブ (timer関数)
  *------------------------------------------
  */
-void pc_autosave (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void pc_autosave (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
 {
     int  interval;
 
@@ -8025,7 +8019,7 @@ void pc_setstand (struct map_session_data *sd)
  * refine_db.txt 精錬データテーブル
  *------------------------------------------
  */
-int pc_readdb (void)
+static int pc_readdb (void)
 {
     int  i, j, k;
     FILE *fp;

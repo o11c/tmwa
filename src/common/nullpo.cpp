@@ -4,7 +4,7 @@
 #include "nullpo.hpp"
 
 static void nullpo_info_core (const char *file, int line, const char *func,
-                              const char *fmt, va_list ap);
+                              const char *fmt, va_list ap) __attribute__((format(printf, 4, 0)));
 
 /// Null check and print format
 bool nullpo_chk_f (const char *file, int line, const char *func,
@@ -26,7 +26,7 @@ bool nullpo_chk (const char *file, int line, const char *func,
     if (target)
         return 0;
 
-    nullpo_info_core (file, line, func, NULL, NULL);
+    nullpo_info (file, line, func);
     return 1;
 }
 
@@ -42,21 +42,19 @@ void nullpo_info_f (const char *file, int line, const char *func,
 }
 void nullpo_info (const char *file, int line, const char *func)
 {
-    nullpo_info_core (file, line, func, NULL, NULL);
-}
-
-/// Actual output function
-static void nullpo_info_core (const char *file, int line, const char *func,
-                              const char *fmt, va_list ap) __attribute__((format(printf, 4, 0)));
-static void nullpo_info_core (const char *file, int line, const char *func,
-                              const char *fmt, va_list ap)
-{
     if (!file)
         file = "??";
     if (!func || !*func)
         func = "unknown";
 
     fprintf (stderr, "%s:%d: in func `%s': NULL pointer\n", file, line, func);
+}
+
+/// Actual output function
+static void nullpo_info_core (const char *file, int line, const char *func,
+                              const char *fmt, va_list ap)
+{
+    nullpo_info (file, line, func);
     if (fmt && *fmt)
     {
         vfprintf (stderr, fmt, ap);

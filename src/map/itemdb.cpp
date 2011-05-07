@@ -38,14 +38,13 @@ static int itemdb_read_randomitem (void);
 static int itemdb_read_itemavail (void);
 static int itemdb_read_itemnametable (void);
 static int itemdb_read_noequip (void);
-void itemdb_reload (void);
 
 /*==========================================
  * 名前で検索用
  *------------------------------------------
  */
 // name = item alias, so we should find items aliases first. if not found then look for "jname" (full name)
-void itemdb_searchname_sub (db_key_t UNUSED, db_val_t data, va_list ap)
+static void itemdb_searchname_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
     struct item_data *item = (struct item_data *) data.p, **dst;
     char *str;
@@ -55,21 +54,6 @@ void itemdb_searchname_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 //      memcmp(item->name,str,24)==0 || memcmp(item->jname,str,24)==0 )
     if (strcasecmp (item->name, str) == 0) //by lupus
         *dst = item;
-}
-
-/*==========================================
- * 名前で検索用
- *------------------------------------------
- */
-int itemdb_searchjname_sub (void *UNUSED, void *data, va_list ap)
-{
-    struct item_data *item = (struct item_data *) data, **dst;
-    char *str;
-    str = va_arg (ap, char *);
-    dst = va_arg (ap, struct item_data **);
-    if (strcasecmp (item->jname, str) == 0)
-        *dst = item;
-    return 0;
 }
 
 /*==========================================

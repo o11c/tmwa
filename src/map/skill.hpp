@@ -867,6 +867,7 @@ enum
 extern int skill_pool_skills[MAX_POOL_SKILLS];  // All pool skills
 extern int skill_pool_skills_size;  // Number of entries in skill_pool_skills
 
+void skill_pool_register (int id);   // [Fate] Remember that a certain skill ID belongs to a pool skill
 int  skill_pool (struct map_session_data *sd, int *skills); // Yields all active skills in the skill pool; no more than MAX_SKILL_POOL.  Return is number of skills.
 int  skill_pool_size (struct map_session_data *sd);
 int  skill_pool_max (struct map_session_data *sd);  // Max. number of pool skills

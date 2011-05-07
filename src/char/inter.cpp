@@ -148,7 +148,7 @@ static int whis_delnum __attribute__((deprecated));
 
 
 /// Save variables
-void inter_accreg_tofile (FILE *fp, struct accreg *reg)
+static void inter_accreg_tofile (FILE *fp, struct accreg *reg)
 {
     if (!reg->reg_num)
         return;
@@ -159,7 +159,7 @@ void inter_accreg_tofile (FILE *fp, struct accreg *reg)
 }
 
 /// Load variables
-int inter_accreg_fromstr (const char *p, struct accreg *reg)
+static int inter_accreg_fromstr (const char *p, struct accreg *reg)
 {
     int n;
     if (sscanf (p, "%d\t%n", &reg->account_id, &n) != 1 || !reg->account_id)
@@ -180,7 +180,7 @@ int inter_accreg_fromstr (const char *p, struct accreg *reg)
 }
 
 /// Read the account variables
-void inter_accreg_init (void)
+static void inter_accreg_init (void)
 {
     accreg_db = numdb_init ();
 
@@ -209,7 +209,7 @@ void inter_accreg_init (void)
 }
 
 /// saving the variables of an account
-void inter_accreg_save_sub (db_key_t UNUSED, db_val_t data, va_list ap)
+static void inter_accreg_save_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
     FILE *fp = va_arg (ap, FILE *);
     struct accreg *reg = (struct accreg *) data.p;
@@ -217,7 +217,7 @@ void inter_accreg_save_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 }
 
 /// Save variables of all accounts
-void inter_accreg_save (void)
+static void inter_accreg_save (void)
 {
     int  lock;
     FILE *fp = lock_fopen (accreg_txt, &lock);
@@ -233,7 +233,7 @@ void inter_accreg_save (void)
 }
 
 /// Read inter server config file
-void inter_config_read (const char *cfgName)
+static void inter_config_read (const char *cfgName)
 {
     FILE *fp = fopen_ (cfgName, "r");
     if (!fp)
@@ -302,14 +302,9 @@ void inter_init (const char *file)
     inter_accreg_init ();
 }
 
-/// Called whenever a map server connects
-void inter_mapif_init (int UNUSED)
-{
-}
-
 /// Send a message to all GMs
 // length of mes is actually only len-4 - it includes the header
-void mapif_GMmessage (char *mes, int len)
+static void mapif_GMmessage (char *mes, int len)
 {
     unsigned char buf[len];
 
@@ -321,7 +316,7 @@ void mapif_GMmessage (char *mes, int len)
 
 extern int server_fd[];
 /// Transmit a whisper to all map servers
-void mapif_whis_message (struct WhisperData *wd)
+static void mapif_whis_message (struct WhisperData *wd)
 {
     unsigned char buf[56 + wd->len];
 
@@ -341,7 +336,7 @@ void mapif_whis_message (struct WhisperData *wd)
 }
 
 /// Transmit the result of a whisper back to the map-server that requested it
-void mapif_whis_end (struct WhisperData *wd, uint8_t flag)
+static void mapif_whis_end (struct WhisperData *wd, uint8_t flag)
 {
     unsigned char buf[27];
 
@@ -354,14 +349,14 @@ void mapif_whis_end (struct WhisperData *wd, uint8_t flag)
 
 /// Send all variables
 // NOTE: src is just WFIFOP (fd, 0)
-void mapif_account_reg (int fd, uint8_t *src)
+static void mapif_account_reg (int fd, uint8_t *src)
 {
     WBUFW (src, 0) = 0x3804;
     mapif_sendallwos (fd, src, WBUFW (src, 2));
 }
 
 /// Account variable reply
-void mapif_account_reg_reply (int fd, account_t account_id)
+static void mapif_account_reg_reply (int fd, account_t account_id)
 {
     struct accreg *reg = (struct accreg *)numdb_search (accreg_db, (numdb_key_t)account_id).p;
 
@@ -388,7 +383,7 @@ void mapif_account_reg_reply (int fd, account_t account_id)
 
 
 /// Check whisper data to time out
-void check_ttl_whisdata_sub (db_key_t UNUSED, db_val_t data, va_list ap)
+static void check_ttl_whisdata_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
     struct WhisperData *wd = (struct WhisperData *) data.p;
     tick_t tick = va_arg (ap, tick_t);
@@ -406,7 +401,7 @@ void check_ttl_whisdata_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 }
 
 /// Check all whisper data to time out
-void check_ttl_whisdata (void)
+static void check_ttl_whisdata (void)
 {
     tick_t tick = gettick ();
     do
@@ -429,13 +424,13 @@ void check_ttl_whisdata (void)
 /// received packets from map-server
 
 // GM messaging
-void mapif_parse_GMmessage (int fd)
+static void mapif_parse_GMmessage (int fd)
 {
     mapif_GMmessage ((char *)RFIFOP (fd, 4), RFIFOW (fd, 2));
 }
 
 /// Send whisper
-void mapif_parse_WhisRequest (int fd)
+static void mapif_parse_WhisRequest (int fd)
 {
     struct WhisperData *wd;
     static int whisid = 0;
@@ -492,7 +487,7 @@ void mapif_parse_WhisRequest (int fd)
 
 /// Whisper result
 // note that we get this once per map server
-void mapif_parse_WhisReply (int fd)
+static void mapif_parse_WhisReply (int fd)
 {
     int id = RFIFOL (fd, 2);
     uint8_t flag = RFIFOB (fd, 6);
@@ -517,14 +512,14 @@ void mapif_parse_WhisReply (int fd)
 
 /// forward @wgm
 // TODO handle immediately on the originating map server and use wos
-void mapif_parse_WhisToGM (int fd)
+static void mapif_parse_WhisToGM (int fd)
 {
     RFIFOW (fd, 0) = 0x3803;
     mapif_sendall (RFIFOP (fd, 0), RFIFOW (fd, 2));
 }
 
 /// Store account variables
-void mapif_parse_AccReg (int fd)
+static void mapif_parse_AccReg (int fd)
 {
     account_t acc = RFIFOL (fd, 4);
     struct accreg *reg = (struct accreg*)numdb_search (accreg_db, (numdb_key_t)acc).p;
@@ -552,7 +547,7 @@ void mapif_parse_AccReg (int fd)
 }
 
 /// Account variable reply
-void mapif_parse_AccRegRequest (int fd)
+static void mapif_parse_AccRegRequest (int fd)
 {
     mapif_account_reg_reply (fd, RFIFOL (fd, 2));
 }

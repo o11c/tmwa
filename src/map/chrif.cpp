@@ -124,7 +124,7 @@ int chrif_save (struct map_session_data *sd)
  *
  *------------------------------------------
  */
-int chrif_connect (int fd)
+static int chrif_connect (int fd)
 {
     WFIFOW (fd, 0) = 0x2af8;
     memcpy (WFIFOP (fd, 2), userid, 24);
@@ -141,7 +141,7 @@ int chrif_connect (int fd)
  * マップ送信
  *------------------------------------------
  */
-int chrif_sendmap (int fd)
+static int chrif_sendmap (int fd)
 {
     int  i;
 
@@ -158,7 +158,7 @@ int chrif_sendmap (int fd)
  * マップ受信
  *------------------------------------------
  */
-int chrif_recvmap (int fd)
+static int chrif_recvmap (int fd)
 {
     int  i, j, ip, port;
     unsigned char *p = (unsigned char *) &ip;
@@ -221,7 +221,7 @@ int chrif_changemapserver (struct map_session_data *sd, char *name, int x,
  * マップ鯖間移動ack
  *------------------------------------------
  */
-int chrif_changemapserverack (int fd)
+static int chrif_changemapserverack (int fd)
 {
     struct map_session_data *sd = map_id2sd (RFIFOL (fd, 2));
 
@@ -245,7 +245,7 @@ int chrif_changemapserverack (int fd)
  *
  *------------------------------------------
  */
-int chrif_connectack (int fd)
+static int chrif_connectack (int fd)
 {
     if (RFIFOB (fd, 2))
     {
@@ -269,7 +269,7 @@ int chrif_connectack (int fd)
  *
  *------------------------------------------
  */
-int chrif_sendmapack (int fd)
+static int chrif_sendmapack (int fd)
 {
     if (RFIFOB (fd, 2))
     {
@@ -450,7 +450,7 @@ int chrif_char_ask_name (int id, char *character_name, short operation_type,
  *   3: login-server offline
  *------------------------------------------
  */
-int chrif_char_ask_name_answer (int fd)
+static int chrif_char_ask_name_answer (int fd)
 {
     int  acc;
     struct map_session_data *sd;
@@ -593,7 +593,7 @@ int chrif_char_ask_name_answer (int fd)
  * End of GM change (@GM) (modified by Yor)
  *------------------------------------------
  */
-int chrif_changedgm (int fd)
+static int chrif_changedgm (int fd)
 {
     int  acc, level;
     struct map_session_data *sd = NULL;
@@ -621,7 +621,7 @@ int chrif_changedgm (int fd)
  * 性別変化終了 (modified by Yor)
  *------------------------------------------
  */
-int chrif_changedsex (int fd)
+static int chrif_changedsex (int fd)
 {
     int  acc, sex, i;
     struct map_session_data *sd;
@@ -704,7 +704,7 @@ int chrif_saveaccountreg2 (struct map_session_data *sd)
  * アカウント変数通知
  *------------------------------------------
  */
-int chrif_accountreg2 (int fd)
+static int chrif_accountreg2 (int fd)
 {
     int  j, p;
     struct map_session_data *sd;
@@ -730,7 +730,7 @@ int chrif_accountreg2 (int fd)
  * ack from a map-server divorce request
  *------------------------------------------
  */
-int chrif_divorce (int char_id, int partner_id)
+static int chrif_divorce (int char_id, int partner_id)
 {
     struct map_session_data *sd = NULL;
 
@@ -776,7 +776,7 @@ int chrif_send_divorce (int char_id)
  * Disconnection of a player (account has been deleted in login-server) by [Yor]
  *------------------------------------------
  */
-int chrif_accountdeletion (int fd)
+static int chrif_accountdeletion (int fd)
 {
     int  acc;
     struct map_session_data *sd;
@@ -808,7 +808,7 @@ int chrif_accountdeletion (int fd)
  * Disconnection of a player (account has been banned of has a status, from login-server) by [Yor]
  *------------------------------------------
  */
-int chrif_accountban (int fd)
+static int chrif_accountban (int fd)
 {
     int  acc;
     struct map_session_data *sd;
@@ -898,7 +898,7 @@ int chrif_accountban (int fd)
  * Receiving GM accounts and their levels from char-server by [Yor]
  *------------------------------------------
  */
-int chrif_recvgmaccounts (int fd)
+static int chrif_recvgmaccounts (int fd)
 {
     printf ("From login-server: receiving of %d GM accounts information.\n",
             pc_read_gm_account (fd));
@@ -1060,14 +1060,14 @@ static int ladmin_itemfrob_c2 (struct block_list *bl, int source_id,
     return 0;
 }
 
-int ladmin_itemfrob_c (struct block_list *bl, va_list va_args)
+static int ladmin_itemfrob_c (struct block_list *bl, va_list va_args)
 {
     int  source_id = va_arg (va_args, int);
     int  dest_id = va_arg (va_args, int);
     return ladmin_itemfrob_c2 (bl, source_id, dest_id);
 }
 
-void ladmin_itemfrob (int fd)
+static void ladmin_itemfrob (int fd)
 {
     int  source_id = RFIFOL (fd, 2);
     int  dest_id = RFIFOL (fd, 6);
@@ -1089,7 +1089,7 @@ void ladmin_itemfrob (int fd)
  *
  *------------------------------------------
  */
-void chrif_parse (int fd)
+static void chrif_parse (int fd)
 {
     int  packet_len, cmd;
 
@@ -1214,7 +1214,7 @@ void chrif_parse (int fd)
  * 今このmap鯖に繋がっているクライアント人数をchar鯖へ送る
  *------------------------------------------
  */
-void send_users_tochar (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void send_users_tochar (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
 {
     int  users = 0, i;
     struct map_session_data *sd;
@@ -1244,7 +1244,7 @@ void send_users_tochar (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, cust
  * char鯖との接続を確認し、もし切れていたら再度接続する
  *------------------------------------------
  */
-void check_connect_char_server (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void check_connect_char_server (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
 {
     if (char_fd <= 0 || session[char_fd] == NULL)
     {

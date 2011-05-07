@@ -631,7 +631,7 @@ void map_clearflooritem_timer (timer_id tid, tick_t UNUSED, custom_id_t id, cust
 /// drop an object on a random point near the object
 // return (y << 16 ) | x for the chosen point
 // TODO rewrite this to avoid the double loop - use an LFSR?
-uint32_t map_searchrandfreecell (uint16_t m, uint16_t x, uint16_t y, int range)
+static uint32_t map_searchrandfreecell (uint16_t m, uint16_t x, uint16_t y, int range)
 {
     int free_cell = 0;
     for (int i = -range; i <= range; i++)
@@ -1211,7 +1211,7 @@ static bool map_readmap (int m, const char *filename)
 }
 
 /// Read all maps
-void map_readallmap (void)
+static void map_readallmap (void)
 {
     int maps_removed = 0;
     char fn[256] = "";
@@ -1232,7 +1232,7 @@ void map_readallmap (void)
 }
 
 /// Add a map to load
-void map_addmap (const char *mapname)
+static void map_addmap (const char *mapname)
 {
     if (strcasecmp (mapname, "clear") == 0)
     {
@@ -1327,7 +1327,7 @@ void map_log (const char *format, ...)
  * 設定ファイルを読み込む
  *------------------------------------------
  */
-int map_config_read (const char *cfgName)
+static int map_config_read (const char *cfgName)
 {
     char line[1024], w1[1024], w2[1024];
     FILE *fp;
@@ -1475,7 +1475,7 @@ static int cleanup_sub (struct block_list *bl, va_list UNUSED)
  * map鯖終了時処理
  *------------------------------------------
  */
-void do_final (void)
+static void do_final (void)
 {
     int  map_id, i;
 

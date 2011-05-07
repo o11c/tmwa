@@ -23,7 +23,7 @@
 int  skill_pool_skills[MAX_POOL_SKILLS];
 int  skill_pool_skills_size = 0;
 
-extern void skill_pool_register (int id)
+void skill_pool_register (int id)
 {
     if (skill_pool_skills_size + 1 >= MAX_POOL_SKILLS)
     {

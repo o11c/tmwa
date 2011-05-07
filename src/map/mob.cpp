@@ -39,7 +39,6 @@ struct mob_db mob_db[2001];
 static int distance (int, int, int, int);
 static int mob_makedummymobdb (int);
 static void mob_timer (timer_id, tick_t, custom_id_t, custom_data_t);
-int  mobskill_use (struct mob_data *md, unsigned int tick, int event);
 int  mobskill_deltimer (struct mob_data *md);
 int  mob_skillid2skillidx (int mob_class, int skillid);
 int  mobskill_use_id (struct mob_data *md, struct block_list *target,
@@ -85,7 +84,7 @@ static void mob_init (struct mob_data *md);
  * The minimum data set for MOB spawning
  *------------------------------------------
  */
-int mob_spawn_dataset (struct mob_data *md, const char *mobname, int mob_class)
+static int mob_spawn_dataset (struct mob_data *md, const char *mobname, int mob_class)
 {
     nullpo_retr (0, md);
 
@@ -254,7 +253,7 @@ static void mob_mutate (struct mob_data *md, int stat, int intensity)   // inten
 }
 
 // This calculates the exp of a given mob
-int mob_gen_exp (struct mob_db *mob)
+static int mob_gen_exp (struct mob_db *mob)
 {
     if (mob->max_hp <= 1)
         return 1;
@@ -538,7 +537,7 @@ int mob_get_equip (int mob_class)   // mob equip [Valaris]
  * Is MOB in the state in which the present movement is possible or not?
  *------------------------------------------
  */
-int mob_can_move (struct mob_data *md)
+static int mob_can_move (struct mob_data *md)
 {
     nullpo_retr (0, md);
 
@@ -812,7 +811,7 @@ static int mob_attack (struct mob_data *md, unsigned int tick, int UNUSED)
  * The callback function of clif_foreachclient
  *------------------------------------------
  */
-int mob_stopattacked (struct map_session_data *sd, va_list ap)
+static int mob_stopattacked (struct map_session_data *sd, va_list ap)
 {
     int  id;
 
@@ -1018,7 +1017,7 @@ static void mob_delayspawn (timer_id UNUSED, tick_t UNUSED, custom_id_t m, custo
  * spawn timing calculation
  *------------------------------------------
  */
-int mob_setdelayspawn (int id)
+static int mob_setdelayspawn (int id)
 {
     unsigned int spawntime, spawntime1, spawntime2, spawntime3;
     struct mob_data *md;
@@ -1269,7 +1268,7 @@ int mob_stop_walking (struct mob_data *md, int type)
  * Reachability to a Specification ID existence place
  *------------------------------------------
  */
-int mob_can_reach (struct mob_data *md, struct block_list *bl, int range)
+static int mob_can_reach (struct mob_data *md, struct block_list *bl, int range)
 {
     int  dx, dy;
     struct walkpath_data wpd;
@@ -2367,7 +2366,7 @@ void mob_timer_delete (timer_id UNUSED, tick_t UNUSED, custom_id_t id, custom_da
  *
  *------------------------------------------
  */
-int mob_deleteslave_sub (struct block_list *bl, va_list ap)
+static int mob_deleteslave_sub (struct block_list *bl, va_list ap)
 {
     struct mob_data *md;
     int  id;
@@ -3016,7 +3015,7 @@ int mob_heal (struct mob_data *md, int heal)
  * Added by RoVeRT
  *------------------------------------------
  */
-int mob_warpslave_sub (struct block_list *bl, va_list ap)
+static int mob_warpslave_sub (struct block_list *bl, va_list ap)
 {
     struct mob_data *md = (struct mob_data *) bl;
     int  id, x, y;
@@ -3034,7 +3033,7 @@ int mob_warpslave_sub (struct block_list *bl, va_list ap)
  * Added by RoVeRT
  *------------------------------------------
  */
-int mob_warpslave (struct mob_data *md, int x, int y)
+static int mob_warpslave (struct mob_data *md, int x, int y)
 {
 //printf("warp slave\n");
     map_foreachinarea (mob_warpslave_sub, md->bl.m,
@@ -3129,7 +3128,7 @@ int mob_warp (struct mob_data *md, int m, int x, int y, int type)
  * 画面内の取り巻きの数計算用(foreachinarea)
  *------------------------------------------
  */
-int mob_countslave_sub (struct block_list *bl, va_list ap)
+static int mob_countslave_sub (struct block_list *bl, va_list ap)
 {
     int  id, *c;
     struct mob_data *md;
@@ -3150,7 +3149,7 @@ int mob_countslave_sub (struct block_list *bl, va_list ap)
  * 画面内の取り巻きの数計算
  *------------------------------------------
  */
-int mob_countslave (struct mob_data *md)
+static int mob_countslave (struct mob_data *md)
 {
     int  c = 0;
 
@@ -3697,7 +3696,7 @@ int mobskill_use_id (struct mob_data *md, struct block_list *target,
  * スキル使用（場所指定）
  *------------------------------------------
  */
-int mobskill_use_pos (struct mob_data *md,
+static int mobskill_use_pos (struct mob_data *md,
                       int skill_x, int skill_y, int skill_idx)
 {
     int  casttime = 0, range;
@@ -3789,7 +3788,7 @@ int mobskill_use_pos (struct mob_data *md,
  * Friendly Mob whose HP is decreasing by a nearby MOB is looked for.
  *------------------------------------------
  */
-int mob_getfriendhpltmaxrate_sub (struct block_list *bl, va_list ap)
+static int mob_getfriendhpltmaxrate_sub (struct block_list *bl, va_list ap)
 {
     int  rate;
     struct mob_data **fr, *md, *mmd;
@@ -3809,7 +3808,7 @@ int mob_getfriendhpltmaxrate_sub (struct block_list *bl, va_list ap)
     return 0;
 }
 
-struct mob_data *mob_getfriendhpltmaxrate (struct mob_data *md, int rate)
+static struct mob_data *mob_getfriendhpltmaxrate (struct mob_data *md, int rate)
 {
     struct mob_data *fr = NULL;
     const int r = 8;
@@ -3826,7 +3825,7 @@ struct mob_data *mob_getfriendhpltmaxrate (struct mob_data *md, int rate)
  * What a status state suits by nearby MOB is looked for.
  *------------------------------------------
  */
-int mob_getfriendstatus_sub (struct block_list *bl, va_list ap)
+static int mob_getfriendstatus_sub (struct block_list *bl, va_list ap)
 {
     int  cond1, cond2;
     struct mob_data **fr, *md, *mmd;
@@ -3858,7 +3857,7 @@ int mob_getfriendstatus_sub (struct block_list *bl, va_list ap)
     return 0;
 }
 
-struct mob_data *mob_getfriendstatus (struct mob_data *md, int cond1,
+static struct mob_data *mob_getfriendstatus (struct mob_data *md, int cond1,
                                       int cond2)
 {
     struct mob_data *fr = NULL;

@@ -67,7 +67,7 @@ static uint8_t filehash (const char *fname)
 }
 
 /// Find the filelist entry for the given filename, or NULL if it is not
-FILELIST *filelist_find (const char *fname)
+static FILELIST *filelist_find (const char *fname)
 {
     int16_t idx = filelist_hash[filehash (fname)];
     while (idx >= 0)
@@ -120,7 +120,7 @@ static FILELIST *filelist_modify (FILELIST * entry)
 
 /// Change fname data/*.gat to lfname data/*.wlk
 // TODO even if the file exists, don't keep reopening it every time one loads
-void grfio_resnametable (const char *fname, char *lfname)
+static void grfio_resnametable (const char *fname, char *lfname)
 {
     char restable[] = "data/resnametable.txt";
 

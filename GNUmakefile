@@ -53,6 +53,7 @@ map-server: ${BUILD_DIR}/map/map
 	cp -f $< $@
 ladmin: ${BUILD_DIR}/ladmin/ladmin
 	cp -f $< $@
+tools: eathena-monitor
 eathena-monitor: ${BUILD_DIR}/tool/eathena-monitor
 	cp -f $< $@
 webserver: ${BUILD_DIR}/webserver/main

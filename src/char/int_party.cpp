@@ -21,7 +21,7 @@ bool party_check_empty (struct party *p);
 void mapif_parse_PartyLeave (int fd, party_t party_id, account_t account_id);
 
 /// Save party
-void inter_party_tofile (FILE *fp, struct party *p)
+static void inter_party_tofile (FILE *fp, struct party *p)
 {
     fprintf (fp, "%u\t%s\t%d,%d\t", p->party_id, p->name, p->exp, p->item);
     for (int i = 0; i < MAX_PARTY; i++)
@@ -33,7 +33,7 @@ void inter_party_tofile (FILE *fp, struct party *p)
 }
 
 /// Read a party
-bool inter_party_fromstr (const char *str, struct party *p)
+static bool inter_party_fromstr (const char *str, struct party *p)
 {
     memset (p, 0, sizeof (struct party));
 
@@ -105,7 +105,7 @@ bool inter_party_init (void)
 }
 
 /// Save a party
-void inter_party_save_sub (db_key_t UNUSED, db_val_t data, va_list ap)
+static void inter_party_save_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
     FILE *fp = va_arg (ap, FILE *);
     inter_party_tofile (fp, (struct party *) data.p);
@@ -127,7 +127,7 @@ bool inter_party_save (void)
 }
 
 /// Check if a party has the name
-void search_partyname_sub (db_key_t UNUSED, db_val_t data, va_list ap)
+static void search_partyname_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
     struct party *p = (struct party *) data.p;
     const char *str = va_arg (ap, const char *);
@@ -137,7 +137,7 @@ void search_partyname_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 }
 
 /// Find the party with the name
-struct party *search_partyname (const char *str)
+static struct party *search_partyname (const char *str)
 {
     struct party *p = NULL;
     numdb_foreach (party_db, search_partyname_sub, str, &p);
@@ -147,7 +147,7 @@ struct party *search_partyname (const char *str)
 /// Check if party can share xp
 // by checking whether the maximum difference between party members
 // exceeds party_share_level
-bool party_check_exp_share (struct party *p)
+static bool party_check_exp_share (struct party *p)
 {
     level_t maxlv = 0;
     level_t minlv = 0xff;
@@ -179,7 +179,7 @@ bool party_check_empty (struct party *p)
 }
 
 /// Checks if player is in the party, but only if it isn't the target party
-void party_check_conflict_sub (db_key_t UNUSED, db_val_t data, va_list ap)
+static void party_check_conflict_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 {
     struct party *p = (struct party *) data.p;
 
@@ -203,7 +203,7 @@ void party_check_conflict_sub (db_key_t UNUSED, db_val_t data, va_list ap)
 }
 
 /// Make sure the character isn't already in any party
-void party_check_conflict (party_t party_id, account_t account_id, const char *nick)
+static void party_check_conflict (party_t party_id, account_t account_id, const char *nick)
 {
     numdb_foreach (party_db, party_check_conflict_sub, party_id, account_id,
                    nick);
@@ -212,7 +212,7 @@ void party_check_conflict (party_t party_id, account_t account_id, const char *n
 
 
 /// inform the map server of whether the party was created
-void mapif_party_created (int fd, account_t account_id, struct party *p)
+static void mapif_party_created (int fd, account_t account_id, struct party *p)
 {
     WFIFOW (fd, 0) = 0x3820;
     WFIFOL (fd, 2) = account_id;
@@ -233,7 +233,7 @@ void mapif_party_created (int fd, account_t account_id, struct party *p)
 }
 
 /// found no party info
-void mapif_party_noinfo (int fd, party_t party_id)
+static void mapif_party_noinfo (int fd, party_t party_id)
 {
     WFIFOW (fd, 0) = 0x3821;
     WFIFOW (fd, 2) = 8;
@@ -243,7 +243,7 @@ void mapif_party_noinfo (int fd, party_t party_id)
 }
 
 /// Return existing party info to given or all map servers
-void mapif_party_info (int fd, struct party *p)
+static void mapif_party_info (int fd, struct party *p)
 {
     uint8_t buf[4 + sizeof (struct party)];
 
@@ -257,7 +257,7 @@ void mapif_party_info (int fd, struct party *p)
 }
 
 /// Inform the map server of whether member got added to the party
-void mapif_party_memberadded (int fd, party_t party_id, account_t account_id, bool failed)
+static void mapif_party_memberadded (int fd, party_t party_id, account_t account_id, bool failed)
 {
     WFIFOW (fd, 0) = 0x3822;
     WFIFOL (fd, 2) = party_id;
@@ -268,7 +268,7 @@ void mapif_party_memberadded (int fd, party_t party_id, account_t account_id, bo
 
 /// Inform map server that a party option changed
 // flag bits: 0x01 exp, 0x10 item
-void mapif_party_optionchanged (int fd, struct party *p, account_t account_id,
+static void mapif_party_optionchanged (int fd, struct party *p, account_t account_id,
                                 uint8_t flag)
 {
     unsigned char buf[15];
@@ -288,7 +288,7 @@ void mapif_party_optionchanged (int fd, struct party *p, account_t account_id,
 }
 
 /// Inform all map servers that someone left a party
-void mapif_party_left (party_t party_id, account_t account_id, const char *name)
+static void mapif_party_left (party_t party_id, account_t account_id, const char *name)
 {
     unsigned char buf[34];
     WBUFW (buf, 0) = 0x3824;
@@ -300,7 +300,7 @@ void mapif_party_left (party_t party_id, account_t account_id, const char *name)
 }
 
 /// Inform all map servers that party member has changed map
-void mapif_party_membermoved (struct party *p, int idx)
+static void mapif_party_membermoved (struct party *p, int idx)
 {
     uint8_t buf[29];
     WBUFW (buf, 0) = 0x3825;
@@ -324,7 +324,7 @@ void mapif_party_broken (party_t party_id, uint8_t flag)
 }
 
 /// Forward party chat
-void mapif_party_message (party_t party_id, account_t account_id, const char *mes, int len)
+static void mapif_party_message (party_t party_id, account_t account_id, const char *mes, int len)
 {
     uint8_t buf[len + 12];
     WBUFW (buf, 0) = 0x3827;
@@ -338,7 +338,7 @@ void mapif_party_message (party_t party_id, account_t account_id, const char *me
 
 
 /// Create a party
-void mapif_parse_CreateParty (int fd, account_t account_id, const char *name,
+static void mapif_parse_CreateParty (int fd, account_t account_id, const char *name,
                               const char *nick, const char *map, level_t lv)
 {
     for (int i = 0; i < 24 && name[i]; i++)
@@ -378,7 +378,7 @@ void mapif_parse_CreateParty (int fd, account_t account_id, const char *name,
 }
 
 /// Request for party info
-void mapif_parse_PartyInfo (int fd, party_t party_id)
+static void mapif_parse_PartyInfo (int fd, party_t party_id)
 {
     struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id).p;
     if (p)
@@ -388,7 +388,7 @@ void mapif_parse_PartyInfo (int fd, party_t party_id)
 }
 
 /// Add member to party
-void mapif_parse_PartyAddMember (int fd, party_t party_id, account_t account_id,
+static void mapif_parse_PartyAddMember (int fd, party_t party_id, account_t account_id,
                                  const char *nick, const char *map, level_t lv)
 {
     struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id).p;
@@ -427,7 +427,7 @@ void mapif_parse_PartyAddMember (int fd, party_t party_id, account_t account_id,
 }
 
 /// Request to change a party option
-void mapif_parse_PartyChangeOption (int fd, party_t party_id, account_t account_id,
+static void mapif_parse_PartyChangeOption (int fd, party_t party_id, account_t account_id,
                                     bool exp, bool item)
 {
     struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id).p;
@@ -468,7 +468,7 @@ void mapif_parse_PartyLeave (int UNUSED, party_t party_id, account_t account_id)
 }
 
 /// A party member changed map (possibly logging off?)
-void mapif_parse_PartyChangeMap (int fd, party_t party_id, account_t account_id,
+static void mapif_parse_PartyChangeMap (int fd, party_t party_id, account_t account_id,
                                  const char *map, bool online, level_t lv)
 {
     struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id).p;
@@ -498,7 +498,7 @@ void mapif_parse_PartyChangeMap (int fd, party_t party_id, account_t account_id,
 }
 
 /// Request to delete a party
-void mapif_parse_BreakParty (int fd, party_t party_id)
+static void mapif_parse_BreakParty (int fd, party_t party_id)
 {
     struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id).p;
     if (!p)

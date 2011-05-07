@@ -54,7 +54,7 @@ static struct tm ev_tm_b;       // 時計イベント用
  * npc_enable_sub 有効時にOnTouchイベントを実行
  *------------------------------------------
  */
-int npc_enable_sub (struct block_list *bl, va_list ap)
+static int npc_enable_sub (struct block_list *bl, va_list ap)
 {
     struct map_session_data *sd;
     struct npc_data *nd;
@@ -195,95 +195,11 @@ int npc_timer_event (const char *eventname) // Added by RoVeRT
     return 0;
 }
 
-/*
-int npc_timer_sub_sub(void *key,void *data,va_list ap)	// Added by RoVeRT
-{
-	char *p=(char *)key;
-	struct event_data *ev=(struct event_data *)data;
-	int *c=va_arg(ap,int *);
-	int tick=0,ctick=gettick();
-	char temp[10];
-	char event[100];
-
-	if(ev->nd->bl.id==(int)*c && (p=strchr(p,':')) && p && strncasecmp("::OnTimer",p,8)==0 ){
-		sscanf(&p[9],"%s",temp);
-		tick=atoi(temp);
-
-		strcpy( event, ev->nd->name);
-		strcat( event, p);
-
-		if (ctick >= ev->nd->lastaction && ctick - ev->nd->timer >= tick) {
-			npc_timer_event(event);
-			ev->nd->lastaction = ctick;
-		}
-	}
-	return 0;
-}
-
-int npc_timer_sub(void *key,void *data,va_list ap)	// Added by RoVeRT
-{
-	struct npc_data *nd=(struct npc_data*)data;
-
-	if(nd->timer == -1)
-		return 0;
-
-	strdb_foreach(ev_db,npc_timer_sub_sub,&nd->bl.id);
-
-	return 0;
-}
-
-int npc_timer(int tid,unsigned int tick,int id,int data)	// Added by RoVeRT
-{
-	strdb_foreach(npcname_db,npc_timer_sub);
-
-	free((void*)data);
-	return 0;
-}*/
-/*==========================================
- * イベント用ラベルのエクスポート
- * npc_parse_script->strdb_foreachから呼ばれる
- *------------------------------------------
- */
-int npc_event_export (void *key, void *data, va_list ap)
-{
-    char *lname = (char *) key;
-    int  pos = (int) data;
-    struct npc_data *nd = va_arg (ap, struct npc_data *);
-
-    if ((lname[0] == 'O' || lname[0] == 'o')
-        && (lname[1] == 'N' || lname[1] == 'n'))
-    {
-        struct event_data *ev;
-        char *buf;
-        char *p = strchr (lname, ':');
-        // エクスポートされる
-        CREATE (ev, struct event_data, 1);
-        CREATE (buf, char, 50);
-        if (p == NULL || (p - lname) > 24)
-        {
-            printf ("npc_event_export: label name error !\n");
-            exit (1);
-        }
-        else
-        {
-            ev->nd = nd;
-            ev->pos = pos;
-            *p = '\0';
-            sprintf (buf, "%s::%s", nd->exname, lname);
-            *p = ':';
-            strdb_insert (ev_db, buf, (void *)ev);
-//          if (battle_config.etc_log)
-//              printf("npc_event_export: export [%s]\n",buf);
-        }
-    }
-    return 0;
-}
-
 /*==========================================
  * 全てのNPCのOn*イベント実行
  *------------------------------------------
  */
-void npc_event_doall_sub (db_key_t key, db_val_t data, va_list ap)
+static void npc_event_doall_sub (db_key_t key, db_val_t data, va_list ap)
 {
     const char *p = key.s;
     int  rid, argc;
@@ -320,7 +236,7 @@ int npc_event_doall_l (const char *name, int rid, int argc, argrec_t * args)
     return c;
 }
 
-void npc_event_do_sub (db_key_t key, db_val_t data, va_list ap)
+static void npc_event_do_sub (db_key_t key, db_val_t data, va_list ap)
 {
     const char *p = key.s;
     struct event_data *ev;
@@ -363,7 +279,7 @@ int npc_event_do_l (const char *name, int rid, int argc, argrec_t * args)
  * 時計イベント実行
  *------------------------------------------
  */
-void npc_event_do_clock (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void npc_event_do_clock (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
 {
     time_t timer;
     struct tm *t;
@@ -411,7 +327,7 @@ int npc_event_do_oninit (void)
  * OnTimer NPC event - by RoVeRT
  *------------------------------------------
  */
-int npc_addeventtimer (struct npc_data *nd, int tick, const char *name)
+static int npc_addeventtimer (struct npc_data *nd, int tick, const char *name)
 {
     int  i;
     for (i = 0; i < MAX_EVENTTIMER; i++)
@@ -432,7 +348,7 @@ int npc_addeventtimer (struct npc_data *nd, int tick, const char *name)
     return 0;
 }
 
-int npc_deleventtimer (struct npc_data *nd, const char *name)
+static int npc_deleventtimer (struct npc_data *nd, const char *name)
 {
     int  i;
     for (i = 0; i < MAX_EVENTTIMER; i++)
@@ -449,20 +365,7 @@ int npc_deleventtimer (struct npc_data *nd, const char *name)
     return 0;
 }
 
-int npc_cleareventtimer (struct npc_data *nd)
-{
-    int  i;
-    for (i = 0; i < MAX_EVENTTIMER; i++)
-        if (nd->eventtimer[i] != -1)
-        {
-            delete_timer (nd->eventtimer[i], npc_event_timer);
-            nd->eventtimer[i] = -1;
-        }
-
-    return 0;
-}
-
-void npc_do_ontimer_sub (db_key_t key, db_val_t data, va_list ap)
+static void npc_do_ontimer_sub (db_key_t key, db_val_t data, va_list ap)
 {
     const char *p = key.s;
     struct event_data *ev = (struct event_data *) data.p;
@@ -500,45 +403,10 @@ int npc_do_ontimer (int npc_id, struct map_session_data *sd, int option)
 }
 
 /*==========================================
- * タイマーイベント用ラベルの取り込み
- * npc_parse_script->strdb_foreachから呼ばれる
- *------------------------------------------
- */
-int npc_timerevent_import (void *key, void *data, va_list ap)
-{
-    char *lname = (char *) key;
-    int  pos = (int) data;
-    struct npc_data *nd = va_arg (ap, struct npc_data *);
-    int  t = 0, n = 0;
-
-    if (sscanf (lname, "OnTimer%d%n", &t, &n) == 1 && lname[n] == ':')
-    {
-        // タイマーイベント
-        struct npc_timerevent_list *te = nd->u.scr.timer_event;
-        int  j, i = nd->u.scr.timeramount;
-        RECREATE (te, struct npc_timerevent_list, i+1);
-        for (j = 0; j < i; j++)
-        {
-            if (te[j].timer > t)
-            {
-                memmove (te + j + 1, te + j,
-                         sizeof (struct npc_timerevent_list) * (i - j));
-                break;
-            }
-        }
-        te[j].timer = t;
-        te[j].pos = pos;
-        nd->u.scr.timer_event = te;
-        nd->u.scr.timeramount = i + 1;
-    }
-    return 0;
-}
-
-/*==========================================
  * タイマーイベント実行
  *------------------------------------------
  */
-void npc_timerevent (timer_id UNUSED, tick_t tick, custom_id_t id, custom_data_t data)
+static void npc_timerevent (timer_id UNUSED, tick_t tick, custom_id_t id, custom_data_t data)
 {
     int  next, t;
     struct npc_data *nd = (struct npc_data *) map_id2bl (id);
@@ -740,7 +608,7 @@ int npc_event (struct map_session_data *sd, const char *eventname,
     return 0;
 }
 
-void npc_command_sub (db_key_t key, db_val_t data, va_list ap)
+static void npc_command_sub (db_key_t key, db_val_t data, va_list ap)
 {
     const char *p = key.s;
     struct event_data *ev = (struct event_data *) data.p;
@@ -1178,7 +1046,7 @@ int npc_selllist (struct map_session_data *sd, int n,
  * 読み込むnpcファイルのクリア
  *------------------------------------------
  */
-void npc_clearsrcfile (void)
+static void npc_clearsrcfile (void)
 {
     struct npc_src_list *p = npc_src_first;
 
@@ -1425,7 +1293,7 @@ static int npc_parse_shop (char *w1, char *UNUSED, char *w3, char *w4)
  * NPCのラベルデータコンバート
  *------------------------------------------
  */
-void npc_convertlabel_db (db_key_t key, db_val_t data, va_list ap)
+static void npc_convertlabel_db (db_key_t key, db_val_t data, va_list ap)
 {
     const char *lname = key.s;
     int  pos = data.i;
@@ -2170,7 +2038,7 @@ static void npc_free_internal (struct npc_data *nd)
     free (nd);
 }
 
-void npc_propagate_update (struct npc_data *nd)
+static void npc_propagate_update (struct npc_data *nd)
 {
     map_foreachinarea (npc_enable_sub,
                        nd->bl.m,
@@ -2226,7 +2094,7 @@ int do_final_npc (void)
     return 0;
 }
 
-void ev_release (db_key_t key, db_val_t val)
+static void ev_release (db_key_t key, db_val_t val)
 {
     free ((char*)key.s);
     free (val.p);

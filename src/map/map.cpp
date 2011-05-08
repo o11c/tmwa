@@ -17,7 +17,6 @@
 #include "npc.hpp"
 #include "pc.hpp"
 #include "mob.hpp"
-#include "chat.hpp"
 #include "itemdb.hpp"
 #include "storage.hpp"
 #include "skill.hpp"
@@ -825,9 +824,6 @@ void map_addnickdb (struct map_session_data *sd)
 void map_quit (struct map_session_data *sd)
 {
     nullpo_retv (sd);
-
-    if (sd->chatID)
-        chat_leavechat (sd);
 
     if (sd->trade_partner)
         trade_tradecancel (sd);

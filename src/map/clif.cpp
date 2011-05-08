@@ -23,7 +23,6 @@
 
 #include "atcommand.hpp"
 #include "battle.hpp"
-#include "chat.hpp"
 #include "chrif.hpp"
 #include "intif.hpp"
 #include "itemdb.hpp"
@@ -98,8 +97,6 @@ enum
     AREA_WOC,
     AREA_WOSC,
     AREA_CHAT_WOC,
-    CHAT,
-    CHAT_WOS,
     PARTY,
     PARTY_WOS,
     PARTY_SAMEMAP,
@@ -250,14 +247,10 @@ static int clif_send_sub (struct block_list *bl, va_list ap)
             }
             /* fall through... */
         case AREA_WOC:
-            if ((sd && sd->chatID) || (bl && bl == src_bl))
+            if (bl && bl == src_bl)
                 return 0;
-
             break;
         case AREA_WOSC:
-            if ((sd) && sd->chatID
-                && sd->chatID == ((struct map_session_data *) src_bl)->chatID)
-                return 0;
             break;
     }
 
@@ -292,7 +285,6 @@ static int clif_send_sub (struct block_list *bl, va_list ap)
 static int clif_send (unsigned char *buf, int len, struct block_list *bl, int type)
 {
     int  i;
-    struct chat_data *cd;
     struct party *p = NULL;
     int  x_0 = 0, x_1 = 0, y_0 = 0, y_1 = 0;
 
@@ -371,31 +363,6 @@ static int clif_send (unsigned char *buf, int len, struct block_list *bl, int ty
                                bl->y + (AREA_SIZE - 5), BL_PC, buf, len, bl,
                                AREA_CHAT_WOC);
             break;
-        case CHAT:
-        case CHAT_WOS:
-            cd = (struct chat_data *) bl;
-            if (bl->type == BL_PC)
-            {
-                sd = (struct map_session_data *) bl;
-                cd = (struct chat_data *) map_id2bl (sd->chatID);
-            }
-            else if (bl->type != BL_CHAT)
-                break;
-            if (cd == NULL)
-                break;
-            for (i = 0; i < cd->users; i++)
-            {
-                if (type == CHAT_WOS
-                    && cd->usersd[i] == (struct map_session_data *) bl)
-                    continue;
-                if (packet_len_table[RBUFW (buf, 0)])
-                {               // packet must exist
-                    memcpy (WFIFOP (cd->usersd[i]->fd, 0), buf, len);
-                    WFIFOSET (cd->usersd[i]->fd, len);
-                }
-            }
-            break;
-
         case PARTY_AREA:       // 同じ画面内の全パーティーメンバに送信
         case PARTY_AREA_WOS:   // 自分以外の同じ画面内の全パーティーメンバに送信
             x_0 = bl->x - AREA_SIZE;
@@ -2525,87 +2492,6 @@ int clif_createchat (struct map_session_data *sd, int fail)
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-int clif_dispchat (struct chat_data *cd, int fd)
-{
-    uint8_t buf[128];              // 最大title(60バイト)+17
-
-    if (cd == NULL || *cd->owner == NULL)
-        return 1;
-
-    WBUFW (buf, 0) = 0xd7;
-    WBUFW (buf, 2) = strlen (cd->title) + 17;
-    WBUFL (buf, 4) = (*cd->owner)->id;
-    WBUFL (buf, 8) = cd->bl.id;
-    WBUFW (buf, 12) = cd->limit;
-    WBUFW (buf, 14) = cd->users;
-    WBUFB (buf, 16) = cd->pub;
-    strcpy ((char *)WBUFP (buf, 17), cd->title);
-    if (fd)
-    {
-        memcpy (WFIFOP (fd, 0), buf, WBUFW (buf, 2));
-        WFIFOSET (fd, WBUFW (buf, 2));
-    }
-    else
-    {
-        clif_send (buf, WBUFW (buf, 2), *cd->owner, AREA_WOSC);
-    }
-
-    return 0;
-}
-
-/*==========================================
- * chatの状態変更成功
- * 外部の人用と命令コード(d7->df)が違うだけ
- *------------------------------------------
- */
-int clif_changechatstatus (struct chat_data *cd)
-{
-    uint8_t buf[128];              // 最大title(60バイト)+17
-
-    if (cd == NULL || cd->usersd[0] == NULL)
-        return 1;
-
-    WBUFW (buf, 0) = 0xdf;
-    WBUFW (buf, 2) = strlen (cd->title) + 17;
-    WBUFL (buf, 4) = cd->usersd[0]->bl.id;
-    WBUFL (buf, 8) = cd->bl.id;
-    WBUFW (buf, 12) = cd->limit;
-    WBUFW (buf, 14) = cd->users;
-    WBUFB (buf, 16) = cd->pub;
-    strcpy ((char *)WBUFP (buf, 17), cd->title);
-    clif_send (buf, WBUFW (buf, 2), &cd->usersd[0]->bl, CHAT);
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int clif_clearchat (struct chat_data *cd, int fd)
-{
-    uint8_t buf[32];
-
-    nullpo_retr (0, cd);
-
-    WBUFW (buf, 0) = 0xd8;
-    WBUFL (buf, 2) = cd->bl.id;
-    if (fd)
-    {
-        memcpy (WFIFOP (fd, 0), buf, packet_len_table[0xd8]);
-        WFIFOSET (fd, packet_len_table[0xd8]);
-    }
-    else
-    {
-        clif_send (buf, packet_len_table[0xd8], *cd->owner, AREA_WOSC);
-    }
-
-    return 0;
-}
 
 /*==========================================
  *
@@ -2622,95 +2508,6 @@ int clif_joinchatfail (struct map_session_data *sd, int fail)
     WFIFOW (fd, 0) = 0xda;
     WFIFOB (fd, 2) = fail;
     WFIFOSET (fd, packet_len_table[0xda]);
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int clif_joinchatok (struct map_session_data *sd, struct chat_data *cd)
-{
-    int  fd;
-    int  i;
-
-    nullpo_retr (0, sd);
-    nullpo_retr (0, cd);
-
-    fd = sd->fd;
-    WFIFOW (fd, 0) = 0xdb;
-    WFIFOW (fd, 2) = 8 + (28 * cd->users);
-    WFIFOL (fd, 4) = cd->bl.id;
-    for (i = 0; i < cd->users; i++)
-    {
-        WFIFOL (fd, 8 + i * 28) = (i != 0) || ((*cd->owner)->type == BL_NPC);
-        memcpy (WFIFOP (fd, 8 + i * 28 + 4), cd->usersd[i]->status.name, 24);
-    }
-    WFIFOSET (fd, WFIFOW (fd, 2));
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int clif_addchat (struct chat_data *cd, struct map_session_data *sd)
-{
-    uint8_t buf[32];
-
-    nullpo_retr (0, sd);
-    nullpo_retr (0, cd);
-
-    WBUFW (buf, 0) = 0x0dc;
-    WBUFW (buf, 2) = cd->users;
-    memcpy (WBUFP (buf, 4), sd->status.name, 24);
-    clif_send (buf, packet_len_table[0xdc], &sd->bl, CHAT_WOS);
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int clif_changechatowner (struct chat_data *cd, struct map_session_data *sd)
-{
-    uint8_t buf[64];
-
-    nullpo_retr (0, sd);
-    nullpo_retr (0, cd);
-
-    WBUFW (buf, 0) = 0xe1;
-    WBUFL (buf, 2) = 1;
-    memcpy (WBUFP (buf, 6), cd->usersd[0]->status.name, 24);
-    WBUFW (buf, 30) = 0xe1;
-    WBUFL (buf, 32) = 0;
-    memcpy (WBUFP (buf, 36), sd->status.name, 24);
-
-    clif_send (buf, packet_len_table[0xe1] * 2, &sd->bl, CHAT);
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int clif_leavechat (struct chat_data *cd, struct map_session_data *sd)
-{
-    uint8_t buf[32];
-
-    nullpo_retr (0, sd);
-    nullpo_retr (0, cd);
-
-    WBUFW (buf, 0) = 0xdd;
-    WBUFW (buf, 2) = cd->users - 1;
-    memcpy (WBUFP (buf, 4), sd->status.name, 24);
-    WBUFB (buf, 28) = 0;
-
-    clif_send (buf, packet_len_table[0xdd], &sd->bl, CHAT);
 
     return 0;
 }
@@ -3004,13 +2801,6 @@ static void clif_getareachar_pc (struct map_session_data *sd,
         WFIFOSET (sd->fd, len);
     }
 
-    if (dstsd->chatID)
-    {
-        struct chat_data *cd;
-        cd = (struct chat_data *) map_id2bl (dstsd->chatID);
-        if (cd->usersd[0] == dstsd)
-            clif_dispchat (cd, sd->fd);
-    }
     if (dstsd->spiritball > 0)
     {
         clif_set01e1 (dstsd, WFIFOP (sd->fd, 0));
@@ -3043,12 +2833,6 @@ static void clif_getareachar_npc (struct map_session_data *sd, struct npc_data *
 
     len = clif_npc0078 (nd, WFIFOP (sd->fd, 0));
     WFIFOSET (sd->fd, len);
-
-    if (nd->chat_id)
-    {
-        clif_dispchat ((struct chat_data *) map_id2bl (nd->chat_id), sd->fd);
-    }
-
 }
 
 /*==========================================
@@ -3381,13 +3165,6 @@ int clif_pcoutsight (struct block_list *bl, va_list ap)
             {
                 clif_clearchar_id (dstsd->bl.id, 0, sd->fd);
                 clif_clearchar_id (sd->bl.id, 0, dstsd->fd);
-                if (dstsd->chatID)
-                {
-                    struct chat_data *cd;
-                    cd = (struct chat_data *) map_id2bl (dstsd->chatID);
-                    if (cd->usersd[0] == dstsd)
-                        clif_dispchat (cd, sd->fd);
-                }
             }
             break;
         case BL_NPC:
@@ -5522,9 +5299,6 @@ static void clif_parse_WalkToXY (int fd, struct map_session_data *sd)
     if (sd->skilltimer != -1 && pc_checkskill (sd, SA_FREECAST) <= 0)   // フリーキャスト
         return;
 
-    if (sd->chatID)
-        return;
-
     if (sd->canmove_tick > gettick ())
         return;
 
@@ -5741,8 +5515,7 @@ static void clif_parse_GlobalMessage (int fd, struct map_session_data *sd)
         WBUFW (buf, 2) = msg_len + 8;   /* Header (2) + length (2) + ID (4). */
         WBUFL (buf, 4) = sd->bl.id;
 
-        clif_send (buf, msg_len + 8, &sd->bl,
-                   sd->chatID ? CHAT_WOS : AREA_CHAT_WOC);
+        clif_send (buf, msg_len + 8, &sd->bl, AREA_CHAT_WOC);
     }
 
     /* Send the message back to the speaker. */
@@ -6271,62 +6044,6 @@ static void clif_parse_NpcSellListSend (int fd, struct map_session_data *sd)
 }
 
 /*==========================================
- *
- *------------------------------------------
- */
-static void clif_parse_CreateChatRoom (int fd, struct map_session_data *sd)
-{
-    chat_createchat (sd, RFIFOW (fd, 4), RFIFOB (fd, 6), (char *)RFIFOP (fd, 7),
-                     (char *)RFIFOP (fd, 15), RFIFOW (fd, 2) - 15);
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-static void clif_parse_ChatAddMember (int fd, struct map_session_data *sd)
-{
-    chat_joinchat (sd, RFIFOL (fd, 2), (char *)RFIFOP (fd, 6));
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-static void clif_parse_ChatRoomStatusChange (int fd, struct map_session_data *sd)
-{
-    chat_changechatstatus (sd, RFIFOW (fd, 4), RFIFOB (fd, 6), (char *)WFIFOP (fd, 7),
-                           (char *)RFIFOP (fd, 15), RFIFOW (fd, 2) - 15);
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-static void clif_parse_ChangeChatOwner (int fd, struct map_session_data *sd)
-{
-    chat_changechatowner (sd, (char *)RFIFOP (fd, 6));
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-static void clif_parse_KickFromChat (int fd, struct map_session_data *sd)
-{
-    chat_kickchat (sd, (char *)RFIFOP (fd, 2));
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-static void clif_parse_ChatLeave (int UNUSED, struct map_session_data *sd)
-{
-    chat_leavechat (sd);
-}
-
-/*==========================================
  * 取引要請を相手に送る
  *------------------------------------------
  */
@@ -6476,7 +6193,7 @@ static void clif_parse_UseSkillToId (int fd, struct map_session_data *sd)
 
     if (maps[sd->bl.m].flag.noskill)
         return;
-    if (sd->chatID || sd->npc_id != 0 || sd->state.storage_flag)
+    if (sd->npc_id || sd->state.storage_flag)
         return;
 
     skilllv = RFIFOW (fd, 2);
@@ -6556,8 +6273,6 @@ static void clif_parse_UseSkillToPos (int fd, struct map_session_data *sd)
         return;
     if (sd->npc_id != 0 || sd->state.storage_flag)
         return;
-    if (sd->chatID)
-        return;
 
     skillmoreinfo = -1;
     skilllv = RFIFOW (fd, 2);
@@ -6619,8 +6334,6 @@ static void clif_parse_UseSkillMap (int fd, struct map_session_data *sd)
     nullpo_retv (sd);
 
     if (maps[sd->bl.m].flag.noskill)
-        return;
-    if (sd->chatID)
         return;
 
     if (sd->npc_id != 0 || (sd->sc_data &&
@@ -7444,21 +7157,21 @@ func_table clif_parse_func_table[0x220] =
     { 0, 0 }, // d2
     { 0, 0 }, // d3
     { 0, 0 }, // d4
-    { 1000, clif_parse_CreateChatRoom }, // d5
+    { 0, 0 }, // d5
     { 0, 0 }, // d6
     { 0, 0 }, // d7
     { 0, 0 }, // d8
-    { 0, clif_parse_ChatAddMember }, // d9
+    { 0, 0 }, // d9
     { 0, 0 }, // da
     { 0, 0 }, // db
     { 0, 0 }, // dc
     { 0, 0 }, // dd
-    { 0, clif_parse_ChatRoomStatusChange }, // de
+    { 0, 0 }, // de
     { 0, 0 }, // df
-    { 0, clif_parse_ChangeChatOwner }, // e0
+    { 0, 0 }, // e0
     { 0, 0 }, // e1
-    { 0, clif_parse_KickFromChat }, // e2
-    { 0, clif_parse_ChatLeave }, // e3
+    { 0, 0 }, // e2
+    { 0, 0 }, // e3
     { 2000, clif_parse_TradeRequest }, // e4
     { 0, 0 }, // e5
     { 0, clif_parse_TradeAck }, // e6

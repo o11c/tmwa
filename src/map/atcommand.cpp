@@ -5331,7 +5331,7 @@ int atcommand_reloadgmdb (      // by [Yor]
 }
 
 /*==========================================
- * @mapinfo <map name> [0-3] by MC_Cameri
+ * @mapinfo <map name> [0-2] by MC_Cameri
  * => Shows information about the map [map name]
  * 0 = no additional information
  * 1 = Show users in that map and their location
@@ -5344,10 +5344,9 @@ int atcommand_mapinfo (const int fd, struct map_session_data *sd,
 {
     struct map_session_data *pl_sd;
     struct npc_data *nd = NULL;
-    struct chat_data *cd = NULL;
     char output[200], map_name[100];
     char direction[12];
-    int  m_id, i, chat_num, list = 0;
+    int  m_id, i, list = 0;
 
     memset (output, '\0', sizeof (output));
     memset (map_name, '\0', sizeof (map_name));
@@ -5355,10 +5354,10 @@ int atcommand_mapinfo (const int fd, struct map_session_data *sd,
 
     sscanf (message, "%d %99[^\n]", &list, map_name);
 
-    if (list < 0 || list > 3)
+    if (list < 0 || list > 2)
     {
         clif_displaymessage (fd,
-                             "Please, enter at least a valid list number (usage: @mapinfo <0-3> [map]).");
+                             "Please, enter at least a valid list number (usage: @mapinfo <0-2> [map]).");
         return -1;
     }
 
@@ -5379,18 +5378,6 @@ int atcommand_mapinfo (const int fd, struct map_session_data *sd,
     sprintf (output, "Players In Map: %d", maps[m_id].users);
     clif_displaymessage (fd, output);
     sprintf (output, "NPCs In Map: %d", maps[m_id].npc_num);
-    clif_displaymessage (fd, output);
-    chat_num = 0;
-    for (i = 0; i < fd_max; i++)
-    {
-        if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-            && pl_sd->state.auth
-            && (cd = (struct chat_data *) map_id2bl (pl_sd->chatID)))
-        {
-            chat_num++;
-        }
-    }
-    sprintf (output, "Chats In Map: %d", chat_num);
     clif_displaymessage (fd, output);
     clif_displaymessage (fd, "------ Map Flags ------");
     sprintf (output, "Player vs Player: %s | No Party: %s",
@@ -5487,32 +5474,9 @@ int atcommand_mapinfo (const int fd, struct map_session_data *sd,
                 clif_displaymessage (fd, output);
             }
             break;
-        case 3:
-            clif_displaymessage (fd, "----- Chats in Map -----");
-            for (i = 0; i < fd_max; i++)
-            {
-                if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-                    && pl_sd->state.auth
-                    && (cd = (struct chat_data *) map_id2bl (pl_sd->chatID))
-                    && strcmp (pl_sd->mapname, map_name) == 0
-                    && cd->usersd[0] == pl_sd)
-                {
-                    sprintf (output,
-                             "Chat %d: %s | Player: %s | Location: %d %d", i,
-                             cd->title, pl_sd->status.name, cd->bl.x,
-                             cd->bl.y);
-                    clif_displaymessage (fd, output);
-                    sprintf (output,
-                             "   Users: %d/%d | Password: %s | Public: %s",
-                             cd->users, cd->limit, cd->pass,
-                             (cd->pub) ? "Yes" : "No");
-                    clif_displaymessage (fd, output);
-                }
-            }
-            break;
         default:               // normally impossible to arrive here
             clif_displaymessage (fd,
-                                 "Please, enter at least a valid list number (usage: @mapinfo <0-3> [map]).");
+                                 "Please, enter at least a valid list number (usage: @mapinfo <0-2> [map]).");
             return -1;
             break;
     }

@@ -11,7 +11,6 @@
 
 #include "atcommand.hpp"
 #include "battle.hpp"
-#include "chat.hpp"
 #include "chrif.hpp"
 #include "clif.hpp"
 #include "intif.hpp"

@@ -1149,7 +1149,6 @@ int npc_parse_warp (char *w1, const char *UNUSED, char *w3, char *w4)
     memcpy (nd->name, w3, 24);
     memcpy (nd->exname, w3, 24);
 
-    nd->chat_id = 0;
     if (!battle_config.warp_point_debug)
         nd->npc_class = WARP_CLASS;
     else
@@ -1268,7 +1267,6 @@ static int npc_parse_shop (char *w1, char *UNUSED, char *w3, char *w4)
     memcpy (nd->name, w3, 24);
     nd->npc_class = atoi (w4);
     nd->speed = 200;
-    nd->chat_id = 0;
     nd->option = 0;
     nd->opt1 = 0;
     nd->opt2 = 0;
@@ -1512,7 +1510,6 @@ static int npc_parse_script (char *w1, char *w2, char *w3, char *w4,
     nd->speed = 200;
     nd->u.scr.script = script;
     nd->u.scr.src_id = src_id;
-    nd->chat_id = 0;
     nd->option = 0;
     nd->opt1 = 0;
     nd->opt2 = 0;
@@ -2006,13 +2003,6 @@ struct npc_data *npc_spawn_text (int m, int x, int y,
 
 static void npc_free_internal (struct npc_data *nd)
 {
-    struct chat_data *cd;
-
-    if (nd->chat_id && (cd = (struct chat_data *) map_id2bl (nd->chat_id)))
-    {
-        free (cd);
-        cd = NULL;
-    }
     if (nd->bl.subtype == SCRIPT)
     {
         if (nd->u.scr.timer_event)

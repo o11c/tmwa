@@ -79,7 +79,7 @@ enum Direction
 };
 
 enum BlockType
-{ BL_NUL, BL_PC, BL_NPC, BL_MOB, BL_ITEM, BL_CHAT, BL_SKILL, BL_SPELL };
+{ BL_NUL, BL_PC, BL_NPC, BL_MOB, BL_ITEM, BL_SKILL, BL_SPELL };
 enum
 { WARP, SHOP, SCRIPT, MONS, MESSAGE };
 struct block_list
@@ -247,7 +247,6 @@ struct map_session_data
         unsigned storage:1;
         unsigned divorce:1;
     } npc_flags;
-    unsigned int chatID;
 
     int  attacktimer;
     int  attacktarget;
@@ -441,7 +440,6 @@ struct npc_data
     short speed;
     char name[24];
     char exname[24];
-    int  chat_id;
     short opt1, opt2, opt3, option;
     short flag;
     union
@@ -711,23 +709,6 @@ enum
 };
 
 #define LOOK_LAST LOOK_MISC2
-
-// AFAIK the client doesn't support this
-struct chat_data
-{
-    struct block_list bl;
-
-    char pass[8];      /* password */
-    char title[61];    /* room title MAX 60 */
-    unsigned char limit;        /* join limit */
-    unsigned char trigger;
-    unsigned char users;        /* current users */
-    unsigned char pub;          /* room attribute */
-    struct map_session_data *usersd[20];
-    struct block_list *owner_;
-    struct block_list **owner;
-    char npc_event[50];
-};
 
 extern struct map_data maps[];
 extern int map_num;

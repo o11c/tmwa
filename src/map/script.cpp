@@ -15,7 +15,6 @@
 
 #include "atcommand.hpp"
 #include "battle.hpp"
-#include "chat.hpp"
 #include "chrif.hpp"
 #include "clif.hpp"
 #include "../common/db.hpp"
@@ -199,8 +198,6 @@ int  buildin_getareausers (struct script_state *st);
 int  buildin_getareadropitem (struct script_state *st);
 int  buildin_enablenpc (struct script_state *st);
 int  buildin_disablenpc (struct script_state *st);
-int  buildin_enablearena (struct script_state *st); // Added by RoVeRT
-int  buildin_disablearena (struct script_state *st);    // Added by RoVeRT
 int  buildin_hideoffnpc (struct script_state *st);
 int  buildin_hideonnpc (struct script_state *st);
 int  buildin_sc_start (struct script_state *st);
@@ -213,12 +210,6 @@ int  buildin_resetlvl (struct script_state *st);
 int  buildin_resetstatus (struct script_state *st);
 int  buildin_resetskill (struct script_state *st);
 int  buildin_changesex (struct script_state *st);
-int  buildin_waitingroom (struct script_state *st);
-int  buildin_delwaitingroom (struct script_state *st);
-int  buildin_enablewaitingroomevent (struct script_state *st);
-int  buildin_disablewaitingroomevent (struct script_state *st);
-int  buildin_getwaitingroomstate (struct script_state *st);
-int  buildin_warpwaitingpc (struct script_state *st);
 int  buildin_attachrid (struct script_state *st);
 int  buildin_detachrid (struct script_state *st);
 int  buildin_isloggedin (struct script_state *st);
@@ -505,10 +496,6 @@ struct builtin_function
     {
     buildin_disablenpc, "disablenpc", "s"},
     {
-    buildin_enablearena, "enablearena", ""},    // Added by RoVeRT
-    {
-    buildin_disablearena, "disablearena", ""},  // Added by RoVeRT
-    {
     buildin_hideoffnpc, "hideoffnpc", "s"},
     {
     buildin_hideonnpc, "hideonnpc", "s"},
@@ -532,20 +519,6 @@ struct builtin_function
     buildin_resetskill, "resetskill", ""},
     {
     buildin_changesex, "changesex", ""},
-    {
-    buildin_waitingroom, "waitingroom", "si*"},
-    {
-    buildin_warpwaitingpc, "warpwaitingpc", "sii"},
-    {
-    buildin_delwaitingroom, "delwaitingroom", "*"},
-    {
-    buildin_enablewaitingroomevent, "enablewaitingroomevent", "*"},
-    {
-    buildin_disablewaitingroomevent, "disablewaitingroomevent", "*"},
-    {
-    buildin_getwaitingroomstate, "getwaitingroomstate", "i*"},
-    {
-    buildin_warpwaitingpc, "warpwaitingpc", "sii*"},
     {
     buildin_attachrid, "attachrid", "i"},
     {
@@ -4534,32 +4507,6 @@ int buildin_disablenpc (struct script_state *st)
     return 0;
 }
 
-int buildin_enablearena (struct script_state *st)   // Added by RoVeRT
-{
-    struct npc_data *nd = (struct npc_data *) map_id2bl (st->oid);
-    struct chat_data *cd;
-
-    if (nd == NULL
-        || (cd = (struct chat_data *) map_id2bl (nd->chat_id)) == NULL)
-        return 0;
-
-    npc_enable (nd->name, 1);
-    nd->arenaflag = 1;
-
-    if (cd->users >= cd->trigger && cd->npc_event[0])
-        npc_timer_event (cd->npc_event);
-
-    return 0;
-}
-
-int buildin_disablearena (struct script_state *st)  // Added by RoVeRT
-{
-    struct npc_data *nd = (struct npc_data *) map_id2bl (st->oid);
-    nd->arenaflag = 0;
-
-    return 0;
-}
-
 /*==========================================
  * 隠れているNPCの表示
  *------------------------------------------
@@ -4778,211 +4725,6 @@ int buildin_changesex (struct script_state *st)
     }
     chrif_char_ask_name (-1, sd->status.name, 5, 0, 0, 0, 0, 0, 0); // type: 5 - changesex
     chrif_save (sd);
-    return 0;
-}
-
-/*==========================================
- * npcチャット作成
- *------------------------------------------
- */
-int buildin_waitingroom (struct script_state *st)
-{
-    const char *name, *ev = "";
-    int  limit, trigger = 0, pub = 1;
-    name = conv_str (st, &(st->stack->stack_data[st->start + 2]));
-    limit = conv_num (st, &(st->stack->stack_data[st->start + 3]));
-    if (limit == 0)
-        pub = 3;
-
-    if ((st->end > st->start + 5))
-    {
-        struct script_data *data = &(st->stack->stack_data[st->start + 5]);
-        get_val (st, data);
-        if (data->type == C_INT)
-        {
-            // 新Athena仕様(旧Athena仕様と互換性あり)
-            ev = conv_str (st, &(st->stack->stack_data[st->start + 4]));
-            trigger = conv_num (st, &(st->stack->stack_data[st->start + 5]));
-        }
-        else
-        {
-            // eathena仕様
-            trigger = conv_num (st, &(st->stack->stack_data[st->start + 4]));
-            ev = conv_str (st, &(st->stack->stack_data[st->start + 5]));
-        }
-    }
-    else
-    {
-        // 旧Athena仕様
-        if (st->end > st->start + 4)
-            ev = conv_str (st, &(st->stack->stack_data[st->start + 4]));
-    }
-    chat_createnpcchat ((struct npc_data *) map_id2bl (st->oid),
-                        limit, pub, trigger, name, strlen (name) + 1, ev);
-    return 0;
-}
-
-/*==========================================
- * npcチャット削除
- *------------------------------------------
- */
-int buildin_delwaitingroom (struct script_state *st)
-{
-    struct npc_data *nd;
-    if (st->end > st->start + 2)
-        nd = npc_name2id (conv_str
-                          (st, &(st->stack->stack_data[st->start + 2])));
-    else
-        nd = (struct npc_data *) map_id2bl (st->oid);
-    chat_deletenpcchat (nd);
-    return 0;
-}
-
-/*==========================================
- * npcチャットイベント有効化
- *------------------------------------------
- */
-int buildin_enablewaitingroomevent (struct script_state *st)
-{
-    struct npc_data *nd;
-    struct chat_data *cd;
-
-    if (st->end > st->start + 2)
-        nd = npc_name2id (conv_str
-                          (st, &(st->stack->stack_data[st->start + 2])));
-    else
-        nd = (struct npc_data *) map_id2bl (st->oid);
-
-    if (nd == NULL
-        || (cd = (struct chat_data *) map_id2bl (nd->chat_id)) == NULL)
-        return 0;
-    chat_enableevent (cd);
-    return 0;
-}
-
-/*==========================================
- * npcチャットイベント無効化
- *------------------------------------------
- */
-int buildin_disablewaitingroomevent (struct script_state *st)
-{
-    struct npc_data *nd;
-    struct chat_data *cd;
-
-    if (st->end > st->start + 2)
-        nd = npc_name2id (conv_str
-                          (st, &(st->stack->stack_data[st->start + 2])));
-    else
-        nd = (struct npc_data *) map_id2bl (st->oid);
-
-    if (nd == NULL
-        || (cd = (struct chat_data *) map_id2bl (nd->chat_id)) == NULL)
-        return 0;
-    chat_disableevent (cd);
-    return 0;
-}
-
-/*==========================================
- * npcチャット状態所得
- *------------------------------------------
- */
-int buildin_getwaitingroomstate (struct script_state *st)
-{
-    struct npc_data *nd;
-    struct chat_data *cd;
-    int  val = 0, type;
-    type = conv_num (st, &(st->stack->stack_data[st->start + 2]));
-    if (st->end > st->start + 3)
-        nd = npc_name2id (conv_str
-                          (st, &(st->stack->stack_data[st->start + 3])));
-    else
-        nd = (struct npc_data *) map_id2bl (st->oid);
-
-    if (nd == NULL
-        || (cd = (struct chat_data *) map_id2bl (nd->chat_id)) == NULL)
-    {
-        push_val (st->stack, C_INT, -1);
-        return 0;
-    }
-
-    switch (type)
-    {
-        case 0:
-            val = cd->users;
-            break;
-        case 1:
-            val = cd->limit;
-            break;
-        case 2:
-            val = cd->trigger & 0x7f;
-            break;
-        case 3:
-            val = ((cd->trigger & 0x80) > 0);
-            break;
-        case 32:
-            val = (cd->users >= cd->limit);
-            break;
-        case 33:
-            val = (cd->users >= cd->trigger);
-            break;
-
-        case 4:
-            push_str (st->stack, C_CONSTSTR, cd->title);
-            return 0;
-        case 5:
-            push_str (st->stack, C_CONSTSTR, cd->pass);
-            return 0;
-        case 16:
-            push_str (st->stack, C_CONSTSTR, cd->npc_event);
-            return 0;
-    }
-    push_val (st->stack, C_INT, val);
-    return 0;
-}
-
-/*==========================================
- * チャットメンバー(規定人数)ワープ
- *------------------------------------------
- */
-int buildin_warpwaitingpc (struct script_state *st)
-{
-    int  x, y, i, n;
-    const char *str;
-    struct npc_data *nd = (struct npc_data *) map_id2bl (st->oid);
-    struct chat_data *cd;
-
-    if (nd == NULL
-        || (cd = (struct chat_data *) map_id2bl (nd->chat_id)) == NULL)
-        return 0;
-
-    n = cd->trigger & 0x7f;
-    str = conv_str (st, &(st->stack->stack_data[st->start + 2]));
-    x = conv_num (st, &(st->stack->stack_data[st->start + 3]));
-    y = conv_num (st, &(st->stack->stack_data[st->start + 4]));
-
-    if (st->end > st->start + 5)
-        n = conv_num (st, &(st->stack->stack_data[st->start + 5]));
-
-    for (i = 0; i < n; i++)
-    {
-        struct map_session_data *sd = cd->usersd[0];    // リスト先頭のPCを次々に。
-
-        mapreg_setreg (add_str ("$@warpwaitingpc") + (i << 24), sd->bl.id);
-
-        if (strcmp (str, "Random") == 0)
-            pc_randomwarp (sd, 3);
-        else if (strcmp (str, "SavePoint") == 0)
-        {
-            if (maps[sd->bl.m].flag.noteleport)  // テレポ禁止
-                return 0;
-
-            pc_setpos (sd, sd->status.save_point.map,
-                       sd->status.save_point.x, sd->status.save_point.y, 3);
-        }
-        else
-            pc_setpos (sd, str, x, y, 0);
-    }
-    mapreg_setreg (add_str ("$@warpwaitingpcnum"), n);
     return 0;
 }
 

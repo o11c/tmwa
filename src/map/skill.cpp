@@ -1706,10 +1706,6 @@ int skill_attack (int attack_type, struct block_list *src,
     }
     if (skillid == WZ_FROSTNOVA && dsrc->x == bl->x && dsrc->y == bl->y)    //使用スキルがフロストノヴァで、dsrcとblが同じ場所なら何もしない
         return 0;
-    if (src->type == BL_PC && ((struct map_session_data *) src)->chatID)    //術者がPCでチャット中なら何もしない
-        return 0;
-    if (dsrc->type == BL_PC && ((struct map_session_data *) dsrc)->chatID)  //術者がPCでチャット中なら何もしない
-        return 0;
 
 //何もしない判定ここまで
 
@@ -6246,8 +6242,6 @@ static int skill_unit_onplace (struct skill_unit *src, struct block_list *bl,
 
     if (ss->type == BL_PC)
         nullpo_retr (0, srcsd = (struct map_session_data *) ss);
-    if (srcsd && srcsd->chatID)
-        return 0;
 
     if (bl->type != BL_PC && bl->type != BL_MOB)
         return 0;
@@ -6456,21 +6450,18 @@ static int skill_unit_onplace (struct skill_unit *src, struct block_list *bl,
                     && src->bl.y == bl->y && src->bl.x == sd->to_x
                     && src->bl.y == sd->to_y)
                 {
-                    if (battle_config.chat_warpportal || !sd->chatID)
+                    if ((sg->val1--) > 0)
                     {
-                        if ((sg->val1--) > 0)
-                        {
-                            pc_setpos (sd, sg->valstr, sg->val2 >> 16,
-                                       sg->val2 & 0xffff, 3);
-                            if (sg->src_id == bl->id
-                                || (strcmp (maps[src->bl.m].name, sg->valstr)
-                                    == 0 && src->bl.x == (sg->val2 >> 16)
-                                    && src->bl.y == (sg->val2 & 0xffff)))
-                                skill_delunitgroup (sg);
-                        }
-                        else
+                        pc_setpos (sd, sg->valstr, sg->val2 >> 16,
+                                    sg->val2 & 0xffff, 3);
+                        if (sg->src_id == bl->id
+                            || (strcmp (maps[src->bl.m].name, sg->valstr)
+                                == 0 && src->bl.x == (sg->val2 >> 16)
+                                && src->bl.y == (sg->val2 & 0xffff)))
                             skill_delunitgroup (sg);
                     }
+                    else
+                        skill_delunitgroup (sg);
                 }
             }
             else if (bl->type == BL_MOB && battle_config.mob_warpportal)

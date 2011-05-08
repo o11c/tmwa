@@ -15,7 +15,6 @@
 
 #include "atcommand.hpp"
 #include "battle.hpp"
-#include "chat.hpp"
 #include "chrif.hpp"
 #include "clif.hpp"
 #include "intif.hpp"
@@ -3864,8 +3863,6 @@ int pc_setpos (struct map_session_data *sd, const char *mapname_org, int x, int 
 
     nullpo_retr (0, sd);
 
-    if (sd->chatID)             // チャットから出る
-        chat_leavechat (sd);
     if (sd->trade_partner)      // 取引を中断する
         trade_tradecancel (sd);
     if (sd->state.storage_flag == 1)

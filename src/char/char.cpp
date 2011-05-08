@@ -114,7 +114,7 @@ int  start_armor = 1202;
 // Initial position (it's possible to set it in conf file)
 struct point start_point = { "new_1-1.gat", 53, 111 };
 
-struct gm_account *gm_account = NULL;
+struct gm_account *gm_accounts = NULL;
 int  GM_num = 0;
 
 // online players by [Yor]
@@ -164,8 +164,8 @@ void char_log (const char *fmt, ...)
 static gm_level_t isGM (int account_id)
 {
     for (int i = 0; i < GM_num; i++)
-        if (gm_account[i].account_id == account_id)
-            return gm_account[i].level;
+        if (gm_accounts[i].account_id == account_id)
+            return gm_accounts[i].level;
     return 0;
 }
 
@@ -1642,14 +1642,13 @@ static void parse_tologin (int fd)
             if (RFIFOREST (fd) < 4 || RFIFOREST (fd) < RFIFOW (fd, 2))
                 return;
         {
-            if (gm_account != NULL)
-                free (gm_account);
+            free (gm_accounts);
             GM_num = (RFIFOW (fd, 2) - 4) / 5;
-            CREATE (gm_account, struct gm_account, GM_num);
-            for (int i = 4; i < GM_num; i += 5)
+            CREATE (gm_accounts, struct gm_account, GM_num);
+            for (int i = 0; i < GM_num; i++)
             {
-                gm_account[GM_num].account_id = RFIFOL (fd, i);
-                gm_account[GM_num].level = RFIFOB (fd, i + 4);
+                gm_accounts[i].account_id = RFIFOL (fd, 4 + 5*i);
+                gm_accounts[i].level = RFIFOB (fd, 4 + 5*i + 4);
             }
             char_log ("From login-server: receiving of %d GM accounts information.\n",
                       GM_num);
@@ -2574,8 +2573,8 @@ static void parse_char (int fd)
             WFIFOW (fd, 0) = 0x2b15;
             for (int j = 0; j < GM_num; j++)
             {
-                WFIFOL (fd, len) = gm_account[j].account_id;
-                WFIFOB (fd, len + 4) = gm_account[j].level;
+                WFIFOL (fd, len) = gm_accounts[j].account_id;
+                WFIFOB (fd, len + 4) = gm_accounts[j].level;
                 len += 5;
             }
             WFIFOW (fd, 2) = len;

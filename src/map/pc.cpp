@@ -2978,56 +2978,6 @@ int pc_skill (struct map_session_data *sd, int id, int level, int flag)
     return 0;
 }
 
-/*==========================================
- * カード挿入
- *------------------------------------------
- */
-int pc_insert_card (struct map_session_data *sd, int idx_card, int idx_equip)
-{
-    nullpo_retr (0, sd);
-
-    if (idx_card >= 0 && idx_card < MAX_INVENTORY && idx_equip >= 0
-        && idx_equip < MAX_INVENTORY && sd->inventory_data[idx_card])
-    {
-        int  i;
-        int  nameid = sd->status.inventory[idx_equip].nameid;
-        int  cardid = sd->status.inventory[idx_card].nameid;
-        int  ep = sd->inventory_data[idx_card]->equip;
-
-        if (nameid <= 0 || sd->inventory_data[idx_equip] == NULL ||
-            (sd->inventory_data[idx_equip]->type != 4 && sd->inventory_data[idx_equip]->type != 5) ||   // 装 備じゃない
-            (sd->status.inventory[idx_equip].identify == 0) ||  // 未鑑定
-            (sd->status.inventory[idx_equip].card[0] == 0x00ff) ||  // 製造武器
-            (sd->status.inventory[idx_equip].card[0] == 0x00fe) ||
-            ((sd->inventory_data[idx_equip]->equip & ep) == 0) ||    // 装 備個所違い
-            (sd->inventory_data[idx_equip]->type == 4 && ep == 32) ||   // 両 手武器と盾カード
-            (sd->status.inventory[idx_equip].card[0] == (short) 0xff00)
-            || sd->status.inventory[idx_equip].equip)
-        {
-
-            clif_insert_card (sd, idx_equip, idx_card, 1);
-            return 0;
-        }
-        for (i = 0; i < sd->inventory_data[idx_equip]->slot; i++)
-        {
-            if (sd->status.inventory[idx_equip].card[i] == 0)
-            {
-                // 空きスロットがあったので差し込む
-                sd->status.inventory[idx_equip].card[i] = cardid;
-
-                // カードは減らす
-                clif_insert_card (sd, idx_equip, idx_card, 0);
-                pc_delitem (sd, idx_card, 1, 1);
-                return 0;
-            }
-        }
-    }
-    else
-        clif_insert_card (sd, idx_equip, idx_card, 1);
-
-    return 0;
-}
-
 //
 // アイテム物
 //
@@ -3608,31 +3558,6 @@ int pc_cart_delitem (struct map_session_data *sd, int n, int amount, int type)
 }
 
 /*==========================================
- * カートへアイテム移動
- *------------------------------------------
- */
-int pc_putitemtocart (struct map_session_data *sd, int idx, int amount)
-{
-    struct item *item_data;
-
-    nullpo_retr (0, sd);
-
-    if (idx < 0 || idx >= MAX_INVENTORY)
-        return 1;
-
-    nullpo_retr (0, item_data = &sd->status.inventory[idx]);
-
-    if (!pc_iscarton (sd))
-        return 1;
-    if (item_data->nameid == 0 || item_data->amount < amount)
-        return 1;
-    if (pc_cart_additem (sd, item_data, amount) == 0)
-        return pc_delitem (sd, idx, amount, 0);
-
-    return 1;
-}
-
-/*==========================================
  * カート内のアイテム数確認(個数の差分を返す)
  *------------------------------------------
  */
@@ -3652,34 +3577,6 @@ int pc_cartitem_amount (struct map_session_data *sd, int idx, int amount)
     if (item_data->nameid == 0 || !item_data->amount)
         return -1;
     return item_data->amount - amount;
-}
-
-/*==========================================
- * カートからアイテム移動
- *------------------------------------------
- */
-
-int pc_getitemfromcart (struct map_session_data *sd, int idx, int amount)
-{
-    struct item *item_data;
-    int  flag;
-
-    nullpo_retr (0, sd);
-
-    if (idx < 0 || idx >= MAX_CART)
-        return 1;
-
-    nullpo_retr (0, item_data = &sd->status.cart[idx]);
-
-    if (!pc_iscarton (sd))
-        return 1;
-    if (item_data->nameid == 0 || item_data->amount < amount)
-        return 1;
-    if ((flag = pc_additem (sd, item_data, amount)) == 0)
-        return pc_cart_delitem (sd, idx, amount, 0);
-
-    clif_additem (sd, 0, 0, flag);
-    return 1;
 }
 
 /*==========================================
@@ -4016,67 +3913,6 @@ int pc_randomwarp (struct map_session_data *sd, int type)
         pc_setpos (sd, maps[m].name, x, y, type);
 
     return 0;
-}
-
-/*==========================================
- * 現在位置のメモ
- *------------------------------------------
- */
-int pc_memo (struct map_session_data *sd, int i)
-{
-    int  skill;
-    int  j;
-
-    nullpo_retr (0, sd);
-
-    skill = pc_checkskill (sd, AL_WARP);
-
-    if (i >= MIN_PORTAL_MEMO)
-        i -= MIN_PORTAL_MEMO;
-    else if (maps[sd->bl.m].flag.nomemo
-             || (maps[sd->bl.m].flag.nowarpto
-                 && battle_config.any_warp_GM_min_level > pc_isGM (sd)))
-    {
-        clif_skill_teleportmessage (sd, 1);
-        return 0;
-    }
-
-    if (skill < 1)
-    {
-        clif_skill_memo (sd, 2);
-    }
-
-    if (skill < 2 || i < -1 || i > 2)
-    {
-        clif_skill_memo (sd, 1);
-        return 0;
-    }
-
-    for (j = 0; j < 3; j++)
-    {
-        if (strcmp (sd->status.memo_point[j].map, maps[sd->bl.m].name) == 0)
-        {
-            i = j;
-            break;
-        }
-    }
-
-    if (i == -1)
-    {
-        for (i = skill - 3; i >= 0; i--)
-        {
-            memcpy (&sd->status.memo_point[i + 1], &sd->status.memo_point[i],
-                    sizeof (struct point));
-        }
-        i = 0;
-    }
-    memcpy (sd->status.memo_point[i].map, maps[sd->bl.m].name, 24);
-    sd->status.memo_point[i].x = sd->bl.x;
-    sd->status.memo_point[i].y = sd->bl.y;
-
-    clif_skill_memo (sd, 0);
-
-    return 1;
 }
 
 /*==========================================

@@ -272,66 +272,6 @@ int storage_storageget (struct map_session_data *sd, int idx, int amount)
 }
 
 /*==========================================
- * Move an item from cart to storage.
- *------------------------------------------
- */
-int storage_storageaddfromcart (struct map_session_data *sd, int idx,
-                                int amount)
-{
-    struct storage *stor;
-
-    nullpo_retr (0, sd);
-    nullpo_retr (0, stor = account2storage2 (sd->status.account_id));
-
-    if (stor->storage_amount > MAX_STORAGE || !stor->storage_status)
-        return 0;               // storage full / storage closed
-
-    if (idx < 0 || idx >= MAX_CART)
-        return 0;
-
-    if (sd->status.cart[idx].nameid <= 0)
-        return 0;               //No item there.
-
-    if (amount < 1 || amount > sd->status.cart[idx].amount)
-        return 0;
-
-    if (storage_additem (sd, stor, &sd->status.cart[idx], amount) == 0)
-        pc_cart_delitem (sd, idx, amount, 0);
-
-    return 1;
-}
-
-/*==========================================
- * Get from Storage to the Cart
- *------------------------------------------
- */
-int storage_storagegettocart (struct map_session_data *sd, int idx,
-                              int amount)
-{
-    struct storage *stor;
-
-    nullpo_retr (0, sd);
-    nullpo_retr (0, stor = account2storage2 (sd->status.account_id));
-
-    if (!stor->storage_status)
-        return 0;
-
-    if (idx < 0 || idx >= MAX_STORAGE)
-        return 0;
-
-    if (stor->storage_[idx].nameid <= 0)
-        return 0;               //Nothing there.
-
-    if (amount < 1 || amount > stor->storage_[idx].amount)
-        return 0;
-
-    if (pc_cart_additem (sd, &stor->storage_[idx], amount) == 0)
-        storage_delitem (sd, stor, idx, amount);
-
-    return 1;
-}
-
-/*==========================================
  * Modified By Valaris to save upon closing [massdriller]
  *------------------------------------------
  */

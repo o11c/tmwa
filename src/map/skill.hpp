@@ -130,7 +130,6 @@ int  skill_castcancel (struct block_list *bl, int type);
 int  skill_gangsterparadise (struct map_session_data *sd, int type);
 void skill_brandishspear_first (struct square *tc, int dir, int x, int y);
 void skill_brandishspear_dir (struct square *tc, int dir, int are);
-int  skill_autospell (struct map_session_data *md, int skillid);
 void skill_devotion (struct map_session_data *md, int target);
 void skill_devotion2 (struct block_list *bl, int crusader);
 int  skill_devotion3 (struct block_list *bl, int target);

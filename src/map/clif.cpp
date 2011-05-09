@@ -5367,110 +5367,6 @@ void clif_parse_QuitGame (int fd, struct map_session_data *sd)
 }
 
 /*==========================================
- *
- *------------------------------------------
- */
-static void clif_parse_GetCharNameRequest (int fd, struct map_session_data *sd)
-{
-    struct block_list *bl;
-    int  account_id;
-
-    account_id = RFIFOL (fd, 2);
-    bl = map_id2bl (account_id);
-    if (bl == NULL)
-        return;
-
-    WFIFOW (fd, 0) = 0x95;
-    WFIFOL (fd, 2) = account_id;
-
-    switch (bl->type)
-    {
-        case BL_PC:
-        {
-            struct map_session_data *ssd = (struct map_session_data *) bl;
-
-            nullpo_retv (ssd);
-
-            if (ssd->state.shroud_active)
-                memset (WFIFOP (fd, 6), 0, 24);
-            else
-                memcpy (WFIFOP (fd, 6), ssd->status.name, 24);
-            WFIFOSET (fd, packet_len_table[0x95]);
-
-            struct party *p = NULL;
-
-            const char *party_name = "";
-
-            bool will_send = 0;
-
-            if (ssd->status.party_id > 0 && (p = party_search (ssd->status.party_id)) != NULL)
-            {
-                party_name = p->name;
-                will_send = 1;
-            }
-
-            if (will_send)
-            {
-                WFIFOW (fd, 0) = 0x195;
-                WFIFOL (fd, 2) = account_id;
-                memcpy (WFIFOP (fd, 6), party_name, 24);
-                memset (WFIFOP (fd, 30), 0, 24);
-                memset (WFIFOP (fd, 54), 0, 24);
-                memset (WFIFOP (fd, 78), 0, 24); // We send this value twice because the client expects it
-                WFIFOSET (fd, packet_len_table[0x195]);
-
-            }
-
-            if (pc_isGM(sd) >= battle_config.hack_info_GM_level)
-            {
-                in_addr_t ip = ssd->ip;
-                WFIFOW (fd, 0) = 0x20C;
-
-                // Mask the IP using the char-server password
-                if (battle_config.mask_ip_gms)
-                    ip = MD5_ip(chrif_getpasswd (), ssd->ip);
-
-                WFIFOL (fd, 2) = account_id;
-                WFIFOL (fd, 6) = ip;
-                WFIFOSET (fd, packet_len_table[0x20C]);
-             }
-
-        }
-            break;
-        case BL_NPC:
-            memcpy (WFIFOP (fd, 6), ((struct npc_data *) bl)->name, 24);
-            {
-                char *start = (char *)WFIFOP (fd, 6);
-                char *end = strchr (start, '#');    // [fate] elim hashed out/invisible names for the client
-                if (end)
-                    while (*end)
-                        *end++ = 0;
-
-                // [fate] Elim preceding underscores for (hackish) name position fine-tuning
-                while (*start == '_')
-                    *start++ = ' ';
-            }
-            WFIFOSET (fd, packet_len_table[0x95]);
-            break;
-        case BL_MOB:
-        {
-            struct mob_data *md = (struct mob_data *) bl;
-
-            nullpo_retv (md);
-
-            memcpy (WFIFOP (fd, 6), md->name, 24);
-            WFIFOSET (fd, packet_len_table[0x95]);
-        }
-            break;
-        default:
-            if (battle_config.error_log)
-                printf ("clif_parse_GetCharNameRequest : bad type %d(%d)\n",
-                        bl->type, account_id);
-            break;
-    }
-}
-
-/*==========================================
  * Validate and process transmission of a
  * global/public message.
  *
@@ -6110,59 +6006,6 @@ static void clif_parse_TradeCommit (int UNUSED, struct map_session_data *sd)
 }
 
 /*==========================================
- *
- *------------------------------------------
- */
-static void clif_parse_StopAttack (int UNUSED, struct map_session_data *sd)
-{
-    pc_stopattack (sd);
-}
-
-/*==========================================
- * カートへアイテムを移す
- *------------------------------------------
- */
-static void clif_parse_PutItemToCart (int fd, struct map_session_data *sd)
-{
-    nullpo_retv (sd);
-
-    if (sd->npc_id != 0 || sd->trade_partner != 0)
-        return;
-    pc_putitemtocart (sd, RFIFOW (fd, 2) - 2, RFIFOL (fd, 4));
-}
-
-/*==========================================
- * カートからアイテムを出す
- *------------------------------------------
- */
-static void clif_parse_GetItemFromCart (int fd, struct map_session_data *sd)
-{
-    nullpo_retv (sd);
-
-    if (sd->npc_id != 0 || sd->trade_partner != 0)
-        return;
-    pc_getitemfromcart (sd, RFIFOW (fd, 2) - 2, RFIFOL (fd, 4));
-}
-
-/*==========================================
- * 付属品(鷹,ペコ,カート)をはずす
- *------------------------------------------
- */
-static void clif_parse_RemoveOption (int UNUSED, struct map_session_data *sd)
-{
-    pc_setoption (sd, 0);
-}
-
-/*==========================================
- * チェンジカート
- *------------------------------------------
- */
-static void clif_parse_ChangeCart (int fd, struct map_session_data *sd)
-{
-    pc_setcart (sd, RFIFOW (fd, 2));
-}
-
-/*==========================================
  * ステータスアップ
  *------------------------------------------
  */
@@ -6350,15 +6193,6 @@ static void clif_parse_UseSkillMap (int fd, struct map_session_data *sd)
 }
 
 /*==========================================
- * メモ要求
- *------------------------------------------
- */
-static void clif_parse_RequestMemo (int UNUSED, struct map_session_data *sd)
-{
-    pc_memo (sd, -1);
-}
-
-/*==========================================
  *
  *------------------------------------------
  */
@@ -6439,54 +6273,6 @@ static void clif_parse_NpcCloseClicked (int fd, struct map_session_data *sd)
 }
 
 /*==========================================
- * アイテム鑑定
- *------------------------------------------
- */
-static void clif_parse_ItemIdentify (int fd, struct map_session_data *sd)
-{
-    pc_item_identify (sd, RFIFOW (fd, 2) - 2);
-}
-
-/*==========================================
- * オートスペル受信
- *------------------------------------------
- */
-static void clif_parse_AutoSpell (int fd, struct map_session_data *sd)
-{
-    skill_autospell (sd, RFIFOW (fd, 2));
-}
-
-/*==========================================
- * カード使用
- *------------------------------------------
- */
-static void clif_parse_UseCard (int fd, struct map_session_data *sd)
-{
-    clif_use_card (sd, RFIFOW (fd, 2) - 2);
-}
-
-/*==========================================
- * カード挿入装備選択
- *------------------------------------------
- */
-static void clif_parse_InsertCard (int fd, struct map_session_data *sd)
-{
-    pc_insert_card (sd, RFIFOW (fd, 2) - 2, RFIFOW (fd, 4) - 2);
-}
-
-/*==========================================
- * 0193 キャラID名前引き
- *------------------------------------------
- */
-static void clif_parse_SolveCharName (int fd, struct map_session_data *sd)
-{
-    int  char_id;
-
-    char_id = RFIFOL (fd, 2);
-    clif_solved_charname (sd, char_id);
-}
-
-/*==========================================
  * カプラ倉庫へ入れる
  *------------------------------------------
  */
@@ -6529,36 +6315,6 @@ static void clif_parse_MoveFromKafra (int fd, struct map_session_data *sd)
 }
 
 /*==========================================
- * カプラ倉庫へカートから入れる
- *------------------------------------------
- */
-static void clif_parse_MoveToKafraFromCart (int fd, struct map_session_data *sd)
-{
-    nullpo_retv (sd);
-
-    if ((sd->npc_id != 0 && !sd->npc_flags.storage) || sd->trade_partner != 0
-        || !sd->state.storage_flag)
-        return;
-    if (sd->state.storage_flag == 1)
-        storage_storageaddfromcart (sd, RFIFOW (fd, 2) - 2, RFIFOL (fd, 4));
-}
-
-/*==========================================
- * カプラ倉庫から出す
- *------------------------------------------
- */
-static void clif_parse_MoveFromKafraToCart (int fd, struct map_session_data *sd)
-{
-    nullpo_retv (sd);
-
-    if ((sd->npc_id != 0 && !sd->npc_flags.storage) || sd->trade_partner != 0
-        || !sd->state.storage_flag)
-        return;
-    if (sd->state.storage_flag == 1)
-        storage_storagegettocart (sd, RFIFOW (fd, 2) - 1, RFIFOL (fd, 4));
-}
-
-/*==========================================
  * カプラ倉庫を閉じる
  *------------------------------------------
  */
@@ -6578,29 +6334,6 @@ static void clif_parse_CloseKafra (int UNUSED, struct map_session_data *sd)
  *------------------------------------------
  */
 static void clif_parse_CreateParty (int fd, struct map_session_data *sd)
-{
-    if (battle_config.basic_skill_check == 0
-        || pc_checkskill (sd, NV_PARTY) >= 2)
-    {
-        party_create (sd, (char *)RFIFOP (fd, 2));
-    }
-    else
-        clif_skill_fail (sd, 1, 0, 4);
-}
-
-/*==========================================
- * パーティを作る
- * Process request to create a party.
- *
- * (S 01e8 <party_name>.24B <exp>.B <itm>.B)
- *
- * Note: Upstream eAthena uses this to
- *       specify experience/item sharing,
- *       respectively, but it was left
- *       incomplete here.
- *------------------------------------------
- */
-static void clif_parse_CreateParty2 (int fd, struct map_session_data *sd)
 {
     if (battle_config.basic_skill_check == 0
         || pc_checkskill (sd, NV_PARTY) >= 2)
@@ -6711,226 +6444,6 @@ static void clif_parse_PartyMessage (int fd, struct map_session_data *sd)
 
     party_send_message (sd, message, RFIFOW (fd, 2) - 4);
     free (buf);
-}
-
-static void clif_parse_PMIgnore (int fd, struct map_session_data *sd)
-{                               // Rewritten by [Yor]
-    char output[1024];
-    char *nick;                 // S 00cf <nick>.24B <type>.B: 00 (/ex nick) deny speech from nick, 01 (/in nick) allow speech from nick
-    int  i;
-    int  pos;
-
-    memset (output, '\0', sizeof (output));
-
-    nick = (char *)RFIFOP (fd, 2);
-    //printf("Ignore: char '%s' state: %d\n", nick, RFIFOB(fd,26));
-    // we ask for deny (we add nick only if it's not already exist
-    if (RFIFOB (fd, 26) == 0)
-    {                           // type
-        if (strlen (nick) >= 4 && strlen (nick) < 24)
-        {                       // do something only if nick can be exist
-            pos = -1;
-            for (i = 0; i < (sizeof (sd->ignore) / sizeof (sd->ignore[0]));
-                 i++)
-            {
-                if (strcmp (sd->ignore[i].name, nick) == 0)
-                    break;
-                else if (pos == -1 && sd->ignore[i].name[0] == '\0')
-                    pos = i;
-            }
-            WFIFOW (fd, 0) = 0x0d1; // R 00d1 <type>.B <fail>.B: type: 0: deny, 1: allow, fail: 0: success, 1: fail
-            WFIFOB (fd, 2) = 0;
-            // if a position is found and name not found, we add it in the list
-            if (pos != -1
-                && i == (sizeof (sd->ignore) / sizeof (sd->ignore[0])))
-            {
-                memcpy (sd->ignore[pos].name, nick, 24);
-                WFIFOB (fd, 3) = 0; // success
-                WFIFOSET (fd, packet_len_table[0x0d1]);
-                if (strcmp (wisp_server_name, nick) == 0)
-                {               // to found possible bot users that automaticaly ignores people.
-                    sprintf (output,
-                             "Character '%s' (account: %d) has tried to block wisps from '%s' (wisp name of the server). Bot user?",
-                             sd->status.name, sd->status.account_id,
-                             wisp_server_name);
-                    intif_wis_message_to_gm (wisp_server_name,
-                                             battle_config.hack_info_GM_level,
-                                             output, strlen (output) + 1);
-                    // send something to be inform and force bot to ignore twice... If GM receiving block + block again, it's a bot :)
-                    clif_wis_message (fd, wisp_server_name,
-                                      "Add me in your ignore list, doesn't block my wisps.",
-                                      strlen
-                                      ("Add me in your ignore list, doesn't block my wisps.")
-                                      + 1);
-                }
-            }
-            else
-            {
-                WFIFOB (fd, 3) = 1; // fail
-                if (i == (sizeof (sd->ignore) / sizeof (sd->ignore[0])))
-                {
-                    clif_wis_message (fd, wisp_server_name,
-                                      "You can not block more people.",
-                                      strlen
-                                      ("You can not block more people.") + 1);
-                    if (strcmp (wisp_server_name, nick) == 0)
-                    {           // to found possible bot users that automaticaly ignores people.
-                        sprintf (output,
-                                 "Character '%s' (account: %d) has tried to block wisps from '%s' (wisp name of the server). Bot user?",
-                                 sd->status.name, sd->status.account_id,
-                                 wisp_server_name);
-                        intif_wis_message_to_gm (wisp_server_name,
-                                                 battle_config.hack_info_GM_level,
-                                                 output, strlen (output) + 1);
-                    }
-                }
-                else
-                {
-                    clif_wis_message (fd, wisp_server_name,
-                                      "This player is already blocked.",
-                                      strlen
-                                      ("This player is already blocked.") +
-                                      1);
-                    if (strcmp (wisp_server_name, nick) == 0)
-                    {           // to found possible bot users that automaticaly ignores people.
-                        sprintf (output,
-                                 "Character '%s' (account: %d) has tried AGAIN to block wisps from '%s' (wisp name of the server). Bot user?",
-                                 sd->status.name, sd->status.account_id,
-                                 wisp_server_name);
-                        intif_wis_message_to_gm (wisp_server_name,
-                                                 battle_config.hack_info_GM_level,
-                                                 output, strlen (output) + 1);
-                    }
-                }
-            }
-        }
-        else
-            clif_wis_message (fd, wisp_server_name,
-                              "It's impossible to block this player.",
-                              strlen ("It's impossible to block this player.")
-                              + 1);
-        // we ask for allow (we remove all same nick if exist)
-    }
-    else
-    {
-        if (strlen (nick) >= 4 && strlen (nick) < 24)
-        {                       // do something only if nick can be exist
-            WFIFOW (fd, 0) = 0x0d1; // R 00d1 <type>.B <fail>.B: type: 0: deny, 1: allow, fail: 0: success, 1: fail
-            WFIFOB (fd, 2) = 1;
-            for (i = 0; i < (sizeof (sd->ignore) / sizeof (sd->ignore[0]));
-                 i++)
-                if (strcmp (sd->ignore[i].name, nick) == 0)
-                {
-                    memset (sd->ignore[i].name, 0,
-                            sizeof (sd->ignore[i].name));
-                    WFIFOB (fd, 3) = 0; // success
-                    WFIFOSET (fd, packet_len_table[0x0d1]);
-                    break;
-                }
-            if (i == (sizeof (sd->ignore) / sizeof (sd->ignore[0])))
-            {
-                WFIFOB (fd, 3) = 1; // fail
-                WFIFOSET (fd, packet_len_table[0x0d1]);
-                clif_wis_message (fd, wisp_server_name,
-                                  "This player is not blocked by you.",
-                                  strlen
-                                  ("This player is not blocked by you.") + 1);
-            }
-        }
-        else
-            clif_wis_message (fd, wisp_server_name,
-                              "It's impossible to unblock this player.",
-                              strlen
-                              ("It's impossible to unblock this player.") +
-                              1);
-    }
-
-//  for(i = 0; i < (sizeof(sd->ignore) / sizeof(sd->ignore[0])); i++) // for debug only
-//      if (sd->ignore[i].name[0] != '\0')
-//          printf("Ignored player: '%s'\n", sd->ignore[i].name);
-
-    return;
-}
-
-static void clif_parse_PMIgnoreAll (int fd, struct map_session_data *sd)
-{                               // Rewritten by [Yor]
-    //printf("Ignore all: state: %d\n", RFIFOB(fd,2));
-    if (RFIFOB (fd, 2) == 0)
-    {                           // S 00d0 <type>len.B: 00 (/exall) deny all speech, 01 (/inall) allow all speech
-        WFIFOW (fd, 0) = 0x0d2; // R 00d2 <type>.B <fail>.B: type: 0: deny, 1: allow, fail: 0: success, 1: fail
-        WFIFOB (fd, 2) = 0;
-        if (sd->ignoreAll == 0)
-        {
-            sd->ignoreAll = 1;
-            WFIFOB (fd, 3) = 0; // success
-            WFIFOSET (fd, packet_len_table[0x0d2]);
-        }
-        else
-        {
-            WFIFOB (fd, 3) = 1; // fail
-            WFIFOSET (fd, packet_len_table[0x0d2]);
-            clif_wis_message (fd, wisp_server_name,
-                              "You already block everyone.",
-                              strlen ("You already block everyone.") + 1);
-        }
-    }
-    else
-    {
-        WFIFOW (fd, 0) = 0x0d2; // R 00d2 <type>.B <fail>.B: type: 0: deny, 1: allow, fail: 0: success, 1: fail
-        WFIFOB (fd, 2) = 1;
-        if (sd->ignoreAll == 1)
-        {
-            sd->ignoreAll = 0;
-            WFIFOB (fd, 3) = 0; // success
-            WFIFOSET (fd, packet_len_table[0x0d2]);
-        }
-        else
-        {
-            WFIFOB (fd, 3) = 1; // fail
-            WFIFOSET (fd, packet_len_table[0x0d2]);
-            clif_wis_message (fd, wisp_server_name,
-                              "You already allow everyone.",
-                              strlen ("You already allow everyone.") + 1);
-        }
-    }
-
-    return;
-}
-
-/*==========================================
- * スパノビの/doridoriによるSPR2倍
- *------------------------------------------
- */
-static void clif_parse_sn_doridori (int UNUSED, struct map_session_data *sd)
-{
-    if (sd)
-        sd->doridori_counter = 1;
-
-    return;
-}
-
-/*==========================================
- * スパノビの爆裂波動
- *------------------------------------------
- */
-static void clif_parse_sn_explosionspirits (int UNUSED, struct map_session_data *sd)
-{
-    if (sd)
-    {
-        int  nextbaseexp = pc_nextbaseexp (sd);
-        if (battle_config.etc_log)
-        {
-            if (nextbaseexp != 0)
-                printf ("SuperNovice explosionspirits!! %d %d %d %d\n",
-                        sd->bl.id, 0/*s_class.job*/, sd->status.base_exp,
-                        (int) ((double) 1000 * sd->status.base_exp /
-                               nextbaseexp));
-            else
-                printf ("SuperNovice explosionspirits!! %d %d %d 000\n",
-                        sd->bl.id, 0/*s_class.job*/, sd->status.base_exp);
-        }
-    }
-    return;
 }
 
 // functions list. Rate is how many milliseconds are required between
@@ -7092,7 +6605,7 @@ func_table clif_parse_func_table[0x220] =
     { 0, 0 }, // 91
     { 0, 0 }, // 92
     { 0, 0 }, // 93
-    { -1, clif_parse_GetCharNameRequest }, // 94
+    { 0, 0 }, // 94
     { 0, 0 }, // 95
     { 300, clif_parse_Wis }, // 96
     { 0, 0 }, // 97
@@ -7151,8 +6664,8 @@ func_table clif_parse_func_table[0x220] =
     { 0, 0 }, // cc
     { 0, 0 }, // cd
     { 0, 0 }, // ce
-    { 0, clif_parse_PMIgnore }, // cf
-    { 0, clif_parse_PMIgnoreAll }, // d0
+    { 0, 0 }, // cf
+    { 0, 0 }, // d0
     { 0, 0 }, // d1
     { 0, 0 }, // d2
     { 0, 0 }, // d3
@@ -7224,12 +6737,12 @@ func_table clif_parse_func_table[0x220] =
     { 0, 0 }, // 115
     { 0, clif_parse_UseSkillToPos }, // 116
     { 0, 0 }, // 117
-    { 0, clif_parse_StopAttack }, // 118
+    { 0, 0 }, // 118
     { 0, 0 }, // 119
     { 0, 0 }, // 11a
     { 0, clif_parse_UseSkillMap }, // 11b
     { 0, 0 }, // 11c
-    { 0, clif_parse_RequestMemo }, // 11d
+    { 0, 0 }, // 11d
     { 0, 0 }, // 11e
     { 0, 0 }, // 11f
     { 0, 0 }, // 120
@@ -7238,11 +6751,11 @@ func_table clif_parse_func_table[0x220] =
     { 0, 0 }, // 123
     { 0, 0 }, // 124
     { 0, 0 }, // 125
-    { 0, clif_parse_PutItemToCart }, // 126
-    { 0, clif_parse_GetItemFromCart }, // 127
-    { 0, clif_parse_MoveFromKafraToCart }, // 128
-    { 0, clif_parse_MoveToKafraFromCart }, // 129
-    { 0, clif_parse_RemoveOption }, // 12a
+    { 0, 0 }, // 126
+    { 0, 0 }, // 127
+    { 0, 0 }, // 128
+    { 0, 0 }, // 129
+    { 0, 0 }, // 12a
     { 0, 0 }, // 12b
     { 0, 0 }, // 12c
     { 0, 0 }, // 12d
@@ -7320,11 +6833,11 @@ func_table clif_parse_func_table[0x220] =
     { 0, 0 }, // 175
     { 0, 0 }, // 176
     { 0, 0 }, // 177
-    { 0, clif_parse_ItemIdentify }, // 178
+    { 0, 0 }, // 178
     { 0, 0 }, // 179
-    { 0, clif_parse_UseCard }, // 17a
+    { 0, 0 }, // 17a
     { 0, 0 }, // 17b
-    { 0, clif_parse_InsertCard }, // 17c
+    { 0, 0 }, // 17c
     { 0, 0 }, // 17d
     { 0, 0 }, // 17e
     { 0, 0 }, // 17f
@@ -7347,7 +6860,7 @@ func_table clif_parse_func_table[0x220] =
     { 0, clif_parse_UseSkillToPos }, // 190
     { 0, 0 }, // 191
     { 0, 0 }, // 192
-    { 0, clif_parse_SolveCharName }, // 193
+    { 0, 0 }, // 193
     { 0, 0 }, // 194
     { 0, 0 }, // 195
     { 0, 0 }, // 196
@@ -7375,7 +6888,7 @@ func_table clif_parse_func_table[0x220] =
     { 0, 0 }, // 1ac
     { 0, 0 }, // 1ad
     { 0, 0 }, // 1ae
-    { 0, clif_parse_ChangeCart }, // 1af
+    { 0, 0 }, // 1af
     { 0, 0 }, // 1b0
     { 0, 0 }, // 1b1
     { 0, 0 }, // 1b2
@@ -7406,7 +6919,7 @@ func_table clif_parse_func_table[0x220] =
     { 0, 0 }, // 1cb
     { 0, 0 }, // 1cc
     { 0, 0 }, // 1cd
-    { 0, clif_parse_AutoSpell }, // 1ce
+    { 0, 0 }, // 1ce
     { 0, 0 }, // 1cf
     { 0, 0 }, // 1d0
     { 0, 0 }, // 1d1
@@ -7431,13 +6944,13 @@ func_table clif_parse_func_table[0x220] =
     { 0, 0 }, // 1e4
     { 0, 0 }, // 1e5
     { 0, 0 }, // 1e6
-    { 0, clif_parse_sn_doridori }, // 1e7
-    { 1000, clif_parse_CreateParty2 }, // 1e8
+    { 0, 0 }, // 1e7
+    { 0, 0 }, // 1e8
     { 0, 0 }, // 1e9
     { 0, 0 }, // 1ea
     { 0, 0 }, // 1eb
     { 0, 0 }, // 1ec
-    { 0, clif_parse_sn_explosionspirits }, // 1ed
+    { 0, 0 }, // 1ed
     { 0, 0 }, // 1ee
     { 0, 0 }, // 1ef
     { 0, 0 }, // 1f0

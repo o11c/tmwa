@@ -8534,60 +8534,6 @@ void skill_devotion_end (struct map_session_data *md,
 }
 
 /*==========================================
- * オートスペル
- *------------------------------------------
- */
-int skill_autospell (struct map_session_data *sd, int skillid)
-{
-    int  skilllv;
-    int  maxlv = 1, lv;
-
-    nullpo_retr (0, sd);
-
-    skilllv = pc_checkskill (sd, SA_AUTOSPELL);
-
-    if (skillid == MG_NAPALMBEAT)
-        maxlv = 3;
-    else if (skillid == MG_COLDBOLT || skillid == MG_FIREBOLT
-             || skillid == MG_LIGHTNINGBOLT)
-    {
-        if (skilllv == 2)
-            maxlv = 1;
-        else if (skilllv == 3)
-            maxlv = 2;
-        else if (skilllv >= 4)
-            maxlv = 3;
-    }
-    else if (skillid == MG_SOULSTRIKE)
-    {
-        if (skilllv == 5)
-            maxlv = 1;
-        else if (skilllv == 6)
-            maxlv = 2;
-        else if (skilllv >= 7)
-            maxlv = 3;
-    }
-    else if (skillid == MG_FIREBALL)
-    {
-        if (skilllv == 8)
-            maxlv = 1;
-        else if (skilllv >= 9)
-            maxlv = 2;
-    }
-    else if (skillid == MG_FROSTDIVER)
-        maxlv = 1;
-    else
-        return 0;
-
-    if (maxlv > (lv = pc_checkskill (sd, skillid)))
-        maxlv = lv;
-
-    skill_status_change_start (&sd->bl, SC_AUTOSPELL, skilllv, skillid, maxlv, 0,   // val1:スキルID val2:使用最大Lv
-                               skill_get_time (SA_AUTOSPELL, skilllv), 0);  // にしてみたけどbscriptが書き易い・・・？
-    return 0;
-}
-
-/*==========================================
  * ギャングスターパラダイス判定処理(foreachinarea)
  *------------------------------------------
  */

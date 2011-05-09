@@ -198,7 +198,7 @@ static FILE *unk_packets;
 // TODO make this more general (multiple log files ...)
 // TODO add options to print common stuff: function/line, connection type,
 // connection id, IP
-void login_log (const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+static void login_log (const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 #define log(fmt, ...)\
     fprintf (logfp, "%s:%d: in func %s by %s:", __FILE__, __LINE__, __func__, ip),\
     login_log(fmt ,##__VA_ARGS__)

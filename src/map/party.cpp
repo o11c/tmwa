@@ -20,7 +20,7 @@
 
 static struct dbt *party_db;
 
-void party_send_xyhp_timer (timer_id tid, tick_t tick, custom_id_t id, custom_data_t data);
+static void party_send_xyhp_timer (timer_id tid, tick_t tick, custom_id_t id, custom_data_t data);
 /*==========================================
  * 終了
  *------------------------------------------

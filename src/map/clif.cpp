@@ -5004,7 +5004,7 @@ int clif_GM_kickack (struct map_session_data *sd, int id)
     return 0;
 }
 
-void clif_parse_QuitGame (int fd, struct map_session_data *sd);
+static void clif_parse_QuitGame (int fd, struct map_session_data *sd);
 
 int clif_GM_kick (struct map_session_data *sd, struct map_session_data *tsd,
                   int type)

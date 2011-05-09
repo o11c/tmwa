@@ -623,7 +623,7 @@ void gm_log (const char *fmt, ...)
 }
 
 
-bool atcommand (gm_level_t level, const char *message, AtCommandInfo *info);
+static bool atcommand (gm_level_t level, const char *message, AtCommandInfo *info);
 
 bool is_atcommand (const int fd, struct map_session_data *sd, const char *message,
                    gm_level_t gmlvl)

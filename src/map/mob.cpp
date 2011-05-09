@@ -39,8 +39,7 @@ struct mob_db mob_db[2001];
 static int distance (int, int, int, int);
 static int mob_makedummymobdb (int);
 static void mob_timer (timer_id, tick_t, custom_id_t, custom_data_t);
-int  mobskill_deltimer (struct mob_data *md);
-int  mob_skillid2skillidx (int mob_class, int skillid);
+static int mob_skillid2skillidx (int mob_class, int skillid);
 int  mobskill_use_id (struct mob_data *md, struct block_list *target,
                       int skill_idx);
 static int mob_unlocktarget (struct mob_data *md, int tick);
@@ -4098,25 +4097,6 @@ int mobskill_event (struct mob_data *md, int flag)
     if ((flag & BF_LONG)
         && mobskill_use (md, gettick (), MSC_LONGRANGEATTACKED))
         return 1;
-    return 0;
-}
-
-/*==========================================
- * スキル用タイマー削除
- *------------------------------------------
- */
-int mobskill_deltimer (struct mob_data *md)
-{
-    nullpo_retr (0, md);
-
-    if (md->skilltimer != -1)
-    {
-        if (skill_get_inf (md->skillid) & 2)
-            delete_timer (md->skilltimer, mobskill_castend_pos);
-        else
-            delete_timer (md->skilltimer, mobskill_castend_id);
-        md->skilltimer = -1;
-    }
     return 0;
 }
 

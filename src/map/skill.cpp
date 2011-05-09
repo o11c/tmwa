@@ -833,14 +833,13 @@ static int skill_get_castnodex (int id, int lv)
 struct skill_unit_group *skill_unitsetting (struct block_list *src,
                                             int skillid, int skilllv, int x,
                                             int y, int flag);
-int  skill_check_condition (struct map_session_data *sd, int type);
-int  skill_frostjoke_scream (struct block_list *bl, va_list ap);
-int  skill_status_change_timer_sub (struct block_list *bl, va_list ap);
-int  skill_attack_area (struct block_list *bl, va_list ap);
-int  skill_clear_element_field (struct block_list *bl);
-int  skill_landprotector (struct block_list *bl, va_list ap);
-int  skill_trap_splash (struct block_list *bl, va_list ap);
-int  skill_count_target (struct block_list *bl, va_list ap);
+static int skill_check_condition (struct map_session_data *sd, int type);
+static int skill_frostjoke_scream (struct block_list *bl, va_list ap);
+static int skill_status_change_timer_sub (struct block_list *bl, va_list ap);
+static int skill_clear_element_field (struct block_list *bl);
+static int skill_landprotector (struct block_list *bl, va_list ap);
+static int skill_trap_splash (struct block_list *bl, va_list ap);
+static int skill_count_target (struct block_list *bl, va_list ap);
 
 // [MouseJstr] - skill ok to cast? and when?
 static int skillnotok (int skillid, struct map_session_data *sd)
@@ -8711,36 +8710,6 @@ int skill_frostjoke_scream (struct block_list *bl, va_list ap)
  *
  *------------------------------------------
  */
-int skill_attack_area (struct block_list *bl, va_list ap)
-{
-    struct block_list *src, *dsrc;
-    int  atk_type, skillid, skilllv, flag, type;
-    unsigned int tick;
-
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-
-    atk_type = va_arg (ap, int);
-    if ((src = va_arg (ap, struct block_list *)) == NULL)
-        return 0;
-    if ((dsrc = va_arg (ap, struct block_list *)) == NULL)
-        return 0;
-    skillid = va_arg (ap, int);
-    skilllv = va_arg (ap, int);
-    tick = va_arg (ap, unsigned int);
-    flag = va_arg (ap, int);
-    type = va_arg (ap, int);
-
-    if (battle_check_target (dsrc, bl, type) > 0)
-        skill_attack (atk_type, src, dsrc, bl, skillid, skilllv, tick, flag);
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
 int skill_clear_element_field (struct block_list *bl)
 {
     struct mob_data *md = NULL;
@@ -10869,7 +10838,7 @@ struct skill_unit *skill_initunit (struct skill_unit_group *group, int idx,
     return unit;
 }
 
-int  skill_unit_timer_sub_ondelete (struct block_list *bl, va_list ap);
+static int skill_unit_timer_sub_ondelete (struct block_list *bl, va_list ap);
 /*==========================================
  * スキルユニット削除
  *------------------------------------------

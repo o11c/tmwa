@@ -16,9 +16,9 @@ char party_txt[1024] = "save/party.txt";
 static struct dbt *party_db;
 static party_t party_newid = 100;
 
-void mapif_party_broken (party_t party_id, uint8_t flag);
-bool party_check_empty (struct party *p);
-void mapif_parse_PartyLeave (int fd, party_t party_id, account_t account_id);
+static void mapif_party_broken (party_t party_id, uint8_t flag);
+static bool party_check_empty (struct party *p);
+static void mapif_parse_PartyLeave (int fd, party_t party_id, account_t account_id);
 
 /// Save party
 static void inter_party_tofile (FILE *fp, struct party *p)

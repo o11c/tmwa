@@ -252,7 +252,7 @@ int  already_exit_function = 0; // sometimes, the exit function is called twice.
 //------------------------------
 // Writing function of logs file
 //------------------------------
-int ladmin_log (const char *fmt, ...) __attribute__((format (printf, 1, 2)));
+static int ladmin_log (const char *fmt, ...) __attribute__((format (printf, 1, 2)));
 int ladmin_log (const char *fmt, ...)
 {
     FILE *logfp;

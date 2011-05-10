@@ -282,360 +282,185 @@ struct builtin_function
     const char *arg;
 } buildin_func[] =
 {
-    {
-    buildin_mes, "mes", "s"},
-    {
-    buildin_next, "next", ""},
-    {
-    buildin_close, "close", ""},
-    {
-    buildin_close2, "close2", ""},
-    {
-    buildin_menu, "menu", "*"},
-    {
-    buildin_goto, "goto", "l"},
-    {
-    buildin_callsub, "callsub", "i*"},
-    {
-    buildin_callfunc, "callfunc", "s*"},
-    {
-    buildin_return, "return", "*"},
-    {
-    buildin_getarg, "getarg", "i"},
-    {
-    buildin_input, "input", "*"},
-    {
-    buildin_warp, "warp", "sii"},
-    {
-    buildin_isat, "isat", "sii"},
-    {
-    buildin_areawarp, "areawarp", "siiiisii"},
-    {
-    buildin_setlook, "setlook", "ii"},
-    {
-    buildin_set, "set", "ii"},
-    {
-    buildin_setarray, "setarray", "ii*"},
-    {
-    buildin_cleararray, "cleararray", "iii"},
-    {
-    buildin_copyarray, "copyarray", "iii"},
-    {
-    buildin_getarraysize, "getarraysize", "i"},
-    {
-    buildin_deletearray, "deletearray", "ii"},
-    {
-    buildin_getelementofarray, "getelementofarray", "ii"},
-    {
-    buildin_if, "if", "i*"},
-    {
-    buildin_getitem, "getitem", "ii**"},
-    {
-    buildin_getitem2, "getitem2", "iiiiiiiii*"},
-    {
-    buildin_makeitem, "makeitem", "iisii"},
-    {
-    buildin_delitem, "delitem", "ii"},
-    {
-    buildin_cutin, "cutin", "si"},
-    {
-    buildin_cutincard, "cutincard", "i"},
-    {
-    buildin_viewpoint, "viewpoint", "iiiii"},
-    {
-    buildin_heal, "heal", "ii"},
-    {
-    buildin_itemheal, "itemheal", "ii"},
-    {
-    buildin_percentheal, "percentheal", "ii"},
-    {
-    buildin_rand, "rand", "i*"},
-    {
-    buildin_pow, "pow", "ii"},
-    {
-    buildin_countitem, "countitem", "i"},
-    {
-    buildin_checkweight, "checkweight", "ii"},
-    {
-    buildin_readparam, "readparam", "i*"},
-    {
-    buildin_getcharid, "getcharid", "i*"},
-    {
-    buildin_getpartyname, "getpartyname", "i"},
-    {
-    buildin_getpartymember, "getpartymember", "i"},
-    {
-    buildin_strcharinfo, "strcharinfo", "i"},
-    {
-    buildin_getequipid, "getequipid", "i"},
-    {
-    buildin_getequipname, "getequipname", "i"},
-    {
-    buildin_getbrokenid, "getbrokenid", "i"},   // [Valaris]
-    {
-    buildin_repair, "repair", "i"}, // [Valaris]
-    {
-    buildin_getequipisequiped, "getequipisequiped", "i"},
-    {
-    buildin_getequipisenableref, "getequipisenableref", "i"},
-    {
-    buildin_getequipisidentify, "getequipisidentify", "i"},
-    {
-    buildin_getequiprefinerycnt, "getequiprefinerycnt", "i"},
-    {
-    buildin_getequipweaponlv, "getequipweaponlv", "i"},
-    {
-    buildin_getequippercentrefinery, "getequippercentrefinery", "i"},
-    {
-    buildin_successrefitem, "successrefitem", "i"},
-    {
-    buildin_failedrefitem, "failedrefitem", "i"},
-    {
-    buildin_statusup, "statusup", "i"},
-    {
-    buildin_statusup2, "statusup2", "ii"},
-    {
-    buildin_bonus, "bonus", "ii"},
-    {
-    buildin_bonus2, "bonus2", "iii"},
-    {
-    buildin_bonus3, "bonus3", "iiii"},
-    {
-    buildin_skill, "skill", "ii*"},
-    {
-    buildin_setskill, "setskill", "ii"},    // [Fate]
-    {
-    buildin_getskilllv, "getskilllv", "i"},
-    {
-    buildin_basicskillcheck, "basicskillcheck", "*"},
-    {
-    buildin_getgmlevel, "getgmlevel", "*"},
-    {
-    buildin_end, "end", ""},
-    {
-    buildin_getopt2, "getopt2", "i"},
-    {
-    buildin_setopt2, "setopt2", "i"},
-    {
-    buildin_end, "break", ""},
-    {
-    buildin_checkoption, "checkoption", "i"},
-    {
-    buildin_setoption, "setoption", "i"},
-    {
-    buildin_setcart, "setcart", ""},
-    {
-    buildin_checkcart, "checkcart", "*"},   //fixed by Lupus (added '*')
-    {
-    buildin_setfalcon, "setfalcon", ""},
-    {
-    buildin_checkfalcon, "checkfalcon", "*"},   //fixed by Lupus (fixed wrong pointer, added '*')
-    {
-    buildin_setriding, "setriding", ""},
-    {
-    buildin_checkriding, "checkriding", "*"},   //fixed by Lupus (fixed wrong pointer, added '*')
-    {
-    buildin_savepoint, "save", "sii"},
-    {
-    buildin_savepoint, "savepoint", "sii"},
-    {
-    buildin_gettimetick, "gettimetick", "i"},
-    {
-    buildin_gettime, "gettime", "i"},
-    {
-    buildin_gettimestr, "gettimestr", "si"},
-    {
-    buildin_openstorage, "openstorage", "*"},
-    {
-    buildin_itemskill, "itemskill", "iis"},
-    {
-    buildin_monster, "monster", "siisii*"},
-    {
-    buildin_areamonster, "areamonster", "siiiisii*"},
-    {
-    buildin_killmonster, "killmonster", "ss"},
-    {
-    buildin_killmonsterall, "killmonsterall", "s"},
-    {
-    buildin_doevent, "doevent", "s"},
-    {
-    buildin_donpcevent, "donpcevent", "s"},
-    {
-    buildin_addtimer, "addtimer", "is"},
-    {
-    buildin_deltimer, "deltimer", "s"},
-    {
-    buildin_addtimercount, "addtimercount", "si"},
-    {
-    buildin_initnpctimer, "initnpctimer", "*"},
-    {
-    buildin_stopnpctimer, "stopnpctimer", "*"},
-    {
-    buildin_startnpctimer, "startnpctimer", "*"},
-    {
-    buildin_setnpctimer, "setnpctimer", "*"},
-    {
-    buildin_getnpctimer, "getnpctimer", "i*"},
-    {
-    buildin_announce, "announce", "si"},
-    {
-    buildin_mapannounce, "mapannounce", "ssi"},
-    {
-    buildin_areaannounce, "areaannounce", "siiiisi"},
-    {
-    buildin_getusers, "getusers", "i"},
-    {
-    buildin_getmapusers, "getmapusers", "s"},
-    {
-    buildin_getareausers, "getareausers", "siiii"},
-    {
-    buildin_getareadropitem, "getareadropitem", "siiiii*"},
-    {
-    buildin_enablenpc, "enablenpc", "s"},
-    {
-    buildin_disablenpc, "disablenpc", "s"},
-    {
-    buildin_hideoffnpc, "hideoffnpc", "s"},
-    {
-    buildin_hideonnpc, "hideonnpc", "s"},
-    {
-    buildin_sc_start, "sc_start", "iii*"},
-    {
-    buildin_sc_start2, "sc_start2", "iiii*"},
-    {
-    buildin_sc_end, "sc_end", "i"},
-    {
-    buildin_sc_check, "sc_check", "i"},
-    {
-    buildin_getscrate, "getscrate", "ii*"},
-    {
-    buildin_debugmes, "debugmes", "s"},
-    {
-    buildin_resetlvl, "resetlvl", "i"},
-    {
-    buildin_resetstatus, "resetstatus", ""},
-    {
-    buildin_resetskill, "resetskill", ""},
-    {
-    buildin_changesex, "changesex", ""},
-    {
-    buildin_attachrid, "attachrid", "i"},
-    {
-    buildin_detachrid, "detachrid", ""},
-    {
-    buildin_isloggedin, "isloggedin", "i"},
-    {
-    buildin_setmapflagnosave, "setmapflagnosave", "ssii"},
-    {
-    buildin_setmapflag, "setmapflag", "si"},
-    {
-    buildin_removemapflag, "removemapflag", "si"},
-    {
-    buildin_pvpon, "pvpon", "s"},
-    {
-    buildin_pvpoff, "pvpoff", "s"},
-    {
-    buildin_emotion, "emotion", "i"},
-    {
-    buildin_getequipcardcnt, "getequipcardcnt", "i"},
-    {
-    buildin_successremovecards, "successremovecards", "i"},
-    {
-    buildin_failedremovecards, "failedremovecards", "ii"},
-    {
-    buildin_marriage, "marriage", "s"},
-    {
-    buildin_wedding_effect, "wedding", ""},
-    {
-    buildin_divorce, "divorce", "i"},
-    {
-    buildin_getitemname, "getitemname", "*"},
-    {
-    buildin_getspellinvocation, "getspellinvocation", "s"},
-    {
-    buildin_getanchorinvocation, "getanchorinvocation", "s"},
-    {
-    buildin_getpartnerid, "getpartnerid2", "i"},
-    {
-    buildin_getexp, "getexp", "ii"},
-    {
-    buildin_getinventorylist, "getinventorylist", ""},
-    {
-    buildin_getskilllist, "getskilllist", ""},
-    {
-    buildin_get_pool_skills, "getpoolskilllist", ""},
-    {
-    buildin_get_activated_pool_skills, "getactivatedpoolskilllist", ""},
-    {
-    buildin_get_unactivated_pool_skills, "getunactivatedpoolskilllist", ""},
-    {
-    buildin_activate_pool_skill, "poolskill", "i"},
-    {
-    buildin_deactivate_pool_skill, "unpoolskill", "i"},
-    {
-    buildin_check_pool_skill, "checkpoolskill", "i"},
-    {
-    buildin_clearitem, "clearitem", ""},
-    {
-    buildin_classchange, "classchange", "ii"},
-    {
-    buildin_misceffect, "misceffect", "i*"},
-    {
-    buildin_soundeffect, "soundeffect", "si"},
-    {
-    buildin_strmobinfo, "strmobinfo", "ii"},    // display mob data [Valaris]
-    {
-    buildin_npcskilleffect, "npcskilleffect", "iiii"},  // npc skill effect [Valaris]
-    {
-    buildin_specialeffect, "specialeffect", "i"},   // npc skill effect [Valaris]
-    {
-    buildin_specialeffect2, "specialeffect2", "i"}, // skill effect on players[Valaris]
-    {
-    buildin_nude, "nude", ""},  // nude command [Valaris]
-    {
-    buildin_mapwarp, "mapwarp", "ssii"},    // Added by RoVeRT
-    {
-    buildin_inittimer, "inittimer", ""},
-    {
-    buildin_stoptimer, "stoptimer", ""},
-    {
-    buildin_cmdothernpc, "cmdothernpc", "ss"},
-    {
-    buildin_gmcommand, "gmcommand", "*"},   // [MouseJstr]
+    {buildin_mes, "mes", "s"},
+    {buildin_next, "next", ""},
+    {buildin_close, "close", ""},
+    {buildin_close2, "close2", ""},
+    {buildin_menu, "menu", "*"},
+    {buildin_goto, "goto", "l"},
+    {buildin_callsub, "callsub", "i*"},
+    {buildin_callfunc, "callfunc", "s*"},
+    {buildin_return, "return", "*"},
+    {buildin_getarg, "getarg", "i"},
+    {buildin_input, "input", "*"},
+    {buildin_warp, "warp", "sii"},
+    {buildin_isat, "isat", "sii"},
+    {buildin_areawarp, "areawarp", "siiiisii"},
+    {buildin_setlook, "setlook", "ii"},
+    {buildin_set, "set", "ii"},
+    {buildin_setarray, "setarray", "ii*"},
+    {buildin_cleararray, "cleararray", "iii"},
+    {buildin_copyarray, "copyarray", "iii"},
+    {buildin_getarraysize, "getarraysize", "i"},
+    {buildin_deletearray, "deletearray", "ii"},
+    {buildin_getelementofarray, "getelementofarray", "ii"},
+    {buildin_if, "if", "i*"},
+    {buildin_getitem, "getitem", "ii**"},
+    {buildin_getitem2, "getitem2", "iiiiiiiii*"},
+    {buildin_makeitem, "makeitem", "iisii"},
+    {buildin_delitem, "delitem", "ii"},
+    {buildin_cutin, "cutin", "si"},
+    {buildin_cutincard, "cutincard", "i"},
+    {buildin_viewpoint, "viewpoint", "iiiii"},
+    {buildin_heal, "heal", "ii"},
+    {buildin_itemheal, "itemheal", "ii"},
+    {buildin_percentheal, "percentheal", "ii"},
+    {buildin_rand, "rand", "i*"},
+    {buildin_pow, "pow", "ii"},
+    {buildin_countitem, "countitem", "i"},
+    {buildin_checkweight, "checkweight", "ii"},
+    {buildin_readparam, "readparam", "i*"},
+    {buildin_getcharid, "getcharid", "i*"},
+    {buildin_getpartyname, "getpartyname", "i"},
+    {buildin_getpartymember, "getpartymember", "i"},
+    {buildin_strcharinfo, "strcharinfo", "i"},
+    {buildin_getequipid, "getequipid", "i"},
+    {buildin_getequipname, "getequipname", "i"},
+    {buildin_getbrokenid, "getbrokenid", "i"},   // [Valaris]
+    {buildin_repair, "repair", "i"}, // [Valaris]
+    {buildin_getequipisequiped, "getequipisequiped", "i"},
+    {buildin_getequipisenableref, "getequipisenableref", "i"},
+    {buildin_getequipisidentify, "getequipisidentify", "i"},
+    {buildin_getequiprefinerycnt, "getequiprefinerycnt", "i"},
+    {buildin_getequipweaponlv, "getequipweaponlv", "i"},
+    {buildin_getequippercentrefinery, "getequippercentrefinery", "i"},
+    {buildin_successrefitem, "successrefitem", "i"},
+    {buildin_failedrefitem, "failedrefitem", "i"},
+    {buildin_statusup, "statusup", "i"},
+    {buildin_statusup2, "statusup2", "ii"},
+    {buildin_bonus, "bonus", "ii"},
+    {buildin_bonus2, "bonus2", "iii"},
+    {buildin_bonus3, "bonus3", "iiii"},
+    {buildin_skill, "skill", "ii*"},
+    {buildin_setskill, "setskill", "ii"},    // [Fate]
+    {buildin_getskilllv, "getskilllv", "i"},
+    {buildin_basicskillcheck, "basicskillcheck", "*"},
+    {buildin_getgmlevel, "getgmlevel", "*"},
+    {buildin_end, "end", ""},
+    {buildin_getopt2, "getopt2", "i"},
+    {buildin_setopt2, "setopt2", "i"},
+    {buildin_end, "break", ""},
+    {buildin_checkoption, "checkoption", "i"},
+    {buildin_setoption, "setoption", "i"},
+    {buildin_setcart, "setcart", ""},
+    {buildin_checkcart, "checkcart", "*"},   //fixed by Lupus (added '*')
+    {buildin_setfalcon, "setfalcon", ""},
+    {buildin_checkfalcon, "checkfalcon", "*"},   //fixed by Lupus (fixed wrong pointer, added '*')
+    {buildin_setriding, "setriding", ""},
+    {buildin_checkriding, "checkriding", "*"},   //fixed by Lupus (fixed wrong pointer, added '*')
+    {buildin_savepoint, "save", "sii"},
+    {buildin_savepoint, "savepoint", "sii"},
+    {buildin_gettimetick, "gettimetick", "i"},
+    {buildin_gettime, "gettime", "i"},
+    {buildin_gettimestr, "gettimestr", "si"},
+    {buildin_openstorage, "openstorage", "*"},
+    {buildin_itemskill, "itemskill", "iis"},
+    {buildin_monster, "monster", "siisii*"},
+    {buildin_areamonster, "areamonster", "siiiisii*"},
+    {buildin_killmonster, "killmonster", "ss"},
+    {buildin_killmonsterall, "killmonsterall", "s"},
+    {buildin_doevent, "doevent", "s"},
+    {buildin_donpcevent, "donpcevent", "s"},
+    {buildin_addtimer, "addtimer", "is"},
+    {buildin_deltimer, "deltimer", "s"},
+    {buildin_addtimercount, "addtimercount", "si"},
+    {buildin_initnpctimer, "initnpctimer", "*"},
+    {buildin_stopnpctimer, "stopnpctimer", "*"},
+    {buildin_startnpctimer, "startnpctimer", "*"},
+    {buildin_setnpctimer, "setnpctimer", "*"},
+    {buildin_getnpctimer, "getnpctimer", "i*"},
+    {buildin_announce, "announce", "si"},
+    {buildin_mapannounce, "mapannounce", "ssi"},
+    {buildin_areaannounce, "areaannounce", "siiiisi"},
+    {buildin_getusers, "getusers", "i"},
+    {buildin_getmapusers, "getmapusers", "s"},
+    {buildin_getareausers, "getareausers", "siiii"},
+    {buildin_getareadropitem, "getareadropitem", "siiiii*"},
+    {buildin_enablenpc, "enablenpc", "s"},
+    {buildin_disablenpc, "disablenpc", "s"},
+    {buildin_hideoffnpc, "hideoffnpc", "s"},
+    {buildin_hideonnpc, "hideonnpc", "s"},
+    {buildin_sc_start, "sc_start", "iii*"},
+    {buildin_sc_start2, "sc_start2", "iiii*"},
+    {buildin_sc_end, "sc_end", "i"},
+    {buildin_sc_check, "sc_check", "i"},
+    {buildin_getscrate, "getscrate", "ii*"},
+    {buildin_debugmes, "debugmes", "s"},
+    {buildin_resetlvl, "resetlvl", "i"},
+    {buildin_resetstatus, "resetstatus", ""},
+    {buildin_resetskill, "resetskill", ""},
+    {buildin_changesex, "changesex", ""},
+    {buildin_attachrid, "attachrid", "i"},
+    {buildin_detachrid, "detachrid", ""},
+    {buildin_isloggedin, "isloggedin", "i"},
+    {buildin_setmapflagnosave, "setmapflagnosave", "ssii"},
+    {buildin_setmapflag, "setmapflag", "si"},
+    {buildin_removemapflag, "removemapflag", "si"},
+    {buildin_pvpon, "pvpon", "s"},
+    {buildin_pvpoff, "pvpoff", "s"},
+    {buildin_emotion, "emotion", "i"},
+    {buildin_getequipcardcnt, "getequipcardcnt", "i"},
+    {buildin_successremovecards, "successremovecards", "i"},
+    {buildin_failedremovecards, "failedremovecards", "ii"},
+    {buildin_marriage, "marriage", "s"},
+    {buildin_wedding_effect, "wedding", ""},
+    {buildin_divorce, "divorce", "i"},
+    {buildin_getitemname, "getitemname", "*"},
+    {buildin_getspellinvocation, "getspellinvocation", "s"},
+    {buildin_getanchorinvocation, "getanchorinvocation", "s"},
+    {buildin_getpartnerid, "getpartnerid2", "i"},
+    {buildin_getexp, "getexp", "ii"},
+    {buildin_getinventorylist, "getinventorylist", ""},
+    {buildin_getskilllist, "getskilllist", ""},
+    {buildin_get_pool_skills, "getpoolskilllist", ""},
+    {buildin_get_activated_pool_skills, "getactivatedpoolskilllist", ""},
+    {buildin_get_unactivated_pool_skills, "getunactivatedpoolskilllist", ""},
+    {buildin_activate_pool_skill, "poolskill", "i"},
+    {buildin_deactivate_pool_skill, "unpoolskill", "i"},
+    {buildin_check_pool_skill, "checkpoolskill", "i"},
+    {buildin_clearitem, "clearitem", ""},
+    {buildin_classchange, "classchange", "ii"},
+    {buildin_misceffect, "misceffect", "i*"},
+    {buildin_soundeffect, "soundeffect", "si"},
+    {buildin_strmobinfo, "strmobinfo", "ii"},    // display mob data [Valaris]
+    {buildin_npcskilleffect, "npcskilleffect", "iiii"},  // npc skill effect [Valaris]
+    {buildin_specialeffect, "specialeffect", "i"},   // npc skill effect [Valaris]
+    {buildin_specialeffect2, "specialeffect2", "i"}, // skill effect on players[Valaris]
+    {buildin_nude, "nude", ""},  // nude command [Valaris]
+    {buildin_mapwarp, "mapwarp", "ssii"},    // Added by RoVeRT
+    {buildin_inittimer, "inittimer", ""},
+    {buildin_stoptimer, "stoptimer", ""},
+    {buildin_cmdothernpc, "cmdothernpc", "ss"},
+    {buildin_gmcommand, "gmcommand", "*"},   // [MouseJstr]
     {buildin_movenpc,"movenpc","siis"}, // [MouseJstr]
-    {
-    buildin_npcwarp, "npcwarp", "iis"}, // [remoitnane]
-    {
-    buildin_message, "message", "s*"},  // [MouseJstr]
-    {
-    buildin_npctalk, "npctalk", "*"},   // [Valaris]
-    {
-    buildin_hasitems, "hasitems", "*"}, // [Valaris]
-    {
-    buildin_mobcount, "mobcount", "ss"},
-    {
-    buildin_getlook, "getlook", "i"},
-    {
-    buildin_getsavepoint, "getsavepoint", "i"},
-    {
-    buildin_areatimer, "areatimer", "siiiiis"},
-    {
-    buildin_isin, "isin", "siiii"},
-    {
-    buildin_shop, "shop", "s"},
-    {
-    buildin_isdead, "isdead", "i"},
-    {
-    buildin_fakenpcname, "fakenpcname", "ssi"},
-    {
-    buildin_unequip_by_id, "unequipbyid", "i"}, // [Freeyorp]
-    {
-    buildin_getx, "getx", "i"}, // [Kage]
-    {
-    buildin_gety, "gety", "i"}, // [Kage]
+    {buildin_npcwarp, "npcwarp", "iis"}, // [remoitnane]
+    {buildin_message, "message", "s*"},  // [MouseJstr]
+    {buildin_npctalk, "npctalk", "*"},   // [Valaris]
+    {buildin_hasitems, "hasitems", "*"}, // [Valaris]
+    {buildin_mobcount, "mobcount", "ss"},
+    {buildin_getlook, "getlook", "i"},
+    {buildin_getsavepoint, "getsavepoint", "i"},
+    {buildin_areatimer, "areatimer", "siiiiis"},
+    {buildin_isin, "isin", "siiii"},
+    {buildin_shop, "shop", "s"},
+    {buildin_isdead, "isdead", "i"},
+    {buildin_fakenpcname, "fakenpcname", "ssi"},
+    {buildin_unequip_by_id, "unequipbyid", "i"}, // [Freeyorp]
+    {buildin_getx, "getx", "i"}, // [Kage]
+    {buildin_gety, "gety", "i"}, // [Kage]
         // End Additions
-    {
-NULL, NULL, NULL},};
+    {NULL, NULL, NULL},
+};
 
 enum
 {

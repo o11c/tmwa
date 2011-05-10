@@ -4480,107 +4480,66 @@ static int mob_readskilldb (void)
     {
         char str[32];
         int  id;
-    } cond1[] =
+    }
+    cond1[] =
     {
-        {
-        "always", MSC_ALWAYS},
-        {
-        "myhpltmaxrate", MSC_MYHPLTMAXRATE},
-        {
-        "friendhpltmaxrate", MSC_FRIENDHPLTMAXRATE},
-        {
-        "mystatuson", MSC_MYSTATUSON},
-        {
-        "mystatusoff", MSC_MYSTATUSOFF},
-        {
-        "friendstatuson", MSC_FRIENDSTATUSON},
-        {
-        "friendstatusoff", MSC_FRIENDSTATUSOFF},
-        {
-        "notintown", MSC_NOTINTOWN},
-        {
-        "attackpcgt", MSC_ATTACKPCGT},
-        {
-        "attackpcge", MSC_ATTACKPCGE},
-        {
-        "slavelt", MSC_SLAVELT},
-        {
-        "slavele", MSC_SLAVELE},
-        {
-        "closedattacked", MSC_CLOSEDATTACKED},
-        {
-        "longrangeattacked", MSC_LONGRANGEATTACKED},
-        {
-        "skillused", MSC_SKILLUSED},
-        {
-    "casttargeted", MSC_CASTTARGETED},}, cond2[] =
+        {"always", MSC_ALWAYS},
+        {"myhpltmaxrate", MSC_MYHPLTMAXRATE},
+        {"friendhpltmaxrate", MSC_FRIENDHPLTMAXRATE},
+        {"mystatuson", MSC_MYSTATUSON},
+        {"mystatusoff", MSC_MYSTATUSOFF},
+        {"friendstatuson", MSC_FRIENDSTATUSON},
+        {"friendstatusoff", MSC_FRIENDSTATUSOFF},
+        {"notintown", MSC_NOTINTOWN},
+        {"attackpcgt", MSC_ATTACKPCGT},
+        {"attackpcge", MSC_ATTACKPCGE},
+        {"slavelt", MSC_SLAVELT},
+        {"slavele", MSC_SLAVELE},
+        {"closedattacked", MSC_CLOSEDATTACKED},
+        {"longrangeattacked", MSC_LONGRANGEATTACKED},
+        {"skillused", MSC_SKILLUSED},
+        {"casttargeted", MSC_CASTTARGETED},
+    },
+    cond2[] =
     {
-        {
-        "anybad", -1},
-        {
-        "stone", SC_STONE},
-        {
-        "freeze", SC_FREEZE},
-        {
-        "stan", SC_STAN},
-        {
-        "sleep", SC_SLEEP},
-        {
-        "poison", SC_POISON},
-        {
-        "curse", SC_CURSE},
-        {
-        "silence", SC_SILENCE},
-        {
-        "confusion", SC_CONFUSION},
-        {
-        "blind", SC_BLIND},
-        {
-        "hiding", SC_HIDING},
-        {
-    "sight", SC_SIGHT},}, state[] =
+        {"anybad", -1},
+        {"stone", SC_STONE},
+        {"freeze", SC_FREEZE},
+        {"stan", SC_STAN},
+        {"sleep", SC_SLEEP},
+        {"poison", SC_POISON},
+        {"curse", SC_CURSE},
+        {"silence", SC_SILENCE},
+        {"confusion", SC_CONFUSION},
+        {"blind", SC_BLIND},
+        {"hiding", SC_HIDING},
+        {"sight", SC_SIGHT},
+    },
+    state[] =
     {
-        {
-        "any", -1},
-        {
-        "idle", MSS_IDLE},
-        {
-        "walk", MSS_WALK},
-        {
-        "attack", MSS_ATTACK},
-        {
-        "dead", MSS_DEAD},
-        {
-        "loot", MSS_LOOT},
-        {
-    "chase", MSS_CHASE},}, target[] =
+        {"any", -1},
+        {"idle", MSS_IDLE},
+        {"walk", MSS_WALK},
+        {"attack", MSS_ATTACK},
+        {"dead", MSS_DEAD},
+        {"loot", MSS_LOOT},
+        {"chase", MSS_CHASE},
+    }, target[] =
     {
-        {
-        "target", MST_TARGET},
-        {
-        "self", MST_SELF},
-        {
-        "friend", MST_FRIEND},
-        {
-        "master", MST_MASTER},
-        {
-        "around5", MST_AROUND5},
-        {
-        "around6", MST_AROUND6},
-        {
-        "around7", MST_AROUND7},
-        {
-        "around8", MST_AROUND8},
-        {
-        "around1", MST_AROUND1},
-        {
-        "around2", MST_AROUND2},
-        {
-        "around3", MST_AROUND3},
-        {
-        "around4", MST_AROUND4},
-        {
-    "around", MST_AROUND},};
+        {"target", MST_TARGET},
+        {"self", MST_SELF},
+        {"friend", MST_FRIEND},
+        {"master", MST_MASTER},
+        {"around5", MST_AROUND5},
+        {"around6", MST_AROUND6},
+        {"around7", MST_AROUND7},
+        {"around8", MST_AROUND8},
+        {"around1", MST_AROUND1},
+        {"around2", MST_AROUND2},
+        {"around3", MST_AROUND3},
+        {"around4", MST_AROUND4},
+        {"around", MST_AROUND},
+    };
 
     int  x;
     const char *filename[] = { "db/mob_skill_db.txt", "db/mob_skill_db2.txt" };

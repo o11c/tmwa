@@ -5976,14 +5976,16 @@ struct skill_unit_group *skill_unitsetting (struct block_list *src,
             {
                 if (dir & 1)
                 {               /* 斜め配置 */
-                    static const int dx[][5] = {
-                        {1, 1, 0, 0, -1}, {-1, -1, 0, 0, 1},
-                    }, dy[][5] =
+                    static const int dx[][5] =
                     {
-                        {
-                        1, 0, 0, -1, -1},
-                        {
-                    1, 0, 0, -1, -1},};
+                        {1, 1, 0, 0, -1},
+                        {-1, -1, 0, 0, 1},
+                    },
+                    dy[][5] =
+                    {
+                        {1, 0, 0, -1, -1},
+                        {1, 0, 0, -1, -1},
+                    };
                     ux += dx[(dir >> 1) & 1][i];
                     uy += dy[(dir >> 1) & 1][i];
                 }

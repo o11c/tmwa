@@ -7261,32 +7261,21 @@ static void clif_parse (int fd)
 
     cmd = RFIFOW (fd, 0);
 
-    // 管理用パケット処理
-    if (cmd >= 30000)
+    if (cmd == 0x7530)
     {
-        switch (cmd)
-        {
-            case 0x7530:       // Athena情報所得
-                WFIFOW (fd, 0) = 0x7531;
-                WFIFOB (fd, 2) = ATHENA_MAJOR_VERSION;
-                WFIFOB (fd, 3) = ATHENA_MINOR_VERSION;
-                WFIFOB (fd, 4) = ATHENA_REVISION;
-                WFIFOB (fd, 5) = ATHENA_RELEASE_FLAG;
-                WFIFOB (fd, 6) = ATHENA_OFFICIAL_FLAG;
-                WFIFOB (fd, 7) = ATHENA_SERVER_MAP;
-                WFIFOW (fd, 8) = ATHENA_MOD_VERSION;
-                WFIFOSET (fd, 10);
-                RFIFOSKIP (fd, 2);
-                break;
-            case 0x7532:       // 接続の切断
-                session[fd]->eof = 1;
-                break;
-        }
+            WFIFOW (fd, 0) = 0x7531;
+            memcpy (WFIFOP (fd, 2), &tmwAthenaVersion, 8);
+            // WFIFOB (fd, 6) = 0;
+            WFIFOB (fd, 7) = ATHENA_SERVER_MAP;
+            WFIFOSET (fd, 10);
+            RFIFOSKIP (fd, 2);
+            return;
+    }
+    if (cmd >= ARRAY_SIZEOF (packet_len_table))
+    {
+        session[fd]->eof = 1;
         return;
     }
-    else if (cmd >= 0x200)
-        return;
-
     // パケット長を計算
     packet_len = packet_len_table[cmd];
     if (packet_len == -1)

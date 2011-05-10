@@ -3691,8 +3691,8 @@ void do_init (int argc, char **argv)
     set_defaultparse (parse_fromlogin);
 
     Iprintf ("EAthena login-server administration tool.\n");
-    Iprintf ("(for eAthena version %d.%d.%d.)\n", ATHENA_MAJOR_VERSION,
-             ATHENA_MINOR_VERSION, ATHENA_REVISION);
+    Iprintf ("(for tmwAthena version %d.%d.%d.)\n", tmwAthenaVersion.major,
+             tmwAthenaVersion.minor, tmwAthenaVersion.rev);
 
     ladmin_log ("Ladmin is ready.\n");
     Iprintf ("Ladmin is \033[1;32mready\033[0m.\n\n");

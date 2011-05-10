@@ -1504,25 +1504,9 @@ static void x7530 (int fd, bool ladmin)
 {
     login_log ("%sRequest server version (ip: %s)\n", ladmin ? "'ladmin': " : "", ip_of (fd));
     WFIFOW (fd, 0) = 0x7531;
-    if (ladmin)
-    {
-        WFIFOB (fd, 2) = ATHENA_MAJOR_VERSION;
-        WFIFOB (fd, 3) = ATHENA_MINOR_VERSION;
-        WFIFOB (fd, 4) = ATHENA_REVISION;
-        WFIFOB (fd, 5) = ATHENA_RELEASE_FLAG;
-        WFIFOB (fd, 6) = ATHENA_OFFICIAL_FLAG;
-        WFIFOB (fd, 7) = ATHENA_SERVER_LOGIN;
-        WFIFOW (fd, 8) = ATHENA_MOD_VERSION;
-    }
-    else // normal player
-    {
-        WFIFOB (fd, 2) = -1;
-        WFIFOB (fd, 3) = PUBLIC_VERSION[0];
-        WFIFOB (fd, 4) = PUBLIC_VERSION[1];
-        WFIFOB (fd, 5) = PUBLIC_VERSION[2];
-        // NOTE: this would be a good place to advertise features
-        WFIFOL (fd, 6) = new_account_flag ? 1 : 0;
-    }
+    memcpy (WFIFOP (fd, 2), &tmwAthenaVersion, 8);
+    WFIFOB (fd, 6) = new_account_flag ? 1 : 0;
+    WFIFOB (fd, 7) = ATHENA_SERVER_LOGIN;
     WFIFOSET (fd, 10);
 }
 

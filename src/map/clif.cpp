@@ -808,6 +808,7 @@ static int clif_set007b (struct map_session_data *sd, unsigned char *buf)
  * クラスチェンジ typeはMobの場合は1で他は0？
  *------------------------------------------
  */
+// ignored by client
 int clif_npc_class_change (struct block_list *bl, int npc_class, int type)
 {
     uint8_t buf[16];
@@ -851,6 +852,7 @@ int clif_mob_class_change (struct mob_data *md, int class_)
 
 // mob equipment [Valaris]
 
+// ignored by client
 int clif_mob_equip (struct mob_data *md, int nameid)
 {
     unsigned char buf[16];
@@ -990,6 +992,8 @@ static int clif_npc0078 (struct npc_data *nd, unsigned char *buf)
  *
  *------------------------------------------
  */
+// ignored by client
+static int clif_set01e1 (struct map_session_data *sd, unsigned char *buf) __attribute__((deprecated));
 static int clif_set01e1 (struct map_session_data *sd, unsigned char *buf)
 {
     nullpo_retr (0, sd);
@@ -1005,6 +1009,8 @@ static int clif_set01e1 (struct map_session_data *sd, unsigned char *buf)
  *
  *------------------------------------------
  */
+// ignored by client
+static int clif_set0192 (int fd, int m, int x, int y, int type) __attribute__((deprecated));
 static int clif_set0192 (int fd, int m, int x, int y, int type)
 {
     WFIFOW (fd, 0) = 0x192;
@@ -1560,6 +1566,7 @@ int clif_scriptinputstr (struct map_session_data *sd, int npcid)
  *
  *------------------------------------------
  */
+// ignored by client
 int clif_viewpoint (struct map_session_data *sd, int npc_id, int type, int x,
                     int y, int id, int color)
 {
@@ -1584,6 +1591,7 @@ int clif_viewpoint (struct map_session_data *sd, int npc_id, int type, int x,
  *
  *------------------------------------------
  */
+// ignored by client
 int clif_cutin (struct map_session_data *sd, const char *image, int type)
 {
     int  fd;
@@ -2068,6 +2076,7 @@ int clif_updatestatus (struct map_session_data *sd, int type)
             break;
 
         case SP_CARTINFO:
+            // ignored by client
             WFIFOW (fd, 0) = 0x121;
             WFIFOW (fd, 2) = sd->cart_num;
             WFIFOW (fd, 4) = sd->cart_max_num;
@@ -2090,6 +2099,7 @@ int clif_updatestatus (struct map_session_data *sd, int type)
     return 0;
 }
 
+// ignored by client
 int clif_changestatus (struct block_list *bl, int type, int val)
 {
     unsigned char buf[12];
@@ -2478,6 +2488,7 @@ int clif_useitemack (struct map_session_data *sd, int idx, int amount,
  *
  *------------------------------------------
  */
+// ignored by client
 int clif_createchat (struct map_session_data *sd, int fail)
 {
     int  fd;
@@ -2497,6 +2508,7 @@ int clif_createchat (struct map_session_data *sd, int fail)
  *
  *------------------------------------------
  */
+// ignored by client
 int clif_joinchatfail (struct map_session_data *sd, int fail)
 {
     int  fd;
@@ -2607,7 +2619,6 @@ int clif_tradeitemok (struct map_session_data *sd, int idx, int amount,
 
     fd = sd->fd;
     WFIFOW (fd, 0) = 0x1b1;
-    //WFIFOW(fd,0)=0xea;
     WFIFOW (fd, 2) = idx;
     WFIFOW (fd, 4) = amount;
     WFIFOB (fd, 6) = fail;
@@ -3014,8 +3025,11 @@ static void clif_getareachar_item (struct map_session_data *sd,
  * 場所スキルエフェクトが視界に入る
  *------------------------------------------
  */
+// ignored by client
 static int clif_getareachar_skillunit (struct map_session_data *sd,
-                                struct skill_unit *unit)
+                                       struct skill_unit *unit) __attribute__((deprecated));
+static int clif_getareachar_skillunit (struct map_session_data *sd,
+                                       struct skill_unit *unit)
 {
     int  fd;
     struct block_list *bl;
@@ -3075,6 +3089,8 @@ static int clif_getareachar_skillunit (struct map_session_data *sd,
  * 場所スキルエフェクトが視界から消える
  *------------------------------------------
  */
+// ignored by client
+static int clif_clearchar_skillunit (struct skill_unit *unit, int fd) __attribute__((deprecated));
 static int clif_clearchar_skillunit (struct skill_unit *unit, int fd)
 {
     nullpo_retr (0, unit);
@@ -3092,6 +3108,7 @@ static int clif_clearchar_skillunit (struct skill_unit *unit, int fd)
  *
  *------------------------------------------
  */
+// ignored by client
 int clif_01ac (struct block_list *bl)
 {
     uint8_t buf[32];
@@ -3269,6 +3286,7 @@ int clif_mobinsight (struct block_list *bl, va_list ap)
  *
  *------------------------------------------
  */
+// ignored by client
 int clif_skillinfo (struct map_session_data *sd, int skillid, int type,
                     int range)
 {
@@ -3378,6 +3396,7 @@ int clif_skillup (struct map_session_data *sd, int skill_num)
  * スキル詠唱エフェクトを送信する
  *------------------------------------------
  */
+// ignored by client
 int clif_skillcasting (struct block_list *bl,
                        int src_id, int dst_id, int dst_x, int dst_y,
                        int skill_num, int casttime)
@@ -3400,6 +3419,7 @@ int clif_skillcasting (struct block_list *bl,
  *
  *------------------------------------------
  */
+// ignored by client
 int clif_skillcastcancel (struct block_list *bl)
 {
     unsigned char buf[16];
@@ -3490,6 +3510,7 @@ int clif_skill_damage (struct block_list *src, struct block_list *dst,
  * 吹き飛ばしスキル攻撃エフェクト＆ダメージ
  *------------------------------------------
  */
+// ignored by client
 int clif_skill_damage2 (struct block_list *src, struct block_list *dst,
                         unsigned int tick, int sdelay, int ddelay, int damage,
                         int div_, int skill_id, int skill_lv, int type)
@@ -3536,6 +3557,7 @@ int clif_skill_damage2 (struct block_list *src, struct block_list *dst,
  * 支援/回復スキルエフェクト
  *------------------------------------------
  */
+// ignored by client
 int clif_skill_nodamage (struct block_list *src, struct block_list *dst,
                          int skill_id, int heal, int fail)
 {
@@ -3559,6 +3581,7 @@ int clif_skill_nodamage (struct block_list *src, struct block_list *dst,
  * 場所スキルエフェクト
  *------------------------------------------
  */
+// ignored by client
 int clif_skill_poseffect (struct block_list *src, int skill_id, int val,
                           int x, int y, int tick)
 {
@@ -3655,6 +3678,7 @@ int clif_skill_delunit (struct skill_unit *unit)
  * ワープ場所選択
  *------------------------------------------
  */
+// ignored by client
 int clif_skill_warppoint (struct map_session_data *sd, int skill_num,
                           const char *map1, const char *map2,
                           const char *map3, const char *map4)
@@ -3678,6 +3702,7 @@ int clif_skill_warppoint (struct map_session_data *sd, int skill_num,
  * メモ応答
  *------------------------------------------
  */
+// ignored by client
 int clif_skill_memo (struct map_session_data *sd, int flag)
 {
     int  fd;
@@ -3692,6 +3717,7 @@ int clif_skill_memo (struct map_session_data *sd, int flag)
     return 0;
 }
 
+// ignored by client
 int clif_skill_teleportmessage (struct map_session_data *sd, int flag)
 {
     int  fd;
@@ -3709,6 +3735,7 @@ int clif_skill_teleportmessage (struct map_session_data *sd, int flag)
  * モンスター情報
  *------------------------------------------
  */
+// ignored by client
 int clif_skill_estimation (struct map_session_data *sd,
                            struct block_list *dst)
 {
@@ -3812,6 +3839,7 @@ int clif_GMmessage (struct block_list *bl, const char *mes, int len, int flag)
  * HPSP回復エフェクトを送信する
  *------------------------------------------
  */
+// ignored by client
 int clif_heal (int fd, int type, int val)
 {
     WFIFOW (fd, 0) = 0x13d;
@@ -3852,6 +3880,7 @@ int clif_resurrection (struct block_list *bl, int type)
  * PVP実装？（仮）
  *------------------------------------------
  */
+// ignored by client
 int clif_set0199 (int fd, int type)
 {
     WFIFOW (fd, 0) = 0x199;
@@ -3865,6 +3894,7 @@ int clif_set0199 (int fd, int type)
  * PVP実装？(仮)
  *------------------------------------------
  */
+// ignored by client
 int clif_pvpset (struct map_session_data *sd, int pvprank, int pvpnum,
                  int type)
 {
@@ -3925,6 +3955,7 @@ int clif_send0199 (int map, int type)
  * 精錬エフェクトを送信する
  *------------------------------------------
  */
+// ignored by client
 int clif_refine (int fd, struct map_session_data *UNUSED, int fail, int idx,
                  int val)
 {
@@ -3967,6 +3998,7 @@ int clif_wis_end (int fd, int flag) // R 0098 <type>.B: 0: success to send wispe
  * キャラID名前引き結果を送信する
  *------------------------------------------
  */
+// ignored by client
 int clif_solved_charname (struct map_session_data *sd, int char_id)
 {
     const char *p = map_charid2nick (char_id);
@@ -3994,6 +4026,7 @@ int clif_solved_charname (struct map_session_data *sd, int char_id)
  * カードの挿入可能リストを返す
  *------------------------------------------
  */
+// ignored by client
 int clif_use_card (struct map_session_data *sd, int idx)
 {
     nullpo_retr (0, sd);
@@ -4048,6 +4081,7 @@ int clif_use_card (struct map_session_data *sd, int idx)
  * カードの挿入終了
  *------------------------------------------
  */
+// ignored by client
 int clif_insert_card (struct map_session_data *sd, int idx_equip,
                       int idx_card, int flag)
 {
@@ -4068,6 +4102,7 @@ int clif_insert_card (struct map_session_data *sd, int idx_equip,
  * 鑑定可能アイテムリスト送信
  *------------------------------------------
  */
+// ignored by client
 int clif_item_identify_list (struct map_session_data *sd)
 {
     int  i, c;
@@ -4099,6 +4134,7 @@ int clif_item_identify_list (struct map_session_data *sd)
  * 鑑定結果
  *------------------------------------------
  */
+// ignored by client
 int clif_item_identified (struct map_session_data *sd, int idx, int flag)
 {
     int  fd;
@@ -4118,6 +4154,7 @@ int clif_item_identified (struct map_session_data *sd, int idx, int flag)
  * ※実際のパケットがわからないので動作しません
  *------------------------------------------
  */
+// ignored by client
 int clif_item_repair_list (struct map_session_data *sd)
 {
     int  i, c;
@@ -4177,6 +4214,7 @@ int clif_item_skill (struct map_session_data *sd, int skillid, int skilllv,
  * カートにアイテム追加
  *------------------------------------------
  */
+// ignored by client
 int clif_cart_additem (struct map_session_data *sd, int n, int amount,
                        int UNUSED)
 {
@@ -4212,6 +4250,7 @@ int clif_cart_additem (struct map_session_data *sd, int n, int amount,
  * カートからアイテム削除
  *------------------------------------------
  */
+// ignored by client
 int clif_cart_delitem (struct map_session_data *sd, int n, int amount)
 {
     int  fd;
@@ -4233,6 +4272,7 @@ int clif_cart_delitem (struct map_session_data *sd, int n, int amount)
  * カートのアイテムリスト
  *------------------------------------------
  */
+// ignored by client
 int clif_cart_itemlist (struct map_session_data *sd)
 {
     struct item_data *id;
@@ -4275,6 +4315,7 @@ int clif_cart_itemlist (struct map_session_data *sd)
  * カートの装備品リスト
  *------------------------------------------
  */
+// ignored by client
 int clif_cart_equiplist (struct map_session_data *sd)
 {
     struct item_data *id;
@@ -4632,6 +4673,7 @@ int clif_movetoattack (struct map_session_data *sd, struct block_list *bl)
  * 製造エフェクト
  *------------------------------------------
  */
+// ignored by client
 int clif_produceeffect (struct map_session_data *sd, int flag, int nameid)
 {
     int fd;
@@ -4655,6 +4697,7 @@ int clif_produceeffect (struct map_session_data *sd, int flag, int nameid)
  * オートスペル リスト送信
  *------------------------------------------
  */
+// ignored by client
 int clif_autospell (struct map_session_data *sd, int skilllv)
 {
     int  fd;
@@ -4701,6 +4744,7 @@ int clif_autospell (struct map_session_data *sd, int skilllv)
  * ディボーションの青い糸
  *------------------------------------------
  */
+// ignored by client
 int clif_devotion (struct map_session_data *sd, int UNUSED)
 {
     unsigned char buf[56];
@@ -4725,6 +4769,7 @@ int clif_devotion (struct map_session_data *sd, int UNUSED)
  * 氣球
  *------------------------------------------
  */
+// ignored by client
 int clif_spiritball (struct map_session_data *sd)
 {
     unsigned char buf[16];
@@ -4742,6 +4787,7 @@ int clif_spiritball (struct map_session_data *sd)
  *
  *------------------------------------------
  */
+// ignored by client
 int clif_combo_delay (struct block_list *bl, int wait)
 {
     unsigned char buf[32];
@@ -4760,6 +4806,7 @@ int clif_combo_delay (struct block_list *bl, int wait)
  *白刃取り
  *------------------------------------------
  */
+// ignored by client
 int clif_bladestop (struct block_list *src, struct block_list *dst, int boolean)
 {
     unsigned char buf[32];
@@ -4822,6 +4869,7 @@ int clif_mvp_effect (struct map_session_data *sd)
  * MVPアイテム所得
  *------------------------------------------
  */
+// ignored by client
 int clif_mvp_item (struct map_session_data *sd, int nameid)
 {
     int fd;
@@ -4839,6 +4887,7 @@ int clif_mvp_item (struct map_session_data *sd, int nameid)
  * MVP経験値所得
  *------------------------------------------
  */
+// ignored by client
 int clif_mvp_exp (struct map_session_data *sd, int exp)
 {
     int  fd;
@@ -4893,6 +4942,7 @@ static void clif_emotion_towards (struct block_list *bl,
  * トーキーボックス
  *------------------------------------------
  */
+// ignored by client
 void clif_talkiebox (struct block_list *bl, char *talkie)
 {
     unsigned char buf[86];
@@ -4909,6 +4959,7 @@ void clif_talkiebox (struct block_list *bl, char *talkie)
  * 結婚エフェクト
  *------------------------------------------
  */
+// ignored by client
 void clif_wedding_effect (struct block_list *bl)
 {
     unsigned char buf[6];
@@ -4924,6 +4975,7 @@ void clif_wedding_effect (struct block_list *bl)
  * あなたに逢いたい使用時名前叫び
  *------------------------------------------
 
+// ignored by client
 void clif_callpartner(struct map_session_data *sd)
 {
 	unsigned char buf[26];
@@ -5023,6 +5075,7 @@ int clif_GM_kick (struct map_session_data *sd, struct map_session_data *tsd,
  * サウンドエフェクト
  *------------------------------------------
  */
+// ignored by client
 void clif_soundeffect (struct map_session_data *sd, struct block_list *bl,
                        const char *name, int type)
 {

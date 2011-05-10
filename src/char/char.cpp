@@ -1524,6 +1524,27 @@ static void parse_tologin (int fd)
         }
             break;
 
+        case 0x7931:
+            if (RFIFOREST (fd) < 10)
+                return;
+        {
+            Version *server_version = (Version *)RFIFOP (login_fd, 2);
+            if (!(server_version->what_server & ATHENA_SERVER_LOGIN))
+            {
+                char_log ("Not a login server!");
+                abort();
+            }
+            if (server_version->major != tmwAthenaVersion.major
+                || server_version->minor != tmwAthenaVersion.minor
+                || server_version->rev != tmwAthenaVersion.rev)
+            {
+                char_log ("Version mismatch!");
+                abort();
+            }
+        }
+            RFIFOSKIP (fd, 10);
+            break;
+
         /// [Fate] Itemfrob package: forwarded from login-server
         // uint16_t packet, uint32_t srcid, uint32_t dstid
         case 0x7924:
@@ -2692,6 +2713,9 @@ static void check_connect_login_server (timer_id UNUSED, tick_t UNUSED, custom_i
     WFIFOW (login_fd, 82) = char_maintenance;
     WFIFOW (login_fd, 84) = char_new;
     WFIFOSET (login_fd, 86);
+
+    WFIFOW (login_fd, 0) = 0x7530;
+    WFIFOSET (login_fd, 2);
 }
 
 /// read conf/lan_support.conf

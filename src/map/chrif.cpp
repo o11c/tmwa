@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <time.h>
 
+#include "../common/version.hpp"
 #include "../common/socket.hpp"
 #include "../common/timer.hpp"
 #include "map.hpp"
@@ -133,6 +134,9 @@ static int chrif_connect (int fd)
     WFIFOL (fd, 54) = clif_getip ();
     WFIFOW (fd, 58) = clif_getport ();  // [Valaris] thanks to fov
     WFIFOSET (fd, 60);
+
+    WFIFOW (fd, 0) = 0x7530;
+    WFIFOSET (fd, 2);
 
     return 0;
 }
@@ -1112,6 +1116,34 @@ static void chrif_parse (int fd)
     while (RFIFOREST (fd) >= 2)
     {
         cmd = RFIFOW (fd, 0);
+        if (cmd == 0x7931)
+        {
+            if (RFIFOREST (fd) < 10)
+                return;
+            {
+                Version *server_version = (Version *)RFIFOP (fd, 2);
+                if (!(server_version->what_server & ATHENA_SERVER_CHAR))
+                {
+                    map_log ("Not a char server!");
+                    abort();
+                }
+                if (!(server_version->what_server & ATHENA_SERVER_INTER))
+                {
+                    map_log ("Not an inter server!");
+                    abort();
+                }
+                if (server_version->major != tmwAthenaVersion.major
+                    || server_version->minor != tmwAthenaVersion.minor
+                    || server_version->rev != tmwAthenaVersion.rev)
+                {
+                    map_log ("Version mismatch!");
+                    abort();
+                }
+            }
+            RFIFOSKIP (fd, 10);
+            continue;
+        }
+
         if (cmd < 0x2af8
             || cmd >=
             0x2af8 +

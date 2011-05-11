@@ -3043,7 +3043,6 @@ int atcommand_memo (const int fd, struct map_session_data *sd,
                     24);
             sd->status.memo_point[position].x = sd->bl.x;
             sd->status.memo_point[position].y = sd->bl.y;
-            clif_skill_memo (sd, 0);
             if (pc_checkskill (sd, AL_WARP) <= (position + 1))
                 clif_displaymessage (fd, "Note: you don't have the 'Warp' skill level to use it.");
             atcommand_memo_sub (sd);
@@ -7515,7 +7514,6 @@ int atcommand_summon (const int UNUSED, struct map_session_data *sd,
         md->deletetimer = add_timer (tick + 60000, mob_timer_delete, id, 0);
         clif_misceffect (&md->bl, 344);
     }
-    clif_skill_poseffect (&sd->bl, AM_CALLHOMUN, 1, x, y, tick);
 
     return 0;
 }

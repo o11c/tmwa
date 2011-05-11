@@ -49,7 +49,6 @@ int  clif_scriptmenu (struct map_session_data *, int, const char *);  //self
 int  clif_scriptinput (struct map_session_data *, int); //self
 int  clif_scriptinputstr (struct map_session_data *sd, int npcid);  // self
 int  clif_cutin (struct map_session_data *, const char *, int) __attribute__((deprecated));   //self
-int  clif_viewpoint (struct map_session_data *, int, int, int, int, int, int) __attribute__((deprecated));  //self
 int  clif_additem (struct map_session_data *, int, int, int);   //self
 int  clif_delitem (struct map_session_data *, int, int);    //self
 int  clif_updatestatus (struct map_session_data *, int);    //self
@@ -66,9 +65,6 @@ int  clif_unequipitemack (struct map_session_data *, int, int, int);    // self
 int  clif_misceffect (struct block_list *, int);    // area
 int  clif_changeoption (struct block_list *);   // area
 int  clif_useitemack (struct map_session_data *, int, int, int);    // self
-
-int  clif_createchat (struct map_session_data *, int) __attribute__((deprecated));  // self
-int  clif_joinchatfail (struct map_session_data *, int) __attribute__((deprecated));    // self
 
 void clif_emotion (struct block_list *bl, int type);
 void clif_talkiebox (struct block_list *bl, char *talkie);
@@ -112,44 +108,16 @@ int  clif_npc_class_change (struct block_list *bl, int npc_class, int type) __at
 int  clif_mob_class_change (struct mob_data *md, int mob_class) __attribute__((deprecated));
 int  clif_mob_equip (struct mob_data *md, int nameid);  // [Valaris]
 
-int  clif_skillinfo (struct map_session_data *sd, int skillid, int type,
-                     int range) __attribute__((deprecated));
 int  clif_skillinfoblock (struct map_session_data *sd);
 int  clif_skillup (struct map_session_data *sd, int skill_num);
 
-int  clif_skillcasting (struct block_list *bl,
-                        int src_id, int dst_id, int dst_x, int dst_y,
-                        int skill_num, int casttime) __attribute__((deprecated));
-int  clif_skillcastcancel (struct block_list *bl) __attribute__((deprecated));
-int  clif_skill_fail (struct map_session_data *sd, int skill_id, int type,
-                      int btype);
 int  clif_skill_damage (struct block_list *src, struct block_list *dst,
                         unsigned int tick, int sdelay, int ddelay, int damage,
                         int div, int skill_id, int skill_lv, int type);
-int  clif_skill_damage2 (struct block_list *src, struct block_list *dst,
-                         unsigned int tick, int sdelay, int ddelay,
-                         int damage, int div, int skill_id, int skill_lv,
-                         int type) __attribute__((deprecated));
-int  clif_skill_nodamage (struct block_list *src, struct block_list *dst,
-                          int skill_id, int heal, int fail) __attribute__((deprecated));
-int  clif_skill_poseffect (struct block_list *src, int skill_id, int val,
-                           int x, int y, int tick) __attribute__((deprecated));
-int  clif_skill_estimation (struct map_session_data *sd,
-                            struct block_list *dst) __attribute__((deprecated));
-int  clif_skill_warppoint (struct map_session_data *sd, int skill_num,
-                           const char *map1, const char *map2,
-                           const char *map3, const char *map4) __attribute__((deprecated));
-int  clif_skill_memo (struct map_session_data *sd, int flag) __attribute__((deprecated));
-int  clif_skill_teleportmessage (struct map_session_data *sd, int flag) __attribute__((deprecated));
 
 int  clif_skill_setunit (struct skill_unit *unit);
 int  clif_skill_delunit (struct skill_unit *unit);
 
-int  clif_autospell (struct map_session_data *sd, int skilllv) __attribute__((deprecated));
-int  clif_devotion (struct map_session_data *sd, int target) __attribute__((deprecated));
-int  clif_combo_delay (struct block_list *src, int wait) __attribute__((deprecated));
-int  clif_bladestop (struct block_list *src, struct block_list *dst,
-                     int boolean) __attribute__((deprecated));
 int  clif_changemapcell (int m, int x, int y, int cell_type, int type);
 
 int  clif_status_change (struct block_list *bl, int type, int flag);

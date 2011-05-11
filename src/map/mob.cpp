@@ -2418,7 +2418,7 @@ int mob_damage (struct block_list *src, struct mob_data *md, int damage,
     unsigned int tick = gettick ();
     struct map_session_data *mvp_sd = NULL, *second_sd = NULL, *third_sd =
         NULL;
-    double dmg_rate, tdmg, temp;
+    double tdmg, temp;
     struct item item;
     int  ret;
 //    int  drop_rate;
@@ -2600,7 +2600,6 @@ int mob_damage (struct block_list *src, struct mob_data *md, int damage,
     /* ソウルドレイン */
     if (sd && (skill = pc_checkskill (sd, HW_SOULDRAIN)) > 0)
     {
-        clif_skill_nodamage (src, &md->bl, HW_SOULDRAIN, skill, 1);
         sp = (battle_get_lv (&md->bl)) * (65 + 15 * skill) / 100;
         if (sd->status.sp + sp > sd->status.max_sp)
             sp = sd->status.max_sp - sd->status.sp;
@@ -2637,12 +2636,6 @@ int mob_damage (struct block_list *src, struct mob_data *md, int damage,
     // [MouseJstr]
     if ((maps[md->bl.m].flag.pvp == 0) || (battle_config.pvp_exp == 1))
     {
-
-        if ((double) max_hp < tdmg)
-            dmg_rate = ((double) max_hp) / tdmg;
-        else
-            dmg_rate = 1;
-
         // 経験値の分配
         for (int i = 0; i < DAMAGELOG_SIZE; i++)
         {
@@ -3231,9 +3224,6 @@ int mob_summonslave (struct mob_data *md2, int *value, int amount, int flag)
             md->bl.type = BL_MOB;
             map_addiddb (&md->bl);
             mob_spawn (md->bl.id);
-            clif_skill_nodamage (&md->bl, &md->bl,
-                                 (flag) ? NPC_SUMMONSLAVE : NPC_SUMMONMONSTER,
-                                 a, 1);
 
             if (flag)
                 md->master_id = md2->bl.id;
@@ -3570,7 +3560,7 @@ int mobskill_use_id (struct mob_data *md, struct block_list *target,
 {
     int  casttime, range;
     struct mob_skill *ms;
-    int  skill_id, skill_lv, forcecast = 0;
+    int  skill_id, skill_lv;
 
     nullpo_retr (0, md);
     nullpo_retr (0, ms = &mob_db[md->mob_class].skill[skill_idx]);
@@ -3629,16 +3619,10 @@ int mobskill_use_id (struct mob_data *md, struct block_list *target,
                 && battle_check_undead (battle_get_race (target),
                                         battle_get_elem_type (target)))
             {                   /* 敵がアンデッドなら */
-                forcecast = 1;  /* ターンアンデットと同じ詠唱時間 */
                 casttime =
                     skill_castfix (&md->bl,
                                    skill_get_cast (PR_TURNUNDEAD, skill_lv));
             }
-            break;
-        case MO_EXTREMITYFIST: /*阿修羅覇鳳拳 */
-        case SA_MAGICROD:
-        case SA_SPELLBREAKER:
-            forcecast = 1;
             break;
     }
 
@@ -3646,21 +3630,6 @@ int mobskill_use_id (struct mob_data *md, struct block_list *target,
         printf
             ("MOB skill use target_id=%d skill=%d lv=%d cast=%d, mob_class = %d\n",
              target->id, skill_id, skill_lv, casttime, md->mob_class);
-
-    if (casttime > 0 || forcecast)
-    {                           // 詠唱が必要
-//      struct mob_data *md2;
-        clif_skillcasting (&md->bl,
-                           md->bl.id, target->id, 0, 0, skill_id, casttime);
-
-        // 詠唱反応モンスター
-/*		if( target->type==BL_MOB && mob_db[(md2=(struct mob_data *)target)->mob_class].mode&0x10 &&
-			md2->state.state!=MS_ATTACK){
-				md2->target_id=md->bl.id;
-				md->state.targettype = ATTACKABLE;
-				md2->min_chase=13;
-		}*/
-    }
 
     if (casttime <= 0)          // 詠唱の無いものはキャンセルされない
         md->state.skillcastcancel = 0;
@@ -3750,11 +3719,6 @@ static int mobskill_use_pos (struct mob_data *md,
         printf
             ("MOB skill use target_pos=(%d,%d) skill=%d lv=%d cast=%d, mob_class = %d\n",
              skill_x, skill_y, skill_id, skill_lv, casttime, md->mob_class);
-
-    if (casttime > 0)           // A cast time is required.
-        clif_skillcasting (&md->bl,
-                           md->bl.id, 0, skill_x, skill_y, skill_id,
-                           casttime);
 
     if (casttime <= 0)          // A skill without a cast time wont be cancelled.
         md->state.skillcastcancel = 0;

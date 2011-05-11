@@ -126,7 +126,6 @@ static int buildin_getitem (struct script_state *st);
 static int buildin_getitem2 (struct script_state *st);
 static int buildin_makeitem (struct script_state *st);
 static int buildin_delitem (struct script_state *st);
-static int buildin_viewpoint (struct script_state *st);
 static int buildin_countitem (struct script_state *st);
 static int buildin_checkweight (struct script_state *st);
 static int buildin_readparam (struct script_state *st);
@@ -247,7 +246,6 @@ static int buildin_stoptimer (struct script_state *st);
 static int buildin_cmdothernpc (struct script_state *st);
 static int buildin_mobcount (struct script_state *st);
 static int buildin_strmobinfo (struct script_state *st);  // Script for displaying mob info [Valaris]
-static int buildin_npcskilleffect (struct script_state *st);  // skill effects for npcs [Valaris]
 static int buildin_specialeffect (struct script_state *st);   // special effect script [Valaris]
 static int buildin_specialeffect2 (struct script_state *st);  // special effect script [Valaris]
 static int buildin_nude (struct script_state *st);    // nude [Valaris]
@@ -311,7 +309,6 @@ struct builtin_function
     {buildin_delitem, "delitem", "ii"},
     {buildin_cutin, "cutin", "si"},
     {buildin_cutincard, "cutincard", "i"},
-    {buildin_viewpoint, "viewpoint", "iiiii"},
     {buildin_heal, "heal", "ii"},
     {buildin_itemheal, "itemheal", "ii"},
     {buildin_percentheal, "percentheal", "ii"},
@@ -433,7 +430,6 @@ struct builtin_function
     {buildin_misceffect, "misceffect", "i*"},
     {buildin_soundeffect, "soundeffect", "si"},
     {buildin_strmobinfo, "strmobinfo", "ii"},    // display mob data [Valaris]
-    {buildin_npcskilleffect, "npcskilleffect", "iiii"},  // npc skill effect [Valaris]
     {buildin_specialeffect, "specialeffect", "i"},   // npc skill effect [Valaris]
     {buildin_specialeffect2, "specialeffect2", "i"}, // skill effect on players[Valaris]
     {buildin_nude, "nude", ""},  // nude command [Valaris]
@@ -2397,25 +2393,6 @@ int buildin_cutincard (struct script_state *st)
 
     clif_cutin (script_rid2sd (st), itemdb_search (itemid)->cardillustname,
                 4);
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int buildin_viewpoint (struct script_state *st)
-{
-    int  type, x, y, id, color;
-
-    type = conv_num (st, &(st->stack->stack_data[st->start + 2]));
-    x = conv_num (st, &(st->stack->stack_data[st->start + 3]));
-    y = conv_num (st, &(st->stack->stack_data[st->start + 4]));
-    id = conv_num (st, &(st->stack->stack_data[st->start + 5]));
-    color = conv_num (st, &(st->stack->stack_data[st->start + 6]));
-
-    clif_viewpoint (script_rid2sd (st), st->oid, type, x, y, id, color);
 
     return 0;
 }
@@ -5559,24 +5536,6 @@ int buildin_soundeffect (struct script_state *st)
 }
 
 /*==========================================
- * NPC skill effects [Valaris]
- *------------------------------------------
- */
-int buildin_npcskilleffect (struct script_state *st)
-{
-    struct npc_data *nd = (struct npc_data *) map_id2bl (st->oid);
-
-    int  skillid = conv_num (st, &(st->stack->stack_data[st->start + 2]));
-    int  skilllv = conv_num (st, &(st->stack->stack_data[st->start + 3]));
-    int  x = conv_num (st, &(st->stack->stack_data[st->start + 4]));
-    int  y = conv_num (st, &(st->stack->stack_data[st->start + 5]));
-
-    clif_skill_poseffect (&nd->bl, skillid, skilllv, x, y, gettick ());
-
-    return 0;
-}
-
-/*==========================================
  * Special effects [Valaris]
  *------------------------------------------
  */
@@ -5677,8 +5636,9 @@ int buildin_gmcommand (struct script_state *st)
  *------------------------------------------
  */
 
-int buildin_movenpc (struct script_state *st)
+int buildin_movenpc (struct script_state *)
 {
+#if 0
     struct map_session_data *sd;
     const char *map, *npc;
     int  x, y;
@@ -5691,7 +5651,7 @@ int buildin_movenpc (struct script_state *st)
     npc = conv_str (st, &(st->stack->stack_data[st->start + 5]));
 
     // TODO actually implement this - the next function might be useful
-
+#endif
     return 0;
 }
 

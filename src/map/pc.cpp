@@ -3317,7 +3317,6 @@ static int pc_isUseitem (struct map_session_data *sd, int n)
         return 0;
     if (nameid == 601 && maps[sd->bl.m].flag.noteleport)
     {
-        clif_skill_teleportmessage (sd, 0);
         return 0;
     }
 
@@ -3339,13 +3338,12 @@ static int pc_isUseitem (struct map_session_data *sd, int n)
  */
 int pc_useitem (struct map_session_data *sd, int n)
 {
-    int  nameid, amount;
+    int amount;
 
     nullpo_retr (1, sd);
 
     if (n >= 0 && n < MAX_INVENTORY && sd->inventory_data[n])
     {
-        nameid = sd->status.inventory[n].nameid;
         amount = sd->status.inventory[n].amount;
         if (sd->status.inventory[n].nameid <= 0
             || sd->status.inventory[n].amount <= 0
@@ -4330,7 +4328,6 @@ static void pc_attack_timer (timer_id tid, tick_t tick, custom_id_t id, custom_d
     {
         if (DIFF_TICK (tick, sd->canact_tick) < 0)
         {
-            clif_skill_fail (sd, 1, 4, 0);
             return;
         }
     }

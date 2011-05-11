@@ -1529,31 +1529,6 @@ int clif_scriptinputstr (struct map_session_data *sd, int npcid)
  *------------------------------------------
  */
 // ignored by client
-int clif_viewpoint (struct map_session_data *sd, int npc_id, int type, int x,
-                    int y, int id, int color)
-{
-    int  fd;
-
-    nullpo_retr (0, sd);
-
-    fd = sd->fd;
-    WFIFOW (fd, 0) = 0x144;
-    WFIFOL (fd, 2) = npc_id;
-    WFIFOL (fd, 6) = type;
-    WFIFOL (fd, 10) = x;
-    WFIFOL (fd, 14) = y;
-    WFIFOB (fd, 18) = id;
-    WFIFOL (fd, 19) = color;
-    WFIFOSET (fd, packet_len_table[0x144]);
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-// ignored by client
 int clif_cutin (struct map_session_data *sd, const char *image, int type)
 {
     int  fd;
@@ -2414,46 +2389,6 @@ int clif_useitemack (struct map_session_data *sd, int idx, int amount,
 }
 
 /*==========================================
- *
- *------------------------------------------
- */
-// ignored by client
-int clif_createchat (struct map_session_data *sd, int fail)
-{
-    int  fd;
-
-    nullpo_retr (0, sd);
-
-    fd = sd->fd;
-    WFIFOW (fd, 0) = 0xd6;
-    WFIFOB (fd, 2) = fail;
-    WFIFOSET (fd, packet_len_table[0xd6]);
-
-    return 0;
-}
-
-
-/*==========================================
- *
- *------------------------------------------
- */
-// ignored by client
-int clif_joinchatfail (struct map_session_data *sd, int fail)
-{
-    int  fd;
-
-    nullpo_retr (0, sd);
-
-    fd = sd->fd;
-
-    WFIFOW (fd, 0) = 0xda;
-    WFIFOB (fd, 2) = fail;
-    WFIFOSET (fd, packet_len_table[0xda]);
-
-    return 0;
-}
-
-/*==========================================
  * 取り引き要請受け
  *------------------------------------------
  */
@@ -3180,47 +3115,6 @@ int clif_mobinsight (struct block_list *bl, va_list ap)
 }
 
 /*==========================================
- *
- *------------------------------------------
- */
-// ignored by client
-int clif_skillinfo (struct map_session_data *sd, int skillid, int type,
-                    int range)
-{
-    int  fd, id;
-
-    nullpo_retr (0, sd);
-
-    fd = sd->fd;
-    if ((id = sd->status.skill[skillid].id) <= 0)
-        return 0;
-    WFIFOW (fd, 0) = 0x147;
-    WFIFOW (fd, 2) = id;
-    if (type < 0)
-        WFIFOW (fd, 4) = skill_get_inf (id);
-    else
-        WFIFOW (fd, 4) = type;
-    WFIFOW (fd, 6) = 0;
-    WFIFOW (fd, 8) = sd->status.skill[skillid].lv;
-    WFIFOW (fd, 10) = skill_get_sp (id, sd->status.skill[skillid].lv);
-    if (range < 0)
-    {
-        range = skill_get_range (id, sd->status.skill[skillid].lv);
-        if (range < 0)
-            range = battle_get_range (&sd->bl) - (range + 1);
-        WFIFOW (fd, 12) = range;
-    }
-    else
-        WFIFOW (fd, 12) = range;
-    memset (WFIFOP (fd, 14), 0, 24);
-    WFIFOB (fd, 38) =
-        (sd->status.skill[skillid].lv < skill_get_max_raise (id)) ? 1 : 0;
-    WFIFOSET (fd, packet_len_table[0x147]);
-
-    return 0;
-}
-
-/*==========================================
  * スキルリストを送信する
  *------------------------------------------
  */
@@ -3290,76 +3184,6 @@ int clif_skillup (struct map_session_data *sd, int skill_num)
 }
 
 /*==========================================
- * スキル詠唱エフェクトを送信する
- *------------------------------------------
- */
-// ignored by client
-int clif_skillcasting (struct block_list *bl,
-                       int src_id, int dst_id, int dst_x, int dst_y,
-                       int skill_num, int casttime)
-{
-    unsigned char buf[32];
-    WBUFW (buf, 0) = 0x13e;
-    WBUFL (buf, 2) = src_id;
-    WBUFL (buf, 6) = dst_id;
-    WBUFW (buf, 10) = dst_x;
-    WBUFW (buf, 12) = dst_y;
-    WBUFW (buf, 14) = skill_num;    //魔法詠唱スキル
-    WBUFL (buf, 16) = skill_get_pl (skill_num); //属性
-    WBUFL (buf, 20) = casttime; //skill詠唱時間
-    clif_send (buf, packet_len_table[0x13e], bl, AREA);
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-// ignored by client
-int clif_skillcastcancel (struct block_list *bl)
-{
-    unsigned char buf[16];
-
-    nullpo_retr (0, bl);
-
-    WBUFW (buf, 0) = 0x1b9;
-    WBUFL (buf, 2) = bl->id;
-    clif_send (buf, packet_len_table[0x1b9], bl, AREA);
-
-    return 0;
-}
-
-/*==========================================
- * スキル詠唱失敗
- *------------------------------------------
- */
-int clif_skill_fail (struct map_session_data *sd, int skill_id, int type,
-                     int btype)
-{
-    int  fd;
-
-    nullpo_retr (0, sd);
-
-    fd = sd->fd;
-
-    if (type == 0x4 && battle_config.display_delay_skill_fail == 0)
-    {
-        return 0;
-    }
-
-    WFIFOW (fd, 0) = 0x110;
-    WFIFOW (fd, 2) = skill_id;
-    WFIFOW (fd, 4) = btype;
-    WFIFOW (fd, 6) = 0;
-    WFIFOB (fd, 8) = 0;
-    WFIFOB (fd, 9) = type;
-    WFIFOSET (fd, packet_len_table[0x110]);
-
-    return 0;
-}
-
-/*==========================================
  * スキル攻撃エフェクト＆ダメージ
  *------------------------------------------
  */
@@ -3402,102 +3226,6 @@ int clif_skill_damage (struct block_list *src, struct block_list *dst,
 
     return 0;
 }
-
-/*==========================================
- * 吹き飛ばしスキル攻撃エフェクト＆ダメージ
- *------------------------------------------
- */
-// ignored by client
-int clif_skill_damage2 (struct block_list *src, struct block_list *dst,
-                        unsigned int tick, int sdelay, int ddelay, int damage,
-                        int div_, int skill_id, int skill_lv, int type)
-{
-    unsigned char buf[64];
-    struct status_change *sc_data;
-
-    nullpo_retr (0, src);
-    nullpo_retr (0, dst);
-
-    sc_data = battle_get_sc_data (dst);
-
-    if (type != 5 && dst->type == BL_PC
-        && ((struct map_session_data *) dst)->special_state.infinite_endure)
-        type = 9;
-    if (sc_data)
-    {
-        if (type != 5 && sc_data[SC_ENDURE].timer != -1)
-            type = 9;
-        if (sc_data[SC_HALLUCINATION].timer != -1 && damage > 0)
-            damage =
-                damage * (5 + sc_data[SC_HALLUCINATION].val1) + MRAND (100);
-    }
-
-    WBUFW (buf, 0) = 0x115;
-    WBUFW (buf, 2) = skill_id;
-    WBUFL (buf, 4) = src->id;
-    WBUFL (buf, 8) = dst->id;
-    WBUFL (buf, 12) = tick;
-    WBUFL (buf, 16) = sdelay;
-    WBUFL (buf, 20) = ddelay;
-    WBUFW (buf, 24) = dst->x;
-    WBUFW (buf, 26) = dst->y;
-    WBUFW (buf, 28) = damage;
-    WBUFW (buf, 30) = skill_lv;
-    WBUFW (buf, 32) = div_;
-    WBUFB (buf, 34) = (type > 0) ? type : skill_get_hit (skill_id);
-    clif_send (buf, packet_len_table[0x115], src, AREA);
-
-    return 0;
-}
-
-/*==========================================
- * 支援/回復スキルエフェクト
- *------------------------------------------
- */
-// ignored by client
-int clif_skill_nodamage (struct block_list *src, struct block_list *dst,
-                         int skill_id, int heal, int fail)
-{
-    unsigned char buf[32];
-
-    nullpo_retr (0, src);
-    nullpo_retr (0, dst);
-
-    WBUFW (buf, 0) = 0x11a;
-    WBUFW (buf, 2) = skill_id;
-    WBUFW (buf, 4) = (heal > 0x7fff) ? 0x7fff : heal;
-    WBUFL (buf, 6) = dst->id;
-    WBUFL (buf, 10) = src->id;
-    WBUFB (buf, 14) = fail;
-    clif_send (buf, packet_len_table[0x11a], src, AREA);
-
-    return 0;
-}
-
-/*==========================================
- * 場所スキルエフェクト
- *------------------------------------------
- */
-// ignored by client
-int clif_skill_poseffect (struct block_list *src, int skill_id, int val,
-                          int x, int y, int tick)
-{
-    unsigned char buf[32];
-
-    nullpo_retr (0, src);
-
-    WBUFW (buf, 0) = 0x117;
-    WBUFW (buf, 2) = skill_id;
-    WBUFL (buf, 4) = src->id;
-    WBUFW (buf, 8) = val;
-    WBUFW (buf, 10) = x;
-    WBUFW (buf, 12) = y;
-    WBUFL (buf, 14) = tick;
-    clif_send (buf, packet_len_table[0x117], src, AREA);
-
-    return 0;
-}
-
 /*==========================================
  * 場所スキルエフェクト表示
  *------------------------------------------
@@ -3568,106 +3296,6 @@ int clif_skill_delunit (struct skill_unit *unit)
     WBUFW (buf, 0) = 0x120;
     WBUFL (buf, 2) = unit->bl.id;
     clif_send (buf, packet_len_table[0x120], &unit->bl, AREA);
-    return 0;
-}
-
-/*==========================================
- * ワープ場所選択
- *------------------------------------------
- */
-// ignored by client
-int clif_skill_warppoint (struct map_session_data *sd, int skill_num,
-                          const char *map1, const char *map2,
-                          const char *map3, const char *map4)
-{
-    int  fd;
-
-    nullpo_retr (0, sd);
-
-    fd = sd->fd;
-    WFIFOW (fd, 0) = 0x11c;
-    WFIFOW (fd, 2) = skill_num;
-    memcpy (WFIFOP (fd, 4), map1, 16);
-    memcpy (WFIFOP (fd, 20), map2, 16);
-    memcpy (WFIFOP (fd, 36), map3, 16);
-    memcpy (WFIFOP (fd, 52), map4, 16);
-    WFIFOSET (fd, packet_len_table[0x11c]);
-    return 0;
-}
-
-/*==========================================
- * メモ応答
- *------------------------------------------
- */
-// ignored by client
-int clif_skill_memo (struct map_session_data *sd, int flag)
-{
-    int  fd;
-
-    nullpo_retr (0, sd);
-
-    fd = sd->fd;
-
-    WFIFOW (fd, 0) = 0x11e;
-    WFIFOB (fd, 2) = flag;
-    WFIFOSET (fd, packet_len_table[0x11e]);
-    return 0;
-}
-
-// ignored by client
-int clif_skill_teleportmessage (struct map_session_data *sd, int flag)
-{
-    int  fd;
-
-    nullpo_retr (0, sd);
-
-    fd = sd->fd;
-    WFIFOW (fd, 0) = 0x189;
-    WFIFOW (fd, 2) = flag;
-    WFIFOSET (fd, packet_len_table[0x189]);
-    return 0;
-}
-
-/*==========================================
- * モンスター情報
- *------------------------------------------
- */
-// ignored by client
-int clif_skill_estimation (struct map_session_data *sd,
-                           struct block_list *dst)
-{
-    struct mob_data *md;
-    unsigned char buf[64];
-    int  i;
-
-    nullpo_retr (0, sd);
-    nullpo_retr (0, dst);
-
-    if (dst->type != BL_MOB)
-        return 0;
-    if ((md = (struct mob_data *) dst) == NULL)
-        return 0;
-
-    WBUFW (buf, 0) = 0x18c;
-    WBUFW (buf, 2) = mob_get_viewclass (md->mob_class);
-    WBUFW (buf, 4) = mob_db[md->mob_class].lv;
-    WBUFW (buf, 6) = mob_db[md->mob_class].size;
-    WBUFL (buf, 8) = md->hp;
-    WBUFW (buf, 12) = battle_get_def2 (&md->bl);
-    WBUFW (buf, 14) = mob_db[md->mob_class].race;
-    WBUFW (buf, 16) =
-        battle_get_mdef2 (&md->bl) - (mob_db[md->mob_class].vit >> 1);
-    WBUFW (buf, 18) = battle_get_elem_type (&md->bl);
-    for (i = 0; i < 9; i++)
-        WBUFB (buf, 20 + i) = battle_attr_fix (100, i + 1, md->def_ele);
-
-    if (sd->status.party_id > 0)
-        clif_send (buf, packet_len_table[0x18c], &sd->bl, PARTY_AREA);
-    else
-    {
-        memcpy (WFIFOP (sd->fd, 0), buf, packet_len_table[0x18c]);
-        WFIFOSET (sd->fd, packet_len_table[0x18c]);
-    }
     return 0;
 }
 
@@ -4508,119 +4136,6 @@ int clif_movetoattack (struct map_session_data *sd, struct block_list *bl)
 }
 
 /*==========================================
- * オートスペル リスト送信
- *------------------------------------------
- */
-// ignored by client
-int clif_autospell (struct map_session_data *sd, int skilllv)
-{
-    int  fd;
-
-    nullpo_retr (0, sd);
-
-    fd = sd->fd;
-    WFIFOW (fd, 0) = 0x1cd;
-
-    if (skilllv > 0 && pc_checkskill (sd, MG_NAPALMBEAT) > 0)
-        WFIFOL (fd, 2) = MG_NAPALMBEAT;
-    else
-        WFIFOL (fd, 2) = 0x00000000;
-    if (skilllv > 1 && pc_checkskill (sd, MG_COLDBOLT) > 0)
-        WFIFOL (fd, 6) = MG_COLDBOLT;
-    else
-        WFIFOL (fd, 6) = 0x00000000;
-    if (skilllv > 1 && pc_checkskill (sd, MG_FIREBOLT) > 0)
-        WFIFOL (fd, 10) = MG_FIREBOLT;
-    else
-        WFIFOL (fd, 10) = 0x00000000;
-    if (skilllv > 1 && pc_checkskill (sd, MG_LIGHTNINGBOLT) > 0)
-        WFIFOL (fd, 14) = MG_LIGHTNINGBOLT;
-    else
-        WFIFOL (fd, 14) = 0x00000000;
-    if (skilllv > 4 && pc_checkskill (sd, MG_SOULSTRIKE) > 0)
-        WFIFOL (fd, 18) = MG_SOULSTRIKE;
-    else
-        WFIFOL (fd, 18) = 0x00000000;
-    if (skilllv > 7 && pc_checkskill (sd, MG_FIREBALL) > 0)
-        WFIFOL (fd, 22) = MG_FIREBALL;
-    else
-        WFIFOL (fd, 22) = 0x00000000;
-    if (skilllv > 9 && pc_checkskill (sd, MG_FROSTDIVER) > 0)
-        WFIFOL (fd, 26) = MG_FROSTDIVER;
-    else
-        WFIFOL (fd, 26) = 0x00000000;
-
-    WFIFOSET (fd, packet_len_table[0x1cd]);
-    return 0;
-}
-
-/*==========================================
- * ディボーションの青い糸
- *------------------------------------------
- */
-// ignored by client
-int clif_devotion (struct map_session_data *sd, int UNUSED)
-{
-    unsigned char buf[56];
-    int  n;
-
-    nullpo_retr (0, sd);
-
-    WBUFW (buf, 0) = 0x1cf;
-    WBUFL (buf, 2) = sd->bl.id;
-//  WBUFL(buf,6)=target;
-    for (n = 0; n < 5; n++)
-        WBUFL (buf, 6 + 4 * n) = sd->dev.val2[n];
-//      WBUFL(buf,10+4*n)=0;
-    WBUFB (buf, 26) = 8;
-    WBUFB (buf, 27) = 0;
-
-    clif_send (buf, packet_len_table[0x1cf], &sd->bl, AREA);
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-// ignored by client
-int clif_combo_delay (struct block_list *bl, int wait)
-{
-    unsigned char buf[32];
-
-    nullpo_retr (0, bl);
-
-    WBUFW (buf, 0) = 0x1d2;
-    WBUFL (buf, 2) = bl->id;
-    WBUFL (buf, 6) = wait;
-    clif_send (buf, packet_len_table[0x1d2], bl, AREA);
-
-    return 0;
-}
-
-/*==========================================
- *白刃取り
- *------------------------------------------
- */
-// ignored by client
-int clif_bladestop (struct block_list *src, struct block_list *dst, int boolean)
-{
-    unsigned char buf[32];
-
-    nullpo_retr (0, src);
-    nullpo_retr (0, dst);
-
-    WBUFW (buf, 0) = 0x1d1;
-    WBUFL (buf, 2) = src->id;
-    WBUFL (buf, 6) = dst->id;
-    WBUFL (buf, 10) = boolean;
-
-    clif_send (buf, packet_len_table[0x1d1], src, AREA);
-
-    return 0;
-}
-
-/*==========================================
  *
  *------------------------------------------
  */
@@ -5337,8 +4852,6 @@ static void clif_parse_Emotion (int fd, struct map_session_data *sd)
         WBUFB (buf, 6) = RFIFOB (fd, 2);
         clif_send (buf, packet_len_table[0xc0], &sd->bl, AREA);
     }
-    else
-        clif_skill_fail (sd, 1, 0, 1);
 }
 
 /*==========================================
@@ -5395,7 +4908,6 @@ static void clif_parse_ActionRequest (int fd, struct map_session_data *sd)
             {
                 if (DIFF_TICK (tick, sd->canact_tick) < 0)
                 {
-                    clif_skill_fail (sd, 1, 4, 0);
                     return;
                 }
             }
@@ -5800,8 +5312,6 @@ static void clif_parse_TradeRequest (int UNUSED, struct map_session_data *sd)
     {
         trade_traderequest (sd, RFIFOL (sd->fd, 2));
     }
-    else
-        clif_skill_fail (sd, 1, 0, 0);
 }
 
 /*==========================================
@@ -5898,7 +5408,6 @@ static void clif_parse_UseSkillToId (int fd, struct map_session_data *sd)
     }
     else if (DIFF_TICK (tick, sd->canact_tick) < 0)
     {
-        clif_skill_fail (sd, skillnum, 4, 0);
         return;
     }
 
@@ -5927,12 +5436,10 @@ static void clif_parse_UseSkillToId (int fd, struct map_session_data *sd)
                 if (!sd->state.skill_flag)
                 {
                     sd->state.skill_flag = 1;
-                    clif_skillinfo (sd, MO_EXTREMITYFIST, 1, -1);
                     return;
                 }
                 else if (sd->bl.id == target_id)
                 {
-                    clif_skillinfo (sd, MO_EXTREMITYFIST, 1, -1);
                     return;
                 }
             }
@@ -5977,7 +5484,6 @@ static void clif_parse_UseSkillToPos (int fd, struct map_session_data *sd)
     {
         if (pc_issit (sd))
         {
-            clif_skill_fail (sd, skillnum, 0, 0);
             return;
         }
         memcpy (talkie_mes, RFIFOP (fd, skillmoreinfo), 80);
@@ -5987,7 +5493,6 @@ static void clif_parse_UseSkillToPos (int fd, struct map_session_data *sd)
         return;
     else if (DIFF_TICK (tick, sd->canact_tick) < 0)
     {
-        clif_skill_fail (sd, skillnum, 4, 0);
         return;
     }
 
@@ -6188,8 +5693,6 @@ static void clif_parse_CreateParty (int fd, struct map_session_data *sd)
     {
         party_create (sd, (char *)RFIFOP (fd, 2));
     }
-    else
-        clif_skill_fail (sd, 1, 0, 4);
 }
 
 /*==========================================
@@ -6221,7 +5724,6 @@ static void clif_parse_ReplyPartyInvite (int fd, struct map_session_data *sd)
     else
     {
         party_reply_invite (sd, RFIFOL (fd, 2), 0);
-        clif_skill_fail (sd, 1, 0, 4);
     }
 }
 

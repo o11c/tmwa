@@ -31,3 +31,5 @@
 
 -Wno-switch
 -Wmissing-declarations
+
+-Werror=unused-but-set-variable

@@ -78,11 +78,11 @@ ${BUILD_DIR}/map/battle.o: src/map/battle.cpp src/map/battle.hpp \
  src/map/../common/socket.hpp src/map/../common/mt_rand.hpp
 ${BUILD_DIR}/map/chrif.o: src/map/chrif.cpp src/map/chrif.hpp \
  src/map/../common/mmo.hpp src/map/../common/utils.hpp \
- src/map/../common/sanity.hpp src/map/../common/socket.hpp \
- src/map/../common/timer.hpp src/map/map.hpp src/map/../common/db.hpp \
- src/map/script.hpp src/map/battle.hpp src/map/clif.hpp \
- src/map/storage.hpp src/map/intif.hpp src/map/npc.hpp src/map/pc.hpp \
- src/map/../common/nullpo.hpp src/map/itemdb.hpp
+ src/map/../common/sanity.hpp src/map/../common/version.hpp \
+ src/map/../common/socket.hpp src/map/../common/timer.hpp src/map/map.hpp \
+ src/map/../common/db.hpp src/map/script.hpp src/map/battle.hpp \
+ src/map/clif.hpp src/map/storage.hpp src/map/intif.hpp src/map/npc.hpp \
+ src/map/pc.hpp src/map/../common/nullpo.hpp src/map/itemdb.hpp
 ${BUILD_DIR}/map/clif.o: src/map/clif.cpp src/map/clif.hpp \
  src/map/map.hpp src/map/../common/mmo.hpp src/map/../common/utils.hpp \
  src/map/../common/sanity.hpp src/map/../common/timer.hpp \

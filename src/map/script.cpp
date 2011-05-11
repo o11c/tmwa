@@ -145,8 +145,6 @@ static int buildin_getequipweaponlv (struct script_state *st);
 static int buildin_getequippercentrefinery (struct script_state *st);
 static int buildin_successrefitem (struct script_state *st);
 static int buildin_failedrefitem (struct script_state *st);
-static int buildin_cutin (struct script_state *st);
-static int buildin_cutincard (struct script_state *st);
 static int buildin_statusup (struct script_state *st);
 static int buildin_statusup2 (struct script_state *st);
 static int buildin_bonus (struct script_state *st);
@@ -300,8 +298,6 @@ struct builtin_function
     {buildin_getitem2, "getitem2", "iiiiiiiii*"},
     {buildin_makeitem, "makeitem", "iisii"},
     {buildin_delitem, "delitem", "ii"},
-    {buildin_cutin, "cutin", "si"},
-    {buildin_cutincard, "cutincard", "i"},
     {buildin_heal, "heal", "ii"},
     {buildin_itemheal, "itemheal", "ii"},
     {buildin_percentheal, "percentheal", "ii"},
@@ -2354,39 +2350,6 @@ int buildin_setlook (struct script_state *st)
  *
  *------------------------------------------
  */
-int buildin_cutin (struct script_state *st)
-{
-    int  type;
-
-    conv_str (st, &(st->stack->stack_data[st->start + 2]));
-    type = conv_num (st, &(st->stack->stack_data[st->start + 3]));
-
-    clif_cutin (script_rid2sd (st),
-                st->stack->stack_data[st->start + 2].u.str, type);
-
-    return 0;
-}
-
-/*==========================================
- * カードのイラストを表示する
- *------------------------------------------
- */
-int buildin_cutincard (struct script_state *st)
-{
-    int  itemid;
-
-    itemid = conv_num (st, &(st->stack->stack_data[st->start + 2]));
-
-    clif_cutin (script_rid2sd (st), itemdb_search (itemid)->cardillustname,
-                4);
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
 int buildin_countitem (struct script_state *st)
 {
     int  nameid = 0, count = 0, i;
@@ -3189,7 +3152,6 @@ int buildin_successrefitem (struct script_state *st)
 
         sd->status.inventory[i].refine++;
         pc_unequipitem (sd, i, 0);
-        clif_refine (sd->fd, sd, 0, i, sd->status.inventory[i].refine);
         clif_delitem (sd, i, 1);
         clif_additem (sd, i, 1, 0);
         pc_equipitem (sd, i, ep);
@@ -3216,7 +3178,6 @@ int buildin_failedrefitem (struct script_state *st)
         sd->status.inventory[i].refine = 0;
         pc_unequipitem (sd, i, 0);
         // 精錬失敗エフェクトのパケット
-        clif_refine (sd->fd, sd, 1, i, sd->status.inventory[i].refine);
         pc_delitem (sd, i, 1, 0);
         // 他の人にも失敗を通知
         clif_misceffect (&sd->bl, 2);

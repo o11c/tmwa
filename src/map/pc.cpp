@@ -3350,10 +3350,7 @@ int pc_item_identify (struct map_session_data *sd, int idx)
             flag = 0;
             sd->status.inventory[idx].identify = 1;
         }
-        clif_item_identified (sd, idx, flag);
     }
-    else
-        clif_item_identified (sd, idx, flag);
 
     return !flag;
 }

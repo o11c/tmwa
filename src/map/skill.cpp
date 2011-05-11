@@ -4016,8 +4016,6 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl,
             break;
 
         case MC_IDENTIFY:      /* アイテム鑑定 */
-            if (sd)
-                clif_item_identify_list (sd);
             break;
 
         case BS_REPAIRWEAPON:  /* 武器修理 */

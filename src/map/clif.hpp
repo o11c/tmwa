@@ -48,7 +48,6 @@ int  clif_scriptclose (struct map_session_data *, int); //self
 int  clif_scriptmenu (struct map_session_data *, int, const char *);  //self
 int  clif_scriptinput (struct map_session_data *, int); //self
 int  clif_scriptinputstr (struct map_session_data *sd, int npcid);  // self
-int  clif_cutin (struct map_session_data *, const char *, int) __attribute__((deprecated));   //self
 int  clif_additem (struct map_session_data *, int, int, int);   //self
 int  clif_delitem (struct map_session_data *, int, int);    //self
 int  clif_updatestatus (struct map_session_data *, int);    //self
@@ -121,16 +120,8 @@ int  clif_status_change (struct block_list *bl, int type, int flag);
 int  clif_wis_message (int fd, const char *nick, const char *mes, int mes_len);
 int  clif_wis_end (int fd, int flag);
 
-int  clif_use_card (struct map_session_data *sd, int idx) __attribute__((deprecated));
-int  clif_insert_card (struct map_session_data *sd, int idx_equip,
-                       int idx_card, int flag) __attribute__((deprecated));
-
 int  clif_itemlist (struct map_session_data *sd);
 int  clif_equiplist (struct map_session_data *sd);
-
-int  clif_item_identify_list (struct map_session_data *sd) __attribute__((deprecated));
-int  clif_item_identified (struct map_session_data *sd, int idx, int flag) __attribute__((deprecated));
-int  clif_item_repair_list (struct map_session_data *sd) __attribute__((deprecated));
 
 int  clif_item_skill (struct map_session_data *sd, int skillid, int skilllv,
                       const char *name);
@@ -162,8 +153,6 @@ int  clif_displaymessage (int fd, const char *mes);
 int  clif_disp_onlyself (struct map_session_data *sd, char *mes, int len);
 int  clif_GMmessage (struct block_list *bl, const char *mes, int len, int flag);
 int  clif_resurrection (struct block_list *bl, int type);
-int  clif_refine (int fd, struct map_session_data *sd, int fail, int index,
-                  int val) __attribute__((deprecated));
 
 int  clif_specialeffect (struct block_list *bl, int type, int flag);    // special effects [Valaris]
 int  clif_message (struct block_list *bl, char *msg);   // messages (from mobs/npcs) [Valaris]

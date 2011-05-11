@@ -2965,7 +2965,6 @@ int atcommand_produce (const int fd, struct map_session_data *sd,
         tmp_item.card[0] = 0x00ff;
         tmp_item.card[1] = ((star * 5) << 8) + attribute;
         *((unsigned long *) (&tmp_item.card[2])) = sd->char_id;
-        clif_produceeffect (sd, 0, item_id);    // 製造エフェクトパケット
         clif_misceffect (&sd->bl, 3);   // 他人にも成功を通知
         if ((flag = pc_additem (sd, &tmp_item, 1)))
             clif_additem (sd, 0, 0, flag);

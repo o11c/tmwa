@@ -3995,34 +3995,6 @@ int clif_wis_end (int fd, int flag) // R 0098 <type>.B: 0: success to send wispe
 }
 
 /*==========================================
- * キャラID名前引き結果を送信する
- *------------------------------------------
- */
-// ignored by client
-int clif_solved_charname (struct map_session_data *sd, int char_id)
-{
-    const char *p = map_charid2nick (char_id);
-    int  fd;
-
-    nullpo_retr (0, sd);
-
-    fd = sd->fd;
-    if (p != NULL)
-    {
-        WFIFOW (fd, 0) = 0x194;
-        WFIFOL (fd, 2) = char_id;
-        memcpy (WFIFOP (fd, 6), p, 24);
-        WFIFOSET (fd, packet_len_table[0x194]);
-    }
-    else
-    {
-        map_reqchariddb (sd, char_id);
-        chrif_searchcharid (char_id);
-    }
-    return 0;
-}
-
-/*==========================================
  * カードの挿入可能リストを返す
  *------------------------------------------
  */
@@ -4666,30 +4638,6 @@ int clif_movetoattack (struct map_session_data *sd, struct block_list *bl)
     WFIFOW (fd, 12) = sd->bl.y;
     WFIFOW (fd, 14) = sd->attackrange;
     WFIFOSET (fd, packet_len_table[0x139]);
-    return 0;
-}
-
-/*==========================================
- * 製造エフェクト
- *------------------------------------------
- */
-// ignored by client
-int clif_produceeffect (struct map_session_data *sd, int flag, int nameid)
-{
-    int fd;
-
-    nullpo_retr (0, sd);
-
-    fd = sd->fd;
-    // 名前の登録と送信を先にしておく
-    if (map_charid2nick (sd->status.char_id) == NULL)
-        map_addchariddb (sd->status.char_id, sd->status.name);
-    clif_solved_charname (sd, sd->status.char_id);
-
-    WFIFOW (fd, 0) = 0x18f;
-    WFIFOW (fd, 2) = flag;
-    WFIFOW (fd, 4) = nameid;
-    WFIFOSET (fd, packet_len_table[0x18f]);
     return 0;
 }
 

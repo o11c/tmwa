@@ -3064,7 +3064,6 @@ int buildin_repair (struct script_state *st)
             {
                 sd->status.inventory[i].broken = 0;
                 clif_equiplist (sd);
-                clif_produceeffect (sd, 0, sd->status.inventory[i].nameid);
                 clif_misceffect (&sd->bl, 3);
                 clif_displaymessage (sd->fd, "Item has been repaired.");
                 break;

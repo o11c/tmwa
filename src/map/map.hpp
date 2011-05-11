@@ -768,7 +768,6 @@ int  map_addflooritem (struct item *, int amount, uint16_t m, uint16_t x, uint16
 // mappings between character id and names
 void map_addchariddb (charid_t charid, const char *name);
 void map_delchariddb (charid_t charid);
-void map_reqchariddb (struct map_session_data *sd, charid_t charid);
 const char *map_charid2nick (charid_t);
 
 struct map_session_data *map_id2sd (unsigned int);

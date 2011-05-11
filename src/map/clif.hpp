@@ -143,8 +143,6 @@ int  clif_skill_warppoint (struct map_session_data *sd, int skill_num,
 int  clif_skill_memo (struct map_session_data *sd, int flag) __attribute__((deprecated));
 int  clif_skill_teleportmessage (struct map_session_data *sd, int flag) __attribute__((deprecated));
 
-int  clif_produceeffect (struct map_session_data *sd, int flag, int nameid) __attribute__((deprecated));
-
 int  clif_skill_setunit (struct skill_unit *unit);
 int  clif_skill_delunit (struct skill_unit *unit);
 
@@ -162,8 +160,6 @@ int  clif_status_change (struct block_list *bl, int type, int flag);
 
 int  clif_wis_message (int fd, const char *nick, const char *mes, int mes_len);
 int  clif_wis_end (int fd, int flag);
-
-int  clif_solved_charname (struct map_session_data *sd, int char_id) __attribute__((deprecated));
 
 int  clif_use_card (struct map_session_data *sd, int idx) __attribute__((deprecated));
 int  clif_insert_card (struct map_session_data *sd, int idx_equip,

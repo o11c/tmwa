@@ -2604,7 +2604,6 @@ int mob_damage (struct block_list *src, struct mob_data *md, int damage,
         if (sd->status.sp + sp > sd->status.max_sp)
             sp = sd->status.max_sp - sd->status.sp;
         sd->status.sp += sp;
-        clif_heal (sd->fd, SP_SP, sp);
     }
 
     // map外に消えた人は計算から除くので
@@ -2935,7 +2934,6 @@ int mob_class_change (struct mob_data *md, int *value)
 
     max_hp = battle_get_max_hp (&md->bl);
     hp_rate = md->hp * 100 / max_hp;
-    clif_mob_class_change (md, mob_class);
     md->mob_class = mob_class;
     max_hp = battle_get_max_hp (&md->bl);
     if (battle_config.monster_class_change_full_recover == 1)

@@ -104,10 +104,6 @@ int  clif_pcoutsight (struct block_list *, va_list);    // map_forallinmovearea 
 int  clif_mobinsight (struct block_list *, va_list);    // map_forallinmovearea callback
 int  clif_moboutsight (struct block_list *, va_list);   // map_forallinmovearea callback
 
-int  clif_npc_class_change (struct block_list *bl, int npc_class, int type) __attribute__((deprecated));
-int  clif_mob_class_change (struct mob_data *md, int mob_class) __attribute__((deprecated));
-int  clif_mob_equip (struct mob_data *md, int nameid);  // [Valaris]
-
 int  clif_skillinfoblock (struct map_session_data *sd);
 int  clif_skillup (struct map_session_data *sd, int skill_num);
 
@@ -170,7 +166,6 @@ int  clif_party_hp (struct party *p, struct map_session_data *sd);
 int  clif_displaymessage (int fd, const char *mes);
 int  clif_disp_onlyself (struct map_session_data *sd, char *mes, int len);
 int  clif_GMmessage (struct block_list *bl, const char *mes, int len, int flag);
-int  clif_heal (int fd, int type, int val) __attribute__((deprecated));
 int  clif_resurrection (struct block_list *bl, int type);
 int  clif_pvpset (struct map_session_data *sd, int pvprank, int pvpnum,
                   int type) __attribute__((deprecated));

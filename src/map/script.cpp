@@ -237,7 +237,6 @@ static int buildin_activate_pool_skill (struct script_state *st); // [fate]
 static int buildin_deactivate_pool_skill (struct script_state *st);   // [fate]
 static int buildin_check_pool_skill (struct script_state *st);    // [fate]
 static int buildin_clearitem (struct script_state *st);
-static int buildin_classchange (struct script_state *st);
 static int buildin_misceffect (struct script_state *st);
 static int buildin_soundeffect (struct script_state *st);
 static int buildin_mapwarp (struct script_state *st);
@@ -426,7 +425,6 @@ struct builtin_function
     {buildin_deactivate_pool_skill, "unpoolskill", "i"},
     {buildin_check_pool_skill, "checkpoolskill", "i"},
     {buildin_clearitem, "clearitem", ""},
-    {buildin_classchange, "classchange", "ii"},
     {buildin_misceffect, "misceffect", "i*"},
     {buildin_soundeffect, "soundeffect", "si"},
     {buildin_strmobinfo, "strmobinfo", "ii"},    // display mob data [Valaris]
@@ -5433,26 +5431,6 @@ int buildin_clearitem (struct script_state *st)
         if (sd->status.inventory[i].amount)
             pc_delitem (sd, i, sd->status.inventory[i].amount, 0);
     }
-    return 0;
-}
-
-/*==========================================
- * NPCクラスチェンジ
- * classは変わりたいclass
- * typeは通常0なのかな？
- *------------------------------------------
- */
-int buildin_classchange (struct script_state *st)
-{
-    int  npc_class, type;
-    struct block_list *bl = map_id2bl (st->oid);
-
-    if (bl == NULL)
-        return 0;
-
-    npc_class = conv_num (st, &(st->stack->stack_data[st->start + 2]));
-    type = conv_num (st, &(st->stack->stack_data[st->start + 3]));
-    clif_npc_class_change (bl, npc_class, type);
     return 0;
 }
 

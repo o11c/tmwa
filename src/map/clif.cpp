@@ -804,72 +804,7 @@ static int clif_set007b (struct map_session_data *sd, unsigned char *buf)
     return packet_len_table[0x1da];
 }
 
-/*==========================================
- * クラスチェンジ typeはMobの場合は1で他は0？
- *------------------------------------------
- */
-// ignored by client
-int clif_npc_class_change (struct block_list *bl, int npc_class, int type)
-{
-    uint8_t buf[16];
-
-    nullpo_retr (0, bl);
-
-    if (npc_class >= MAX_PC_CLASS)
-    {
-        WBUFW (buf, 0) = 0x1b0;
-        WBUFL (buf, 2) = bl->id;
-        WBUFB (buf, 6) = type;
-        WBUFL (buf, 7) = npc_class;
-
-        clif_send (buf, packet_len_table[0x1b0], bl, AREA);
-    }
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int clif_mob_class_change (struct mob_data *md, int class_)
-{
-    uint8_t buf[16];
-    int  view = mob_get_viewclass (class_);
-
-    nullpo_retr (0, md);
-
-    if (view >= MAX_PC_CLASS)
-    {
-        WBUFW (buf, 0) = 0x1b0;
-        WBUFL (buf, 2) = md->bl.id;
-        WBUFB (buf, 6) = 1;
-        WBUFL (buf, 7) = view;
-
-        clif_send (buf, packet_len_table[0x1b0], &md->bl, AREA);
-    }
-    return 0;
-}
-
 // mob equipment [Valaris]
-
-// ignored by client
-int clif_mob_equip (struct mob_data *md, int nameid)
-{
-    unsigned char buf[16];
-
-    nullpo_retr (0, md);
-
-    memset (buf, 0, packet_len_table[0x1a4]);
-
-    WBUFW (buf, 0) = 0x1a4;
-    WBUFB (buf, 2) = 3;
-    WBUFL (buf, 3) = md->bl.id;
-    WBUFL (buf, 7) = nameid;
-
-    clif_send (buf, packet_len_table[0x1a4], &md->bl, AREA);
-
-    return 0;
-}
 
 /*==========================================
  * MOB表示1
@@ -1162,9 +1097,6 @@ int clif_spawnmob (struct mob_data *md)
 
     len = clif_mob0078 (md, buf);
     clif_send (buf, len, &md->bl, AREA);
-
-    if (mob_get_equip (md->mob_class) > 0)  // mob equipment [Valaris]
-        clif_mob_equip (md, mob_get_equip (md->mob_class));
 
     return 0;
 }
@@ -2716,9 +2648,6 @@ int clif_movemob (struct mob_data *md)
     len = clif_mob007b (md, buf);
     clif_send (buf, len, &md->bl, AREA);
 
-    if (mob_get_equip (md->mob_class) > 0)  // mob equipment [Valaris]
-        clif_mob_equip (md, mob_get_equip (md->mob_class));
-
     return 0;
 }
 
@@ -2845,9 +2774,6 @@ static void clif_getareachar_mob (struct map_session_data *sd, struct mob_data *
         len = clif_mob0078 (md, WFIFOP (sd->fd, 0));
         WFIFOSET (sd->fd, len);
     }
-
-    if (mob_get_equip (md->mob_class) > 0)  // mob equipment [Valaris]
-        clif_mob_equip (md, mob_get_equip (md->mob_class));
 }
 
 /*==========================================
@@ -3357,21 +3283,6 @@ int clif_GMmessage (struct block_list *bl, const char *mes, int len, int flag)
                (flag == 2) ? AREA : (flag == 3) ? SELF : ALL_CLIENT);
     if (buf != lbuf)
         free (buf);
-    return 0;
-}
-
-/*==========================================
- * HPSP回復エフェクトを送信する
- *------------------------------------------
- */
-// ignored by client
-int clif_heal (int fd, int type, int val)
-{
-    WFIFOW (fd, 0) = 0x13d;
-    WFIFOW (fd, 2) = type;
-    WFIFOW (fd, 4) = val;
-    WFIFOSET (fd, packet_len_table[0x13d]);
-
     return 0;
 }
 

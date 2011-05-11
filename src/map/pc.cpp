@@ -7261,7 +7261,6 @@ static int pc_natural_heal_hp (struct map_session_data *sd)
                     sd->status.hp = sd->status.max_hp;
                     sd->hp_sub = sd->inchealhptick = 0;
                 }
-                clif_heal (sd->fd, SP_HP, bonus);
             }
         }
     }
@@ -7286,7 +7285,6 @@ static int pc_natural_heal_hp (struct map_session_data *sd)
                     sd->status.hp = sd->status.max_hp;
                     sd->hp_sub = sd->inchealhptick = 0;
                 }
-                clif_heal (sd->fd, SP_HP, bonus);
             }
         }
     }
@@ -7361,7 +7359,6 @@ static int pc_natural_heal_sp (struct map_session_data *sd)
                     sd->status.sp = sd->status.max_sp;
                     sd->sp_sub = sd->inchealsptick = 0;
                 }
-                clif_heal (sd->fd, SP_SP, bonus);
             }
         }
     }
@@ -7408,7 +7405,6 @@ static int pc_spirit_heal_hp (struct map_session_data *sd, int UNUSED)
                         bonus_hp = sd->status.max_hp - sd->status.hp;
                         sd->status.hp = sd->status.max_hp;
                     }
-                    clif_heal (sd->fd, SP_HP, bonus_hp);
                     sd->inchealspirithptick = 0;
                 }
             }
@@ -7458,7 +7454,6 @@ static int pc_spirit_heal_sp (struct map_session_data *sd, int UNUSED)
                         bonus_sp = sd->status.max_sp - sd->status.sp;
                         sd->status.sp = sd->status.max_sp;
                     }
-                    clif_heal (sd->fd, SP_SP, bonus_sp);
                     sd->inchealspiritsptick = 0;
                 }
             }

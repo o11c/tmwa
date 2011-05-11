@@ -1820,12 +1820,8 @@ int atcommand_heal (const int fd, struct map_session_data *sd,
             sp = 1 - sd->status.sp;
     }
 
-    if (hp > 0)                 // display like heal
-        clif_heal (fd, SP_HP, hp);
-    else if (hp < 0)            // display like damage
+    if (hp < 0)            // display like damage
         clif_damage (&sd->bl, &sd->bl, gettick (), 0, 0, -hp, 0, 4, 0);
-    if (sp > 0)                 // no display when we lost SP
-        clif_heal (fd, SP_SP, sp);
 
     if (hp != 0 || sp != 0)
     {

@@ -1725,7 +1725,6 @@ int skill_attack (int attack_type, struct block_list *src,
             }
             else                //回復SP+現在のSPがMSPより小さい場合は回復SPを加算
                 ((struct map_session_data *) bl)->status.sp += sp;
-            clif_heal (((struct map_session_data *) bl)->fd, SP_SP, sp);    //SP回復エフェクトの表示
             ((struct map_session_data *) bl)->canact_tick = tick + skill_delayfix (bl, skill_get_delay (SA_MAGICROD, sc_data[SC_MAGICROD].val1));   //
         }
     }
@@ -3639,7 +3638,6 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl,
             if (i)
             {
                 sd->status.sp += i;
-                clif_heal (sd->fd, SP_SP, i);
             }
             break;
         }
@@ -4421,7 +4419,6 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl,
                     }
                     else
                         dstsd->status.sp += sp;
-                    clif_heal (dstsd->fd, SP_SP, sp);
                 }
                 if (sd)
                 {
@@ -4473,7 +4470,6 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl,
                         }
                         else
                             sd->status.sp += sp;
-                        clif_heal (sd->fd, SP_SP, sp);
                     }
                 }
             }
@@ -4693,7 +4689,6 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl,
                     sd->status.sp : conv_sp;
                 sd->status.sp += conv_sp;   //SPを増やす
                 pc_heal (sd, -conv_hp, conv_sp);
-                clif_heal (sd->fd, SP_SP, conv_sp);
             }
             break;
         case HT_REMOVETRAP:    /* リムーブトラップ */

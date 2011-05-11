@@ -162,8 +162,6 @@ int  clif_displaymessage (int fd, const char *mes);
 int  clif_disp_onlyself (struct map_session_data *sd, char *mes, int len);
 int  clif_GMmessage (struct block_list *bl, const char *mes, int len, int flag);
 int  clif_resurrection (struct block_list *bl, int type);
-int  clif_pvpset (struct map_session_data *sd, int pvprank, int pvpnum,
-                  int type) __attribute__((deprecated));
 int  clif_refine (int fd, struct map_session_data *sd, int fail, int index,
                   int val) __attribute__((deprecated));
 

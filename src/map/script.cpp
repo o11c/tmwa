@@ -4659,7 +4659,6 @@ int buildin_pvpoff (struct script_state *st)
             {
                 if (m == pl_sd->bl.m)
                 {
-                    clif_pvpset (pl_sd, 0, 0, 2);
                     if (pl_sd->pvp_timer != -1)
                     {
                         delete_timer (pl_sd->pvp_timer,

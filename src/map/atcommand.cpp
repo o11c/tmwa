@@ -2251,7 +2251,6 @@ int atcommand_pvpoff (const int fd, struct map_session_data *sd,
             {
                 if (sd->bl.m == pl_sd->bl.m)
                 {
-                    clif_pvpset (pl_sd, 0, 0, 2);
                     if (pl_sd->pvp_timer != -1)
                     {
                         delete_timer (pl_sd->pvp_timer,

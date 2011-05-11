@@ -2775,83 +2775,6 @@ static void clif_getareachar_item (struct map_session_data *sd,
 }
 
 /*==========================================
- * 場所スキルエフェクトが視界に入る
- *------------------------------------------
- */
-// ignored by client
-static int clif_getareachar_skillunit (struct map_session_data *sd,
-                                       struct skill_unit *unit) __attribute__((deprecated));
-static int clif_getareachar_skillunit (struct map_session_data *sd,
-                                       struct skill_unit *unit)
-{
-    int  fd;
-    struct block_list *bl;
-
-    nullpo_retr (0, unit);
-
-    fd = sd->fd;
-    bl = map_id2bl (unit->group->src_id);
-    memset (WFIFOP (fd, 0), 0, packet_len_table[0x1c9]);
-    WFIFOW (fd, 0) = 0x1c9;
-    WFIFOL (fd, 2) = unit->bl.id;
-    WFIFOL (fd, 6) = unit->group->src_id;
-    WFIFOW (fd, 10) = unit->bl.x;
-    WFIFOW (fd, 12) = unit->bl.y;
-    WFIFOB (fd, 14) = unit->group->unit_id;
-    WFIFOB (fd, 15) = 1;
-    WFIFOL (fd, 15 + 1) = 0;    //1-4調べた限り固定
-    WFIFOL (fd, 15 + 5) = 0;    //5-8調べた限り固定
-    //9-12マップごとで一定の77-80とはまた違う4バイトのかなり大きな数字
-    WFIFOL (fd, 15 + 13) = unit->bl.y - 0x12;   //13-16ユニットのY座標-18っぽい(Y:17でFF FF FF FF)
-    WFIFOL (fd, 15 + 17) = 0x004f37dd;  //17-20調べた限り固定
-    WFIFOL (fd, 15 + 21) = 0x0012f674;  //21-24調べた限り固定
-    WFIFOL (fd, 15 + 25) = 0x0012f664;  //25-28調べた限り固定
-    WFIFOL (fd, 15 + 29) = 0x0012f654;  //29-32調べた限り固定
-    WFIFOL (fd, 15 + 33) = 0x77527bbc;  //33-36調べた限り固定
-    //37-39
-    WFIFOB (fd, 15 + 40) = 0x2d;    //40調べた限り固定
-    WFIFOL (fd, 15 + 41) = 0;   //41-44調べた限り0固定
-    WFIFOL (fd, 15 + 45) = 0;   //45-48調べた限り0固定
-    WFIFOL (fd, 15 + 49) = 0;   //49-52調べた限り0固定
-    WFIFOL (fd, 15 + 53) = 0x0048d919;  //53-56調べた限り固定
-    WFIFOL (fd, 15 + 57) = 0x0000003e;  //57-60調べた限り固定
-    WFIFOL (fd, 15 + 61) = 0x0012f66c;  //61-64調べた限り固定
-    //65-68
-    //69-72
-    if (bl)
-        WFIFOL (fd, 15 + 73) = bl->y;   //73-76術者のY座標
-    WFIFOL (fd, 15 + 77) = unit->bl.m;  //77-80マップIDかなぁ？かなり2バイトで足りそうな数字
-    WFIFOB (fd, 15 + 81) = 0xaa;    //81終端文字0xaa
-
-    /*  Graffiti [Valaris]  */
-    if (unit->group->unit_id == 0xb0)
-    {
-        WFIFOL (fd, 15) = 1;
-        WFIFOL (fd, 16) = 1;
-        memcpy (WFIFOP (fd, 17), unit->group->valstr, 80);
-    }
-
-    WFIFOSET (fd, packet_len_table[0x1c9]);
-    return 0;
-}
-
-/*==========================================
- * 場所スキルエフェクトが視界から消える
- *------------------------------------------
- */
-// ignored by client
-static int clif_clearchar_skillunit (struct skill_unit *unit, int fd) __attribute__((deprecated));
-static int clif_clearchar_skillunit (struct skill_unit *unit, int fd)
-{
-    nullpo_retr (0, unit);
-
-    WFIFOW (fd, 0) = 0x120;
-    WFIFOL (fd, 2) = unit->bl.id;
-    WFIFOSET (fd, packet_len_table[0x120]);
-    return 0;
-}
-
-/*==========================================
  *
  *------------------------------------------
  */
@@ -2881,7 +2804,6 @@ static int clif_getareachar (struct block_list *bl, va_list ap)
             clif_getareachar_item (sd, (struct flooritem_data *) bl);
             break;
         case BL_SKILL:
-            clif_getareachar_skillunit (sd, (struct skill_unit *) bl);
             break;
         default:
             if (battle_config.error_log)
@@ -2923,9 +2845,6 @@ int clif_pcoutsight (struct block_list *bl, va_list ap)
         case BL_ITEM:
             clif_clearflooritem ((struct flooritem_data *) bl, sd->fd);
             break;
-        case BL_SKILL:
-            clif_clearchar_skillunit ((struct skill_unit *) bl, sd->fd);
-            break;
     }
     return 0;
 }
@@ -2960,9 +2879,6 @@ int clif_pcinsight (struct block_list *bl, va_list ap)
             break;
         case BL_ITEM:
             clif_getareachar_item (sd, (struct flooritem_data *) bl);
-            break;
-        case BL_SKILL:
-            clif_getareachar_skillunit (sd, (struct skill_unit *) bl);
             break;
     }
 
@@ -3279,50 +3195,6 @@ int clif_resurrection (struct block_list *bl, int type)
     WBUFW (buf, 6) = type;
 
     clif_send (buf, packet_len_table[0x148], bl, type == 1 ? AREA : AREA_WOS);
-
-    return 0;
-}
-
-/*==========================================
- * PVP実装？(仮)
- *------------------------------------------
- */
-// ignored by client
-int clif_pvpset (struct map_session_data *sd, int pvprank, int pvpnum,
-                 int type)
-{
-    nullpo_retr (0, sd);
-
-    if (maps[sd->bl.m].flag.nopvp)
-        return 0;
-
-    if (type == 2)
-    {
-        WFIFOW (sd->fd, 0) = 0x19a;
-        WFIFOL (sd->fd, 2) = sd->bl.id;
-        if (pvprank <= 0)
-            pc_calc_pvprank (sd);
-        WFIFOL (sd->fd, 6) = pvprank;
-        WFIFOL (sd->fd, 10) = pvpnum;
-        WFIFOSET (sd->fd, packet_len_table[0x19a]);
-    }
-    else
-    {
-        uint8_t buf[32];
-
-        WBUFW (buf, 0) = 0x19a;
-        WBUFL (buf, 2) = sd->bl.id;
-        if (sd->status.option & 0x46)
-            WBUFL (buf, 6) = -1;
-        else if (pvprank <= 0)
-            pc_calc_pvprank (sd);
-        WBUFL (buf, 6) = pvprank;
-        WBUFL (buf, 10) = pvpnum;
-        if (!type)
-            clif_send (buf, packet_len_table[0x19a], &sd->bl, AREA);
-        else
-            clif_send (buf, packet_len_table[0x19a], &sd->bl, ALL_SAMEMAP);
-    }
 
     return 0;
 }

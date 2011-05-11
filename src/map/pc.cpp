@@ -6777,21 +6777,16 @@ static int pc_calc_pvprank_sub (struct block_list *bl, va_list ap)
  */
 int pc_calc_pvprank (struct map_session_data *sd)
 {
-    int  old;
     struct map_data *m;
 
     nullpo_retr (0, sd);
     nullpo_retr (0, m = &maps[sd->bl.m]);
-
-    old = sd->pvp_rank;
 
     if (!(m->flag.pvp))
         return 0;
     sd->pvp_rank = 1;
     map_foreachinarea (pc_calc_pvprank_sub, sd->bl.m, 0, 0, m->xs, m->ys,
                        BL_PC, sd);
-    if (old != sd->pvp_rank || sd->pvp_lastusers != m->users)
-        clif_pvpset (sd, sd->pvp_rank, sd->pvp_lastusers = m->users, 0);
     return sd->pvp_rank;
 }
 

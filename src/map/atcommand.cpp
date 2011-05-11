@@ -2268,7 +2268,6 @@ int atcommand_pvpoff (const int fd, struct map_session_data *sd,
     if (maps[sd->bl.m].flag.pvp)
     {
         maps[sd->bl.m].flag.pvp = 0;
-        clif_send0199 (sd->bl.m, 0);
         for (i = 0; i < fd_max; i++)
         {                       //人数分ループ
             if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
@@ -2316,7 +2315,6 @@ int atcommand_pvpon (const int fd, struct map_session_data *sd,
     if (!maps[sd->bl.m].flag.pvp && !maps[sd->bl.m].flag.nopvp)
     {
         maps[sd->bl.m].flag.pvp = 1;
-        clif_send0199 (sd->bl.m, 1);
         for (i = 0; i < fd_max; i++)
         {
             if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)

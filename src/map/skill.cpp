@@ -6375,7 +6375,6 @@ static int skill_unit_onplace (struct skill_unit *src, struct block_list *bl,
                     clif_fixmobpos ((struct mob_data *) bl);
                 else
                     clif_fixpos (bl);
-                clif_01ac (&src->bl);
                 sg->limit = DIFF_TICK (tick, sg->tick) + sec;
                 sg->val2 = bl->id;
             }
@@ -6577,7 +6576,6 @@ static int skill_unit_onplace (struct skill_unit *src, struct block_list *bl,
                     clif_fixmobpos ((struct mob_data *) bl);
                 else
                     clif_fixpos (bl);
-                clif_01ac (&src->bl);
                 sg->limit =
                     DIFF_TICK (tick,
                                sg->tick) + skill_get_time2 (sg->skill_id,

@@ -53,7 +53,6 @@ int  clif_viewpoint (struct map_session_data *, int, int, int, int, int, int) __
 int  clif_additem (struct map_session_data *, int, int, int);   //self
 int  clif_delitem (struct map_session_data *, int, int);    //self
 int  clif_updatestatus (struct map_session_data *, int);    //self
-int  clif_changestatus (struct block_list *, int, int) __attribute__((deprecated)); //area
 int  clif_damage (struct block_list *, struct block_list *, unsigned int, int, int, int, int, int, int);    // area
 #define clif_takeitem(src,dst) clif_damage(src,dst,0,0,0,0,0,1,0)
 int  clif_changelook (struct block_list *, int, int);   // area
@@ -146,8 +145,6 @@ int  clif_skill_teleportmessage (struct map_session_data *sd, int flag) __attrib
 int  clif_skill_setunit (struct skill_unit *unit);
 int  clif_skill_delunit (struct skill_unit *unit);
 
-int  clif_01ac (struct block_list *bl) __attribute__((deprecated));
-
 int  clif_autospell (struct map_session_data *sd, int skilllv) __attribute__((deprecated));
 int  clif_devotion (struct map_session_data *sd, int target) __attribute__((deprecated));
 int  clif_combo_delay (struct block_list *src, int wait) __attribute__((deprecated));
@@ -207,10 +204,8 @@ int  clif_disp_onlyself (struct map_session_data *sd, char *mes, int len);
 int  clif_GMmessage (struct block_list *bl, const char *mes, int len, int flag);
 int  clif_heal (int fd, int type, int val) __attribute__((deprecated));
 int  clif_resurrection (struct block_list *bl, int type);
-int  clif_set0199 (int fd, int type) __attribute__((deprecated));
 int  clif_pvpset (struct map_session_data *sd, int pvprank, int pvpnum,
                   int type) __attribute__((deprecated));
-int  clif_send0199 (int map, int type);
 int  clif_refine (int fd, struct map_session_data *sd, int fail, int index,
                   int val) __attribute__((deprecated));
 

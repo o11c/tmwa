@@ -988,24 +988,6 @@ static int clif_npc0078 (struct npc_data *nd, unsigned char *buf)
     return packet_len_table[0x78];
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-// ignored by client
-static int clif_set0192 (int fd, int m, int x, int y, int type) __attribute__((deprecated));
-static int clif_set0192 (int fd, int m, int x, int y, int type)
-{
-    WFIFOW (fd, 0) = 0x192;
-    WFIFOW (fd, 2) = x;
-    WFIFOW (fd, 4) = y;
-    WFIFOW (fd, 6) = type;
-    memcpy (WFIFOP (fd, 8), maps[m].name, 16);
-    WFIFOSET (fd, packet_len_table[0x192]);
-
-    return 0;
-}
-
 /* These indices are derived from equip_pos in pc.c and some guesswork */
 static int equip_points[LOOK_LAST + 1] = {
     -1,                         /* 0: base */
@@ -1906,7 +1888,6 @@ int clif_updatestatus (struct map_session_data *sd, int type)
             break;
         case SP_MANNER:
             WFIFOL (fd, 4) = sd->status.manner;
-            clif_changestatus (&sd->bl, SP_MANNER, sd->status.manner);
             break;
         case SP_STATUSPOINT:
             WFIFOL (fd, 4) = sd->status.status_point;
@@ -2076,38 +2057,6 @@ int clif_updatestatus (struct map_session_data *sd, int type)
     }
     WFIFOSET (fd, len);
 
-    return 0;
-}
-
-// ignored by client
-int clif_changestatus (struct block_list *bl, int type, int val)
-{
-    unsigned char buf[12];
-    struct map_session_data *sd = NULL;
-
-    nullpo_retr (0, bl);
-
-    if (bl->type == BL_PC)
-        sd = (struct map_session_data *) bl;
-
-//printf("clif_changestatus id:%d type:%d val:%d\n",bl->id,type,val);
-    if (sd)
-    {
-        WBUFW (buf, 0) = 0x1ab;
-        WBUFL (buf, 2) = bl->id;
-        WBUFW (buf, 6) = type;
-        switch (type)
-        {
-            case SP_MANNER:
-                WBUFL (buf, 8) = val;
-                break;
-            default:
-                if (battle_config.error_log)
-                    printf ("clif_changestatus : make %d routine\n", type);
-                return 1;
-        }
-        clif_send (buf, packet_len_table[0x1ab], bl, AREA_WOS);
-    }
     return 0;
 }
 
@@ -2796,9 +2745,6 @@ static void clif_getareachar_pc (struct map_session_data *sd,
         clif_changelook (&dstsd->bl, LOOK_CLOTHES_COLOR,
                          dstsd->status.clothes_color);
 
-    if (sd->status.manner < 0)
-        clif_changestatus (&sd->bl, SP_MANNER, sd->status.manner);
-
     clif_changelook_accessories (&sd->bl, dstsd);
     clif_changelook_accessories (&dstsd->bl, sd);
 }
@@ -3054,9 +3000,6 @@ static int clif_getareachar_skillunit (struct map_session_data *sd,
     }
 
     WFIFOSET (fd, packet_len_table[0x1c9]);
-    if (unit->group->skill_id == WZ_ICEWALL)
-        clif_set0192 (fd, unit->bl.m, unit->bl.x, unit->bl.y, 5);
-
     return 0;
 }
 
@@ -3073,27 +3016,6 @@ static int clif_clearchar_skillunit (struct skill_unit *unit, int fd)
     WFIFOW (fd, 0) = 0x120;
     WFIFOL (fd, 2) = unit->bl.id;
     WFIFOSET (fd, packet_len_table[0x120]);
-    if (unit->group->skill_id == WZ_ICEWALL)
-        clif_set0192 (fd, unit->bl.m, unit->bl.x, unit->bl.y, unit->val2);
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-// ignored by client
-int clif_01ac (struct block_list *bl)
-{
-    uint8_t buf[32];
-
-    nullpo_retr (0, bl);
-
-    WBUFW (buf, 0) = 0x1ac;
-    WBUFL (buf, 2) = bl->id;
-
-    clif_send (buf, packet_len_table[0x1ac], bl, AREA);
     return 0;
 }
 
@@ -3852,20 +3774,6 @@ int clif_resurrection (struct block_list *bl, int type)
 }
 
 /*==========================================
- * PVP実装？（仮）
- *------------------------------------------
- */
-// ignored by client
-int clif_set0199 (int fd, int type)
-{
-    WFIFOW (fd, 0) = 0x199;
-    WFIFOW (fd, 2) = type;
-    WFIFOSET (fd, packet_len_table[0x199]);
-
-    return 0;
-}
-
-/*==========================================
  * PVP実装？(仮)
  *------------------------------------------
  */
@@ -3905,23 +3813,6 @@ int clif_pvpset (struct map_session_data *sd, int pvprank, int pvpnum,
         else
             clif_send (buf, packet_len_table[0x19a], &sd->bl, ALL_SAMEMAP);
     }
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int clif_send0199 (int map, int type)
-{
-    struct block_list bl;
-    uint8_t buf[16];
-
-    bl.m = map;
-    WBUFW (buf, 0) = 0x199;
-    WBUFW (buf, 2) = type;
-    clif_send (buf, packet_len_table[0x199], &bl, ALL_SAMEMAP);
 
     return 0;
 }
@@ -5160,7 +5051,6 @@ static void clif_parse_LoadEndAck (int UNUSED, struct map_session_data *sd)
             sd->pvp_lastusers = 0;
             sd->pvp_point = 5;
         }
-        clif_set0199 (sd->fd, 1);
     }
     else
     {

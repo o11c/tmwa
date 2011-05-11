@@ -4761,8 +4761,6 @@ int buildin_pvpon (struct script_state *st)
     if (m >= 0 && !maps[m].flag.pvp && !maps[m].flag.nopvp)
     {
         maps[m].flag.pvp = 1;
-        clif_send0199 (m, 1);
-
         if (battle_config.pk_mode)  // disable ranking functions if pk_mode is on [Valaris]
             return 0;
 
@@ -4798,8 +4796,6 @@ int buildin_pvpoff (struct script_state *st)
     if (m >= 0 && maps[m].flag.pvp && maps[m].flag.nopvp)
     {
         maps[m].flag.pvp = 0;
-        clif_send0199 (m, 0);
-
         if (battle_config.pk_mode)  // disable ranking options if pk_mode is on [Valaris]
             return 0;
 

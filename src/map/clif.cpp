@@ -1943,16 +1943,6 @@ int clif_updatestatus (struct map_session_data *sd, int type)
             len = 14;
             break;
 
-        case SP_CARTINFO:
-            // ignored by client
-            WFIFOW (fd, 0) = 0x121;
-            WFIFOW (fd, 2) = sd->cart_num;
-            WFIFOW (fd, 4) = sd->cart_max_num;
-            WFIFOL (fd, 6) = sd->cart_weight;
-            WFIFOL (fd, 10) = sd->cart_max_weight;
-            len = 14;
-            break;
-
         case SP_GM:
             WFIFOL (fd, 4) = pc_isGM (sd);
             break;
@@ -2238,15 +2228,10 @@ int clif_changeoption (struct block_list *bl)
 {
     uint8_t buf[32];
     short option;
-    struct status_change *sc_data;
-    static const int omask[] = { 0x10, 0x20 };
-    static const int scnum[] = { SC_FALCON, SC_RIDING };
-    int  i;
 
     nullpo_retr (0, bl);
 
     option = *battle_get_option (bl);
-    sc_data = battle_get_sc_data (bl);
 
     WBUFW (buf, 0) = 0x119;
     WBUFL (buf, 2) = bl->id;
@@ -2268,20 +2253,6 @@ int clif_changeoption (struct block_list *bl)
     }
     else
         clif_send (buf, packet_len_table[0x119], bl, AREA);
-
-    // アイコンの表示
-    for (i = 0; i < sizeof (omask) / sizeof (omask[0]); i++)
-    {
-        if (option & omask[i])
-        {
-            if (sc_data[scnum[i]].timer == -1)
-                skill_status_change_start (bl, scnum[i], 0, 0, 0, 0, 0, 0);
-        }
-        else
-        {
-            skill_status_change_end (bl, scnum[i], -1);
-        }
-    }
 
     return 0;
 }
@@ -3588,156 +3559,6 @@ int clif_item_skill (struct map_session_data *sd, int skillid, int skilllv,
 }
 
 /*==========================================
- * カートにアイテム追加
- *------------------------------------------
- */
-// ignored by client
-int clif_cart_additem (struct map_session_data *sd, int n, int amount,
-                       int UNUSED)
-{
-    int fd;
-    unsigned char *buf;
-
-    nullpo_retr (0, sd);
-
-    fd = sd->fd;
-    buf = WFIFOP (fd, 0);
-    if (n < 0 || n >= MAX_CART || sd->status.cart[n].nameid <= 0)
-        return 1;
-
-    WBUFW (buf, 0) = 0x124;
-    WBUFW (buf, 2) = n + 2;
-    WBUFL (buf, 4) = amount;
-    WBUFW (buf, 8) = sd->status.cart[n].nameid;
-    WBUFB (buf, 10) = sd->status.cart[n].identify;
-    if (sd->status.cart[n].broken == 1) //is weapon broken [Valaris]
-        WBUFB (buf, 11) = 1;
-    else
-        WBUFB (buf, 11) = sd->status.cart[n].attribute;
-    WBUFB (buf, 12) = sd->status.cart[n].refine;
-    WBUFW (buf, 13) = sd->status.cart[n].card[0];
-    WBUFW (buf, 15) = sd->status.cart[n].card[1];
-    WBUFW (buf, 17) = sd->status.cart[n].card[2];
-    WBUFW (buf, 19) = sd->status.cart[n].card[3];
-    WFIFOSET (fd, packet_len_table[0x124]);
-    return 0;
-}
-
-/*==========================================
- * カートからアイテム削除
- *------------------------------------------
- */
-// ignored by client
-int clif_cart_delitem (struct map_session_data *sd, int n, int amount)
-{
-    int  fd;
-
-    nullpo_retr (0, sd);
-
-    fd = sd->fd;
-
-    WFIFOW (fd, 0) = 0x125;
-    WFIFOW (fd, 2) = n + 2;
-    WFIFOL (fd, 4) = amount;
-
-    WFIFOSET (fd, packet_len_table[0x125]);
-
-    return 0;
-}
-
-/*==========================================
- * カートのアイテムリスト
- *------------------------------------------
- */
-// ignored by client
-int clif_cart_itemlist (struct map_session_data *sd)
-{
-    struct item_data *id;
-    int  i, n, fd;
-    unsigned char *buf;
-
-    nullpo_retr (0, sd);
-
-    fd = sd->fd;
-    buf = WFIFOP (fd, 0);
-    WBUFW (buf, 0) = 0x1ef;
-    for (i = 0, n = 0; i < MAX_CART; i++)
-    {
-        if (sd->status.cart[i].nameid <= 0)
-            continue;
-        id = itemdb_search (sd->status.cart[i].nameid);
-        if (itemdb_isequip2 (id))
-            continue;
-        WBUFW (buf, n * 18 + 4) = i + 2;
-        WBUFW (buf, n * 18 + 6) = sd->status.cart[i].nameid;
-        WBUFB (buf, n * 18 + 8) = id->type;
-        WBUFB (buf, n * 18 + 9) = sd->status.cart[i].identify;
-        WBUFW (buf, n * 18 + 10) = sd->status.cart[i].amount;
-        WBUFW (buf, n * 18 + 12) = 0;
-        WBUFW (buf, n * 18 + 14) = sd->status.cart[i].card[0];
-        WBUFW (buf, n * 18 + 16) = sd->status.cart[i].card[1];
-        WBUFW (buf, n * 18 + 18) = sd->status.cart[i].card[2];
-        WBUFW (buf, n * 18 + 20) = sd->status.cart[i].card[3];
-        n++;
-    }
-    if (n)
-    {
-        WBUFW (buf, 2) = 4 + n * 18;
-        WFIFOSET (fd, WFIFOW (fd, 2));
-    }
-    return 0;
-}
-
-/*==========================================
- * カートの装備品リスト
- *------------------------------------------
- */
-// ignored by client
-int clif_cart_equiplist (struct map_session_data *sd)
-{
-    struct item_data *id;
-    int  i, n, fd;
-    unsigned char *buf;
-
-    nullpo_retr (0, sd);
-
-    fd = sd->fd;
-    buf = WFIFOP (fd, 0);
-
-    WBUFW (buf, 0) = 0x122;
-    for (i = 0, n = 0; i < MAX_INVENTORY; i++)
-    {
-        if (sd->status.cart[i].nameid <= 0)
-            continue;
-        id = itemdb_search (sd->status.cart[i].nameid);
-        if (!itemdb_isequip2 (id))
-            continue;
-        WBUFW (buf, n * 20 + 4) = i + 2;
-        WBUFW (buf, n * 20 + 6) = sd->status.cart[i].nameid;
-        WBUFB (buf, n * 20 + 8) = id->type;
-        WBUFB (buf, n * 20 + 9) = sd->status.cart[i].identify;
-        WBUFW (buf, n * 20 + 10) = id->equip;
-        WBUFW (buf, n * 20 + 12) = sd->status.cart[i].equip;
-        if (sd->status.cart[i].broken == 1)
-            WBUFB (buf, n * 20 + 14) = 1;   //is weapon broken [Valaris]
-        else
-            WBUFB (buf, n * 20 + 14) = sd->status.cart[i].attribute;
-        WBUFB (buf, n * 20 + 15) = sd->status.cart[i].refine;
-        WBUFW (buf, n * 20 + 16) = sd->status.cart[i].card[0];
-        WBUFW (buf, n * 20 + 18) = sd->status.cart[i].card[1];
-        WBUFW (buf, n * 20 + 20) = sd->status.cart[i].card[2];
-        WBUFW (buf, n * 20 + 22) = sd->status.cart[i].card[3];
-        n++;
-    }
-    if (n)
-    {
-        WBUFW (buf, 2) = 4 + n * 20;
-        WFIFOSET (fd, WFIFOW (fd, 2));
-    }
-    return 0;
-}
-
-/*==========================================
  * パーティ作成完了
  * Relay the result of party creation.
  *
@@ -4438,12 +4259,6 @@ static void clif_parse_LoadEndAck (int UNUSED, struct map_session_data *sd)
     clif_itemlist (sd);
     clif_equiplist (sd);
     // cart
-    if (pc_iscarton (sd))
-    {
-        clif_cart_itemlist (sd);
-        clif_cart_equiplist (sd);
-        clif_updatestatus (sd, SP_CARTINFO);
-    }
     // param all
     clif_initialstatus (sd);
     // party

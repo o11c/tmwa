@@ -128,11 +128,6 @@ int  clif_insert_card (struct map_session_data *sd, int idx_equip,
 int  clif_itemlist (struct map_session_data *sd);
 int  clif_equiplist (struct map_session_data *sd);
 
-int  clif_cart_additem (struct map_session_data *, int, int, int) __attribute__((deprecated));
-int  clif_cart_delitem (struct map_session_data *, int, int) __attribute__((deprecated));
-int  clif_cart_itemlist (struct map_session_data *sd) __attribute__((deprecated));
-int  clif_cart_equiplist (struct map_session_data *sd) __attribute__((deprecated));
-
 int  clif_item_identify_list (struct map_session_data *sd) __attribute__((deprecated));
 int  clif_item_identified (struct map_session_data *sd, int idx, int flag) __attribute__((deprecated));
 int  clif_item_repair_list (struct map_session_data *sd) __attribute__((deprecated));

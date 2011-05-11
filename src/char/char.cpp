@@ -253,19 +253,7 @@ static void mmo_char_tofile (FILE *fp, struct mmo_charstatus *p)
         }
     fprintf (fp, "\t");
 
-    for (int i = 0; i < MAX_CART; i++)
-        if (p->cart[i].nameid)
-        {
-            fprintf (fp, "%d,%d,%d,%d," "%d,%d,%d," "%d,%d,%d,%d,%d ",
-                     p->cart[i].id, p->cart[i].nameid,
-                     p->cart[i].amount, p->cart[i].equip,
-
-                     p->cart[i].identify, p->cart[i].refine,
-                     p->cart[i].attribute,
-
-                     p->cart[i].card[0], p->cart[i].card[1],
-                     p->cart[i].card[2], p->cart[i].card[3], p->cart[i].broken);
-        }
+    // cart was here
     fprintf (fp, "\t");
 
     for (int i = 0; i < MAX_SKILL; i++)
@@ -386,14 +374,15 @@ static int mmo_char_fromstr (char *str, struct mmo_charstatus *p)
     for (int i = 0; str[0] && str[0] != '\t'; i++)
     {
         int len;
+        struct item cart;
         switch (sscanf (str, "%d,%hd,%hd,%hu,%hhd,%hhd,%hhd,%hd,%hd,%hd,%hd%n,%hd%n",
-                        &p->cart[i].id, &p->cart[i].nameid, &p->cart[i].amount, &p->cart[i].equip,
-                        &p->cart[i].identify, &p->cart[i].refine, &p->cart[i].attribute,
-                        &p->cart[i].card[0], &p->cart[i].card[1], &p->cart[i].card[2], &p->cart[i].card[3],
-                        &next, &p->cart[i].broken, &len))
+                        &cart.id, &cart.nameid, &cart.amount, &cart.equip,
+                        &cart.identify, &cart.refine, &cart.attribute,
+                        &cart.card[0], &cart.card[1], &cart.card[2], &cart.card[3],
+                        &next, &cart.broken, &len))
         {
         default: return -5;
-        case 11: p->cart[i].broken = 0; break;
+        case 11: cart.broken = 0; break;
         case 12: next = len;
         }
         str += next;
@@ -1562,8 +1551,6 @@ static void parse_tologin (int fd)
 #define FIX(v) if (v == source_id) {v = dest_id; ++changes; }
                 for (int j = 0; j < MAX_INVENTORY; j++)
                     FIX (c->inventory[j].nameid);
-                for (int j = 0; j < MAX_CART; j++)
-                    FIX (c->cart[j].nameid);
                 FIX (c->weapon);
                 FIX (c->shield);
                 FIX (c->head_top);

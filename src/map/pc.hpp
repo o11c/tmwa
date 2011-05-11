@@ -4,7 +4,6 @@
 #include "map.hpp"
 
 #define OPTION_MASK 0xd7b8
-#define CART_MASK 0x788
 
 #define pc_setdead(sd) ((sd)->state.dead_sit = 1)
 #define pc_setsit(sd) ((sd)->state.dead_sit = 2)
@@ -14,9 +13,6 @@
 #define pc_setdir(sd,b) ((sd)->dir = (b))
 #define pc_setchatid(sd,n) ((sd)->chatID = n)
 #define pc_ishiding(sd) ((sd)->status.option&0x4006)
-#define pc_iscarton(sd) ((sd)->status.option&CART_MASK)
-#define pc_isfalcon(sd) ((sd)->status.option&0x0010)
-#define pc_isriding(sd) ((sd)->status.option&0x0020)
 #define pc_isinvisible(sd) ((sd)->status.option&0x0040)
 #define pc_is50overweight(sd) (sd->weight*2 >= sd->max_weight)
 #define pc_is90overweight(sd) (sd->weight*10 >= sd->max_weight*9)
@@ -69,12 +65,6 @@ int  pc_checkitem (struct map_session_data *);
 int  pc_count_all_items (struct map_session_data *player, int item_id);
 int  pc_remove_items (struct map_session_data *player, int item_id,
                       int count);
-
-int  pc_cart_additem (struct map_session_data *sd, struct item *item_data,
-                      int amount);
-int  pc_cart_delitem (struct map_session_data *sd, int n, int amount,
-                      int type);
-int  pc_cartitem_amount (struct map_session_data *sd, int idx, int amount);
 
 int  pc_takeitem (struct map_session_data *, struct flooritem_data *);
 int  pc_dropitem (struct map_session_data *, int, int);
@@ -131,9 +121,6 @@ int  pc_heal (struct map_session_data *, int, int);
 int  pc_itemheal (struct map_session_data *sd, int hp, int sp);
 int  pc_percentheal (struct map_session_data *sd, int, int);
 int  pc_setoption (struct map_session_data *, int);
-int  pc_setcart (struct map_session_data *sd, int type);
-int  pc_setfalcon (struct map_session_data *sd);
-int  pc_setriding (struct map_session_data *sd);
 int  pc_changelook (struct map_session_data *, int, int);
 int  pc_equiplookall (struct map_session_data *sd);
 

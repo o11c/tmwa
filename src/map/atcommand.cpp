@@ -129,8 +129,6 @@ ATCOMMAND_FUNC (char_block);    // by Yor
 ATCOMMAND_FUNC (char_ban);      // by Yor
 ATCOMMAND_FUNC (char_unblock);  // by Yor
 ATCOMMAND_FUNC (char_unban);    // by Yor
-ATCOMMAND_FUNC (mount_peco);    // by Valaris
-ATCOMMAND_FUNC (char_mount_peco);   // by Yor
 ATCOMMAND_FUNC (partyspy);      // [Syrus22]
 ATCOMMAND_FUNC (partyrecall);   // by Yor
 ATCOMMAND_FUNC (enablenpc);
@@ -151,7 +149,6 @@ ATCOMMAND_FUNC (email);         // by Yor
 ATCOMMAND_FUNC (effect);        //by Apple
 ATCOMMAND_FUNC (character_item_list);   // by Yor
 ATCOMMAND_FUNC (character_storage_list);    // by Yor
-ATCOMMAND_FUNC (character_cart_list);   // by Yor
 ATCOMMAND_FUNC (addwarp);       // by MouseJstr
 ATCOMMAND_FUNC (follow);        // by MouseJstr
 ATCOMMAND_FUNC (skillon);       // by MouseJstr
@@ -414,10 +411,6 @@ static AtCommandInfo atcommand_info[] = {
     "time charname",    "temporary ban for +-#y|m|d|h|mn|s"},
     {"@unban", 60,      atcommand_char_unban,   ATCC_CHAR,
     "charname",         "remove a temporary ban"},
-    {"@mountpeco", 20,  atcommand_mount_peco,   ATCC_SELF,
-    "",                 "probably doesn't work"},
-    {"@charmountpeco", 50, atcommand_char_mount_peco, ATCC_CHAR,
-    "charname",         "probably doesn't work"},
     {"@partyspy", 60,   atcommand_partyspy,     ATCC_GROUP,
     "partyname",        "listen in on a party's chat"},
     {"@partyrecall", 60, atcommand_partyrecall, ATCC_GROUP,
@@ -461,8 +454,6 @@ static AtCommandInfo atcommand_info[] = {
     {"@charitemlist", 40, atcommand_character_item_list, ATCC_CHAR,
     "charname",         "list cart of a player"},
     {"@charstoragelist", 40, atcommand_character_storage_list, ATCC_CHAR,
-    "charname",         "list cart of a player"},
-    {"@charcartlist", 40, atcommand_character_cart_list, ATCC_CHAR,
     "charname",         "list cart of a player"},
     {"@follow", 10,     atcommand_follow,       ATCC_SELF,
     "charname",         "automatically follow somebody"},
@@ -1652,18 +1643,7 @@ int atcommand_option (const int fd, struct map_session_data *sd,
 
     sd->opt1 = param1;
     sd->opt2 = param2;
-    if (!(sd->status.option & CART_MASK) && param3 & CART_MASK)
-    {
-        clif_cart_itemlist (sd);
-        clif_cart_equiplist (sd);
-        clif_updatestatus (sd, SP_CARTINFO);
-    }
     sd->status.option = param3;
-    // fix pecopeco display
-    if (pc_isriding (sd))
-    {                       // sd have the new value...
-        sd->status.option &= ~0x0020;
-    }
 
     clif_changeoption (&sd->bl);
     pc_calcstatus (sd, 0);
@@ -3599,11 +3579,6 @@ int atcommand_character_option (const int fd, struct map_session_data *sd,
             pl_sd->opt1 = opt1;
             pl_sd->opt2 = opt2;
             pl_sd->status.option = opt3;
-            // fix pecopeco display
-            if (pc_isriding (pl_sd))
-            {               // pl_sd have the new value...
-                    pl_sd->status.option &= ~0x0020;
-            }
             clif_changeoption (&pl_sd->bl);
             pc_calcstatus (pl_sd, 0);
             clif_displaymessage (fd, "Character's options changed.");
@@ -5480,80 +5455,6 @@ int atcommand_mapinfo (const int fd, struct map_session_data *sd,
  *
  *------------------------------------------
  */
-int atcommand_mount_peco (const int fd, struct map_session_data *sd,
-                          const char *UNUSED, const char *UNUSED)
-{
-    if (sd->disguise > 0)
-    {                           // temporary prevention of crash caused by peco + disguise, will look into a better solution [Valaris]
-        clif_displaymessage (fd, "Cannot mount a Peco while in disguise.");
-        return -1;
-    }
-
-    if (!pc_isriding (sd))
-    {                           // if actually no peco
-        clif_displaymessage (fd, "You can not mount a peco with your job.");
-        return -1;
-    }
-    else
-    {
-        pc_setoption (sd, sd->status.option & ~0x0020);
-        clif_displaymessage (fd, "Unmounted Peco.");
-    }
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int atcommand_char_mount_peco (const int fd, struct map_session_data *UNUSED,
-                               const char *UNUSED, const char *message)
-{
-    char character[100];
-    struct map_session_data *pl_sd;
-
-    memset (character, '\0', sizeof (character));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
-    {
-        clif_displaymessage (fd,
-                             "Please, enter a player name (usage: @charmountpeco <char_name>).");
-        return -1;
-    }
-
-    if ((pl_sd = map_nick2sd (character)) != NULL)
-    {
-        if (pl_sd->disguise > 0)
-        {                       // temporary prevention of crash caused by peco + disguise, will look into a better solution [Valaris]
-            clif_displaymessage (fd, "This player cannot mount a Peco while in disguise.");
-            return -1;
-        }
-
-        if (!pc_isriding (pl_sd))
-        {                       // if actually no peco
-            clif_displaymessage (fd, "This player can not mount a peco with his/her job.");
-            return -1;
-        }
-        else
-        {
-            pc_setoption (pl_sd, pl_sd->status.option & ~0x0020);
-            clif_displaymessage (fd, "Now, this player has not more peco.");
-        }
-    }
-    else
-    {
-        clif_displaymessage (fd, "Character not found.");
-        return -1;
-    }
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
 int atcommand_partyspy (const int fd, struct map_session_data *sd,
                         const char *UNUSED, const char *message)
 {
@@ -6013,11 +5914,6 @@ int atcommand_disguise (const int fd, struct map_session_data *sd,
         (mob_id >= 813 && mob_id <= 834) || // NPC
         (mob_id > 1000 && mob_id < 1521))
     {                           // monsters
-        if (pc_isriding (sd))
-        {                       // temporary prevention of crash caused by peco + disguise, will look into a better solution [Valaris]
-            clif_displaymessage (fd, "Cannot wear disguise while riding a Peco.");
-            return -1;
-        }
         sd->disguiseflag = 1;   // set to override items with disguise script [Valaris]
         sd->disguise = mob_id;
         pc_setpos (sd, sd->mapname, sd->bl.x, sd->bl.y, 3);
@@ -6372,11 +6268,6 @@ int atcommand_chardisguise (const int fd, struct map_session_data *sd,
                 (mob_id >= 813 && mob_id <= 834) || // NPC
                 (mob_id > 1000 && mob_id < 1521))
             {                   // monsters
-                if (pc_isriding (pl_sd))
-                {               // temporary prevention of crash caused by peco + disguise, will look into a better solution [Valaris]
-                    clif_displaymessage (fd, "Character cannot wear disguise while riding a Peco.");
-                    return -1;
-                }
                 pl_sd->disguiseflag = 1;    // set to override items with disguise script [Valaris]
                 pl_sd->disguise = mob_id;
                 pc_setpos (pl_sd, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y,
@@ -6804,121 +6695,6 @@ atcommand_character_storage_list (const int fd, struct map_session_data *sd,
             {
                 clif_displaymessage (fd, "This player has no storage.");
                 return -1;
-            }
-        }
-        else
-        {
-            clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
-            return -1;
-        }
-    }
-    else
-    {
-        clif_displaymessage (fd, "Character not found.");
-        return -1;
-    }
-
-    return 0;
-}
-
-/*==========================================
- * @charcartlist <character>: Displays the items list of a player's cart.
- *------------------------------------------
- */
-int
-atcommand_character_cart_list (const int fd, struct map_session_data *sd,
-                               const char *UNUSED, const char *message)
-{
-    struct map_session_data *pl_sd;
-    struct item_data *item_data, *item_temp;
-    int  i, j, count, counter, counter2;
-    char character[100], output[200], outputtmp[200];
-
-    memset (character, '\0', sizeof (character));
-    memset (output, '\0', sizeof (output));
-    memset (outputtmp, '\0', sizeof (outputtmp));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
-    {
-        clif_displaymessage (fd,
-                             "Please, enter a player name (usage: @charitemlist <char name>).");
-        return -1;
-    }
-
-    if ((pl_sd = map_nick2sd (character)) != NULL)
-    {
-        if (pc_isGM (sd) >= pc_isGM (pl_sd))
-        {                       // you can look items only lower or same level
-            counter = 0;
-            count = 0;
-            for (i = 0; i < MAX_CART; i++)
-            {
-                if (pl_sd->status.cart[i].nameid > 0
-                    && (item_data =
-                        itemdb_search (pl_sd->status.cart[i].nameid)) != NULL)
-                {
-                    counter = counter + pl_sd->status.cart[i].amount;
-                    count++;
-                    if (count == 1)
-                    {
-                        sprintf (output,
-                                 "------ Cart items list of '%s' ------",
-                                 pl_sd->status.name);
-                        clif_displaymessage (fd, output);
-                    }
-                    if (pl_sd->status.cart[i].refine)
-                        sprintf (output, "%d %s %+d (%s %+d, id: %d)",
-                                 pl_sd->status.cart[i].amount,
-                                 item_data->name,
-                                 pl_sd->status.cart[i].refine,
-                                 item_data->jname,
-                                 pl_sd->status.cart[i].refine,
-                                 pl_sd->status.cart[i].nameid);
-                    else
-                        sprintf (output, "%d %s (%s, id: %d)",
-                                 pl_sd->status.cart[i].amount,
-                                 item_data->name, item_data->jname,
-                                 pl_sd->status.cart[i].nameid);
-                    clif_displaymessage (fd, output);
-                    memset (output, '\0', sizeof (output));
-                    counter2 = 0;
-                    for (j = 0; j < item_data->slot; j++)
-                    {
-                        if (pl_sd->status.cart[i].card[j])
-                        {
-                            if ((item_temp =
-                                 itemdb_search (pl_sd->status.
-                                                cart[i].card[j])) != NULL)
-                            {
-                                if (output[0] == '\0')
-                                    sprintf (outputtmp,
-                                             " -> (card(s): #%d %s (%s), ",
-                                             ++counter2, item_temp->name,
-                                             item_temp->jname);
-                                else
-                                    sprintf (outputtmp, "#%d %s (%s), ",
-                                             ++counter2, item_temp->name,
-                                             item_temp->jname);
-                                strcat (output, outputtmp);
-                            }
-                        }
-                    }
-                    if (output[0] != '\0')
-                    {
-                        output[strlen (output) - 2] = ')';
-                        output[strlen (output) - 1] = '\0';
-                        clif_displaymessage (fd, output);
-                    }
-                }
-            }
-            if (count == 0)
-                clif_displaymessage (fd,
-                                     "No item found in the cart of this player.");
-            else
-            {
-                sprintf (output, "%d item(s) found in %d kind(s) of items.",
-                         counter, count);
-                clif_displaymessage (fd, output);
             }
         }
         else

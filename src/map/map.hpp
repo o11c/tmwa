@@ -224,7 +224,6 @@ struct map_session_data
     struct item_data *inventory_data[MAX_INVENTORY];
     short equip_index[11];
     int  weight, max_weight;
-    int  cart_weight, cart_max_weight, cart_num, cart_max_num;
     char mapname[24];
     int  fd, new_fd;
     short to_x, to_y;
@@ -650,9 +649,8 @@ enum
     SP_USTR, SP_UAGI, SP_UVIT, SP_UINT, SP_UDEX, SP_ULUK, SP_26, SP_27, // 32-39
     SP_28, SP_ATK1, SP_ATK2, SP_MATK1, SP_MATK2, SP_DEF1, SP_DEF2, SP_MDEF1,    // 40-47
     SP_MDEF2, SP_HIT, SP_FLEE1, SP_FLEE2, SP_CRITICAL, SP_ASPD, SP_36, SP_JOBLEVEL, // 48-55
-    SP_UPPER, SP_PARTNER, SP_CART, SP_FAME, SP_UNBREAKABLE, //56-58
+    SP_UPPER, SP_PARTNER, SP_3a, SP_FAME, SP_UNBREAKABLE, //56-58
     SP_DEAF = 70,
-    SP_CARTINFO = 99,           // 99
     SP_GM = 500,
 
     // original 1000-
@@ -714,7 +712,6 @@ extern int autosave_interval;
 extern bool night_flag;
 
 extern char motd_txt[];
-extern char help_txt[] __attribute__((deprecated));
 
 extern char talkie_mes[];
 

@@ -230,9 +230,7 @@ int  SkillStatusChangeTable[] = {   /* skill.hのenumのSC_***とあわせるこ
     -1, -1,
     SC_WINDWALK,
     SC_MELTDOWN,
-    -1, -1,
-    SC_CARTBOOST,
-    -1,
+    -1, -1, -1, -1,
     SC_CHASEWALK,
 /* 390- */
     SC_REJECTSWORD,
@@ -427,15 +425,12 @@ struct skill_name_db skill_names[] = {
     {LK_PARRYING, "PARRYING", "Parrying"},
     {LK_SPIRALPIERCE, "SPIRALPIERCE", "Spiral_Pierce"},
     {LK_TENSIONRELAX, "TENSIONRELAX", "Tension_Relax"},
-    {MC_CARTREVOLUTION, "CARTREVOLUTION", "Cart_Revolution"},
-    {MC_CHANGECART, "CHANGECART", "Change_Cart"},
     {MC_DISCOUNT, "DISCOUNT", "Discount"},
     {MC_IDENTIFY, "IDENTIFY", "Item_Appraisal"},
     {MC_INCCARRY, "INCCARRY", "Enlarge_Weight_Limit"},
     {MC_LOUD, "LOUD", "Lord_Exclamation"},
     {MC_MAMMONITE, "MAMMONITE", "Mammonite"},
     {MC_OVERCHARGE, "OVERCHARGE", "Overcharge"},
-    {MC_PUSHCART, "PUSHCART", "Pushcart"},
     {MG_COLDBOLT, "COLDBOLT", "Cold_Bolt"},
     {MG_ENERGYCOAT, "ENERGYCOAT", "Energy_Coat"},
     {MG_FIREBALL, "FIREBALL", "Fire_Ball"},
@@ -686,7 +681,6 @@ struct skill_name_db skill_names[] = {
     {WE_CALLPARTNER, "CALLPARTNER", "I Want to See You"},
     {WE_FEMALE, "FEMALE", "I Only Look Up to You"},
     {WE_MALE, "MALE", "I Will Protect You"},
-    {WS_CARTBOOST, "CARTBOOST", "Cart_Boost"},
     {WS_CREATECOIN, "CREATECOIN", "Create_Coins"},
     {WS_CREATENUGGET, "CREATENUGGET", "Create_Nuggets"},
     {WS_MELTDOWN, "MELTDOWN", "Meltdown"},
@@ -1016,7 +1010,7 @@ int skill_get_unit_id (int id, int flag)
  */
 int skill_additional_effect (struct block_list *src, struct block_list *bl,
                              int skillid, int skilllv, int attack_type,
-                             unsigned int tick)
+                             unsigned int)
 {
     /* MOB追加効果スキル用 */
     const int sc[] = {
@@ -1095,16 +1089,6 @@ int skill_additional_effect (struct block_list *src, struct block_list *bl,
     switch (skillid)
     {
         case 0:                /* 通常攻撃 */
-            /* 自動鷹 */
-            if (sd && pc_isfalcon (sd) && sd->status.weapon == 11
-                && (skill = pc_checkskill (sd, HT_BLITZBEAT)) > 0
-                && MRAND (1000) <= sd->paramc[5] * 10 / 3 + 1)
-            {
-                int  lv = (sd->status.job_level + 9) / 10;
-                skill_castend_damage_id (src, bl, HT_BLITZBEAT,
-                                         (skill < lv) ? skill : lv, tick,
-                                         0xf00000);
-            }
             // スナッチャー
             if (sd && sd->status.weapon != 11
                 && (skill = pc_checkskill (sd, RG_SNATCHER)) > 0)
@@ -1398,7 +1382,7 @@ int skill_additional_effect (struct block_list *src, struct block_list *bl,
             break;
     }
 
-    if (sd && skillid != MC_CARTREVOLUTION && attack_type & BF_WEAPON)
+    if (sd && attack_type & BF_WEAPON)
     {                           /* カードによる追加効果 */
         int  i;
         int  sc_def_card = 100;
@@ -2706,7 +2690,6 @@ int skill_castend_damage_id (struct block_list *src, struct block_list *bl,
         case AC_SHOWER:        /* アローシャワー */
         case SM_MAGNUM:        /* マグナムブレイク */
         case AS_GRIMTOOTH:     /* グリムトゥース */
-        case MC_CARTREVOLUTION:    /* カートレヴォリューション */
         case NPC_SPLASHATTACK: /* スプラッシュアタック */
         case ASC_METEORASSAULT:    /* メテオアサルト */
         case AS_SPLASHER:      /* [Valaris] */
@@ -3489,7 +3472,6 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl,
         case LK_CONCENTRATION: /* コンセントレーション */
         case LK_BERSERK:       /* バーサーク */
         case HP_ASSUMPTIO:     /*  */
-        case WS_CARTBOOST:     /* カートブースト */
         case SN_SIGHT:         /* トゥルーサイト */
         case WS_MELTDOWN:      /* メルトダウン */
         case ST_REJECTSWORD:   /* リジェクトソード */
@@ -3522,8 +3504,6 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl,
             skill_status_change_start (bl, SkillStatusChangeTable[skillid],
                                        skilllv, 0, 0, 0,
                                        skill_get_time (skillid, skilllv), 0);
-            break;
-        case MC_CHANGECART:
             break;
         case AC_CONCENTRATION: /* 集中力向上 */
         {
@@ -4363,7 +4343,7 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl,
                 break;
             for (i = 0; i < 136; i++)
             {
-                if (i == SC_RIDING || i == SC_FALCON || i == SC_HALLUCINATION
+                if (i == SC_HALLUCINATION
                     || i == SC_WEIGHT50 || i == SC_WEIGHT90
                     || i == SC_STRIPWEAPON || i == SC_STRIPSHIELD
                     || i == SC_STRIPARMOR || i == SC_STRIPHELM
@@ -7205,24 +7185,6 @@ int skill_check_condition (struct map_session_data *sd, int type)
                 return 0;
             }
             break;
-        case ST_RIDING:
-            if (!pc_isriding (sd))
-            {
-                return 0;
-            }
-            break;
-        case ST_FALCON:
-            if (!pc_isfalcon (sd))
-            {
-                return 0;
-            }
-            break;
-        case ST_CART:
-            if (!pc_iscarton (sd))
-            {
-                return 0;
-            }
-            break;
         case ST_SHIELD:
             if (sd->status.shield <= 0)
             {
@@ -8621,7 +8583,6 @@ int skill_status_change_end (struct block_list *bl, int type, int tid)
             case SC_SPEEDPOTION1:
             case SC_SPEEDPOTION2:
             case SC_APPLEIDUN: /* イドゥンの林檎 */
-            case SC_RIDING:
             case SC_BLADESTOP_WAIT:
             case SC_AURABLADE: /* オーラブレード */
             case SC_PARRYING:  /* パリイング */
@@ -9184,8 +9145,6 @@ void skill_status_change_timer (timer_id tid, tick_t tick, custom_id_t id, custo
             /* 時間切れ無し？？ */
         case SC_AETERNA:
         case SC_TRICKDEAD:
-        case SC_RIDING:
-        case SC_FALCON:
         case SC_WEIGHT50:
         case SC_WEIGHT90:
         case SC_MAGICPOWER:    /* 魔法力増幅 */
@@ -9626,8 +9585,6 @@ int skill_status_effect (struct block_list *bl, int type, int val1, int val2,
                 skill_status_change_end (bl, SC_TRUESIGHT, -1);
             if (sc_data[SC_WINDWALK].timer != -1)   /* ウインドウォーク */
                 skill_status_change_end (bl, SC_WINDWALK, -1);
-            if (sc_data[SC_CARTBOOST].timer != -1)  /* カートブースト */
-                skill_status_change_end (bl, SC_CARTBOOST, -1);
             break;
         case SC_FLAMELAUNCHER: /* フレームランチャー */
             skill_encchant_eremental_end (bl, SC_FLAMELAUNCHER);
@@ -9769,8 +9726,6 @@ int skill_status_effect (struct block_list *bl, int type, int val1, int val2,
                 skill_status_change_end (bl, SC_TRUESIGHT, -1);
             if (sc_data[SC_WINDWALK].timer != -1)   /* ウインドウォーク */
                 skill_status_change_end (bl, SC_WINDWALK, -1);
-            if (sc_data[SC_CARTBOOST].timer != -1)  /* カートブースト */
-                skill_status_change_end (bl, SC_CARTBOOST, -1);
             break;
         case SC_FORTUNE:       /* 幸運のキス */
             calc_flag = 1;
@@ -9961,12 +9916,6 @@ int skill_status_effect (struct block_list *bl, int type, int val1, int val2,
                 val3 = (val1 | 1) * (val1 | 1) - 1;
             break;
 
-            /* スキルじゃない/時間に関係しない */
-        case SC_RIDING:
-            calc_flag = 1;
-            tick = 600 * 1000;
-            break;
-        case SC_FALCON:
         case SC_WEIGHT50:
         case SC_WEIGHT90:
         case SC_BROKNWEAPON:
@@ -10062,7 +10011,6 @@ int skill_status_effect (struct block_list *bl, int type, int val1, int val2,
             *opt3 |= 1024;
             break;
         case SC_MELTDOWN:      /* メルトダウン */
-        case SC_CARTBOOST:     /* カートブースト */
         case SC_TRUESIGHT:     /* トゥルーサイト */
         case SC_SPIDERWEB:     /* スパイダーウェッブ */
         case SC_MAGICPOWER:    /* 魔法力増幅 */
@@ -11459,12 +11407,6 @@ static int skill_readdb (void)
             skill_db[i].state = ST_CLOAKING;
         else if (strcasecmp (split[8], "hidden") == 0)
             skill_db[i].state = ST_HIDDEN;
-        else if (strcasecmp (split[8], "riding") == 0)
-            skill_db[i].state = ST_RIDING;
-        else if (strcasecmp (split[8], "falcon") == 0)
-            skill_db[i].state = ST_FALCON;
-        else if (strcasecmp (split[8], "cart") == 0)
-            skill_db[i].state = ST_CART;
         else if (strcasecmp (split[8], "shield") == 0)
             skill_db[i].state = ST_SHIELD;
         else if (strcasecmp (split[8], "sight") == 0)

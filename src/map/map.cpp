@@ -60,7 +60,6 @@ struct charid2nick
 };
 
 char motd_txt[256] = "conf/motd.txt";
-char help_txt[256] = "conf/help.txt";
 
 // can be modified in char-server configuration file
 char wisp_server_name[24] = "Server";

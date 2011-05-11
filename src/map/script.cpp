@@ -162,12 +162,6 @@ static int buildin_getopt2 (struct script_state *st);
 static int buildin_setopt2 (struct script_state *st);
 static int buildin_checkoption (struct script_state *st);
 static int buildin_setoption (struct script_state *st);
-static int buildin_setcart (struct script_state *st);
-static int buildin_checkcart (struct script_state *st);   // check cart [Valaris]
-static int buildin_setfalcon (struct script_state *st);
-static int buildin_checkfalcon (struct script_state *st); // check falcon [Valaris]
-static int buildin_setriding (struct script_state *st);
-static int buildin_checkriding (struct script_state *st); // check for pecopeco [Valaris]
 static int buildin_savepoint (struct script_state *st);
 static int buildin_gettimetick (struct script_state *st);
 static int buildin_gettime (struct script_state *st);
@@ -348,12 +342,6 @@ struct builtin_function
     {buildin_end, "break", ""},
     {buildin_checkoption, "checkoption", "i"},
     {buildin_setoption, "setoption", "i"},
-    {buildin_setcart, "setcart", ""},
-    {buildin_checkcart, "checkcart", "*"},   //fixed by Lupus (added '*')
-    {buildin_setfalcon, "setfalcon", ""},
-    {buildin_checkfalcon, "checkfalcon", "*"},   //fixed by Lupus (fixed wrong pointer, added '*')
-    {buildin_setriding, "setriding", ""},
-    {buildin_checkriding, "checkriding", "*"},   //fixed by Lupus (fixed wrong pointer, added '*')
     {buildin_savepoint, "save", "sii"},
     {buildin_savepoint, "savepoint", "sii"},
     {buildin_gettimetick, "gettimetick", "i"},
@@ -3477,116 +3465,6 @@ int buildin_setoption (struct script_state *st)
     type = conv_num (st, &(st->stack->stack_data[st->start + 2]));
     sd = script_rid2sd (st);
     pc_setoption (sd, type);
-
-    return 0;
-}
-
-/*==========================================
- * Checkcart [Valaris]
- *------------------------------------------
- */
-
-int buildin_checkcart (struct script_state *st)
-{
-    struct map_session_data *sd;
-
-    sd = script_rid2sd (st);
-
-    if (pc_iscarton (sd))
-    {
-        push_val (st->stack, C_INT, 1);
-    }
-    else
-    {
-        push_val (st->stack, C_INT, 0);
-    }
-    return 0;
-}
-
-/*==========================================
- * カートを付ける
- *------------------------------------------
- */
-int buildin_setcart (struct script_state *st)
-{
-    struct map_session_data *sd;
-
-    sd = script_rid2sd (st);
-    pc_setcart (sd, 1);
-
-    return 0;
-}
-
-/*==========================================
- * checkfalcon [Valaris]
- *------------------------------------------
- */
-
-int buildin_checkfalcon (struct script_state *st)
-{
-    struct map_session_data *sd;
-
-    sd = script_rid2sd (st);
-
-    if (pc_isfalcon (sd))
-    {
-        push_val (st->stack, C_INT, 1);
-    }
-    else
-    {
-        push_val (st->stack, C_INT, 0);
-    }
-
-    return 0;
-}
-
-/*==========================================
- * 鷹を付ける
- *------------------------------------------
- */
-int buildin_setfalcon (struct script_state *st)
-{
-    struct map_session_data *sd;
-
-    sd = script_rid2sd (st);
-    pc_setfalcon (sd);
-
-    return 0;
-}
-
-/*==========================================
- * Checkcart [Valaris]
- *------------------------------------------
- */
-
-int buildin_checkriding (struct script_state *st)
-{
-    struct map_session_data *sd;
-
-    sd = script_rid2sd (st);
-
-    if (pc_isriding (sd))
-    {
-        push_val (st->stack, C_INT, 1);
-    }
-    else
-    {
-        push_val (st->stack, C_INT, 0);
-    }
-
-    return 0;
-}
-
-/*==========================================
- * ペコペコ乗り
- *------------------------------------------
- */
-int buildin_setriding (struct script_state *st)
-{
-    struct map_session_data *sd;
-
-    sd = script_rid2sd (st);
-    pc_setriding (sd);
 
     return 0;
 }

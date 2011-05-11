@@ -1826,10 +1826,7 @@ static int battle_addmastery (struct map_session_data *sd, struct block_list *ta
             // 槍修練(+4 〜 +40,+5 〜 +50) 槍
             if ((skill = pc_checkskill (sd, KN_SPEARMASTERY)) > 0)
             {
-                if (!pc_isriding (sd))
-                    damage += (skill * 4);  // ペコに乗ってない
-                else
-                    damage += (skill * 5);  // ペコに乗ってる
+                damage += (skill * 4);  // ペコに乗ってない
             }
             break;
         }
@@ -1838,10 +1835,7 @@ static int battle_addmastery (struct map_session_data *sd, struct block_list *ta
             // 槍修練(+4 〜 +40,+5 〜 +50) 槍
             if ((skill = pc_checkskill (sd, KN_SPEARMASTERY)) > 0)
             {
-                if (!pc_isriding (sd))
-                    damage += (skill * 4);  // ペコに乗ってない
-                else
-                    damage += (skill * 5);  // ペコに乗ってる
+                damage += (skill * 4);  // ペコに乗ってない
             }
             break;
         }
@@ -2204,9 +2198,6 @@ static struct Damage battle_calc_mob_weapon_attack (struct block_list *src,
                 case TF_SPRINKLESAND:  // 砂まき
                     damage = damage * 125 / 100;
                     break;
-                case MC_CARTREVOLUTION:    // カートレボリューション
-                    damage = (damage * 150) / 100;
-                    break;
                     // 以下MOB
                 case NPC_COMBOATTACK:  // 多段攻撃
                     div_ = skill_get_num (skill_num, skill_lv);
@@ -2512,10 +2503,6 @@ static struct Damage battle_calc_mob_weapon_attack (struct block_list *src,
             battle_attr_fix (damage + 15 * skill_lv, s_ele,
                              battle_get_element (target));
     }
-    if (skill_num == MC_CARTREVOLUTION)
-    {
-        damage = battle_attr_fix (damage, 0, battle_get_element (target));
-    }
 
     // 完全回避の判定
     if (skill_num == 0 && skill_lv >= 0 && tsd != NULL
@@ -2765,9 +2752,7 @@ static struct Damage battle_calc_pc_weapon_attack (struct block_list *src,
     // ペコ騎乗していて、槍で攻撃した場合は中型のサイズ修正を100にする
     // ウェポンパーフェクション,ドレイクC
     if (((sd->special_state.no_sizefix)
-         || (pc_isriding (sd)
-             && (sd->status.weapon == 4 || sd->status.weapon == 5)
-             && t_size == 1) || skill_num == MO_EXTREMITYFIST))
+         || skill_num == MO_EXTREMITYFIST))
     {                           //ペコ騎乗していて、槍で中型を攻撃
         atkmax = watk;
         atkmax_ = watk_;
@@ -3136,26 +3121,6 @@ static struct Damage battle_calc_pc_weapon_attack (struct block_list *src,
                 case TF_SPRINKLESAND:  // 砂まき
                     damage = damage * 125 / 100;
                     damage2 = damage2 * 125 / 100;
-                    break;
-                case MC_CARTREVOLUTION:    // カートレボリューション
-                    if (sd->cart_max_weight > 0 && sd->cart_weight > 0)
-                    {
-                        damage =
-                            (damage *
-                             (150 + pc_checkskill (sd, BS_WEAPONRESEARCH) +
-                              (sd->cart_weight * 100 /
-                               sd->cart_max_weight))) / 100;
-                        damage2 =
-                            (damage2 *
-                             (150 + pc_checkskill (sd, BS_WEAPONRESEARCH) +
-                              (sd->cart_weight * 100 /
-                               sd->cart_max_weight))) / 100;
-                    }
-                    else
-                    {
-                        damage = (damage * 150) / 100;
-                        damage2 = (damage2 * 150) / 100;
-                    }
                     break;
                     // 以下MOB
                 case NPC_COMBOATTACK:  // 多段攻撃
@@ -3890,10 +3855,6 @@ static struct Damage battle_calc_pc_weapon_attack (struct block_list *src,
         damage =
             battle_attr_fix (damage + 15 * skill_lv, s_ele,
                              battle_get_element (target));
-    }
-    if (skill_num == MC_CARTREVOLUTION)
-    {
-        damage = battle_attr_fix (damage, 0, battle_get_element (target));
     }
 
     // 完全回避の判定
@@ -5387,7 +5348,6 @@ int battle_config_read (const char *cfgName)
         battle_config.max_sp = 32500;
         battle_config.max_lv = 99;  // [MouseJstr]
         battle_config.max_parameter = 99;
-        battle_config.max_cart_weight = 8000;
         battle_config.pc_skill_log = 0;
         battle_config.mob_skill_log = 0;
         battle_config.battle_log = 0;
@@ -5597,7 +5557,6 @@ int battle_config_read (const char *cfgName)
             {"max_sp", &battle_config.max_sp},
             {"max_lv", &battle_config.max_lv},
             {"max_parameter", &battle_config.max_parameter},
-            {"max_cart_weight", &battle_config.max_cart_weight},
             {"player_skill_log", &battle_config.pc_skill_log},
             {"monster_skill_log", &battle_config.mob_skill_log},
             {"battle_log", &battle_config.battle_log},
@@ -5655,7 +5614,6 @@ int battle_config_read (const char *cfgName)
             {"invite_request_check", &battle_config.invite_request_check},
             {"skill_removetrap_type", &battle_config.skill_removetrap_type},
             {"disp_experience", &battle_config.disp_experience},
-            {"riding_weight", &battle_config.riding_weight},
             {"item_rate_common", &battle_config.item_rate_common},   // Added by RoVeRT
             {"item_rate_equip", &battle_config.item_rate_equip},
             {"item_rate_card", &battle_config.item_rate_card},   // End Addition
@@ -5765,11 +5723,6 @@ int battle_config_read (const char *cfgName)
             battle_config.max_parameter = 10;
         if (battle_config.max_parameter > 10000)
             battle_config.max_parameter = 10000;
-        if (battle_config.max_cart_weight > 1000000)
-            battle_config.max_cart_weight = 1000000;
-        if (battle_config.max_cart_weight < 100)
-            battle_config.max_cart_weight = 100;
-        battle_config.max_cart_weight *= 10;
 
         if (battle_config.agi_penaly_count < 2)
             battle_config.agi_penaly_count = 2;

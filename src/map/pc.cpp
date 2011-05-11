@@ -1038,19 +1038,6 @@ int pc_calcstatus (struct map_session_data *sd, int first)
                 sd->inventory_data[i]->weight *
                 sd->status.inventory[i].amount;
         }
-        sd->cart_max_weight = battle_config.max_cart_weight;
-        sd->cart_weight = 0;
-        sd->cart_max_num = MAX_CART;
-        sd->cart_num = 0;
-        for (i = 0; i < MAX_CART; i++)
-        {
-            if (sd->status.cart[i].nameid == 0)
-                continue;
-            sd->cart_weight +=
-                itemdb_weight (sd->status.cart[i].nameid) *
-                sd->status.cart[i].amount;
-            sd->cart_num++;
-        }
     }
 
     memset (sd->paramb, 0, sizeof (sd->paramb));
@@ -1623,18 +1610,12 @@ int pc_calcstatus (struct map_session_data *sd, int first)
         sd->hit += skill * 2;
     if (sd->status.option & 2 && (skill = pc_checkskill (sd, RG_TUNNELDRIVE)) > 0)  // トンネルドライブ
         sd->speed += (1.2 * DEFAULT_WALK_SPEED - skill * 9);
-    if (pc_iscarton (sd) && (skill = pc_checkskill (sd, MC_PUSHCART)) > 0)  // カートによる速度低下
-        sd->speed += (10 - skill) * (DEFAULT_WALK_SPEED * 0.1);
-    else if (pc_isriding (sd))  // ペコペコ乗りによる速度増加
-        sd->speed -= (0.25 * DEFAULT_WALK_SPEED);
     sd->max_weight += 1000;
     if (sd->sc_count)
     {
         if (sd->sc_data[SC_WINDWALK].timer != -1)   //ウィンドウォーク時はLv*2%減算
             sd->speed -=
                 sd->speed * (sd->sc_data[SC_WINDWALK].val1 * 2) / 100;
-        if (sd->sc_data[SC_CARTBOOST].timer != -1)  // カートブースト
-            sd->speed -= (DEFAULT_WALK_SPEED * 20) / 100;
         if (sd->sc_data[SC_BERSERK].timer != -1)    //バーサーク中はIAと同じぐらい速い？
             sd->speed -= sd->speed * 25 / 100;
         if (sd->sc_data[SC_WEDDING].timer != -1)    //結婚中は歩くのが遅い
@@ -2059,11 +2040,6 @@ int pc_calcstatus (struct map_session_data *sd, int first)
         sd->speed = 1;
     if (aspd_rate != 100)
         sd->aspd = sd->aspd * aspd_rate / 100;
-    if (pc_isriding (sd))       // 騎兵修練
-        sd->aspd =
-            sd->aspd * (100 +
-                        10 * (5 -
-                              pc_checkskill (sd, KN_CAVALIERMASTERY))) / 100;
 
     if (sd->attack_spell_override)
         sd->aspd = sd->attack_spell_delay;
@@ -2545,12 +2521,6 @@ int pc_bonus (struct map_session_data *sd, int type, int val)
         case SP_DISGUISE:      // Disguise script for items [Valaris]
             if (sd->state.lr_flag != 2 && sd->disguiseflag == 0)
             {
-                if (pc_isriding (sd))
-                {               // temporary prevention of crash caused by peco + disguise, will look into a better solution [Valaris]
-                    clif_displaymessage (sd->fd,
-                                         "Cannot wear disguise when riding a Peco.");
-                    break;
-                }
                 sd->disguise = val;
                 clif_clearchar (&sd->bl, 9);
                 pc_setpos (sd, sd->mapname, sd->bl.x, sd->bl.y, 3);
@@ -3360,119 +3330,6 @@ int pc_useitem (struct map_session_data *sd, int n)
     }
 
     return 0;
-}
-
-/*==========================================
- * カートアイテム追加。個数のみitem構造体の数字を無視
- *------------------------------------------
- */
-int pc_cart_additem (struct map_session_data *sd, struct item *item_data,
-                     int amount)
-{
-    struct item_data *data;
-    int  i, w;
-
-    nullpo_retr (1, sd);
-    nullpo_retr (1, item_data);
-
-    if (item_data->nameid <= 0 || amount <= 0)
-        return 1;
-    data = itemdb_search (item_data->nameid);
-
-    if ((w = data->weight * amount) + sd->cart_weight > sd->cart_max_weight)
-        return 1;
-
-    i = MAX_CART;
-    if (!itemdb_isequip2 (data))
-    {
-        // 装 備品ではないので、既所有品なら個数のみ変化させる
-        for (i = 0; i < MAX_CART; i++)
-        {
-            if (sd->status.cart[i].nameid == item_data->nameid &&
-                sd->status.cart[i].card[0] == item_data->card[0]
-                && sd->status.cart[i].card[1] == item_data->card[1]
-                && sd->status.cart[i].card[2] == item_data->card[2]
-                && sd->status.cart[i].card[3] == item_data->card[3])
-            {
-                if (sd->status.cart[i].amount + amount > MAX_AMOUNT)
-                    return 1;
-                sd->status.cart[i].amount += amount;
-                clif_cart_additem (sd, i, amount, 0);
-                break;
-            }
-        }
-    }
-    if (i >= MAX_CART)
-    {
-        // 装 備品か未所有品だったので空き欄へ追加
-        for (i = 0; i < MAX_CART; i++)
-        {
-            if (sd->status.cart[i].nameid == 0)
-            {
-                memcpy (&sd->status.cart[i], item_data,
-                        sizeof (sd->status.cart[0]));
-                sd->status.cart[i].amount = amount;
-                sd->cart_num++;
-                clif_cart_additem (sd, i, amount, 0);
-                break;
-            }
-        }
-        if (i >= MAX_CART)
-            return 1;
-    }
-    sd->cart_weight += w;
-    clif_updatestatus (sd, SP_CARTINFO);
-
-    return 0;
-}
-
-/*==========================================
- * カートアイテムを減らす
- *------------------------------------------
- */
-int pc_cart_delitem (struct map_session_data *sd, int n, int amount, int type)
-{
-    nullpo_retr (1, sd);
-
-    if (sd->status.cart[n].nameid == 0 || sd->status.cart[n].amount < amount)
-        return 1;
-
-    sd->status.cart[n].amount -= amount;
-    sd->cart_weight -= itemdb_weight (sd->status.cart[n].nameid) * amount;
-    if (sd->status.cart[n].amount <= 0)
-    {
-        memset (&sd->status.cart[n], 0, sizeof (sd->status.cart[0]));
-        sd->cart_num--;
-    }
-    if (!type)
-    {
-        clif_cart_delitem (sd, n, amount);
-        clif_updatestatus (sd, SP_CARTINFO);
-    }
-
-    return 0;
-}
-
-/*==========================================
- * カート内のアイテム数確認(個数の差分を返す)
- *------------------------------------------
- */
-int pc_cartitem_amount (struct map_session_data *sd, int idx, int amount)
-{
-    struct item *item_data;
-
-    nullpo_retr (-1, sd);
-
-    if (idx < 0 || idx >= MAX_CART)
-        return -1;
-
-    nullpo_retr (-1, item_data = &sd->status.cart[idx]);
-
-    if (!pc_iscarton (sd))
-        return -1;
-    if (item_data->nameid == 0 || !item_data->amount)
-        return -1;
-    return item_data->amount - amount;
 }
 
 /*==========================================
@@ -6049,70 +5906,6 @@ int pc_setoption (struct map_session_data *sd, int type)
 }
 
 /*==========================================
- * カート設定
- *------------------------------------------
- */
-int pc_setcart (struct map_session_data *sd, int type)
-{
-    int  cart[6] = { 0x0000, 0x0008, 0x0080, 0x0100, 0x0200, 0x0400 };
-
-    nullpo_retr (0, sd);
-
-    if (pc_checkskill (sd, MC_PUSHCART) > 0)
-    {                           // プッシュカートスキル所持
-        if (!pc_iscarton (sd))
-        {                       // カートを付けていない
-            pc_setoption (sd, cart[type]);
-            clif_cart_itemlist (sd);
-            clif_cart_equiplist (sd);
-            clif_updatestatus (sd, SP_CARTINFO);
-            clif_status_change (&sd->bl, 0x0c, 0);
-        }
-        else
-        {
-            pc_setoption (sd, cart[type]);
-        }
-    }
-
-    return 0;
-}
-
-/*==========================================
- * 鷹設定
- *------------------------------------------
- */
-int pc_setfalcon (struct map_session_data *sd)
-{
-    if (pc_checkskill (sd, HT_FALCON) > 0)
-    {                           // ファルコンマスタリースキル所持
-        pc_setoption (sd, sd->status.option | 0x0010);
-    }
-
-    return 0;
-}
-
-/*==========================================
- * ペコペコ設定
- *------------------------------------------
- */
-int pc_setriding (struct map_session_data *sd)
-{
-    if (sd->disguise > 0)
-    {                           // temporary prevention of crash caused by peco + disguise, will look into a better solution [Valaris]
-        clif_displaymessage (sd->fd,
-                             "Cannot mount a Peco while in disguise.");
-        return 0;
-    }
-
-    if ((pc_checkskill (sd, KN_RIDING) > 0))
-    {                           // ライディングスキル所持
-        pc_setoption (sd, sd->status.option | 0x0020);
-    }
-
-    return 0;
-}
-
-/*==========================================
  * script用変数の値を読む
  *------------------------------------------
  */
@@ -6897,30 +6690,6 @@ int pc_checkitem (struct map_session_data *sd)
                 sizeof (struct item) * (MAX_INVENTORY - j));
     for (k = j; k < MAX_INVENTORY; k++)
         sd->inventory_data[k] = NULL;
-
-    // カート内空き詰め
-    for (i = j = 0; i < MAX_CART; i++)
-    {
-        if ((id = sd->status.cart[i].nameid) == 0)
-            continue;
-        if (battle_config.item_check && !itemdb_available (id))
-        {
-            if (battle_config.error_log)
-                printf ("illeagal item id %d in %d[%s] cart.\n", id,
-                        sd->bl.id, sd->status.name);
-            pc_cart_delitem (sd, i, sd->status.cart[i].amount, 1);
-            continue;
-        }
-        if (i > j)
-        {
-            memcpy (&sd->status.cart[j], &sd->status.cart[i],
-                    sizeof (struct item));
-        }
-        j++;
-    }
-    if (j < MAX_CART)
-        memset (&sd->status.cart[j], 0,
-                sizeof (struct item) * (MAX_CART - j));
 
     // 装 備位置チェック
 

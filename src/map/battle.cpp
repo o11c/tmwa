@@ -3245,24 +3245,9 @@ static struct Damage battle_calc_pc_weapon_attack (struct block_list *src,
                     damage2 = damage2 * (100 + 40 * skill_lv) / 100;
                     break;
                 case MO_FINGEROFFENSIVE:   //指弾
-                    if (battle_config.finger_offensive_type == 0)
-                    {
-                        damage =
-                            damage * (100 +
-                                      50 * skill_lv) / 100 *
-                            sd->spiritball_old;
-                        damage2 =
-                            damage2 * (100 +
-                                       50 * skill_lv) / 100 *
-                            sd->spiritball_old;
-                        div_ = sd->spiritball_old;
-                    }
-                    else
-                    {
-                        damage = damage * (100 + 50 * skill_lv) / 100;
-                        damage2 = damage2 * (100 + 50 * skill_lv) / 100;
-                        div_ = 1;
-                    }
+                    damage = damage * (100 + 50 * skill_lv) / 100;
+                    damage2 = damage2 * (100 + 50 * skill_lv) / 100;
+                    div_ = 1;
                     break;
                 case MO_INVESTIGATE:   // 発 勁
                     if (def1 < 1000000)
@@ -3846,8 +3831,6 @@ static struct Damage battle_calc_pc_weapon_attack (struct block_list *src,
     // 星のかけら、気球の適用
     damage += sd->star;
     damage2 += sd->star_;
-    damage += sd->spiritball * 3;
-    damage2 += sd->spiritball * 3;
 
     if (sc_data && sc_data[SC_AURABLADE].timer != -1)
     {                           /* オーラブレード 必中 */
@@ -4110,7 +4093,6 @@ struct Damage battle_calc_magic_attack (struct block_list *bl,
     int  ele = 0, race = 7, t_ele = 0, t_race = 7, t_mode =
         0, cardfix, t_class, i;
     struct map_session_data *sd = NULL, *tsd = NULL;
-    struct mob_data *tmd = NULL;
 
     //return前の処理があるので情報出力部のみ変更
     if (bl == NULL || target == NULL)
@@ -4139,8 +4121,6 @@ struct Damage battle_calc_magic_attack (struct block_list *bl,
     }
     if (target->type == BL_PC)
         tsd = (struct map_session_data *) target;
-    else if (target->type == BL_MOB)
-        tmd = (struct mob_data *) target;
 
     aflag = BF_MAGIC | BF_LONG | BF_SKILL;
 

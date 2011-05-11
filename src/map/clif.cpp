@@ -993,23 +993,6 @@ static int clif_npc0078 (struct npc_data *nd, unsigned char *buf)
  *------------------------------------------
  */
 // ignored by client
-static int clif_set01e1 (struct map_session_data *sd, unsigned char *buf) __attribute__((deprecated));
-static int clif_set01e1 (struct map_session_data *sd, unsigned char *buf)
-{
-    nullpo_retr (0, sd);
-
-    WBUFW (buf, 0) = 0x1e1;
-    WBUFL (buf, 2) = sd->bl.id;
-    WBUFW (buf, 6) = sd->spiritball;
-
-    return packet_len_table[0x1e1];
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-// ignored by client
 static int clif_set0192 (int fd, int m, int x, int y, int type) __attribute__((deprecated));
 static int clif_set0192 (int fd, int m, int x, int y, int type)
 {
@@ -1084,9 +1067,6 @@ int clif_spawnpc (struct map_session_data *sd)
     WBUFW (buf, 0) = 0x1d9;
     WBUFW (buf, 51) = 0;
     clif_send (buf, packet_len_table[0x1d9], &sd->bl, AREA_WOS);
-
-    if (sd->spiritball > 0)
-        clif_spiritball (sd);
 
     if (maps[sd->bl.m].flag.snow)
         clif_specialeffect (&sd->bl, 162, 1);
@@ -2812,11 +2792,6 @@ static void clif_getareachar_pc (struct map_session_data *sd,
         WFIFOSET (sd->fd, len);
     }
 
-    if (dstsd->spiritball > 0)
-    {
-        clif_set01e1 (dstsd, WFIFOP (sd->fd, 0));
-        WFIFOSET (sd->fd, packet_len_table[0x1e1]);
-    }
     if (battle_config.save_clothcolor == 1 && dstsd->status.clothes_color > 0)
         clif_changelook (&dstsd->bl, LOOK_CLOTHES_COLOR,
                          dstsd->status.clothes_color);
@@ -4710,24 +4685,6 @@ int clif_devotion (struct map_session_data *sd, int UNUSED)
     WBUFB (buf, 27) = 0;
 
     clif_send (buf, packet_len_table[0x1cf], &sd->bl, AREA);
-    return 0;
-}
-
-/*==========================================
- * 氣球
- *------------------------------------------
- */
-// ignored by client
-int clif_spiritball (struct map_session_data *sd)
-{
-    unsigned char buf[16];
-
-    nullpo_retr (0, sd);
-
-    WBUFW (buf, 0) = 0x1d0;
-    WBUFL (buf, 2) = sd->bl.id;
-    WBUFW (buf, 6) = sd->spiritball;
-    clif_send (buf, packet_len_table[0x1d0], &sd->bl, AREA);
     return 0;
 }
 

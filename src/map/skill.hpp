@@ -28,7 +28,7 @@ struct skill_db
     int  hp[MAX_SKILL_LEVEL], sp[MAX_SKILL_LEVEL], mhp[MAX_SKILL_LEVEL],
         hp_rate[MAX_SKILL_LEVEL], sp_rate[MAX_SKILL_LEVEL],
         zeny[MAX_SKILL_LEVEL];
-    int  weapon, state, spiritball[MAX_SKILL_LEVEL];
+    int  weapon, state;
     int  itemid[10], amount[10];
     int  castnodex[MAX_SKILL_LEVEL];
 };

@@ -210,105 +210,6 @@ int pc_delinvincibletimer (struct map_session_data *sd)
     return 0;
 }
 
-static void pc_spiritball_timer (timer_id tid, tick_t UNUSED, custom_id_t id, custom_data_t UNUSED)
-{
-    struct map_session_data *sd;
-    int  i;
-
-    if ((sd = (struct map_session_data *) map_id2sd (id)) == NULL
-        || sd->bl.type != BL_PC)
-        return;
-
-    if (sd->spirit_timer[0] != tid)
-    {
-        if (battle_config.error_log)
-            printf ("spirit_timer %d != %d\n", sd->spirit_timer[0], tid);
-        return;
-    }
-    sd->spirit_timer[0] = -1;
-    for (i = 1; i < sd->spiritball; i++)
-    {
-        sd->spirit_timer[i - 1] = sd->spirit_timer[i];
-        sd->spirit_timer[i] = -1;
-    }
-    sd->spiritball--;
-    if (sd->spiritball < 0)
-        sd->spiritball = 0;
-    clif_spiritball (sd);
-}
-
-int pc_addspiritball (struct map_session_data *sd, int interval, int max)
-{
-    int  i;
-
-    nullpo_retr (0, sd);
-
-    if (max > MAX_SKILL_LEVEL)
-        max = MAX_SKILL_LEVEL;
-    if (sd->spiritball < 0)
-        sd->spiritball = 0;
-
-    if (sd->spiritball >= max)
-    {
-        if (sd->spirit_timer[0] != -1)
-        {
-            delete_timer (sd->spirit_timer[0], pc_spiritball_timer);
-            sd->spirit_timer[0] = -1;
-        }
-        for (i = 1; i < max; i++)
-        {
-            sd->spirit_timer[i - 1] = sd->spirit_timer[i];
-            sd->spirit_timer[i] = -1;
-        }
-    }
-    else
-        sd->spiritball++;
-
-    sd->spirit_timer[sd->spiritball - 1] =
-        add_timer (gettick () + interval, pc_spiritball_timer, sd->bl.id, 0);
-    clif_spiritball (sd);
-
-    return 0;
-}
-
-int pc_delspiritball (struct map_session_data *sd, int count, int type)
-{
-    int  i;
-
-    nullpo_retr (0, sd);
-
-    if (sd->spiritball <= 0)
-    {
-        sd->spiritball = 0;
-        return 0;
-    }
-
-    if (count > sd->spiritball)
-        count = sd->spiritball;
-    sd->spiritball -= count;
-    if (count > MAX_SKILL_LEVEL)
-        count = MAX_SKILL_LEVEL;
-
-    for (i = 0; i < count; i++)
-    {
-        if (sd->spirit_timer[i] != -1)
-        {
-            delete_timer (sd->spirit_timer[i], pc_spiritball_timer);
-            sd->spirit_timer[i] = -1;
-        }
-    }
-    for (i = count; i < MAX_SKILL_LEVEL; i++)
-    {
-        sd->spirit_timer[i - count] = sd->spirit_timer[i];
-        sd->spirit_timer[i] = -1;
-    }
-
-    if (!type)
-        clif_spiritball (sd);
-
-    return 0;
-}
-
 int pc_setrestartvalue (struct map_session_data *sd, int type)
 {
     nullpo_retr (0, sd);
@@ -791,9 +692,6 @@ int pc_authok (int id, int login_id2, time_t connect_until_time,
 
     sd->doridori_counter = 0;
 
-    sd->spiritball = 0;
-    for (int i = 0; i < MAX_SKILL_LEVEL; i++)
-        sd->spirit_timer[i] = -1;
     for (int i = 0; i < MAX_SKILLTIMERSKILL; i++)
         sd->skilltimerskill[i].timer = -1;
 

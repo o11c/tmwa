@@ -354,8 +354,6 @@ struct map_session_data
     short break_weapon_rate, break_armor_rate;
     short add_steal_rate;
 
-    short spiritball, spiritball_old;
-    int  spirit_timer[MAX_SKILL_LEVEL];
     int  magic_damage_return;   // AppleGirl Was Here
     int  random_attack_increase_add, random_attack_increase_per;    // [Valaris]
     int  perfect_hiding;        // [Valaris]

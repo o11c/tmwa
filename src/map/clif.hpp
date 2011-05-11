@@ -150,7 +150,6 @@ int  clif_01ac (struct block_list *bl) __attribute__((deprecated));
 
 int  clif_autospell (struct map_session_data *sd, int skilllv) __attribute__((deprecated));
 int  clif_devotion (struct map_session_data *sd, int target) __attribute__((deprecated));
-int  clif_spiritball (struct map_session_data *sd) __attribute__((deprecated));
 int  clif_combo_delay (struct block_list *src, int wait) __attribute__((deprecated));
 int  clif_bladestop (struct block_list *src, struct block_list *dst,
                      int boolean) __attribute__((deprecated));

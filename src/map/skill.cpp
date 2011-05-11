@@ -1772,9 +1772,6 @@ int skill_attack (int attack_type, struct block_list *src,
             int  delay = 1000 - 4 * battle_get_agi (src) - 2 * battle_get_dex (src);    //基本ディレイの計算
             if (damage < battle_get_hp (bl))
             {                   //ダメージが対象のHPより小さい場合
-                if (pc_checkskill (sd, MO_COMBOFINISH) > 0 && sd->spiritball > 0)   //猛龍拳(MO_COMBOFINISH)取得＆気球保持時は+300ms
-                    delay += 300 * battle_config.combo_delay_rate / 100;    //追加ディレイをconfにより調整
-
                 skill_status_change_start (src, SC_COMBO, MO_CHAINCOMBO, skilllv, 0, 0, delay, 0);  //コンボ状態に
             }
             sd->attackabletime = sd->canmove_tick = tick + delay;
@@ -1788,17 +1785,6 @@ int skill_attack (int attack_type, struct block_list *src,
                 700 - 4 * battle_get_agi (src) - 2 * battle_get_dex (src);
             if (damage < battle_get_hp (bl))
             {
-                //阿修羅覇凰拳(MO_EXTREMITYFIST)取得＆気球4個保持＆爆裂波動(MO_EXPLOSIONSPIRITS)状態時は+300ms
-                //伏虎拳(CH_TIGERFIST)取得時も+300ms
-                if ((pc_checkskill (sd, MO_EXTREMITYFIST) > 0
-                     && sd->spiritball >= 4
-                     && sd->sc_data[SC_EXPLOSIONSPIRITS].timer != -1)
-                    || (pc_checkskill (sd, CH_TIGERFIST) > 0
-                        && sd->spiritball > 0)
-                    || (pc_checkskill (sd, CH_CHAINCRUSH) > 0
-                        && sd->spiritball > 1))
-                    delay += 300 * battle_config.combo_delay_rate / 100;    //追加ディレイをconfにより調整
-
                 skill_status_change_start (src, SC_COMBO, MO_COMBOFINISH, skilllv, 0, 0, delay, 0); //コンボ状態に
             }
             sd->attackabletime = sd->canmove_tick = tick + delay;
@@ -1828,12 +1814,6 @@ int skill_attack (int attack_type, struct block_list *src,
                 1000 - 4 * battle_get_agi (src) - 2 * battle_get_dex (src);
             if (damage < battle_get_hp (bl))
             {
-                //阿修羅覇凰拳(MO_EXTREMITYFIST)取得＆気球4個保持＆爆裂波動(MO_EXPLOSIONSPIRITS)状態時は+300ms
-                if (pc_checkskill (sd, MO_EXTREMITYFIST) > 0
-                    && sd->spiritball >= 4
-                    && sd->sc_data[SC_EXPLOSIONSPIRITS].timer != -1)
-                    delay += 300 * battle_config.combo_delay_rate / 100;    //追加ディレイをconfにより調整
-
                 skill_status_change_start (src, SC_COMBO, CH_CHAINCRUSH, skilllv, 0, 0, delay, 0);  //コンボ状態に
             }
             sd->attackabletime = sd->canmove_tick = tick + delay;
@@ -2664,14 +2644,6 @@ int skill_castend_damage_id (struct block_list *src, struct block_list *bl,
             {
                 skill_attack (BF_WEAPON, src, src, bl, skillid, skilllv, tick,
                               flag);
-                if (sd)
-                {
-                    for (int i = 1; i < sd->spiritball_old; i++)
-                        skill_addtimerskill (src, tick + i * 200, bl->id, 0,
-                                             0, skillid, skilllv, BF_WEAPON,
-                                             flag);
-                    sd->canmove_tick = tick + (sd->spiritball_old - 1) * 200;
-                }
             }
             if (sc_data && sc_data[SC_BLADESTOP].timer != -1)
                 skill_status_change_end (src, SC_BLADESTOP, -1);
@@ -3718,23 +3690,6 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl,
             else
                 clif_skill_fail (sd, skillid, 0, 0);
             break;
-        case MO_CALLSPIRITS:   // 気功
-            if (sd)
-            {
-                clif_skill_nodamage (src, bl, skillid, skilllv, 1);
-                pc_addspiritball (sd, skill_get_time (skillid, skilllv),
-                                  skilllv);
-            }
-            break;
-        case CH_SOULCOLLECT:   // 狂気功
-            if (sd)
-            {
-                clif_skill_nodamage (src, bl, skillid, skilllv, 1);
-                for (int i = 0; i < 5; i++)
-                    pc_addspiritball (sd, skill_get_time (skillid, skilllv),
-                                      5);
-            }
-            break;
         case MO_BLADESTOP:     // 白刃取り
             clif_skill_nodamage (src, bl, skillid, skilllv, 1);
             skill_status_change_start (src, SkillStatusChangeTable[skillid],
@@ -3744,23 +3699,7 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl,
         case MO_ABSORBSPIRITS: // 気奪
         {
             int i = 0;
-            if (sd && dstsd)
-            {
-                if (sd == dstsd || maps[sd->bl.m].flag.pvp)
-                {
-                    if (dstsd->spiritball > 0)
-                    {
-                        clif_skill_nodamage (src, bl, skillid, skilllv, 1);
-                        i = dstsd->spiritball * 7;
-                        pc_delspiritball (dstsd, dstsd->spiritball, 0);
-                        if (i > 0x7FFF)
-                            i = 0x7FFF;
-                        if (sd->status.sp + i > sd->status.max_sp)
-                            i = sd->status.max_sp - sd->status.sp;
-                    }
-                }
-            }
-            else if (sd && dstmd)
+            if (sd && dstmd)
             {                   //対象がモンスターの場合
                 //20%の確率で対象のLv*2のSPを回復する。成功したときはターゲット(σﾟДﾟ)σｹﾞｯﾂ!!
                 if (MRAND (100) < 20)
@@ -7198,7 +7137,7 @@ static int skill_check_condition_mob_master_sub (struct block_list *bl,
  */
 int skill_check_condition (struct map_session_data *sd, int type)
 {
-    int hp, sp, hp_rate, sp_rate, zeny, weapon, state, spiritball, skill,
+    int hp, sp, hp_rate, sp_rate, zeny, weapon, state, skill,
         lv, mhp;
     int  idx[10], itemid[10], amount[10];
 
@@ -7269,7 +7208,6 @@ int skill_check_condition (struct map_session_data *sd, int type)
     zeny = skill_get_zeny (skill, lv);
     weapon = skill_db[skill].weapon;
     state = skill_db[skill].state;
-    spiritball = (lv <= 0) ? 0 : skill_db[skill].spiritball[lv - 1];
     mhp = skill_get_mhp (skill, lv);    /* 消費HP */
     for (int i = 0; i < 10; i++)
     {
@@ -7316,29 +7254,6 @@ int skill_check_condition (struct map_session_data *sd, int type)
                 return 0;
             }
             break;
-        case MO_CALLSPIRITS:   /* 気功 */
-            if (sd->spiritball >= lv)
-            {
-                clif_skill_fail (sd, skill, 0, 0);
-                return 0;
-            }
-            break;
-        case CH_SOULCOLLECT:   /* 狂気功 */
-            if (sd->spiritball >= 5)
-            {
-                clif_skill_fail (sd, skill, 0, 0);
-                return 0;
-            }
-            break;
-        case MO_FINGEROFFENSIVE:   //指弾
-            if (sd->spiritball > 0 && sd->spiritball < spiritball)
-            {
-                spiritball = sd->spiritball;
-                sd->spiritball_old = sd->spiritball;
-            }
-            else
-                sd->spiritball_old = lv;
-            break;
         case MO_CHAINCOMBO:    //連打掌
             if (sd->sc_data[SC_BLADESTOP].timer == -1)
             {
@@ -7365,11 +7280,6 @@ int skill_check_condition (struct map_session_data *sd, int type)
                 return 0;
             break;
         case MO_EXTREMITYFIST: // 阿修羅覇鳳拳
-            if ((sd->sc_data[SC_COMBO].timer != -1
-                 && (sd->sc_data[SC_COMBO].val1 == MO_COMBOFINISH
-                     || sd->sc_data[SC_COMBO].val1 == CH_CHAINCRUSH))
-                || sd->sc_data[SC_BLADESTOP].timer != -1)
-                spiritball--;
             break;
         case BD_ADAPTATION:    /* アドリブ */
         {
@@ -7486,11 +7396,6 @@ int skill_check_condition (struct map_session_data *sd, int type)
         if (!(weapon & (1 << sd->status.weapon)))
         {
             clif_skill_fail (sd, skill, 6, 0);
-            return 0;
-        }
-        if (spiritball > 0 && sd->spiritball < spiritball)
-        {
-            clif_skill_fail (sd, skill, 0, 0);  // 氣球不足
             return 0;
         }
     }
@@ -7646,9 +7551,6 @@ int skill_check_condition (struct map_session_data *sd, int type)
 /* 	} */
     if (zeny > 0)               // Zeny消費
         pc_payzeny (sd, zeny);
-    if (spiritball > 0)         // 氣球消費
-        pc_delspiritball (sd, spiritball, 0);
-
     return 1;
 }
 
@@ -7975,9 +7877,7 @@ int skill_use_id (struct map_session_data *sd, int target_id,
             }
             break;
         case MO_FINGEROFFENSIVE:   /* 指弾 */
-            casttime +=
-                casttime *
-                ((skill_lv > sd->spiritball) ? sd->spiritball : skill_lv);
+            casttime += casttime * skill_lv;
             break;
         case MO_CHAINCOMBO:    /*連打掌 */
             target_id = sd->attacktarget;
@@ -11845,9 +11745,6 @@ static int skill_readdb (void)
             if (p)
                 *p++ = 0;
         }
-        for (k = 0; k < MAX_SKILL_LEVEL; k++)
-            skill_db[i].spiritball[k] =
-                (split2[k]) ? atoi (split2[k]) : atoi (split2[0]);
         skill_db[i].itemid[0] = atoi (split[10]);
         skill_db[i].amount[0] = atoi (split[11]);
         skill_db[i].itemid[1] = atoi (split[12]);

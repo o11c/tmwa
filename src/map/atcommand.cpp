@@ -3015,8 +3015,6 @@ int atcommand_memo (const int fd, struct map_session_data *sd,
                     24);
             sd->status.memo_point[position].x = sd->bl.x;
             sd->status.memo_point[position].y = sd->bl.y;
-            if (pc_checkskill (sd, AL_WARP) <= (position + 1))
-                clif_displaymessage (fd, "Note: you don't have the 'Warp' skill level to use it.");
             atcommand_memo_sub (sd);
         }
         else

@@ -4003,7 +4003,7 @@ static void clif_parse_WalkToXY (int fd, struct map_session_data *sd)
     if (sd->npc_id != 0 || sd->state.storage_flag)
         return;
 
-    if (sd->skilltimer != -1 && pc_checkskill (sd, SA_FREECAST) <= 0)   // フリーキャスト
+    if (sd->skilltimer != -1)
         return;
 
     if (sd->canmove_tick > gettick ())
@@ -4011,7 +4011,7 @@ static void clif_parse_WalkToXY (int fd, struct map_session_data *sd)
 
     if (sd->opt1 > 0 && sd->opt1 != 6)
         return;
-    if ((sd->status.option & 2) && pc_checkskill (sd, RG_TUNNELDRIVE) <= 0)
+    if (sd->status.option & 2)
         return;
 
     if (sd->invincible_timer != -1)
@@ -4229,8 +4229,7 @@ static void clif_parse_ActionRequest (int fd, struct map_session_data *sd)
         case 0x07:             // continuous attack
             if (sd->status.option & OPTION_HIDE)
                 return;
-            if (!battle_config.sdelay_attack_enable
-                && pc_checkskill (sd, SA_FREECAST) <= 0)
+            if (!battle_config.sdelay_attack_enable)
             {
                 if (DIFF_TICK (tick, sd->canact_tick) < 0)
                 {
@@ -4245,12 +4244,10 @@ static void clif_parse_ActionRequest (int fd, struct map_session_data *sd)
             break;
         case 0x02:             // sitdown
             pc_stop_walking (sd, 1);
-            skill_gangsterparadise (sd, 1); // ギャングスターパラダイス設定
             pc_setsit (sd);
             clif_sitting (fd, sd);
             break;
         case 0x03:             // standup
-            skill_gangsterparadise (sd, 0); // ギャングスターパラダイス解除
             pc_setstand (sd);
             WBUFW (buf, 0) = 0x8a;
             WBUFL (buf, 2) = sd->bl.id;
@@ -4708,8 +4705,7 @@ static void clif_parse_UseSkillToId (int fd, struct map_session_data *sd)
 
     if (sd->skilltimer != -1)
     {
-        if (skillnum != SA_CASTCANCEL)
-            return;
+        return;
     }
     else if (DIFF_TICK (tick, sd->canact_tick) < 0)
     {
@@ -4727,18 +4723,6 @@ static void clif_parse_UseSkillToId (int fd, struct map_session_data *sd)
     else
     {
         sd->skillitem = sd->skillitemlv = -1;
-        if (skillnum == MO_EXTREMITYFIST)
-        {
-            if (!sd->state.skill_flag)
-            {
-                sd->state.skill_flag = 1;
-                return;
-            }
-            else if (sd->bl.id == target_id)
-            {
-                return;
-            }
-        }
         if ((lv = pc_checkskill (sd, skillnum)) > 0)
         {
             if (skilllv > lv)

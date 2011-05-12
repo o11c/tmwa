@@ -821,7 +821,6 @@ void map_quit (struct map_session_data *sd)
     pc_stop_walking (sd, 0);
     pc_stopattack (sd);
     pc_delinvincibletimer (sd);
-    skill_gangsterparadise (sd, 0);
 
     pc_calcstatus (sd, 4);
 

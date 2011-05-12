@@ -865,7 +865,7 @@ int npc_buylist (struct map_session_data *sd, int n,
 {
     struct npc_data *nd;
     double z;
-    int  i, j, w, skill, itemamount = 0, new_stacks = 0;
+    int  i, j, w, itemamount = 0, new_stacks = 0;
 
     nullpo_retr (3, sd);
     nullpo_retr (3, item_list);
@@ -949,25 +949,6 @@ int npc_buylist (struct map_session_data *sd, int n,
             }
         }
     }
-
-    //商人経験値
-/*	if ((sd->status.class == 5) || (sd->status.class == 10) || (sd->status.class == 18)) {
-		z = z * pc_checkskill(sd,MC_DISCOUNT) / ((1 + 300 / itemamount) * 4000) * battle_config.shop_exp;
-		pc_gainexp(sd,0,z);
-	}*/
-    if (battle_config.shop_exp > 0 && z > 0
-        && (skill = pc_checkskill (sd, MC_DISCOUNT)) > 0)
-    {
-        if (skill > 0)
-        {
-            z = (log (z * (double) skill) * (double) battle_config.shop_exp /
-                 100.);
-            if (z < 1)
-                z = 1;
-            pc_gainexp (sd, 0, (int) z);
-        }
-    }
-
     return 0;
 }
 
@@ -979,7 +960,7 @@ int npc_selllist (struct map_session_data *sd, int n,
                   unsigned short *item_list)
 {
     double z;
-    int  i, skill, itemamount = 0;
+    int  i, itemamount = 0;
 
     nullpo_retr (1, sd);
     nullpo_retr (1, item_list);
@@ -1014,25 +995,6 @@ int npc_selllist (struct map_session_data *sd, int n,
         int  item_id = item_list[i * 2] - 2;
         pc_delitem (sd, item_id, item_list[i * 2 + 1], 0);
     }
-
-    //商人経験値
-/*	if ((sd->status.class == 5) || (sd->status.class == 10) || (sd->status.class == 18)) {
-		z = z * pc_checkskill(sd,MC_OVERCHARGE) / ((1 + 500 / itemamount) * 4000) * battle_config.shop_exp ;
-		pc_gainexp(sd,0,z);
-	}*/
-    if (battle_config.shop_exp > 0 && z > 0
-        && (skill = pc_checkskill (sd, MC_OVERCHARGE)) > 0)
-    {
-        if (skill > 0)
-        {
-            z = (log (z * (double) skill) * (double) battle_config.shop_exp /
-                 100.);
-            if (z < 1)
-                z = 1;
-            pc_gainexp (sd, 0, (int) z);
-        }
-    }
-
     return 0;
 
 }

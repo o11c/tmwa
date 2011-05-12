@@ -39,7 +39,6 @@ struct mob_db mob_db[2001];
 static int distance (int, int, int, int);
 static int mob_makedummymobdb (int);
 static void mob_timer (timer_id, tick_t, custom_id_t, custom_data_t);
-static int mob_skillid2skillidx (int mob_class, int skillid);
 int  mobskill_use_id (struct mob_data *md, struct block_list *target,
                       int skill_idx);
 static int mob_unlocktarget (struct mob_data *md, int tick);
@@ -2394,8 +2393,6 @@ int mob_damage (struct block_list *src, struct mob_data *md, int damage,
     double tdmg, temp;
     struct item item;
     int  ret;
-//    int  drop_rate;
-    int  skill, sp;
 
     nullpo_retr (0, md);        //srcはNULLで呼ばれる場合もあるので、他でチェック
 
@@ -2527,20 +2524,6 @@ int mob_damage (struct block_list *src, struct mob_data *md, int damage,
 
     md->hp -= damage;
 
-    if (md->state.special_mob_ai == 2)
-    {                           //スフィアーマイン
-        int  skillidx = 0;
-
-        if ((skillidx =
-             mob_skillid2skillidx (md->mob_class, NPC_SELFDESTRUCTION2)) >= 0)
-        {
-            md->mode |= 0x1;
-            md->next_walktime = tick;
-            mobskill_use_id (md, &md->bl, skillidx);    //自爆詠唱開始
-            md->state.special_mob_ai++;
-        }
-    }
-
     if (md->hp > 0)
     {
         return 0;
@@ -2561,15 +2544,6 @@ int mob_damage (struct block_list *src, struct mob_data *md, int damage,
 
     if (src && src->type == BL_MOB)
         mob_unlocktarget ((struct mob_data *) src, tick);
-
-    /* ソウルドレイン */
-    if (sd && (skill = pc_checkskill (sd, HW_SOULDRAIN)) > 0)
-    {
-        sp = (battle_get_lv (&md->bl)) * (65 + 15 * skill) / 100;
-        if (sd->status.sp + sp > sd->status.max_sp)
-            sp = sd->status.max_sp - sd->status.sp;
-        sd->status.sp += sp;
-    }
 
     // map外に消えた人は計算から除くので
     // overkill分は無いけどsumはmax_hpとは違う
@@ -3248,35 +3222,7 @@ int mob_counttargeted (struct mob_data *md, struct block_list *src,
     return c;
 }
 
-/*==========================================
- *MOBskillから該当skillidのskillidxを返す
- *------------------------------------------
- */
-int mob_skillid2skillidx (int mob_class, int skillid)
-{
-    int  i;
-    struct mob_skill *ms = mob_db[mob_class].skill;
 
-    if (ms == NULL)
-        return -1;
-
-    for (i = 0; i < mob_db[mob_class].maxskill; i++)
-    {
-        if (ms[i].skill_id == skillid)
-            return i;
-    }
-    return -1;
-
-}
-
-//
-// MOBスキル
-//
-
-/*==========================================
- * スキル使用（詠唱完了、ID指定）
- *------------------------------------------
- */
 void mobskill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data_t UNUSED)
 {
     struct mob_data *md = NULL;
@@ -3284,7 +3230,7 @@ void mobskill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data
     struct block_list *mbl;
     int  range;
 
-    if ((mbl = map_id2bl (id)) == NULL) //詠唱したMobがもういないというのは良くある正常処理
+    if ((mbl = map_id2bl (id)) == NULL)
         return;
     if ((md = (struct mob_data *) mbl) == NULL)
     {
@@ -3303,8 +3249,6 @@ void mobskill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data
         if (md->opt1 > 0)
             return;
     }
-    if (md->skillid != NPC_EMOTION)
-        md->last_thinktime = tick + battle_get_adelay (&md->bl);
 
     if ((bl = map_id2bl (md->skilltarget)) == NULL || bl->prev == NULL)
     {                           //スキルターゲットが存在しない
@@ -3314,17 +3258,6 @@ void mobskill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data
     if (md->bl.m != bl->m)
         return;
 
-    if (md->skillid == PR_LEXAETERNA)
-    {
-    }
-    else if (md->skillid == RG_BACKSTAP)
-    {
-        Direction dir = map_calc_dir (&md->bl, bl->x, bl->y), t_dir =
-            battle_get_dir (bl);
-        int  dist = distance (md->bl.x, md->bl.y, bl->x, bl->y);
-        if (bl->type != BL_SKILL && (dist == 0 || !map_check_dir (dir, t_dir)))
-            return;
-    }
     if (((skill_get_inf (md->skillid) & 1) || (skill_get_inf2 (md->skillid) & 4)) &&    // 彼我敵対関係チェック
         battle_check_target (&md->bl, bl, BCT_ENEMY) <= 0)
         return;
@@ -3342,27 +3275,6 @@ void mobskill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data
                 md->mob_class);
     mob_stop_walking (md, 0);
 
-    switch (skill_get_nk (md->skillid))
-    {
-            // 攻撃系/吹き飛ばし系
-        case 0:
-        case 2:
-            skill_castend_damage_id (&md->bl, bl, md->skillid, md->skilllv,
-                                     tick, 0);
-            break;
-        case 1:                // 支援系
-            if (!mob_db[md->mob_class].skill[md->skillidx].val[0] &&
-                (md->skillid == AL_HEAL
-                 || (md->skillid == ALL_RESURRECTION && bl->type != BL_PC))
-                && battle_check_undead (battle_get_race (bl),
-                                        battle_get_elem_type (bl)))
-                skill_castend_damage_id (&md->bl, bl, md->skillid,
-                                         md->skilllv, tick, 0);
-            else
-                skill_castend_nodamage_id (&md->bl, bl, md->skillid,
-                                           md->skilllv, tick, 0);
-            break;
-    }
 }
 
 /*==========================================
@@ -3394,68 +3306,6 @@ void mobskill_castend_pos (timer_id tid, tick_t tick, custom_id_t id, custom_dat
             return;
     }
 
-    if (battle_config.monster_skill_reiteration == 0)
-    {
-        range = -1;
-        switch (md->skillid)
-        {
-            case MG_SAFETYWALL:
-            case WZ_FIREPILLAR:
-            case HT_SKIDTRAP:
-            case HT_LANDMINE:
-            case HT_ANKLESNARE:
-            case HT_SHOCKWAVE:
-            case HT_SANDMAN:
-            case HT_FLASHER:
-            case HT_FREEZINGTRAP:
-            case HT_BLASTMINE:
-            case HT_CLAYMORETRAP:
-            case PF_SPIDERWEB: /* スパイダーウェッブ */
-                range = 0;
-                break;
-            case AL_PNEUMA:
-            case AL_WARP:
-                range = 1;
-                break;
-        }
-        if (range >= 0)
-        {
-            if (skill_check_unit_range
-                (md->bl.m, md->skillx, md->skilly, range, md->skillid) > 0)
-                return;
-        }
-    }
-    if (battle_config.monster_skill_nofootset == 1)
-    {
-        range = -1;
-        switch (md->skillid)
-        {
-            case WZ_FIREPILLAR:
-            case HT_SKIDTRAP:
-            case HT_LANDMINE:
-            case HT_ANKLESNARE:
-            case HT_SHOCKWAVE:
-            case HT_SANDMAN:
-            case HT_FLASHER:
-            case HT_FREEZINGTRAP:
-            case HT_BLASTMINE:
-            case HT_CLAYMORETRAP:
-            case AM_DEMONSTRATION:
-            case PF_SPIDERWEB: /* スパイダーウェッブ */
-                range = 1;
-                break;
-            case AL_WARP:
-                range = 0;
-                break;
-        }
-        if (range >= 0)
-        {
-            if (skill_check_unit_range2
-                (md->bl.m, md->skillx, md->skilly, range) > 0)
-                return;
-        }
-    }
-
     if (battle_config.monster_land_skill_limit == 1)
     {
         maxcount = skill_get_maxcount (md->skillid);
@@ -3485,9 +3335,6 @@ void mobskill_castend_pos (timer_id tid, tick_t tick, custom_id_t id, custom_dat
         printf ("MOB skill castend skill=%d, mob_class = %d\n", md->skillid,
                 md->mob_class);
     mob_stop_walking (md, 0);
-
-    skill_castend_pos2 (&md->bl, md->skillx, md->skilly, md->skillid,
-                        md->skilllv, tick, 0);
 
     return;
 }
@@ -3522,10 +3369,7 @@ int mobskill_use_id (struct mob_data *md, struct block_list *target,
             return 0;
     }
 
-    if (md->option & 4 && skill_id == TF_HIDING)
-        return 0;
-    if (md->option & 2 && skill_id != TF_HIDING && skill_id != AS_GRIMTOOTH
-        && skill_id != RG_BACKSTAP && skill_id != RG_RAID)
+    if (md->option & 2)
         return 0;
 
     if (skill_get_inf2 (skill_id) & 0x200 && md->bl.id == target->id)
@@ -3544,20 +3388,6 @@ int mobskill_use_id (struct mob_data *md, struct block_list *target,
     casttime = skill_castfix (&md->bl, ms->casttime);
     md->state.skillcastcancel = ms->cancel;
     md->skilldelay[skill_idx] = gettick ();
-
-    switch (skill_id)
-    {                           /* 何か特殊な処理が必要 */
-        case ALL_RESURRECTION: /* リザレクション */
-            if (target->type != BL_PC
-                && battle_check_undead (battle_get_race (target),
-                                        battle_get_elem_type (target)))
-            {                   /* 敵がアンデッドなら */
-                casttime =
-                    skill_castfix (&md->bl,
-                                   skill_get_cast (PR_TURNUNDEAD, skill_lv));
-            }
-            break;
-    }
 
     if (battle_config.mob_skill_log == 1)
         printf

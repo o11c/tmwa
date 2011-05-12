@@ -543,14 +543,6 @@ static int mob_can_move (struct mob_data *md)
     if (md->canmove_tick > gettick () || (md->opt1 > 0 && md->opt1 != 6)
         || md->option & 2)
         return 0;
-    // アンクル中で動けないとか
-    if (md->sc_data[SC_ANKLE].timer != -1 ||    //アンクルスネア
-        md->sc_data[SC_AUTOCOUNTER].timer != -1 ||  //オートカウンター
-        md->sc_data[SC_BLADESTOP].timer != -1 ||    //白刃取り
-        md->sc_data[SC_SPIDERWEB].timer != -1   //スパイダーウェッブ
-        )
-        return 0;
-
     return 1;
 }
 
@@ -693,12 +685,6 @@ static int mob_check_attack (struct mob_data *md)
     if (md->opt1 > 0 || md->option & 2)
         return 0;
 
-    if (md->sc_data[SC_AUTOCOUNTER].timer != -1)
-        return 0;
-
-    if (md->sc_data[SC_BLADESTOP].timer != -1)
-        return 0;
-
     if ((tbl = map_id2bl (md->target_id)) == NULL)
     {
         md->target_id = 0;
@@ -747,10 +733,9 @@ static int mob_check_attack (struct mob_data *md)
         md->state.targettype = NONE_ATTACKABLE;
         return 0;
     }
-    if (tsd && !(mode & 0x20) && (tsd->sc_data[SC_TRICKDEAD].timer != -1 ||
-                                  ((pc_ishiding (tsd)
+    if (tsd && !(mode & 0x20) && ((pc_ishiding (tsd)
                                     || tsd->state.gangsterparadise)
-                                   && race != 4 && race != 6)))
+                                   && race != 4 && race != 6))
     {
         md->target_id = 0;
         md->state.targettype = NONE_ATTACKABLE;
@@ -792,10 +777,6 @@ static int mob_attack (struct mob_data *md, unsigned int tick, int UNUSED)
         return 0;
 
     md->target_lv = battle_weapon_attack (&md->bl, tbl, tick, 0);
-
-    if (!(battle_config.monster_cloak_check_type & 2)
-        && md->sc_data[SC_CLOAKING].timer != -1)
-        skill_status_change_end (&md->bl, SC_CLOAKING, -1);
 
     md->attackabletime = tick + battle_get_adelay (&md->bl);
 
@@ -1329,14 +1310,12 @@ static int mob_can_reach (struct mob_data *md, struct block_list *bl, int range)
 int mob_target (struct mob_data *md, struct block_list *bl, int dist)
 {
     struct map_session_data *sd;
-    struct status_change *sc_data;
     short *option;
     int  mode, race;
 
     nullpo_retr (0, md);
     nullpo_retr (0, bl);
 
-    sc_data = battle_get_sc_data (bl);
     option = battle_get_option (bl);
     race = mob_db[md->mob_class].race;
 
@@ -1359,8 +1338,7 @@ int mob_target (struct mob_data *md, struct block_list *bl, int dist)
         return 0;
 
     if (mode & 0x20 ||          // Coercion is exerted if it is MVPMOB.
-        (sc_data && sc_data[SC_TRICKDEAD].timer == -1 &&
-         ((option && !(*option & 0x06)) || race == 4 || race == 6)))
+        ((option && !(*option & 0x06)) || race == 4 || race == 6))
     {
         if (bl->type == BL_PC)
         {
@@ -1429,9 +1407,8 @@ static int mob_ai_sub_hard_activesearch (struct block_list *bl, va_list ap)
              distance (smd->bl.x, smd->bl.y, tsd->bl.x, tsd->bl.y)) < 9)
         {
             if (mode & 0x20 ||
-                (tsd->sc_data[SC_TRICKDEAD].timer == -1 &&
-                 ((!pc_ishiding (tsd) && !tsd->state.gangsterparadise)
-                  || race == 4 || race == 6)))
+                ((!pc_ishiding (tsd) && !tsd->state.gangsterparadise)
+                  || race == 4 || race == 6))
             {                   // 妨害がないか判定
                 if (mob_can_reach (smd, bl, 12) &&  // 到達可能性判定
                     MRAND (1000) < 1000 / (++(*pcc)))
@@ -1658,9 +1635,8 @@ static int mob_ai_sub_hard_slavemob (struct mob_data *md, unsigned int tick)
 
             race = mob_db[md->mob_class].race;
             if (mode & 0x20 ||
-                (sd->sc_data[SC_TRICKDEAD].timer == -1 &&
-                 ((!pc_ishiding (sd) && !sd->state.gangsterparadise)
-                  || race == 4 || race == 6)))
+                ((!pc_ishiding (sd) && !sd->state.gangsterparadise)
+                  || race == 4 || race == 6))
             {                   // 妨害がないか判定
 
                 md->target_id = sd->bl.id;
@@ -1804,8 +1780,7 @@ static int mob_ai_sub_hard (struct block_list *bl, va_list ap)
     race = mob_db[md->mob_class].race;
 
     // Abnormalities
-    if ((md->opt1 > 0 && md->opt1 != 6) || md->state.state == MS_DELAY
-        || md->sc_data[SC_BLADESTOP].timer != -1)
+    if ((md->opt1 > 0 && md->opt1 != 6) || md->state.state == MS_DELAY)
         return 0;
 
     if (!(mode & 0x80) && md->target_id > 0)
@@ -1912,11 +1887,9 @@ static int mob_ai_sub_hard (struct block_list *bl, va_list ap)
                                   tbl->y)) >= md->min_chase)
                     mob_unlocktarget (md, tick);    // 別マップか、視界外
                 else if (tsd && !(mode & 0x20)
-                         && (tsd->sc_data[SC_TRICKDEAD].timer != -1
-                             ||
-                             ((pc_ishiding (tsd)
+                         && ((pc_ishiding (tsd)
                                || tsd->state.gangsterparadise) && race != 4
-                              && race != 6)))
+                              && race != 6))
                     mob_unlocktarget (md, tick);    // スキルなどによる策敵妨害
                 else if (!battle_check_range
                          (&md->bl, tbl, mob_db[md->mob_class].range))
@@ -2466,10 +2439,7 @@ int mob_damage (struct block_list *src, struct mob_data *md, int damage,
         return 0;
     }
 
-    if (md->sc_data[SC_ENDURE].timer == -1)
-        mob_stop_walking (md, 3);
-    if (damage > max_hp >> 2)
-        skill_stop_dancing (&md->bl, 0);
+    mob_stop_walking (md, 3);
 
     if (md->hp > max_hp)
         md->hp = max_hp;
@@ -2556,11 +2526,6 @@ int mob_damage (struct block_list *src, struct mob_data *md, int damage,
     }
 
     md->hp -= damage;
-
-    if (md->option & 2)
-        skill_status_change_end (&md->bl, SC_HIDING, -1);
-    if (md->option & 4)
-        skill_status_change_end (&md->bl, SC_CLOAKING, -1);
 
     if (md->state.special_mob_ai == 2)
     {                           //スフィアーマイン
@@ -3335,15 +3300,7 @@ void mobskill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data
     //沈黙や状態異常など
     if (md->sc_data)
     {
-        if (md->opt1 > 0 || md->sc_data[SC_DIVINA].timer != -1
-            || md->sc_data[SC_ROKISWEIL].timer != -1
-            || md->sc_data[SC_STEELBODY].timer != -1)
-            return;
-        if (md->sc_data[SC_AUTOCOUNTER].timer != -1 && md->skillid != KN_AUTOCOUNTER)   //オートカウンター
-            return;
-        if (md->sc_data[SC_BLADESTOP].timer != -1)  //白刃取り
-            return;
-        if (md->sc_data[SC_BERSERK].timer != -1)    //バーサーク
+        if (md->opt1 > 0)
             return;
     }
     if (md->skillid != NPC_EMOTION)
@@ -3359,12 +3316,6 @@ void mobskill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data
 
     if (md->skillid == PR_LEXAETERNA)
     {
-        struct status_change *sc_data = battle_get_sc_data (bl);
-        if (sc_data
-            && (sc_data[SC_FREEZE].timer != -1
-                || (sc_data[SC_STONE].timer != -1
-                    && sc_data[SC_STONE].val2 == 0)))
-            return;
     }
     else if (md->skillid == RG_BACKSTAP)
     {
@@ -3439,15 +3390,7 @@ void mobskill_castend_pos (timer_id tid, tick_t tick, custom_id_t id, custom_dat
     md->skilltimer = -1;
     if (md->sc_data)
     {
-        if (md->opt1 > 0 || md->sc_data[SC_DIVINA].timer != -1
-            || md->sc_data[SC_ROKISWEIL].timer != -1
-            || md->sc_data[SC_STEELBODY].timer != -1)
-            return;
-        if (md->sc_data[SC_AUTOCOUNTER].timer != -1 && md->skillid != KN_AUTOCOUNTER)   //オートカウンター
-            return;
-        if (md->sc_data[SC_BLADESTOP].timer != -1)  //白刃取り
-            return;
-        if (md->sc_data[SC_BERSERK].timer != -1)    //バーサーク
+        if (md->opt1 > 0)
             return;
     }
 
@@ -3575,15 +3518,7 @@ int mobskill_use_id (struct mob_data *md, struct block_list *target,
     // 沈黙や異常
     if (md->sc_data)
     {
-        if (md->opt1 > 0 || md->sc_data[SC_DIVINA].timer != -1
-            || md->sc_data[SC_ROKISWEIL].timer != -1
-            || md->sc_data[SC_STEELBODY].timer != -1)
-            return 0;
-        if (md->sc_data[SC_AUTOCOUNTER].timer != -1 && md->skillid != KN_AUTOCOUNTER)   //オートカウンター
-            return 0;
-        if (md->sc_data[SC_BLADESTOP].timer != -1)  //白刃取り
-            return 0;
-        if (md->sc_data[SC_BERSERK].timer != -1)    //バーサーク
+        if (md->opt1 > 0)
             return 0;
     }
 
@@ -3639,10 +3574,6 @@ int mobskill_use_id (struct mob_data *md, struct block_list *target,
     md->skilllv = skill_lv;
     md->skillidx = skill_idx;
 
-    if (!(battle_config.monster_cloak_check_type & 2)
-        && md->sc_data[SC_CLOAKING].timer != -1 && md->skillid != AS_CLOAKING)
-        skill_status_change_end (&md->bl, SC_CLOAKING, -1);
-
     if (casttime > 0)
     {
         md->skilltimer =
@@ -3682,15 +3613,7 @@ static int mobskill_use_pos (struct mob_data *md,
     //沈黙や状態異常など
     if (md->sc_data)
     {
-        if (md->opt1 > 0 || md->sc_data[SC_DIVINA].timer != -1
-            || md->sc_data[SC_ROKISWEIL].timer != -1
-            || md->sc_data[SC_STEELBODY].timer != -1)
-            return 0;
-        if (md->sc_data[SC_AUTOCOUNTER].timer != -1 && md->skillid != KN_AUTOCOUNTER)   //オートカウンター
-            return 0;
-        if (md->sc_data[SC_BLADESTOP].timer != -1)  //白刃取り
-            return 0;
-        if (md->sc_data[SC_BERSERK].timer != -1)    //バーサーク
+        if (md->opt1 > 0)
             return 0;
     }
 
@@ -3727,9 +3650,6 @@ static int mobskill_use_pos (struct mob_data *md,
     md->skillid = skill_id;
     md->skilllv = skill_lv;
     md->skillidx = skill_idx;
-    if (!(battle_config.monster_cloak_check_type & 2)
-        && md->sc_data[SC_CLOAKING].timer != -1)
-        skill_status_change_end (&md->bl, SC_CLOAKING, -1);
     if (casttime > 0)
     {
         md->skilltimer =
@@ -3804,11 +3724,7 @@ static int mob_getfriendstatus_sub (struct block_list *bl, va_list ap)
     fr = va_arg (ap, struct mob_data **);
     if (cond2 == -1)
     {
-        int  j;
-        for (j = SC_STONE; j <= SC_BLIND && !flag; j++)
-        {
-            flag = (md->sc_data[j].timer != -1);
-        }
+        flag = (md->sc_data[SC_POISON].timer != -1);
     }
     else
         flag = (md->sc_data[cond2].timer != -1);
@@ -3853,9 +3769,6 @@ int mobskill_use (struct mob_data *md, unsigned int tick, int event)
     if (md->state.special_mob_ai)
         return 0;
 
-    if (md->sc_data[SC_SELFDESTRUCTION].timer != -1)    //自爆中はスキルを使わない
-        return 0;
-
     for (int i = 0; i < mob_db[md->mob_class].maxskill; i++)
     {
         int  c2 = ms[i].cond2, flag = 0;
@@ -3885,11 +3798,7 @@ int mobskill_use (struct mob_data *md, unsigned int tick, int event)
                 case MSC_MYSTATUSOFF:  // status[num] off
                     if (ms[i].cond2 == -1)
                     {
-                        int  j;
-                        for (j = SC_STONE; j <= SC_BLIND && !flag; j++)
-                        {
-                            flag = (md->sc_data[j].timer != -1);
-                        }
+                        flag = (md->sc_data[SC_POISON].timer != -1);
                     }
                     else
                         flag = (md->sc_data[ms[i].cond2].timer != -1);
@@ -4465,17 +4374,7 @@ static int mob_readskilldb (void)
     cond2[] =
     {
         {"anybad", -1},
-        {"stone", SC_STONE},
-        {"freeze", SC_FREEZE},
-        {"stan", SC_STAN},
-        {"sleep", SC_SLEEP},
         {"poison", SC_POISON},
-        {"curse", SC_CURSE},
-        {"silence", SC_SILENCE},
-        {"confusion", SC_CONFUSION},
-        {"blind", SC_BLIND},
-        {"hiding", SC_HIDING},
-        {"sight", SC_SIGHT},
     },
     state[] =
     {

@@ -814,10 +814,6 @@ void map_quit (struct map_session_data *sd)
     pc_cleareventtimer (sd);
 
     skill_castcancel (&sd->bl, 0);
-    skill_stop_dancing (&sd->bl, 1);
-
-    if (sd->sc_data && sd->sc_data[SC_BERSERK].timer != -1)
-        sd->status.hp = 100;
 
     skill_status_change_clear (&sd->bl, 1);
     skill_clear_unitgroup (&sd->bl);

@@ -121,26 +121,17 @@ int  skill_unit_move (struct block_list *bl, unsigned int tick, int range);
 int  skill_unit_move_unit_group (struct skill_unit_group *group, int m,
                                  int dx, int dy);
 
-struct skill_unit_group *skill_check_dancing (struct block_list *src);
-void skill_stop_dancing (struct block_list *src, int flag);
-
 // 詠唱キャンセル
 int  skill_castcancel (struct block_list *bl, int type);
 
 int  skill_gangsterparadise (struct map_session_data *sd, int type);
 void skill_brandishspear_first (struct square *tc, int dir, int x, int y);
 void skill_brandishspear_dir (struct square *tc, int dir, int are);
-void skill_devotion (struct map_session_data *md, int target);
-void skill_devotion2 (struct block_list *bl, int crusader);
-int  skill_devotion3 (struct block_list *bl, int target);
-void skill_devotion_end (struct map_session_data *md,
-                         struct map_session_data *sd, int target);
 
 #define skill_calc_heal(bl,skill_lv) (( battle_get_lv(bl)+battle_get_int(bl) )/8 *(4+ skill_lv*8))
 
 // その他
 int  skill_check_cloaking (struct block_list *bl);
-int  skill_is_danceskill (int id);
 
 // ステータス異常
 int  skill_status_effect (struct block_list *bl, int type, int val1, int val2,
@@ -151,7 +142,6 @@ int  skill_status_change_start (struct block_list *bl, int type, int val1,
                                 int flag);
 void skill_status_change_timer (timer_id, tick_t, custom_id_t, custom_data_t);
 int  skill_status_change_active (struct block_list *bl, int type);  // [fate]
-int  skill_encchant_eremental_end (struct block_list *bl, int type);
 int  skill_status_change_end (struct block_list *bl, int type, int tid);
 int  skill_status_change_clear (struct block_list *bl, int type);
 
@@ -182,158 +172,16 @@ enum
 };
 
 const int SC_SENDMAX = 256;
-const int SC_PROVOKE __attribute__((deprecated)) = 0;
-const int SC_ENDURE __attribute__((deprecated)) = 1;
-const int SC_TWOHANDQUICKEN __attribute__((deprecated)) = 2;
-const int SC_CONCENTRATE __attribute__((deprecated)) = 3;
-const int SC_HIDING __attribute__((deprecated)) = 4;
-const int SC_CLOAKING __attribute__((deprecated)) = 5;
-const int SC_ENCPOISON __attribute__((deprecated)) = 6;
-const int SC_POISONREACT __attribute__((deprecated)) = 7;
-const int SC_QUAGMIRE __attribute__((deprecated)) = 8;
-const int SC_ANGELUS __attribute__((deprecated)) = 9;
-const int SC_BLESSING __attribute__((deprecated)) = 10;
-const int SC_SIGNUMCRUCIS __attribute__((deprecated)) = 11;
-const int SC_INCREASEAGI __attribute__((deprecated)) = 12;
-const int SC_DECREASEAGI __attribute__((deprecated)) = 13;
 const int SC_SLOWPOISON = 14;
-const int SC_IMPOSITIO __attribute__((deprecated)) = 15;
-const int SC_SUFFRAGIUM __attribute__((deprecated)) = 16;
-const int SC_ASPERSIO __attribute__((deprecated)) = 17;
-const int SC_BENEDICTIO __attribute__((deprecated)) = 18;
-const int SC_KYRIE __attribute__((deprecated)) = 19;
-const int SC_MAGNIFICAT __attribute__((deprecated)) = 20;
-const int SC_GLORIA __attribute__((deprecated)) = 21;
-const int SC_AETERNA __attribute__((deprecated)) = 22;
-const int SC_ADRENALINE __attribute__((deprecated)) = 23;
-const int SC_WEAPONPERFECTION __attribute__((deprecated)) = 24;
-const int SC_OVERTHRUST __attribute__((deprecated)) = 25;
-const int SC_MAXIMIZEPOWER __attribute__((deprecated)) = 26;
-const int SC_TRICKDEAD __attribute__((deprecated)) = 29;
-const int SC_LOUD __attribute__((deprecated)) = 30;
-const int SC_ENERGYCOAT __attribute__((deprecated)) = 31;
-const int SC_BROKNARMOR __attribute__((deprecated)) = 32;
-const int SC_BROKNWEAPON __attribute__((deprecated)) = 33;
-const int SC_HALLUCINATION __attribute__((deprecated)) = 34;
-const int SC_WEIGHT50 __attribute__((deprecated)) = 35;
-const int SC_WEIGHT90 __attribute__((deprecated)) = 36;
+const int SC_BROKNARMOR = 32;
+const int SC_BROKNWEAPON = 33;
 const int SC_SPEEDPOTION0 = 37;
-const int SC_SPEEDPOTION1 __attribute__((deprecated)) = 38;
-const int SC_SPEEDPOTION2 __attribute__((deprecated)) = 39;
-
-const int SC_STRIPWEAPON __attribute__((deprecated)) = 50;
-const int SC_STRIPSHIELD __attribute__((deprecated)) = 51;
-const int SC_STRIPARMOR __attribute__((deprecated)) = 52;
-const int SC_STRIPHELM __attribute__((deprecated)) = 53;
-const int SC_CP_WEAPON __attribute__((deprecated)) = 54;
-const int SC_CP_SHIELD __attribute__((deprecated)) = 55;
-const int SC_CP_ARMOR __attribute__((deprecated)) = 56;
-const int SC_CP_HELM __attribute__((deprecated)) = 57;
-const int SC_AUTOGUARD __attribute__((deprecated)) = 58;
-const int SC_REFLECTSHIELD __attribute__((deprecated)) = 59;
-const int SC_DEVOTION __attribute__((deprecated)) = 60;
-const int SC_PROVIDENCE __attribute__((deprecated)) = 61;
-const int SC_DEFENDER __attribute__((deprecated)) = 62;
-const int SC_AUTOSPELL __attribute__((deprecated)) = 65;
-const int SC_EXPLOSIONSPIRITS __attribute__((deprecated)) = 86;
-const int SC_STEELBODY __attribute__((deprecated)) = 87;
-const int SC_SPEARSQUICKEN __attribute__((deprecated)) = 68;
 
 const int SC_HEALING = 70;
 
-const int SC_SIGHTTRASHER __attribute__((deprecated)) = 73;
-
-const int SC_COMBO __attribute__((deprecated)) = 89;
-const int SC_FLAMELAUNCHER __attribute__((deprecated)) = 90;
-const int SC_FROSTWEAPON __attribute__((deprecated)) = 91;
-const int SC_LIGHTNINGLOADER __attribute__((deprecated)) = 92;
-const int SC_SEISMICWEAPON __attribute__((deprecated)) = 93;
-
-const int SC_AURABLADE __attribute__((deprecated)) = 103;
-const int SC_PARRYING __attribute__((deprecated)) = 104;
-const int SC_CONCENTRATION __attribute__((deprecated)) = 105;
-const int SC_TENSIONRELAX __attribute__((deprecated)) = 106;
-const int SC_BERSERK __attribute__((deprecated)) = 107;
-
-const int SC_ASSUMPTIO __attribute__((deprecated)) = 110;
-
-const int SC_MAGICPOWER __attribute__((deprecated)) = 113;
-
-const int SC_TRUESIGHT __attribute__((deprecated)) = 115;
-const int SC_WINDWALK __attribute__((deprecated)) = 116;
-const int SC_MELTDOWN __attribute__((deprecated)) = 117;
-
-const int SC_REJECTSWORD __attribute__((deprecated)) = 120;
-const int SC_MARIONETTE __attribute__((deprecated)) = 121;
-
-const int SC_HEADCRUSH __attribute__((deprecated)) = 124;
-const int SC_JOINTBEAT __attribute__((deprecated)) = 125;
-const int SC_BASILICA __attribute__((deprecated)) = 125;
-
-const int SC_STONE __attribute__((deprecated)) = 128;
-const int SC_FREEZE __attribute__((deprecated)) = 129;
-const int SC_STAN __attribute__((deprecated)) = 130;
-const int SC_SLEEP __attribute__((deprecated)) = 131;
 const int SC_POISON = 132;
-const int SC_CURSE __attribute__((deprecated)) = 133;
-const int SC_SILENCE __attribute__((deprecated)) = 134;
-const int SC_CONFUSION __attribute__((deprecated)) = 135;
-const int SC_BLIND __attribute__((deprecated)) = 136;
 
-const int SC_SAFETYWALL __attribute__((deprecated)) = 140;
-const int SC_PNEUMA __attribute__((deprecated)) = 141;
-const int SC_WATERBALL __attribute__((deprecated)) = 142;
-const int SC_ANKLE __attribute__((deprecated)) = 143;
-const int SC_DANCING __attribute__((deprecated)) = 144;
-const int SC_KEEPING __attribute__((deprecated)) = 145;
-const int SC_BARRIER __attribute__((deprecated)) = 146;
-
-const int SC_MAGICROD __attribute__((deprecated)) = 149;
-const int SC_SIGHT __attribute__((deprecated)) = 150;
-const int SC_RUWACH __attribute__((deprecated)) = 151;
-const int SC_AUTOCOUNTER __attribute__((deprecated)) = 152;
-const int SC_VOLCANO __attribute__((deprecated)) = 153;
-const int SC_DELUGE __attribute__((deprecated)) = 154;
-const int SC_VIOLENTGALE __attribute__((deprecated)) = 155;
-const int SC_BLADESTOP_WAIT __attribute__((deprecated)) = 156;
-const int SC_BLADESTOP __attribute__((deprecated)) = 157;
-const int SC_EXTREMITYFIST __attribute__((deprecated)) = 158;
-const int SC_GRAFFITI __attribute__((deprecated)) = 159;
-const int SC_ENSEMBLE __attribute__((deprecated)) = 159;
-
-const int SC_LULLABY __attribute__((deprecated)) = 160;
-const int SC_RICHMANKIM __attribute__((deprecated)) = 161;
-const int SC_ETERNALCHAOS __attribute__((deprecated)) = 162;
-const int SC_DRUMBATTLE __attribute__((deprecated)) = 163;
-const int SC_NIBELUNGEN __attribute__((deprecated)) = 164;
-const int SC_ROKISWEIL __attribute__((deprecated)) = 165;
-const int SC_INTOABYSS __attribute__((deprecated)) = 166;
-const int SC_SIEGFRIED __attribute__((deprecated)) = 167;
-const int SC_DISSONANCE __attribute__((deprecated)) = 168;
-const int SC_WHISTLE __attribute__((deprecated)) = 169;
-const int SC_ASSNCROS __attribute__((deprecated)) = 170;
-const int SC_POEMBRAGI __attribute__((deprecated)) = 171;
-const int SC_APPLEIDUN __attribute__((deprecated)) = 172;
-const int SC_UGLYDANCE __attribute__((deprecated)) = 173;
-const int SC_HUMMING __attribute__((deprecated)) = 174;
-const int SC_DONTFORGETME __attribute__((deprecated)) = 175;
-const int SC_FORTUNE __attribute__((deprecated)) = 176;
-const int SC_SERVICE4U __attribute__((deprecated)) = 177;
-const int SC_FOGWALL __attribute__((deprecated)) = 178;
-const int SC_GOSPEL __attribute__((deprecated)) = 179;
-const int SC_SPIDERWEB __attribute__((deprecated)) = 180;
-const int SC_MEMORIZE __attribute__((deprecated)) = 181;
-const int SC_LANDPROTECTOR __attribute__((deprecated)) = 182;
-const int SC_ADAPTATION __attribute__((deprecated)) = 183;
-const int SC_CHASEWALK __attribute__((deprecated)) = 184;
 const int SC_ATKPOT = 185;
-const int SC_MATKPOT __attribute__((deprecated)) = 186;
-const int SC_WEDDING __attribute__((deprecated)) = 187;
-const int SC_NOCHAT __attribute__((deprecated)) = 188;
-const int SC_SPLASHER __attribute__((deprecated)) = 189;
-const int SC_SELFDESTRUCTION __attribute__((deprecated)) = 190;
-const int SC_MINDBREAKER __attribute__((deprecated)) = 191;
-const int SC_SPELLBREAKER __attribute__((deprecated)) = 192;
 
 // Added for Fate's spells
 const int SC_HIDE = 194;              // Hide from `detect' magic
@@ -342,10 +190,6 @@ const int SC_FLYING_BACKPACK = 196;   // Flying backpack
 const int SC_MBARRIER = 197;          // Magical barrier; magic resistance (val1 : power (%))
 const int SC_HASTE = 198;             // `Haste' spell (val1 : power)
 const int SC_PHYS_SHIELD = 199;       // `Protect' spell; reduce damage (val1: power)
-
-const int SC_DIVINA __attribute__((deprecated)) = 134; //SC_SILENCE;
-
-extern int SkillStatusChangeTable[];
 
 const int NV_EMOTE = 1;
 const int NV_TRADE = 2;
@@ -396,7 +240,7 @@ const int MC_IDENTIFY __attribute__((deprecated)) = 42;
 const int MC_VENDING __attribute__((deprecated)) = 43;
 const int MC_MAMMONITE __attribute__((deprecated)) = 44;
 
-const int AC_OWL __attribute__((deprecated)) = 45;
+const int AC_OWL = 45;
 const int AC_VULTURE __attribute__((deprecated)) = 46;
 const int AC_CONCENTRATION __attribute__((deprecated)) = 47;
 const int AC_DOUBLE __attribute__((deprecated)) = 48;
@@ -417,7 +261,6 @@ const int KN_BRANDISHSPEAR __attribute__((deprecated)) = 59;
 const int KN_SPEARSTAB __attribute__((deprecated)) = 60;
 const int KN_SPEARBOOMERANG __attribute__((deprecated)) = 61;
 const int KN_TWOHANDQUICKEN __attribute__((deprecated)) = 62;
-const int KN_AUTOCOUNTER __attribute__((deprecated)) = 63;
 const int KN_BOWLINGBASH __attribute__((deprecated)) = 64;
 const int KN_RIDING __attribute__((deprecated)) = 65;
 const int KN_CAVALIERMASTERY __attribute__((deprecated)) = 66;

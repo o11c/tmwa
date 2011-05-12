@@ -212,7 +212,6 @@ struct map_session_data
         unsigned no_magic_damage:1;
         unsigned no_weapon_damage:1;
         unsigned no_gemstone:1;
-        unsigned infinite_endure:1;
         unsigned unbreakable_weapon:1;
         unsigned unbreakable_armor:1;
         unsigned infinite_autospell:1;
@@ -368,7 +367,6 @@ struct map_session_data
 
     struct status_change sc_data[MAX_STATUSCHANGE];
     short sc_count;
-    struct square dev;
 
     int  trade_partner;
     int  deal_item_index[10];
@@ -677,7 +675,7 @@ enum
     SP_DISGUISE,                // 1077
 
     SP_RESTART_FULL_RECORVER = 2000, SP_NO_CASTCANCEL, SP_NO_SIZEFIX, SP_NO_MAGIC_DAMAGE, SP_NO_WEAPON_DAMAGE, SP_NO_GEMSTONE,  // 2000-2005
-    SP_NO_CASTCANCEL2, SP_INFINITE_ENDURE, SP_UNBREAKABLE_WEAPON, SP_UNBREAKABLE_ARMOR  // 2006-2009
+    SP_NO_CASTCANCEL2, SP_INFINITE_ENDURE_, SP_UNBREAKABLE_WEAPON, SP_UNBREAKABLE_ARMOR  // 2006-2009
 };
 
 enum

@@ -687,7 +687,6 @@ int npc_touch_areanpc (struct map_session_data *sd, int m, int x, int y)
     switch (maps[m].npc[i]->bl.subtype)
     {
         case WARP:
-            skill_stop_dancing (&sd->bl, 0);
             pc_setpos (sd, maps[m].npc[i]->u.warp.name,
                        maps[m].npc[i]->u.warp.x, maps[m].npc[i]->u.warp.y, 0);
             break;

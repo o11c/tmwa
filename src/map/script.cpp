@@ -4257,7 +4257,7 @@ int buildin_sc_check (struct script_state *st)
 int buildin_getscrate (struct script_state *st)
 {
     struct block_list *bl;
-    int  sc_def = 100, sc_def_mdef2, sc_def_vit2, sc_def_int2, sc_def_luk2;
+    int  sc_def = 100, sc_def_vit2;
     int  type, rate, luk;
 
     type = conv_num (st, &(st->stack->stack_data[st->start + 2]));
@@ -4269,19 +4269,10 @@ int buildin_getscrate (struct script_state *st)
         bl = map_id2bl (st->rid);
 
     luk = battle_get_luk (bl);
-    sc_def_mdef2 = 100 - (3 + battle_get_mdef (bl) + luk / 3);
     sc_def_vit2 = 100 - (3 + battle_get_vit (bl) + luk / 3);
-    sc_def_int2 = 100 - (3 + battle_get_int (bl) + luk / 3);
-    sc_def_luk2 = 100 - (3 + luk);
 
-    if (type == SC_STONE || type == SC_FREEZE)
-        sc_def = sc_def_mdef2;
-    else if (type == SC_STAN || type == SC_POISON || type == SC_SILENCE)
+    if (type == SC_POISON)
         sc_def = sc_def_vit2;
-    else if (type == SC_SLEEP || type == SC_CONFUSION || type == SC_BLIND)
-        sc_def = sc_def_int2;
-    else if (type == SC_CURSE)
-        sc_def = sc_def_luk2;
 
     rate = rate * sc_def / 100;
     push_val (st->stack, C_INT, rate);

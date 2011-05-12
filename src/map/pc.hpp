@@ -40,7 +40,6 @@ int  pc_breakweapon (struct map_session_data *sd);  // weapon breaking [Valaris]
 int  pc_breakarmor (struct map_session_data *sd);   // armor breaking [Valaris]
 
 int  pc_checkskill (struct map_session_data *sd, int skill_id);
-int  pc_checkallowskill (struct map_session_data *sd);
 int  pc_checkequip (struct map_session_data *sd, int pos);
 
 int  pc_checkoverhp (struct map_session_data *);
@@ -68,8 +67,6 @@ int  pc_remove_items (struct map_session_data *player, int item_id,
 
 int  pc_takeitem (struct map_session_data *, struct flooritem_data *);
 int  pc_dropitem (struct map_session_data *, int, int);
-
-int  pc_checkweighticon (struct map_session_data *sd);
 
 int  pc_calcstatus (struct map_session_data *, int);
 int  pc_bonus (struct map_session_data *, int, int);

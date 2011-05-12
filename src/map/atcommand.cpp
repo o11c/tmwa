@@ -173,7 +173,6 @@ ATCOMMAND_FUNC (leaves);
 ATCOMMAND_FUNC (adjgmlvl);      // by MouseJstr
 ATCOMMAND_FUNC (adjcmdlvl);     // by MouseJstr
 ATCOMMAND_FUNC (trade);         // by MouseJstr
-ATCOMMAND_FUNC (unmute);        // [Valaris]
 ATCOMMAND_FUNC (char_wipe);     // [Fate]
 ATCOMMAND_FUNC (set_magic);     // [Fate]
 ATCOMMAND_FUNC (magic_info);    // [Fate]
@@ -504,8 +503,6 @@ static AtCommandInfo atcommand_info[] = {
     "",                 "temporarily adjust the level of a @command"},
     {"@trade", 60,      atcommand_trade,        ATCC_CHAR,
     "charname",         "open a trade window with anyone"},
-    {"@unmute", 60,     atcommand_unmute,       ATCC_CHAR,
-    "",                 "??"},
     {"@charwipe", 60,   atcommand_char_wipe,    ATCC_CHAR,
     "",                 "??"},
     {"@setmagic", 99,   atcommand_set_magic,    ATCC_MISC,
@@ -7378,31 +7375,6 @@ atcommand_trade (const int UNUSED, struct map_session_data *sd,
         return 0;
     }
     return -1;
-}
-
-/*===========================
- * @unmute [Valaris]
- *===========================
-*/
-int atcommand_unmute (const int UNUSED, struct map_session_data *sd,
-                      const char *UNUSED, const char *message)
-{
-    struct map_session_data *pl_sd = NULL;
-    if (!message || !*message)
-        return -1;
-
-    if ((pl_sd = map_nick2sd ((char *) message)) != NULL)
-    {
-        if (pl_sd->sc_data[SC_NOCHAT].timer != -1)
-        {
-            skill_status_change_end (&pl_sd->bl, SC_NOCHAT, -1);
-            clif_displaymessage (sd->fd, "Player unmuted");
-        }
-        else
-            clif_displaymessage (sd->fd, "Player is not muted");
-    }
-
-    return 0;
 }
 
 /* Magic atcommands by Fate */

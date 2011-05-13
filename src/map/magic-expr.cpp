@@ -9,6 +9,8 @@
 
 #define IS_SOLID(c) ((c) == 1 || (c) == 5)
 
+static int magic_location_in_area (int m, int x, int y, area_t * area);
+
 int map_is_solid (int m, int x, int y)
 {
     return (IS_SOLID (map_getcell (m, x, y)));

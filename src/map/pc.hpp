@@ -22,7 +22,6 @@ void pc_touch_all_relevant_npcs (struct map_session_data *sd);  /* Checks all np
 
 int  pc_isGM (struct map_session_data *sd);
 int  pc_iskiller (struct map_session_data *src, struct map_session_data *target);   // [MouseJstr]
-int  pc_getrefinebonus (int lv, int type);
 
 void pc_invisibility (struct map_session_data *sd, int enabled);    // [Fate]
 int  pc_counttargeted (struct map_session_data *sd, struct block_list *src,
@@ -33,7 +32,6 @@ int  pc_setnewpc (struct map_session_data *, int, int, int, int, int, int);
 int  pc_authok (int, int, time_t, short tmw_version, struct mmo_charstatus *);
 int  pc_authfail (int);
 
-int  pc_isequip (struct map_session_data *sd, int n);
 int  pc_equippoint (struct map_session_data *sd, int n);
 
 int  pc_breakweapon (struct map_session_data *sd);  // weapon breaking [Valaris]
@@ -42,13 +40,8 @@ int  pc_breakarmor (struct map_session_data *sd);   // armor breaking [Valaris]
 int  pc_checkskill (struct map_session_data *sd, int skill_id);
 int  pc_checkequip (struct map_session_data *sd, int pos);
 
-int  pc_checkoverhp (struct map_session_data *);
-int  pc_checkoversp (struct map_session_data *);
-
-int  pc_can_reach (struct map_session_data *, int, int);
 int  pc_walktoxy (struct map_session_data *, int, int);
 int  pc_stop_walking (struct map_session_data *, int);
-int  pc_movepos (struct map_session_data *, int, int);
 int  pc_setpos (struct map_session_data *, const char *, int, int, int);
 int  pc_setsavepoint (struct map_session_data *, const char *, int, int);
 int  pc_randomwarp (struct map_session_data *sd, int type);
@@ -74,10 +67,6 @@ int  pc_bonus2 (struct map_session_data *sd, int, int, int);
 int  pc_bonus3 (struct map_session_data *sd, int, int, int, int);
 int  pc_skill (struct map_session_data *, int, int, int);
 
-int  pc_item_identify (struct map_session_data *sd, int idx);
-int  pc_steal_item (struct map_session_data *sd, struct block_list *bl);
-int  pc_steal_coin (struct map_session_data *sd, struct block_list *bl);
-
 int  pc_modifybuyvalue (struct map_session_data *, int);
 int  pc_modifysellvalue (struct map_session_data *, int);
 
@@ -86,8 +75,6 @@ int  pc_stopattack (struct map_session_data *);
 
 int  pc_follow (struct map_session_data *, int);    // [MouseJstr]
 
-int  pc_checkbaselevelup (struct map_session_data *sd);
-int  pc_checkjoblevelup (struct map_session_data *sd);
 int  pc_gainexp (struct map_session_data *, int, int);
 
 #define PC_GAINEXP_REASON_KILLING	0
@@ -97,9 +84,7 @@ int  pc_gainexp_reason (struct map_session_data *, int, int, int reason);
 int  pc_extract_healer_exp (struct map_session_data *, int max);    // [Fate] Used by healers: extract healer-xp from the target, return result (up to max)
 
 int  pc_nextbaseexp (struct map_session_data *);
-int  pc_nextbaseafter (struct map_session_data *);  // [Valaris]
 int  pc_nextjobexp (struct map_session_data *);
-int  pc_nextjobafter (struct map_session_data *);   // [Valaris]
 int  pc_need_status_point (struct map_session_data *, int);
 int  pc_statusup (struct map_session_data *, int);
 int  pc_statusup2 (struct map_session_data *, int, int);
@@ -119,7 +104,6 @@ int  pc_itemheal (struct map_session_data *sd, int hp, int sp);
 int  pc_percentheal (struct map_session_data *sd, int, int);
 int  pc_setoption (struct map_session_data *, int);
 int  pc_changelook (struct map_session_data *, int, int);
-int  pc_equiplookall (struct map_session_data *sd);
 
 int  pc_readparam (struct map_session_data *, int);
 int  pc_setparam (struct map_session_data *, int, int);
@@ -142,17 +126,14 @@ int  pc_cleareventtimer (struct map_session_data *sd);
 int  pc_addeventtimercount (struct map_session_data *sd, const char *name,
                             int tick);
 
-int  pc_calc_pvprank (struct map_session_data *sd);
 void pc_calc_pvprank_timer (timer_id, tick_t, custom_id_t, custom_data_t);
 
-int  pc_ismarried (struct map_session_data *sd);
 int  pc_marriage (struct map_session_data *sd,
                   struct map_session_data *dstsd);
 int  pc_divorce (struct map_session_data *sd);
 struct map_session_data *pc_get_partner (struct map_session_data *sd);
 int  pc_set_gm_level (int account_id, int level);
 void pc_setstand (struct map_session_data *sd);
-void pc_cleanup (struct map_session_data *sd);  // [Fate] Clean up after a logged-out PC
 
 int  pc_read_gm_account (int fd);
 int  pc_setinvincibletimer (struct map_session_data *sd, int);
@@ -167,7 +148,5 @@ enum
 // timer for night.day
 extern timer_id day_timer_tid;
 extern timer_id night_timer_tid;
-void map_day_timer (timer_id, tick_t, custom_id_t, custom_data_t);   // by [yor]
-void map_night_timer (timer_id, tick_t, custom_id_t, custom_data_t); // by [yor]
 
 #endif // PC_H

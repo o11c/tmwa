@@ -16,10 +16,6 @@
 
 #define MAX_RANDITEM	2000
 
-// ** ITEMDB_OVERRIDE_NAME_VERBOSE **
-//   定義すると、itemdb.txtとgrfで名前が異なる場合、表示します.
-//#define ITEMDB_OVERRIDE_NAME_VERBOSE  1
-
 static struct dbt *item_db;
 
 static struct random_item_data blue_box[MAX_RANDITEM],
@@ -204,23 +200,6 @@ int itemdb_isequip3 (int nameid)
     if (type == 4 || type == 5 || type == 8)
         return 1;
     return 0;
-}
-
-/*==========================================
- * 捨てられるアイテムは1、そうでないアイテムは0
- *------------------------------------------
- */
-int itemdb_isdropable (int nameid)
-{
-    //結婚指輪は捨てられない
-    switch (nameid)
-    {
-        case 2634:             //結婚指輪
-        case 2635:             //結婚指輪
-            return 0;
-    }
-
-    return 1;
 }
 
 //

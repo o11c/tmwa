@@ -22,6 +22,11 @@
 #include "skill.hpp"
 #include "../common/socket.hpp"
 
+static void npc_event_timer (timer_id, tick_t, custom_id_t, custom_data_t);
+static int npc_checknear (struct map_session_data *, int);
+static int npc_parse_mob (char *w1, char *w2, char *w3, char *w4);
+
+
 struct npc_src_list
 {
     struct npc_src_list *next;
@@ -176,23 +181,6 @@ void npc_event_timer (timer_id UNUSED, tick_t UNUSED, custom_id_t id, custom_dat
 
     npc_event (sd, (const char *) data, 0);
     free ((void *) data);
-}
-
-int npc_timer_event (const char *eventname) // Added by RoVeRT
-{
-    struct event_data *ev = (struct event_data *)strdb_search (ev_db, eventname).p;
-    struct npc_data *nd;
-//  int xs,ys;
-
-    if ((ev == NULL || (nd = ev->nd) == NULL))
-    {
-        printf ("npc_event: event not found [%s]\n", eventname);
-        return 0;
-    }
-
-    run_script (nd->u.scr.script, ev->pos, nd->bl.id, nd->bl.id);
-
-    return 0;
 }
 
 /*==========================================
@@ -1049,33 +1037,6 @@ void npc_addsrcfile (char *name)
 }
 
 /*==========================================
- * 読み込むnpcファイルの削除
- *------------------------------------------
- */
-void npc_delsrcfile (char *name)
-{
-    struct npc_src_list *p = npc_src_first, *pp = NULL, **lp = &npc_src_first;
-
-    if (strcasecmp (name, "all") == 0)
-    {
-        npc_clearsrcfile ();
-        return;
-    }
-
-    for (; p; lp = &p->next, pp = p, p = p->next)
-    {
-        if (strcmp (p->name, name) == 0)
-        {
-            *lp = p->next;
-            if (npc_src_last == p)
-                npc_src_last = pp;
-            free (p);
-            break;
-        }
-    }
-}
-
-/*==========================================
  * warp行解析
  *------------------------------------------
  */
@@ -1925,13 +1886,6 @@ static int npc_parse_mapflag (char *w1, char *UNUSED, char *w3, char *w4)
     return 0;
 }
 
-static void ev_db_final (db_key_t key, db_val_t data, va_list UNUSED)
-{
-    free (data.p);
-    if (strstr (key.s, "::") != NULL)
-        free ((char*)key.s);
-}
-
 struct npc_data *npc_spawn_text (int m, int x, int y,
                                  int npc_class, const char *name, const char *message)
 {
@@ -2005,44 +1959,6 @@ void npc_free (struct npc_data *nd)
     map_deliddb (&nd->bl);
     map_delblock (&nd->bl);
     npc_free_internal (nd);
-}
-
-/*==========================================
- * 終了
- *------------------------------------------
- */
-int do_final_npc (void)
-{
-    int  i;
-    struct block_list *bl;
-    struct npc_data *nd;
-    struct mob_data *md;
-
-    if (ev_db)
-        strdb_final (ev_db, ev_db_final);
-    if (npcname_db)
-        strdb_final (npcname_db, NULL);
-
-    for (i = START_NPC_NUM; i < npc_next_id; i++)
-    {
-        if ((bl = map_id2bl (i)))
-        {
-            if (bl->type == BL_NPC && (nd = (struct npc_data *) bl))
-                npc_free_internal (nd);
-            else if (bl->type == BL_MOB && (md = (struct mob_data *) bl))
-            {
-                if (md->lootitem)
-                {
-                    free (md->lootitem);
-                    md->lootitem = NULL;
-                }
-                free (md);
-                md = NULL;
-            }
-        }
-    }
-
-    return 0;
 }
 
 static void ev_release (db_key_t key, db_val_t val)

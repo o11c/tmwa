@@ -8,7 +8,6 @@ struct map_session_data;
 struct block_list;
 
 void do_init_party (void);
-void do_final_party (void);
 struct party *party_search (int party_id);
 struct party *party_searchname (char *str);
 
@@ -38,9 +37,6 @@ int  party_send_logout (struct map_session_data *sd);
 int  party_send_message (struct map_session_data *sd, char *mes, int len);
 int  party_recv_message (int party_id, int account_id, char *mes, int len);
 
-int  party_check_conflict (struct map_session_data *sd);
-
-int  party_send_xy_clear (struct party *p);
 int  party_send_hp_check (struct block_list *bl, va_list ap);
 
 int  party_exp_share (struct party *p, int map, int base_exp, int job_exp);

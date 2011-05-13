@@ -29,6 +29,9 @@
 #include "../common/socket.hpp"
 #include "magic.hpp"
 
+static void map_helpscreen (void) __attribute__((noreturn));
+
+
 static struct dbt *id_db = NULL;
 static struct dbt *map_db = NULL;
 static struct dbt *nick_db = NULL;
@@ -227,39 +230,6 @@ int map_delblock (struct block_list *bl)
 
     return 0;
 }
-
-/// Count the number of targets (pc or mob) on a cell
-// only used by the "grand cross" skill (unused by TMW)
-// it appears to be used to calculate a delay, and never returns 0
-unsigned int map_count_oncell (uint16_t m, uint16_t x, uint16_t y)
-{
-    if (x >= maps[m].xs || y >= maps[m].ys)
-        return 1;
-    size_t b = x / BLOCK_SIZE + y / BLOCK_SIZE * maps[m].bxs;
-
-    int count = 0;
-    // first count players
-    struct block_list *bl = maps[m].block[b];
-    int c = maps[m].block_count[b];
-    for (int i = 0; i < c && bl; i++, bl = bl->next)
-    {
-        if (bl->x == x && bl->y == y && bl->type == BL_PC)
-            count++;
-    }
-    // then count mobs
-    bl = maps[m].block_mob[b];
-    c = maps[m].block_mob_count[b];
-    for (int i = 0; i < c && bl; i++, bl = bl->next)
-    {
-        if (bl->x == x && bl->y == y)
-            count++;
-    }
-
-    if (!count)
-        return 1;
-    return count;
-}
-
 
 /// Runs a function for every block in the area
 // if type is 0, all types, else BL_MOB, BL_PC, BL_SKILL, etc
@@ -1031,19 +1001,6 @@ bool map_mapname2ipport (const char *name, in_addr_t *ip, in_port_t *port)
     *ip = mdos->ip;
     *port = mdos->port;
     return 1;
-}
-
-/// Check whether directions are semicompatible
-bool map_check_dir (Direction s_dir, Direction t_dir)
-{
-    return ((s_dir - t_dir + 1) % 8) <= 2;
-    if (s_dir == t_dir)
-        return 1;
-    if (s_dir == (t_dir + 1) % 8)
-        return 1;
-    if ((s_dir + 1) % 8 == t_dir % 8)
-        return 1;
-    return 0;
 }
 
 Direction map_calc_dir (struct block_list *src, int x, int y)

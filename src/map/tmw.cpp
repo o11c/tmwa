@@ -25,6 +25,9 @@
 #include "skill.hpp"
 #include "storage.hpp"
 #include "trade.hpp"
+static int tmw_ShorterStrlen (const char *s1, const char *s2);
+static int tmw_CheckChatLameness (const char *message);
+static void tmw_AutoBan (struct map_session_data *sd, const char *reason, int length);
 
 int tmw_CheckChatSpam (struct map_session_data *sd, const char *message)
 {

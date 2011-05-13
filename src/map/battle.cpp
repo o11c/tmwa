@@ -17,6 +17,22 @@
 #include "../common/socket.hpp"
 #include "../common/mt_rand.hpp"
 
+static int battle_attr_fix (int damage, int atk_elem, int def_elem);
+static int battle_stopattack (struct block_list *bl);
+static int battle_get_class (struct block_list *bl);
+static int battle_get_hit (struct block_list *bl);
+static int battle_get_flee (struct block_list *bl);
+static int battle_get_flee2 (struct block_list *bl);
+static int battle_get_def2 (struct block_list *bl);
+static int battle_get_mdef2 (struct block_list *bl);
+static int battle_get_baseatk (struct block_list *bl);
+static int battle_get_atk (struct block_list *bl);
+static int battle_get_atk2 (struct block_list *bl);
+static int battle_get_attack_element (struct block_list *bl);
+static int battle_get_attack_element2 (struct block_list *bl);
+static int battle_get_size (struct block_list *bl);
+
+
 int  attr_fix_table[4][10][10];
 
 struct Battle_Config battle_config;
@@ -3049,23 +3065,6 @@ int battle_check_range (struct block_list *src, struct block_list *bl,
 }
 
 /*==========================================
- * Return numerical value of a switch configuration (modified by [Yor])
- * on/off, english, fran軋is, deutsch, espal
- *------------------------------------------
- */
-int battle_config_switch (const char *str)
-{
-    if (strcasecmp (str, "on") == 0 || strcasecmp (str, "yes") == 0
-        || strcasecmp (str, "oui") == 0 || strcasecmp (str, "ja") == 0
-        || strcasecmp (str, "si") == 0)
-        return 1;
-    if (strcasecmp (str, "off") == 0 || strcasecmp (str, "no") == 0
-        || strcasecmp (str, "non") == 0 || strcasecmp (str, "nein") == 0)
-        return 0;
-    return atoi (str);
-}
-
-/*==========================================
  * 設定ファイルを読み込む
  *------------------------------------------
  */
@@ -3478,7 +3477,7 @@ int battle_config_read (const char *cfgName)
             continue;
         for (i = 0; i < sizeof (data) / (sizeof (data[0])); i++)
             if (strcasecmp (w1, data[i].str) == 0)
-                *data[i].val = battle_config_switch (w2);
+                *data[i].val = config_switch (w2);
 
         if (strcasecmp (w1, "import") == 0)
             battle_config_read (w2);

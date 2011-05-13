@@ -30,6 +30,11 @@
 #define MOB_LAZYMOVEPERC 50     // Move probability in the negligent mode MOB (rate of 1000 minute)
 #define MOB_LAZYWARPPERC 20     // Warp probability in the negligent mode MOB (rate of 1000 minute)
 
+static int mob_walktoxy (struct mob_data *md, int x, int y, int easy);
+static int mob_changestate (struct mob_data *md, int state, int type);
+static int mob_deleteslave (struct mob_data *md);
+
+
 struct mob_db mob_db[2001];
 
 /*==========================================
@@ -524,11 +529,6 @@ short mob_get_head_buttom (int mob_class)
 short mob_get_clothes_color (int mob_class) // Add for player monster dye - Valaris
 {
     return mob_db[mob_class].clothes_color; // End
-}
-
-int mob_get_equip (int mob_class)   // mob equip [Valaris]
-{
-    return mob_db[mob_class].equip;
 }
 
 /*==========================================
@@ -2846,84 +2846,6 @@ int mob_damage (struct block_list *src, struct mob_data *md, int damage,
 }
 
 /*==========================================
- *
- *------------------------------------------
- */
-int mob_class_change (struct mob_data *md, int *value)
-{
-    unsigned int tick = gettick ();
-    int  i, c, hp_rate, max_hp, mob_class, count = 0;
-
-    nullpo_retr (0, md);
-    nullpo_retr (0, value);
-
-    if (value[0] <= 1000 || value[0] > 2000)
-        return 0;
-    if (md->bl.prev == NULL)
-        return 0;
-
-    while (count < 5 && value[count] > 1000 && value[count] <= 2000)
-        count++;
-    if (count < 1)
-        return 0;
-
-    mob_class = value[MRAND (count)];
-    if (mob_class <= 1000 || mob_class > 2000)
-        return 0;
-
-    max_hp = battle_get_max_hp (&md->bl);
-    hp_rate = md->hp * 100 / max_hp;
-    md->mob_class = mob_class;
-    max_hp = battle_get_max_hp (&md->bl);
-    if (battle_config.monster_class_change_full_recover == 1)
-    {
-        md->hp = max_hp;
-        memset (md->dmglog, 0, sizeof (md->dmglog));
-    }
-    else
-        md->hp = max_hp * hp_rate / 100;
-    if (md->hp > max_hp)
-        md->hp = max_hp;
-    else if (md->hp < 1)
-        md->hp = 1;
-
-    memcpy (md->name, mob_db[mob_class].jname, 24);
-    memset (&md->state, 0, sizeof (md->state));
-    md->attacked_id = 0;
-    md->target_id = 0;
-    md->move_fail_count = 0;
-
-    md->stats[MOB_SPEED] = mob_db[md->mob_class].speed;
-    md->def_ele = mob_db[md->mob_class].element;
-
-    mob_changestate (md, MS_IDLE, 0);
-    skill_castcancel (&md->bl, 0);
-    md->state.skillstate = MSS_IDLE;
-    md->last_thinktime = tick;
-    md->next_walktime = tick + MPRAND (5000, 50);
-    md->attackabletime = tick;
-    md->canmove_tick = tick;
-    md->sg_count = 0;
-
-    for (i = 0, c = tick - 1000 * 3600 * 10; i < MAX_MOBSKILL; i++)
-        md->skilldelay[i] = c;
-    md->skillid = 0;
-    md->skilllv = 0;
-
-    if (md->lootitem == NULL && mob_db[mob_class].mode & 0x02)
-        md->lootitem = (struct item *)
-            calloc (LOOTITEM_SIZE, sizeof (struct item));
-
-    skill_clear_unitgroup (&md->bl);
-    skill_cleartimerskill (&md->bl);
-
-    clif_clearchar_area (&md->bl, 0);
-    clif_spawnmob (md);
-
-    return 0;
-}
-
-/*==========================================
  * mob回復
  *------------------------------------------
  */
@@ -3088,85 +3010,6 @@ static int mob_countslave (struct mob_data *md)
                        0, 0, maps[md->bl.m].xs - 1, maps[md->bl.m].ys - 1,
                        BL_MOB, md->bl.id, &c);
     return c;
-}
-
-/*==========================================
- * 手下MOB召喚
- *------------------------------------------
- */
-int mob_summonslave (struct mob_data *md2, int *value, int amount, int flag)
-{
-    struct mob_data *md;
-    int  bx, by, m, count = 0, mob_class, k, a = amount;
-
-    nullpo_retr (0, md2);
-    nullpo_retr (0, value);
-
-    bx = md2->bl.x;
-    by = md2->bl.y;
-    m = md2->bl.m;
-
-    if (value[0] <= 1000 || value[0] > 2000)    // 値が異常なら召喚を止める
-        return 0;
-    while (count < 5 && value[count] > 1000 && value[count] <= 2000)
-        count++;
-    if (count < 1)
-        return 0;
-
-    for (k = 0; k < count; k++)
-    {
-        amount = a;
-        mob_class = value[k];
-        if (mob_class <= 1000 || mob_class > 2000)
-            continue;
-        for (; amount > 0; amount--)
-        {
-            int  x = 0, y = 0, c = 0, i = 0;
-            md = (struct mob_data *) calloc (1, sizeof (struct mob_data));
-            if (mob_db[mob_class].mode & 0x02)
-                md->lootitem = (struct item *)
-                    calloc (LOOTITEM_SIZE, sizeof (struct item));
-            else
-                md->lootitem = NULL;
-
-            while ((x <= 0 || y <= 0 || (c = map_getcell (m, x, y)) == 1
-                    || c == 5) && (i++) < 100)
-            {
-                x = MPRAND (bx, 9) - 4;
-                y = MPRAND (by, 9) - 4;
-            }
-            if (i >= 100)
-            {
-                x = bx;
-                y = by;
-            }
-
-            mob_spawn_dataset (md, "--ja--", mob_class);
-            md->bl.prev = NULL;
-            md->bl.next = NULL;
-            md->bl.m = m;
-            md->bl.x = x;
-            md->bl.y = y;
-
-            md->m = m;
-            md->x_0 = x;
-            md->y_0 = y;
-            md->xs = 0;
-            md->ys = 0;
-            md->stats[MOB_SPEED] = md2->stats[MOB_SPEED];
-            md->spawndelay_1 = -1;   // 一度のみフラグ
-            md->spawndelay2 = -1;   // 一度のみフラグ
-
-            memset (md->npc_event, 0, sizeof (md->npc_event));
-            md->bl.type = BL_MOB;
-            map_addiddb (&md->bl);
-            mob_spawn (md->bl.id);
-
-            if (flag)
-                md->master_id = md2->bl.id;
-        }
-    }
-    return 0;
 }
 
 /*==========================================

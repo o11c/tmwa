@@ -54,7 +54,6 @@ int  clif_updatestatus (struct map_session_data *, int);    //self
 int  clif_damage (struct block_list *, struct block_list *, unsigned int, int, int, int, int, int, int);    // area
 #define clif_takeitem(src,dst) clif_damage(src,dst,0,0,0,0,0,1,0)
 int  clif_changelook (struct block_list *, int, int);   // area
-int  clif_changelook_towards (struct block_list *, int, int, struct map_session_data *dst); // area or target
 void clif_changelook_accessories (struct block_list *bl, struct map_session_data *dst); // area or target; list gloves, boots etc.
 int  clif_arrowequip (struct map_session_data *sd, int val);    //self
 int  clif_arrow_fail (struct map_session_data *sd, int type);   //self
@@ -68,9 +67,6 @@ int  clif_useitemack (struct map_session_data *, int, int, int);    // self
 void clif_emotion (struct block_list *bl, int type);
 void clif_talkiebox (struct block_list *bl, char *talkie);
 void clif_wedding_effect (struct block_list *bl);
-void clif_sitting (int fd, struct map_session_data *sd);
-//void clif_callpartner(struct map_session_data *sd);
-//void clif_sitting(struct map_session_data *sd);
 void clif_soundeffect (struct map_session_data *sd, struct block_list *bl,
                        const char *name, int type);
 
@@ -120,7 +116,6 @@ int  clif_status_change (struct block_list *bl, int type, int flag);
 int  clif_wis_message (int fd, const char *nick, const char *mes, int mes_len);
 int  clif_wis_end (int fd, int flag);
 
-int  clif_itemlist (struct map_session_data *sd);
 int  clif_equiplist (struct map_session_data *sd);
 
 int  clif_item_skill (struct map_session_data *sd, int skillid, int skilllv,
@@ -157,13 +152,11 @@ int  clif_resurrection (struct block_list *bl, int type);
 int  clif_specialeffect (struct block_list *bl, int type, int flag);    // special effects [Valaris]
 int  clif_message (struct block_list *bl, char *msg);   // messages (from mobs/npcs) [Valaris]
 
-int  clif_GM_kickack (struct map_session_data *sd, int id);
 int  clif_GM_kick (struct map_session_data *sd, struct map_session_data *tsd,
                    int type);
 
 int  clif_foreachclient (int (*)(struct map_session_data *, va_list), ...);
 
-int  do_final_clif (void);
 int  do_init_clif (void);
 
 #endif // CLIF_H

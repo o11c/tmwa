@@ -58,6 +58,21 @@
                    pc_readglobalreg(sd, "MAGIC_EXPERIENCE") & 0xffff,	\
                    (pc_readglobalreg(sd, "MAGIC_EXPERIENCE") >> 24) & 0xff)
 
+static int pc_isequip (struct map_session_data *sd, int n);
+static int pc_checkoverhp (struct map_session_data *);
+static int pc_checkoversp (struct map_session_data *);
+static int pc_can_reach (struct map_session_data *, int, int);
+static int pc_checkbaselevelup (struct map_session_data *sd);
+static int pc_checkjoblevelup (struct map_session_data *sd);
+static int pc_nextbaseafter (struct map_session_data *);
+static int pc_nextjobafter (struct map_session_data *);
+static int pc_calc_pvprank (struct map_session_data *sd);
+static int pc_ismarried (struct map_session_data *sd);
+static void map_day_timer (timer_id, tick_t, custom_id_t, custom_data_t);
+static void map_night_timer (timer_id, tick_t, custom_id_t, custom_data_t);
+
+
+
 static int max_weight_base[MAX_PC_CLASS];
 static int hp_coefficient[MAX_PC_CLASS];
 static int hp_coefficient2[MAX_PC_CLASS];
@@ -151,13 +166,6 @@ int pc_set_gm_level (int account_id, int level)
     RECREATE (gm_account, struct gm_account, GM_num);
     gm_account[GM_num - 1].account_id = account_id;
     gm_account[GM_num - 1].level = level;
-    return 0;
-}
-
-int pc_getrefinebonus (int lv, int type)
-{
-    if (lv >= 0 && lv < 5 && type >= 0 && type < 3)
-        return refinebonus[lv][type];
     return 0;
 }
 
@@ -2361,7 +2369,6 @@ int pc_modifysellvalue (struct map_session_data *, int orig_value)
 
     return val;
 }
-
 /*==========================================
  * アイテムを買った時に、新しいアイテム欄を使うか、
  * 3万個制限にかかるか確認
@@ -2802,162 +2809,6 @@ int pc_useitem (struct map_session_data *sd, int n)
     return 0;
 }
 
-/*==========================================
- * アイテム鑑定
- *------------------------------------------
- */
-int pc_item_identify (struct map_session_data *sd, int idx)
-{
-    int  flag = 1;
-
-    nullpo_retr (0, sd);
-
-    if (idx >= 0 && idx < MAX_INVENTORY)
-    {
-        if (sd->status.inventory[idx].nameid > 0
-            && sd->status.inventory[idx].identify == 0)
-        {
-            flag = 0;
-            sd->status.inventory[idx].identify = 1;
-        }
-    }
-
-    return !flag;
-}
-
-/*==========================================
- * スティル品公開
- *------------------------------------------
- */
-static int pc_show_steal (struct block_list *bl, va_list ap)
-{
-    struct map_session_data *sd;
-    int  itemid;
-    int  type;
-
-    struct item_data *item = NULL;
-    char output[100];
-
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, sd = va_arg (ap, struct map_session_data *));
-
-    itemid = va_arg (ap, int);
-    type = va_arg (ap, int);
-
-    if (!type)
-    {
-        if ((item = itemdb_exists (itemid)) == NULL)
-            sprintf (output, "%s stole an Unknown_Item.", sd->status.name);
-        else
-            sprintf (output, "%s stole %s.", sd->status.name, item->jname);
-        clif_displaymessage (((struct map_session_data *) bl)->fd, output);
-    }
-    else
-    {
-        sprintf (output,
-                 "%s has not stolen the item because of being  overweight.",
-                 sd->status.name);
-        clif_displaymessage (((struct map_session_data *) bl)->fd, output);
-    }
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-//** pc.c: Small Steal Item fix by fritz
-int pc_steal_item (struct map_session_data *sd, struct block_list *bl)
-{
-    if (sd != NULL && bl != NULL && bl->type == BL_MOB)
-    {
-        int  i, skill, rate, itemid, flag, count;
-        struct mob_data *md;
-        md = (struct mob_data *) bl;
-        if (!md->state.steal_flag && mob_db[md->mob_class].mexp <= 0 &&
-            !(mob_db[md->mob_class].mode & 0x20) &&
-            (!(md->mob_class > 1324 && md->mob_class < 1364)))   // prevent stealing from treasure boxes [Valaris]
-        {
-            skill = sd->paramc[4] - mob_db[md->mob_class].dex + 10;
-
-            if (0 < skill)
-            {
-                for (count = 8; count <= 8 && count != 0; count--)
-                {
-                    i = rand () % 8;
-                    itemid = mob_db[md->mob_class].dropitem[i].nameid;
-
-                    if (itemid > 0 && itemdb_type (itemid) != 6)
-                    {
-                        rate =
-                            (mob_db[md->mob_class].dropitem[i].p /
-                             battle_config.item_rate_common * 100 * skill) /
-                            100;
-
-                        if (rand () % 10000 < rate)
-                        {
-                            struct item tmp_item;
-                            memset (&tmp_item, 0, sizeof (tmp_item));
-                            tmp_item.nameid = itemid;
-                            tmp_item.amount = 1;
-                            tmp_item.identify = 1;
-                            flag = pc_additem (sd, &tmp_item, 1);
-                            if (battle_config.show_steal_in_same_party)
-                            {
-                                party_foreachsamemap (pc_show_steal, sd, 1,
-                                                      sd, tmp_item.nameid, 0);
-                            }
-
-                            if (flag)
-                            {
-                                if (battle_config.show_steal_in_same_party)
-                                {
-                                    party_foreachsamemap (pc_show_steal, sd,
-                                                          1, sd,
-                                                          tmp_item.nameid, 1);
-                                }
-
-                                clif_additem (sd, 0, 0, flag);
-                            }
-                            md->state.steal_flag = 1;
-                            return 1;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int pc_steal_coin (struct map_session_data *sd, struct block_list *bl)
-{
-    if (sd != NULL && bl != NULL && bl->type == BL_MOB)
-    {
-        int  rate;
-        struct mob_data *md = (struct mob_data *) bl;
-        if (md && !md->state.steal_coin_flag && md->sc_data)
-        {
-            rate = (sd->status.base_level - mob_db[md->mob_class].lv) * 3 +
-                sd->paramc[4] * 2 + sd->paramc[5] * 2;
-            if (MRAND (1000) < rate)
-            {
-                pc_getzeny (sd, mob_db[md->mob_class].lv * 10 + MRAND (100));
-                md->state.steal_coin_flag = 1;
-                return 1;
-            }
-        }
-    }
-
-    return 0;
-}
-
 //
 //
 //
@@ -3359,71 +3210,6 @@ void pc_touch_all_relevant_npcs (struct map_session_data *sd)
         npc_touch_areanpc (sd, sd->bl.m, sd->bl.x, sd->bl.y);
     else
         sd->areanpc_id = 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int pc_movepos (struct map_session_data *sd, int dst_x, int dst_y)
-{
-    int  moveblock;
-    int  dx, dy, dist;
-
-    struct walkpath_data wpd;
-
-    nullpo_retr (0, sd);
-
-    if (path_search (&wpd, sd->bl.m, sd->bl.x, sd->bl.y, dst_x, dst_y, 0))
-        return 1;
-
-    sd->dir = sd->head_dir = map_calc_dir (&sd->bl, dst_x, dst_y);
-
-    dx = dst_x - sd->bl.x;
-    dy = dst_y - sd->bl.y;
-    dist = distance (sd->bl.x, sd->bl.y, dst_x, dst_y);
-
-    moveblock = (sd->bl.x / BLOCK_SIZE != dst_x / BLOCK_SIZE
-                 || sd->bl.y / BLOCK_SIZE != dst_y / BLOCK_SIZE);
-
-    map_foreachinmovearea (clif_pcoutsight, sd->bl.m, sd->bl.x - AREA_SIZE,
-                           sd->bl.y - AREA_SIZE, sd->bl.x + AREA_SIZE,
-                           sd->bl.y + AREA_SIZE, dx, dy, BL_NUL, sd);
-
-    if (moveblock)
-        map_delblock (&sd->bl);
-    sd->bl.x = dst_x;
-    sd->bl.y = dst_y;
-    if (moveblock)
-        map_addblock (&sd->bl);
-
-    map_foreachinmovearea (clif_pcinsight, sd->bl.m, sd->bl.x - AREA_SIZE,
-                           sd->bl.y - AREA_SIZE, sd->bl.x + AREA_SIZE,
-                           sd->bl.y + AREA_SIZE, -dx, -dy, BL_NUL, sd);
-
-    if (sd->status.party_id > 0)
-    {                           // パーティのＨＰ情報通知検査
-        struct party *p = party_search (sd->status.party_id);
-        if (p != NULL)
-        {
-            int  flag = 0;
-            map_foreachinmovearea (party_send_hp_check, sd->bl.m,
-                                   sd->bl.x - AREA_SIZE, sd->bl.y - AREA_SIZE,
-                                   sd->bl.x + AREA_SIZE, sd->bl.y + AREA_SIZE,
-                                   -dx, -dy, BL_PC, sd->status.party_id,
-                                   &flag);
-            if (flag)
-                sd->party_hp = -1;
-        }
-    }
-
-    if (sd->status.option & 4)  // クローキングの消滅検査
-        skill_check_cloaking (&sd->bl);
-
-    skill_unit_move (&sd->bl, gettick (), dist + 7);    // スキルユニットの検査
-
-    pc_touch_all_relevant_npcs (sd);
-    return 0;
 }
 
 //
@@ -5082,26 +4868,6 @@ int pc_percentheal (struct map_session_data *sd, int hp, int sp)
         clif_updatestatus (sd, SP_HP);
     if (sp)
         clif_updatestatus (sd, SP_SP);
-
-    return 0;
-}
-
-
-/*==========================================
- * 見た目変更
- *------------------------------------------
- */
-int pc_equiplookall (struct map_session_data *sd)
-{
-    nullpo_retr (0, sd);
-
-    clif_changelook (&sd->bl, LOOK_WEAPON, 0);
-//  clif_changelook(&sd->bl,LOOK_SHOES,0);
-    clif_changelook (&sd->bl, LOOK_HEAD_BOTTOM, sd->status.head_bottom);
-    clif_changelook (&sd->bl, LOOK_HEAD_TOP, sd->status.head_top);
-    clif_changelook (&sd->bl, LOOK_HEAD_MID, sd->status.head_mid);
-
-    clif_changelook_accessories (&sd->bl, NULL);
 
     return 0;
 }
@@ -6960,11 +6726,6 @@ int do_init_pc (void)
     }
 
     return 0;
-}
-
-void pc_cleanup (struct map_session_data *sd)
-{
-    magic_stop_completely (sd);
 }
 
 void pc_invisibility (struct map_session_data *sd, int enabled)

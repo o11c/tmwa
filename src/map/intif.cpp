@@ -253,15 +253,6 @@ int intif_party_changemap (struct map_session_data *sd, int online)
     return 0;
 }
 
-// パーティー解散要求
-int intif_break_party (int party_id)
-{
-    WFIFOW (inter_fd, 0) = 0x3026;
-    WFIFOL (inter_fd, 2) = party_id;
-    WFIFOSET (inter_fd, 6);
-    return 0;
-}
-
 // パーティ会話送信
 int intif_party_message (int party_id, int account_id, char *mes, int len)
 {

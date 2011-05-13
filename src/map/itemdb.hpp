@@ -71,7 +71,6 @@ int  itemdb_searchrandomid (int flags);
 int  itemdb_isequip (int);
 int  itemdb_isequip2 (struct item_data *);
 int  itemdb_isequip3 (int);
-int  itemdb_isdropable (int nameid);
 
 void itemdb_reload (void);
 

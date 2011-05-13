@@ -729,7 +729,6 @@ void map_foreachinarea (int (*)(struct block_list *, va_list), int, int, int,
                         int, int, BlockType, ...);
 void map_foreachinmovearea (int (*)(struct block_list *, va_list), int, int,
                             int, int, int, int, int, BlockType, ...);
-uint32_t  map_count_oncell (uint16_t m, uint16_t x, uint16_t y);
 
 /// Temporary objects (loot, etc)
 typedef uint32_t obj_id_t;
@@ -760,7 +759,6 @@ int  map_addflooritem (struct item *, int amount, uint16_t m, uint16_t x, uint16
 
 // mappings between character id and names
 void map_addchariddb (charid_t charid, const char *name);
-void map_delchariddb (charid_t charid);
 const char *map_charid2nick (charid_t);
 
 struct map_session_data *map_id2sd (unsigned int);
@@ -789,15 +787,11 @@ struct map_session_data *map_get_prev_session (struct map_session_data
 uint8_t map_getcell (int, int, int);
 void map_setcell (int, int, int, uint8_t);
 
-// check if directions are mostly equal
-bool map_check_dir (Direction s_dir, Direction t_dir);
 // get the general direction from block's location to the coordinates
 Direction map_calc_dir (struct block_list *src, int x, int y);
 
 // in path.cpp
 int  path_search (struct walkpath_data *, int, int, int, int, int, int);
 int  path_blownpos (int m, int x_0, int y_0, int dx, int dy, int count);
-
-void map_helpscreen (void) __attribute__((noreturn));
 
 #endif

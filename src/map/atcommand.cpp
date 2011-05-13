@@ -35,14 +35,16 @@
 
 #define STATE_BLIND 0x10
 
+static void log_atcommand (struct map_session_data *sd, const char *fmt, ...) __attribute__((format (printf, 2, 3)));
+
 #define ATCOMMAND_FUNC(x) static int atcommand_ ## x (const int fd, struct map_session_data* sd, const char* command, const char* message)
 ATCOMMAND_FUNC (setup);
 ATCOMMAND_FUNC (broadcast);
 ATCOMMAND_FUNC (localbroadcast);
 ATCOMMAND_FUNC (charwarp);
-// ATCOMMAND_FUNC (warp);
+ATCOMMAND_FUNC (warp);
 ATCOMMAND_FUNC (where);
-// ATCOMMAND_FUNC (goto);
+ATCOMMAND_FUNC (goto);
 ATCOMMAND_FUNC (jump);
 ATCOMMAND_FUNC (who);
 ATCOMMAND_FUNC (whogroup);
@@ -60,7 +62,7 @@ ATCOMMAND_FUNC (kill);
 ATCOMMAND_FUNC (alive);
 ATCOMMAND_FUNC (kami);
 ATCOMMAND_FUNC (heal);
-// ATCOMMAND_FUNC (item);
+ATCOMMAND_FUNC (item);
 ATCOMMAND_FUNC (itemreset);
 ATCOMMAND_FUNC (itemcheck);
 ATCOMMAND_FUNC (baselevelup);
@@ -71,7 +73,7 @@ ATCOMMAND_FUNC (pvpoff);
 ATCOMMAND_FUNC (pvpon);
 ATCOMMAND_FUNC (model);
 ATCOMMAND_FUNC (go);
-// ATCOMMAND_FUNC (spawn);
+ATCOMMAND_FUNC (spawn);
 ATCOMMAND_FUNC (killmonster);
 ATCOMMAND_FUNC (killmonster2);
 ATCOMMAND_FUNC (produce);
@@ -82,7 +84,7 @@ ATCOMMAND_FUNC (statuspoint);
 ATCOMMAND_FUNC (skillpoint);
 ATCOMMAND_FUNC (zeny);
 ATCOMMAND_FUNC (param);
-// ATCOMMAND_FUNC (recall);
+ATCOMMAND_FUNC (recall);
 ATCOMMAND_FUNC (recallall);
 ATCOMMAND_FUNC (revive);
 ATCOMMAND_FUNC (character_stats);
@@ -401,6 +403,8 @@ static AtCommandInfo atcommand_info[] = {
                         "set display options of a character"},
     {"@revive", 60,     atcommand_revive,       ATCC_CHAR,
     "charname",         "resurrect someone else"},
+    {"@recall", 60,     atcommand_recall,       ATCC_CHAR,
+    "charname",         "warp a player to you"},
     {"@charsave", 60,   atcommand_character_save, ATCC_CHAR,
     "map x y charname", "changes somebody's respawn point"},
     {"@doom", 80,       atcommand_doom,         ATCC_CHAR,

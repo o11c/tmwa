@@ -53,21 +53,13 @@ int  do_init_skill (void);
 int  skill_get_hit (int id);
 int  skill_get_inf (int id);
 int  skill_get_pl (int id);
-int  skill_get_nk (int id);
 int  skill_get_max (int id);
 int  skill_get_max_raise (int id);
 int  skill_get_range (int id, int lv);
-int  skill_get_hp (int id, int lv);
-int  skill_get_mhp (int id, int lv);
 int  skill_get_sp (int id, int lv);
-int  skill_get_zeny (int id, int lv);
 int  skill_get_num (int id, int lv);
-int  skill_get_cast (int id, int lv);
 int  skill_get_delay (int id, int lv);
-int  skill_get_time (int id, int lv);
-int  skill_get_time2 (int id, int lv);
 int  skill_get_castdef (int id);
-int  skill_get_weapontype (int id);
 int  skill_get_inf2 (int id);
 int  skill_get_maxcount (int id);
 int  skill_get_blewcount (int id, int lv);
@@ -98,12 +90,10 @@ int  skill_delunit (struct skill_unit *unit);
 struct skill_unit_group *skill_initunitgroup (struct block_list *src,
                                               int count, int skillid,
                                               int skilllv, int unit_id);
-int  skill_delunitgroup (struct skill_unit_group *group);
 struct skill_unit_group_tickset *skill_unitgrouptickset_search (struct
                                                                 block_list
                                                                 *bl,
                                                                 int group_id);
-int  skill_unitgrouptickset_delete (struct block_list *bl, int group_id);
 int  skill_clear_unitgroup (struct block_list *src);
 
 int  skill_unit_ondamaged (struct skill_unit *src, struct block_list *bl,
@@ -111,10 +101,6 @@ int  skill_unit_ondamaged (struct skill_unit *src, struct block_list *bl,
 
 int  skill_castfix (struct block_list *bl, int time);
 int  skill_delayfix (struct block_list *bl, int time);
-int  skill_check_unit_range (int m, int x, int y, int range, int skillid);
-int  skill_check_unit_range2 (int m, int x, int y, int range);
-// -- moonsoul  (added skill_check_unit_cell)
-int  skill_check_unit_cell (int skillid, int m, int x, int y, int unit_id);
 int  skill_unit_out_all (struct block_list *bl, unsigned int tick, int range);
 int  skill_unit_move (struct block_list *bl, unsigned int tick, int range);
 int  skill_unit_move_unit_group (struct skill_unit_group *group, int m,
@@ -122,9 +108,6 @@ int  skill_unit_move_unit_group (struct skill_unit_group *group, int m,
 
 // 詠唱キャンセル
 int  skill_castcancel (struct block_list *bl, int type);
-
-void skill_brandishspear_first (struct square *tc, int dir, int x, int y);
-void skill_brandishspear_dir (struct square *tc, int dir, int are);
 
 #define skill_calc_heal(bl,skill_lv) (( battle_get_lv(bl)+battle_get_int(bl) )/8 *(4+ skill_lv*8))
 
@@ -138,7 +121,6 @@ int  skill_status_effect (struct block_list *bl, int type, int val1, int val2,
 int  skill_status_change_start (struct block_list *bl, int type, int val1,
                                 int val2, int val3, int val4, int tick,
                                 int flag);
-void skill_status_change_timer (timer_id, tick_t, custom_id_t, custom_data_t);
 int  skill_status_change_active (struct block_list *bl, int type);  // [fate]
 int  skill_status_change_end (struct block_list *bl, int type, int tid);
 int  skill_status_change_clear (struct block_list *bl, int type);
@@ -216,9 +198,7 @@ extern int skill_pool_skills_size;  // Number of entries in skill_pool_skills
 
 void skill_pool_register (int id);   // [Fate] Remember that a certain skill ID belongs to a pool skill
 int  skill_pool (struct map_session_data *sd, int *skills); // Yields all active skills in the skill pool; no more than MAX_SKILL_POOL.  Return is number of skills.
-int  skill_pool_size (struct map_session_data *sd);
 int  skill_pool_max (struct map_session_data *sd);  // Max. number of pool skills
-void skill_pool_empty (struct map_session_data *sd);    // Deactivate all pool skills
 int  skill_pool_activate (struct map_session_data *sd, int skill);  // Skill into skill pool.  Return is zero iff okay.
 int  skill_pool_is_activated (struct map_session_data *sd, int skill);  // Skill into skill pool.  Return is zero when activated.
 int  skill_pool_deactivate (struct map_session_data *sd, int skill);    // Skill out of skill pool.  Return is zero iff okay.

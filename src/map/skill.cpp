@@ -25,6 +25,15 @@
 
 #define STATE_BLIND 0x10
 
+static int skill_get_hp (int id, int lv);
+static int skill_get_mhp (int id, int lv);
+static int skill_get_zeny (int id, int lv);
+static int skill_get_cast (int id, int lv);
+static int skill_get_time2 (int id, int lv);
+static int skill_delunitgroup (struct skill_unit_group *group);
+static int skill_unitgrouptickset_delete (struct block_list *bl, int group_id);
+static void skill_status_change_timer (timer_id, tick_t, custom_id_t, custom_data_t);
+
 struct skill_name_db skill_names[] = {
     {AC_OWL, "OWL", "Owl's_Eye"},
     {NV_EMOTE, "EMOTE", "Emote_Skill"},
@@ -57,11 +66,6 @@ int skill_get_inf (int id)
 int skill_get_pl (int id)
 {
     return skill_db[id].pl;
-}
-
-int skill_get_nk (int id)
-{
-    return skill_db[id].nk;
 }
 
 int skill_get_max (int id)
@@ -109,11 +113,6 @@ int skill_get_delay (int id, int lv)
     return (lv <= 0) ? 0 : skill_db[id].delay[lv - 1];
 }
 
-int skill_get_time (int id, int lv)
-{
-    return (lv <= 0) ? 0 : skill_db[id].upkeep_time[lv - 1];
-}
-
 int skill_get_time2 (int id, int lv)
 {
     return (lv <= 0) ? 0 : skill_db[id].upkeep_time2[lv - 1];
@@ -122,11 +121,6 @@ int skill_get_time2 (int id, int lv)
 int skill_get_castdef (int id)
 {
     return skill_db[id].cast_def_rate;
-}
-
-int skill_get_weapontype (int id)
-{
-    return skill_db[id].weapon;
 }
 
 int skill_get_inf2 (int id)
@@ -593,35 +587,6 @@ int skill_attack (int attack_type, struct block_list *src,
  */
 typedef int (*SkillFunc) (struct block_list *, struct block_list *, int, int,
                           unsigned int, int);
-
-static int skill_check_unit_range2_sub (struct block_list *bl, va_list ap)
-{
-    int *c;
-
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, c = va_arg (ap, int *));
-
-    if (bl->prev == NULL || (bl->type != BL_PC && bl->type != BL_MOB))
-        return 0;
-
-    if (bl->type == BL_PC && pc_isdead ((struct map_session_data *) bl))
-        return 0;
-
-    (*c)++;
-
-    return 0;
-}
-
-int skill_check_unit_range2 (int m, int x, int y, int range)
-{
-    int  c = 0;
-
-    map_foreachinarea (skill_check_unit_range2_sub, m, x - range, y - range,
-                       x + range, y + range, BL_NUL, &c);
-
-    return c;
-}
 
 /*==========================================
  *
@@ -2012,162 +1977,6 @@ int skill_castcancel (struct block_list *bl, int type)
         return 0;
     }
     return 1;
-}
-
-/*=========================================
- * ブランディッシュスピア 初期範囲決定
- *----------------------------------------
- */
-void skill_brandishspear_first (struct square *tc, int dir, int x, int y)
-{
-
-    nullpo_retv (tc);
-
-    if (dir == 0)
-    {
-        tc->val1[0] = x - 2;
-        tc->val1[1] = x - 1;
-        tc->val1[2] = x;
-        tc->val1[3] = x + 1;
-        tc->val1[4] = x + 2;
-        tc->val2[0] =
-            tc->val2[1] = tc->val2[2] = tc->val2[3] = tc->val2[4] = y - 1;
-    }
-    else if (dir == 2)
-    {
-        tc->val1[0] =
-            tc->val1[1] = tc->val1[2] = tc->val1[3] = tc->val1[4] = x + 1;
-        tc->val2[0] = y + 2;
-        tc->val2[1] = y + 1;
-        tc->val2[2] = y;
-        tc->val2[3] = y - 1;
-        tc->val2[4] = y - 2;
-    }
-    else if (dir == 4)
-    {
-        tc->val1[0] = x - 2;
-        tc->val1[1] = x - 1;
-        tc->val1[2] = x;
-        tc->val1[3] = x + 1;
-        tc->val1[4] = x + 2;
-        tc->val2[0] =
-            tc->val2[1] = tc->val2[2] = tc->val2[3] = tc->val2[4] = y + 1;
-    }
-    else if (dir == 6)
-    {
-        tc->val1[0] =
-            tc->val1[1] = tc->val1[2] = tc->val1[3] = tc->val1[4] = x - 1;
-        tc->val2[0] = y + 2;
-        tc->val2[1] = y + 1;
-        tc->val2[2] = y;
-        tc->val2[3] = y - 1;
-        tc->val2[4] = y - 2;
-    }
-    else if (dir == 1)
-    {
-        tc->val1[0] = x - 1;
-        tc->val1[1] = x;
-        tc->val1[2] = x + 1;
-        tc->val1[3] = x + 2;
-        tc->val1[4] = x + 3;
-        tc->val2[0] = y - 4;
-        tc->val2[1] = y - 3;
-        tc->val2[2] = y - 1;
-        tc->val2[3] = y;
-        tc->val2[4] = y + 1;
-    }
-    else if (dir == 3)
-    {
-        tc->val1[0] = x + 3;
-        tc->val1[1] = x + 2;
-        tc->val1[2] = x + 1;
-        tc->val1[3] = x;
-        tc->val1[4] = x - 1;
-        tc->val2[0] = y - 1;
-        tc->val2[1] = y;
-        tc->val2[2] = y + 1;
-        tc->val2[3] = y + 2;
-        tc->val2[4] = y + 3;
-    }
-    else if (dir == 5)
-    {
-        tc->val1[0] = x + 1;
-        tc->val1[1] = x;
-        tc->val1[2] = x - 1;
-        tc->val1[3] = x - 2;
-        tc->val1[4] = x - 3;
-        tc->val2[0] = y + 3;
-        tc->val2[1] = y + 2;
-        tc->val2[2] = y + 1;
-        tc->val2[3] = y;
-        tc->val2[4] = y - 1;
-    }
-    else if (dir == 7)
-    {
-        tc->val1[0] = x - 3;
-        tc->val1[1] = x - 2;
-        tc->val1[2] = x - 1;
-        tc->val1[3] = x;
-        tc->val1[4] = x + 1;
-        tc->val2[1] = y;
-        tc->val2[0] = y + 1;
-        tc->val2[2] = y - 1;
-        tc->val2[3] = y - 2;
-        tc->val2[4] = y - 3;
-    }
-
-}
-
-/*=========================================
- * ブランディッシュスピア 方向判定 範囲拡張
- *-----------------------------------------
- */
-void skill_brandishspear_dir (struct square *tc, int dir, int are)
-{
-
-    int  c;
-
-    nullpo_retv (tc);
-
-    for (c = 0; c < 5; c++)
-    {
-        if (dir == 0)
-        {
-            tc->val2[c] += are;
-        }
-        else if (dir == 1)
-        {
-            tc->val1[c] -= are;
-            tc->val2[c] += are;
-        }
-        else if (dir == 2)
-        {
-            tc->val1[c] -= are;
-        }
-        else if (dir == 3)
-        {
-            tc->val1[c] -= are;
-            tc->val2[c] -= are;
-        }
-        else if (dir == 4)
-        {
-            tc->val2[c] -= are;
-        }
-        else if (dir == 5)
-        {
-            tc->val1[c] += are;
-            tc->val2[c] -= are;
-        }
-        else if (dir == 6)
-        {
-            tc->val1[c] += are;
-        }
-        else if (dir == 7)
-        {
-            tc->val1[c] += are;
-            tc->val2[c] += are;
-        }
-    }
 }
 
 /*==========================================

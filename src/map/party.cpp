@@ -18,23 +18,14 @@
 
 #define PARTY_SEND_XYHP_INVERVAL	1000    // 座標やＨＰ送信の間隔
 
+static int party_check_conflict (struct map_session_data *sd);
+static int party_send_xy_clear (struct party *p);
+
+
+
 static struct dbt *party_db;
 
 static void party_send_xyhp_timer (timer_id tid, tick_t tick, custom_id_t id, custom_data_t data);
-/*==========================================
- * 終了
- *------------------------------------------
- */
-static void party_db_final (db_key_t UNUSED, db_val_t data, va_list UNUSED)
-{
-    free (data.p);
-}
-
-void do_final_party (void)
-{
-    if (party_db)
-        numdb_final (party_db, party_db_final);
-}
 
 // 初期化
 void do_init_party (void)

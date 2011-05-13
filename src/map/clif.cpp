@@ -41,6 +41,12 @@
 #define STATE_BLIND 0x10
 #define EMOTE_IGNORED 0x0e
 
+static int clif_changelook_towards (struct block_list *, int, int, struct map_session_data *dst); // area or target
+static void clif_sitting (int fd, struct map_session_data *sd);
+static int clif_itemlist (struct map_session_data *sd);
+static int clif_GM_kickack (struct map_session_data *sd, int id);
+
+
 static const int packet_len_table[0x220] = {
     10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -3650,33 +3656,6 @@ void clif_wedding_effect (struct block_list *bl)
     clif_send (buf, packet_len_table[0x1ea], bl, AREA);
 }
 
-/*==========================================
- * あなたに逢いたい使用時名前叫び
- *------------------------------------------
-
-// ignored by client
-void clif_callpartner(struct map_session_data *sd)
-{
-	unsigned char buf[26];
-	char *p;
-
-	nullpo_retv(sd);
-
-	if(sd->status.partner_id){
-		WBUFW(buf,0)=0x1e6;
-		p = map_charid2nick(sd->status.partner_id);
-		if(p){
-			memcpy(WBUFP(buf,2),p,24);
-		}else{
-			map_reqchariddb(sd,sd->status.partner_id);
-			chrif_searchcharid(sd->status.partner_id);
-			WBUFB(buf,2) = 0;
-		}
-		clif_send(buf,packet_len_table[0x1e6]&sd->bl,AREA);
-	}
-	return;
-}
-*/
 /*==========================================
  * 座る
  *------------------------------------------

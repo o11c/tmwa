@@ -15,6 +15,11 @@
 #include "battle.hpp"
 #include "atcommand.hpp"
 
+static int storage_delete (int account_id);
+static int storage_comp_item (const void *_i1, const void *_i2);
+static void sortage_sortitem (struct storage *stor);
+
+
 static struct dbt *storage_db;
 
 /*==========================================
@@ -62,19 +67,6 @@ void do_final_storage (void)    // by [MC Cameri]
 {
     if (storage_db)
         numdb_final (storage_db, storage_db_final);
-}
-
-static void storage_reconnect_sub (db_key_t UNUSED, db_val_t data, va_list UNUSED)
-{                               //Parses storage and saves 'dirty' ones upon reconnect. [Skotlex]
-    struct storage *stor = (struct storage *) data.p;
-    if (stor->dirty && stor->storage_status == 0)   //Save closed storages.
-        storage_storage_save (stor->account_id, stor->dirty == 2 ? 1 : 0);
-}
-
-//Function to be invoked upon server reconnection to char. To save all 'dirty' storages [Skotlex
-void do_reconnect_storage (void)
-{
-    numdb_foreach (storage_db, storage_reconnect_sub);
 }
 
 struct storage *account2storage (int account_id)
@@ -318,16 +310,6 @@ int storage_storage_quit (struct map_session_data *sd)
     }
 
     return 0;
-}
-
-void storage_storage_dirty (struct map_session_data *sd)
-{
-    struct storage *stor;
-
-    stor = account2storage2 (sd->status.account_id);
-
-    if (stor)
-        stor->dirty = 1;
 }
 
 int storage_storage_save (int account_id, int final)

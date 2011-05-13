@@ -23,6 +23,8 @@
 int  skill_pool_skills[MAX_POOL_SKILLS];
 int  skill_pool_skills_size = 0;
 
+static int  skill_pool_size (struct map_session_data *sd);
+
 void skill_pool_register (int id)
 {
     if (skill_pool_skills_size + 1 >= MAX_POOL_SKILLS)
@@ -59,17 +61,6 @@ int skill_pool (struct map_session_data *sd, int *skills)
     }
 
     return count;
-}
-
-void skill_pool_empty (struct map_session_data *sd)
-{
-    int  i;
-
-    for (i = 0; i < skill_pool_skills_size; i++)
-    {
-        int  skill_id = skill_pool_skills[i];
-        sd->status.skill[skill_id].flags = 0;
-    }
 }
 
 int skill_pool_size (struct map_session_data *sd)

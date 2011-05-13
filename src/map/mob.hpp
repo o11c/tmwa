@@ -105,14 +105,11 @@ int  mob_once_spawn_area (struct map_session_data *sd, const char *mapname, int 
                           int y_0, int x_1, int y_1, const char *mobname,
                           int class_, int amount, const char *event);
 
-int  mob_walktoxy (struct mob_data *md, int x, int y, int easy);
-
 int  mob_target (struct mob_data *md, struct block_list *bl, int dist);
 int  mob_stop_walking (struct mob_data *md, int type);
 int  mob_stopattack (struct mob_data *);
 int  mob_spawn (int);
 int  mob_damage (struct block_list *, struct mob_data *, int, int);
-int  mob_changestate (struct mob_data *md, int state, int type);
 int  mob_heal (struct mob_data *, int);
 int  mob_get_viewclass (int);
 int  mob_get_sex (int);
@@ -124,26 +121,21 @@ short mob_get_head_top (int);
 short mob_get_head_mid (int);
 short mob_get_head_buttom (int);
 short mob_get_clothes_color (int);  //player mob dye [Valaris]
-int  mob_get_equip (int);       // mob equip [Valaris]
 int  do_init_mob (void);
 
 int  mob_delete (struct mob_data *md);
 int  mob_catch_delete (struct mob_data *md, int type);
 void mob_timer_delete (timer_id, tick_t, custom_id_t, custom_data_t);
 
-int  mob_deleteslave (struct mob_data *md);
-
 int  mob_counttargeted (struct mob_data *md, struct block_list *src,
                         int target_lv);
 
-int  mob_class_change (struct mob_data *md, int *value);
 int  mob_warp (struct mob_data *md, int m, int x, int y, int type);
 
 int  mobskill_use (struct mob_data *md, unsigned int tick, int event);
 int  mobskill_event (struct mob_data *md, int flag);
 void mobskill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data_t data);
 void mobskill_castend_pos (timer_id tid, tick_t tick, custom_id_t id, custom_data_t data);
-int  mob_summonslave (struct mob_data *md2, int *value, int amount, int flag);
 
 void mob_reload (void);
 

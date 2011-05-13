@@ -24,6 +24,7 @@
 #include "../common/nullpo.hpp"
 #include "itemdb.hpp"
 
+
 static const int packet_len_table[0x20] = {
     60, 3, 10, 27, 22, -1, 6, -1,   // 2af8-2aff
     6, -1, 18, 7, -1, 49, 44, 0,    // 2b00-2b07
@@ -58,11 +59,6 @@ void chrif_setpasswd (char *pwd)
 {
     strncpy (passwd, pwd, sizeof(passwd)-1);
     passwd[sizeof(passwd)-1] = '\0';
-}
-
-char *chrif_getpasswd (void)
-{
-    return passwd;
 }
 
 /*==========================================
@@ -919,65 +915,6 @@ int chrif_reloadGMdb (void)
 
     WFIFOW (char_fd, 0) = 0x2af7;
     WFIFOSET (char_fd, 2);
-
-    return 0;
-}
-
-/*==========================================
- * Send rates and motd to char server [Wizputer]
- *------------------------------------------
- */
-int chrif_ragsrvinfo (int base_rate, int job_rate, int drop_rate)
-{
-    char buf[256];
-    FILE *fp;
-    int  i;
-
-    WFIFOW (char_fd, 0) = 0x2b16;
-    WFIFOW (char_fd, 2) = base_rate;
-    WFIFOW (char_fd, 4) = job_rate;
-    WFIFOW (char_fd, 6) = drop_rate;
-
-    if ((fp = fopen_ (motd_txt, "r")) != NULL)
-    {
-        if (fgets (buf, 250, fp) != NULL)
-        {
-            for (i = 0; buf[i]; i++)
-            {
-                if (buf[i] == '\r' || buf[i] == '\n')
-                {
-                    buf[i] = 0;
-                    break;
-                }
-            }
-            WFIFOW (char_fd, 8) = sizeof (buf) + 10;
-            memcpy (WFIFOP (char_fd, 10), buf, sizeof (buf));
-        }
-        fclose_ (fp);
-    }
-    else
-    {
-        WFIFOW (char_fd, 8) = sizeof (buf) + 10;
-        memcpy (WFIFOP (char_fd, 10), buf, sizeof (buf));
-    }
-    WFIFOSET (char_fd, WFIFOW (char_fd, 8));
-
-    return 0;
-}
-
-/*=========================================
- * Tell char-server charcter disconnected [Wizputer]
- *-----------------------------------------
- */
-
-int chrif_char_offline (struct map_session_data *sd)
-{
-    if (char_fd < 0)
-        return -1;
-
-    WFIFOW (char_fd, 0) = 0x2b17;
-    WFIFOL (char_fd, 2) = sd->status.char_id;
-    WFIFOSET (char_fd, 6);
 
     return 0;
 }

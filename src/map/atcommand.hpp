@@ -34,17 +34,8 @@ struct AtCommandInfo
 bool is_atcommand (const int fd, struct map_session_data *sd,
                    const char *message, gm_level_t gmlvl);
 
-// int  get_atcommand_level (const AtCommandType type);
-
-int  atcommand_item (const int fd, struct map_session_data *sd, const char *command, const char *message);  // [Valaris]
-int  atcommand_warp (const int fd, struct map_session_data *sd, const char *command, const char *message);  // [Yor]
-int  atcommand_spawn (const int fd, struct map_session_data *sd, const char *command, const char *message); // [Valaris]
-int  atcommand_goto (const int fd, struct map_session_data *sd, const char *command, const char *message);  // [Yor]
-int  atcommand_recall (const int fd, struct map_session_data *sd, const char *command, const char *message);    // [Yor]
-
 int  atcommand_config_read (const char *cfgName);
 
-void log_atcommand (struct map_session_data *sd, const char *fmt, ...) __attribute__((format (printf, 2, 3)));
 void gm_log (const char *fmt, ...) __attribute__((format (printf, 1, 2)));
 
 #endif // ATCOMMAND_H

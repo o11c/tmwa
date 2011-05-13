@@ -4,7 +4,6 @@
 #include "map.hpp"
 
 #define OPTION_MASK 0xd7b8
-#define CART_MASK 0x788
 
 #define pc_setdead(sd) ((sd)->state.dead_sit = 1)
 #define pc_setsit(sd) ((sd)->state.dead_sit = 2)
@@ -14,9 +13,6 @@
 #define pc_setdir(sd,b) ((sd)->dir = (b))
 #define pc_setchatid(sd,n) ((sd)->chatID = n)
 #define pc_ishiding(sd) ((sd)->status.option&0x4006)
-#define pc_iscarton(sd) ((sd)->status.option&CART_MASK)
-#define pc_isfalcon(sd) ((sd)->status.option&0x0010)
-#define pc_isriding(sd) ((sd)->status.option&0x0020)
 #define pc_isinvisible(sd) ((sd)->status.option&0x0040)
 #define pc_is50overweight(sd) (sd->weight*2 >= sd->max_weight)
 #define pc_is90overweight(sd) (sd->weight*10 >= sd->max_weight*9)
@@ -44,7 +40,6 @@ int  pc_breakweapon (struct map_session_data *sd);  // weapon breaking [Valaris]
 int  pc_breakarmor (struct map_session_data *sd);   // armor breaking [Valaris]
 
 int  pc_checkskill (struct map_session_data *sd, int skill_id);
-int  pc_checkallowskill (struct map_session_data *sd);
 int  pc_checkequip (struct map_session_data *sd, int pos);
 
 int  pc_checkoverhp (struct map_session_data *);
@@ -57,7 +52,6 @@ int  pc_movepos (struct map_session_data *, int, int);
 int  pc_setpos (struct map_session_data *, const char *, int, int, int);
 int  pc_setsavepoint (struct map_session_data *, const char *, int, int);
 int  pc_randomwarp (struct map_session_data *sd, int type);
-int  pc_memo (struct map_session_data *sd, int i);
 
 int  pc_checkadditem (struct map_session_data *, int, int);
 int  pc_inventoryblank (struct map_session_data *);
@@ -71,27 +65,14 @@ int  pc_count_all_items (struct map_session_data *player, int item_id);
 int  pc_remove_items (struct map_session_data *player, int item_id,
                       int count);
 
-int  pc_cart_additem (struct map_session_data *sd, struct item *item_data,
-                      int amount);
-int  pc_cart_delitem (struct map_session_data *sd, int n, int amount,
-                      int type);
-int  pc_putitemtocart (struct map_session_data *sd, int idx, int amount);
-int  pc_getitemfromcart (struct map_session_data *sd, int idx, int amount);
-int  pc_cartitem_amount (struct map_session_data *sd, int idx, int amount);
-
 int  pc_takeitem (struct map_session_data *, struct flooritem_data *);
 int  pc_dropitem (struct map_session_data *, int, int);
-
-int  pc_checkweighticon (struct map_session_data *sd);
 
 int  pc_calcstatus (struct map_session_data *, int);
 int  pc_bonus (struct map_session_data *, int, int);
 int  pc_bonus2 (struct map_session_data *sd, int, int, int);
 int  pc_bonus3 (struct map_session_data *sd, int, int, int, int);
 int  pc_skill (struct map_session_data *, int, int, int);
-
-int  pc_insert_card (struct map_session_data *sd, int idx_card,
-                     int idx_equip);
 
 int  pc_item_identify (struct map_session_data *sd, int idx);
 int  pc_steal_item (struct map_session_data *sd, struct block_list *bl);
@@ -137,9 +118,6 @@ int  pc_heal (struct map_session_data *, int, int);
 int  pc_itemheal (struct map_session_data *sd, int hp, int sp);
 int  pc_percentheal (struct map_session_data *sd, int, int);
 int  pc_setoption (struct map_session_data *, int);
-int  pc_setcart (struct map_session_data *sd, int type);
-int  pc_setfalcon (struct map_session_data *sd);
-int  pc_setriding (struct map_session_data *sd);
 int  pc_changelook (struct map_session_data *, int, int);
 int  pc_equiplookall (struct map_session_data *sd);
 
@@ -179,8 +157,6 @@ void pc_cleanup (struct map_session_data *sd);  // [Fate] Clean up after a logge
 int  pc_read_gm_account (int fd);
 int  pc_setinvincibletimer (struct map_session_data *sd, int);
 int  pc_delinvincibletimer (struct map_session_data *sd);
-int  pc_addspiritball (struct map_session_data *sd, int, int);
-int  pc_delspiritball (struct map_session_data *sd, int, int);
 int  pc_logout (struct map_session_data *sd);   // [fate] Player logs out
 
 int  do_init_pc (void);

@@ -687,7 +687,6 @@ int npc_touch_areanpc (struct map_session_data *sd, int m, int x, int y)
     switch (maps[m].npc[i]->bl.subtype)
     {
         case WARP:
-            skill_stop_dancing (&sd->bl, 0);
             pc_setpos (sd, maps[m].npc[i]->u.warp.name,
                        maps[m].npc[i]->u.warp.x, maps[m].npc[i]->u.warp.y, 0);
             break;
@@ -866,7 +865,7 @@ int npc_buylist (struct map_session_data *sd, int n,
 {
     struct npc_data *nd;
     double z;
-    int  i, j, w, skill, itemamount = 0, new_stacks = 0;
+    int  i, j, w, itemamount = 0, new_stacks = 0;
 
     nullpo_retr (3, sd);
     nullpo_retr (3, item_list);
@@ -950,25 +949,6 @@ int npc_buylist (struct map_session_data *sd, int n,
             }
         }
     }
-
-    //商人経験値
-/*	if ((sd->status.class == 5) || (sd->status.class == 10) || (sd->status.class == 18)) {
-		z = z * pc_checkskill(sd,MC_DISCOUNT) / ((1 + 300 / itemamount) * 4000) * battle_config.shop_exp;
-		pc_gainexp(sd,0,z);
-	}*/
-    if (battle_config.shop_exp > 0 && z > 0
-        && (skill = pc_checkskill (sd, MC_DISCOUNT)) > 0)
-    {
-        if (skill > 0)
-        {
-            z = (log (z * (double) skill) * (double) battle_config.shop_exp /
-                 100.);
-            if (z < 1)
-                z = 1;
-            pc_gainexp (sd, 0, (int) z);
-        }
-    }
-
     return 0;
 }
 
@@ -980,7 +960,7 @@ int npc_selllist (struct map_session_data *sd, int n,
                   unsigned short *item_list)
 {
     double z;
-    int  i, skill, itemamount = 0;
+    int  i, itemamount = 0;
 
     nullpo_retr (1, sd);
     nullpo_retr (1, item_list);
@@ -1015,25 +995,6 @@ int npc_selllist (struct map_session_data *sd, int n,
         int  item_id = item_list[i * 2] - 2;
         pc_delitem (sd, item_id, item_list[i * 2 + 1], 0);
     }
-
-    //商人経験値
-/*	if ((sd->status.class == 5) || (sd->status.class == 10) || (sd->status.class == 18)) {
-		z = z * pc_checkskill(sd,MC_OVERCHARGE) / ((1 + 500 / itemamount) * 4000) * battle_config.shop_exp ;
-		pc_gainexp(sd,0,z);
-	}*/
-    if (battle_config.shop_exp > 0 && z > 0
-        && (skill = pc_checkskill (sd, MC_OVERCHARGE)) > 0)
-    {
-        if (skill > 0)
-        {
-            z = (log (z * (double) skill) * (double) battle_config.shop_exp /
-                 100.);
-            if (z < 1)
-                z = 1;
-            pc_gainexp (sd, 0, (int) z);
-        }
-    }
-
     return 0;
 
 }
@@ -1149,7 +1110,6 @@ int npc_parse_warp (char *w1, const char *UNUSED, char *w3, char *w4)
     memcpy (nd->name, w3, 24);
     memcpy (nd->exname, w3, 24);
 
-    nd->chat_id = 0;
     if (!battle_config.warp_point_debug)
         nd->npc_class = WARP_CLASS;
     else
@@ -1268,7 +1228,6 @@ static int npc_parse_shop (char *w1, char *UNUSED, char *w3, char *w4)
     memcpy (nd->name, w3, 24);
     nd->npc_class = atoi (w4);
     nd->speed = 200;
-    nd->chat_id = 0;
     nd->option = 0;
     nd->opt1 = 0;
     nd->opt2 = 0;
@@ -1512,7 +1471,6 @@ static int npc_parse_script (char *w1, char *w2, char *w3, char *w4,
     nd->speed = 200;
     nd->u.scr.script = script;
     nd->u.scr.src_id = src_id;
-    nd->chat_id = 0;
     nd->option = 0;
     nd->opt1 = 0;
     nd->opt2 = 0;
@@ -2006,13 +1964,6 @@ struct npc_data *npc_spawn_text (int m, int x, int y,
 
 static void npc_free_internal (struct npc_data *nd)
 {
-    struct chat_data *cd;
-
-    if (nd->chat_id && (cd = (struct chat_data *) map_id2bl (nd->chat_id)))
-    {
-        free (cd);
-        cd = NULL;
-    }
     if (nd->bl.subtype == SCRIPT)
     {
         if (nd->u.scr.timer_event)

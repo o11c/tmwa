@@ -220,7 +220,6 @@ extern struct Battle_Config
     int  max_sp;
     int  max_lv;
     int  max_parameter;
-    int  max_cart_weight;
     int  pc_skill_log;
     int  mob_skill_log;
     int  battle_log;
@@ -300,7 +299,6 @@ extern struct Battle_Config
     int  invite_request_check;
     int  skill_removetrap_type;
     int  disp_experience;
-    int  riding_weight;
     int  backstab_bow_penalty;
 
     int  night_at_start;        // added by [Yor]
@@ -309,7 +307,6 @@ extern struct Battle_Config
     int  hack_info_GM_level;    // added by [Yor]
     int  any_warp_GM_min_level; // added by [Yor]
     int  packet_ver_flag;       // added by [Yor]
-    int  muting_players;        // added by [Apple]
 
     int  min_hair_style;        // added by [MouseJstr]
     int  max_hair_style;        // added by [MouseJstr]

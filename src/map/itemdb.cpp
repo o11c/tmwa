@@ -82,18 +82,13 @@ int itemdb_searchrandomid (int flags)
         struct random_item_data *list;
     } data[] =
     {
-        {
-        0, 0, NULL},
-        {
-        blue_box_default, blue_box_count, blue_box},
-        {
-        violet_box_default, violet_box_count, violet_box},
-        {
-        card_album_default, card_album_count, card_album},
-        {
-        gift_box_default, gift_box_count, gift_box},
-        {
-    scroll_default, scroll_count, scroll},};
+        {0, 0, NULL},
+        {blue_box_default, blue_box_count, blue_box},
+        {violet_box_default, violet_box_count, violet_box},
+        {card_album_default, card_album_count, card_album},
+        {gift_box_default, gift_box_count, gift_box},
+        {scroll_default, scroll_count, scroll},
+    };
 
     if (flags >= 1 && flags <= 5)
     {

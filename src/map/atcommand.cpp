@@ -129,8 +129,6 @@ ATCOMMAND_FUNC (char_block);    // by Yor
 ATCOMMAND_FUNC (char_ban);      // by Yor
 ATCOMMAND_FUNC (char_unblock);  // by Yor
 ATCOMMAND_FUNC (char_unban);    // by Yor
-ATCOMMAND_FUNC (mount_peco);    // by Valaris
-ATCOMMAND_FUNC (char_mount_peco);   // by Yor
 ATCOMMAND_FUNC (partyspy);      // [Syrus22]
 ATCOMMAND_FUNC (partyrecall);   // by Yor
 ATCOMMAND_FUNC (enablenpc);
@@ -151,7 +149,6 @@ ATCOMMAND_FUNC (email);         // by Yor
 ATCOMMAND_FUNC (effect);        //by Apple
 ATCOMMAND_FUNC (character_item_list);   // by Yor
 ATCOMMAND_FUNC (character_storage_list);    // by Yor
-ATCOMMAND_FUNC (character_cart_list);   // by Yor
 ATCOMMAND_FUNC (addwarp);       // by MouseJstr
 ATCOMMAND_FUNC (follow);        // by MouseJstr
 ATCOMMAND_FUNC (skillon);       // by MouseJstr
@@ -176,7 +173,6 @@ ATCOMMAND_FUNC (leaves);
 ATCOMMAND_FUNC (adjgmlvl);      // by MouseJstr
 ATCOMMAND_FUNC (adjcmdlvl);     // by MouseJstr
 ATCOMMAND_FUNC (trade);         // by MouseJstr
-ATCOMMAND_FUNC (unmute);        // [Valaris]
 ATCOMMAND_FUNC (char_wipe);     // [Fate]
 ATCOMMAND_FUNC (set_magic);     // [Fate]
 ATCOMMAND_FUNC (magic_info);    // [Fate]
@@ -592,7 +588,7 @@ void gm_log (const char *fmt, ...)
 }
 
 
-bool atcommand (gm_level_t level, const char *message, AtCommandInfo *info);
+static bool atcommand (gm_level_t level, const char *message, AtCommandInfo *info);
 
 bool is_atcommand (const int fd, struct map_session_data *sd, const char *message,
                    gm_level_t gmlvl)
@@ -1621,18 +1617,7 @@ int atcommand_option (const int fd, struct map_session_data *sd,
 
     sd->opt1 = param1;
     sd->opt2 = param2;
-    if (!(sd->status.option & CART_MASK) && param3 & CART_MASK)
-    {
-        clif_cart_itemlist (sd);
-        clif_cart_equiplist (sd);
-        clif_updatestatus (sd, SP_CARTINFO);
-    }
     sd->status.option = param3;
-    // fix pecopeco display
-    if (pc_isriding (sd))
-    {                       // sd have the new value...
-        sd->status.option &= ~0x0020;
-    }
 
     clif_changeoption (&sd->bl);
     pc_calcstatus (sd, 0);
@@ -1789,12 +1774,8 @@ int atcommand_heal (const int fd, struct map_session_data *sd,
             sp = 1 - sd->status.sp;
     }
 
-    if (hp > 0)                 // display like heal
-        clif_heal (fd, SP_HP, hp);
-    else if (hp < 0)            // display like damage
+    if (hp < 0)            // display like damage
         clif_damage (&sd->bl, &sd->bl, gettick (), 0, 0, -hp, 0, 4, 0);
-    if (sp > 0)                 // no display when we lost SP
-        clif_heal (fd, SP_SP, sp);
 
     if (hp != 0 || sp != 0)
     {
@@ -2237,7 +2218,6 @@ int atcommand_pvpoff (const int fd, struct map_session_data *sd,
     if (maps[sd->bl.m].flag.pvp)
     {
         maps[sd->bl.m].flag.pvp = 0;
-        clif_send0199 (sd->bl.m, 0);
         for (i = 0; i < fd_max; i++)
         {                       //人数分ループ
             if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
@@ -2245,7 +2225,6 @@ int atcommand_pvpoff (const int fd, struct map_session_data *sd,
             {
                 if (sd->bl.m == pl_sd->bl.m)
                 {
-                    clif_pvpset (pl_sd, 0, 0, 2);
                     if (pl_sd->pvp_timer != -1)
                     {
                         delete_timer (pl_sd->pvp_timer,
@@ -2285,7 +2264,6 @@ int atcommand_pvpon (const int fd, struct map_session_data *sd,
     if (!maps[sd->bl.m].flag.pvp && !maps[sd->bl.m].flag.nopvp)
     {
         maps[sd->bl.m].flag.pvp = 1;
-        clif_send0199 (sd->bl.m, 1);
         for (i = 0; i < fd_max; i++)
         {
             if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
@@ -2934,7 +2912,6 @@ int atcommand_produce (const int fd, struct map_session_data *sd,
         tmp_item.card[0] = 0x00ff;
         tmp_item.card[1] = ((star * 5) << 8) + attribute;
         *((unsigned long *) (&tmp_item.card[2])) = sd->char_id;
-        clif_produceeffect (sd, 0, item_id);    // 製造エフェクトパケット
         clif_misceffect (&sd->bl, 3);   // 他人にも成功を通知
         if ((flag = pc_additem (sd, &tmp_item, 1)))
             clif_additem (sd, 0, 0, flag);
@@ -3015,9 +2992,6 @@ int atcommand_memo (const int fd, struct map_session_data *sd,
                     24);
             sd->status.memo_point[position].x = sd->bl.x;
             sd->status.memo_point[position].y = sd->bl.y;
-            clif_skill_memo (sd, 0);
-            if (pc_checkskill (sd, AL_WARP) <= (position + 1))
-                clif_displaymessage (fd, "Note: you don't have the 'Warp' skill level to use it.");
             atcommand_memo_sub (sd);
         }
         else
@@ -3576,11 +3550,6 @@ int atcommand_character_option (const int fd, struct map_session_data *sd,
             pl_sd->opt1 = opt1;
             pl_sd->opt2 = opt2;
             pl_sd->status.option = opt3;
-            // fix pecopeco display
-            if (pc_isriding (pl_sd))
-            {               // pl_sd have the new value...
-                    pl_sd->status.option &= ~0x0020;
-            }
             clif_changeoption (&pl_sd->bl);
             pc_calcstatus (pl_sd, 0);
             clif_displaymessage (fd, "Character's options changed.");
@@ -5300,7 +5269,7 @@ int atcommand_reloadgmdb (      // by [Yor]
 }
 
 /*==========================================
- * @mapinfo <map name> [0-3] by MC_Cameri
+ * @mapinfo <map name> [0-2] by MC_Cameri
  * => Shows information about the map [map name]
  * 0 = no additional information
  * 1 = Show users in that map and their location
@@ -5313,10 +5282,9 @@ int atcommand_mapinfo (const int fd, struct map_session_data *sd,
 {
     struct map_session_data *pl_sd;
     struct npc_data *nd = NULL;
-    struct chat_data *cd = NULL;
     char output[200], map_name[100];
     char direction[12];
-    int  m_id, i, chat_num, list = 0;
+    int  m_id, i, list = 0;
 
     memset (output, '\0', sizeof (output));
     memset (map_name, '\0', sizeof (map_name));
@@ -5324,10 +5292,10 @@ int atcommand_mapinfo (const int fd, struct map_session_data *sd,
 
     sscanf (message, "%d %99[^\n]", &list, map_name);
 
-    if (list < 0 || list > 3)
+    if (list < 0 || list > 2)
     {
         clif_displaymessage (fd,
-                             "Please, enter at least a valid list number (usage: @mapinfo <0-3> [map]).");
+                             "Please, enter at least a valid list number (usage: @mapinfo <0-2> [map]).");
         return -1;
     }
 
@@ -5348,18 +5316,6 @@ int atcommand_mapinfo (const int fd, struct map_session_data *sd,
     sprintf (output, "Players In Map: %d", maps[m_id].users);
     clif_displaymessage (fd, output);
     sprintf (output, "NPCs In Map: %d", maps[m_id].npc_num);
-    clif_displaymessage (fd, output);
-    chat_num = 0;
-    for (i = 0; i < fd_max; i++)
-    {
-        if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-            && pl_sd->state.auth
-            && (cd = (struct chat_data *) map_id2bl (pl_sd->chatID)))
-        {
-            chat_num++;
-        }
-    }
-    sprintf (output, "Chats In Map: %d", chat_num);
     clif_displaymessage (fd, output);
     clif_displaymessage (fd, "------ Map Flags ------");
     sprintf (output, "Player vs Player: %s | No Party: %s",
@@ -5456,108 +5412,11 @@ int atcommand_mapinfo (const int fd, struct map_session_data *sd,
                 clif_displaymessage (fd, output);
             }
             break;
-        case 3:
-            clif_displaymessage (fd, "----- Chats in Map -----");
-            for (i = 0; i < fd_max; i++)
-            {
-                if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-                    && pl_sd->state.auth
-                    && (cd = (struct chat_data *) map_id2bl (pl_sd->chatID))
-                    && strcmp (pl_sd->mapname, map_name) == 0
-                    && cd->usersd[0] == pl_sd)
-                {
-                    sprintf (output,
-                             "Chat %d: %s | Player: %s | Location: %d %d", i,
-                             cd->title, pl_sd->status.name, cd->bl.x,
-                             cd->bl.y);
-                    clif_displaymessage (fd, output);
-                    sprintf (output,
-                             "   Users: %d/%d | Password: %s | Public: %s",
-                             cd->users, cd->limit, cd->pass,
-                             (cd->pub) ? "Yes" : "No");
-                    clif_displaymessage (fd, output);
-                }
-            }
-            break;
         default:               // normally impossible to arrive here
             clif_displaymessage (fd,
-                                 "Please, enter at least a valid list number (usage: @mapinfo <0-3> [map]).");
+                                 "Please, enter at least a valid list number (usage: @mapinfo <0-2> [map]).");
             return -1;
             break;
-    }
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int atcommand_mount_peco (const int fd, struct map_session_data *sd,
-                          const char *UNUSED, const char *UNUSED)
-{
-    if (sd->disguise > 0)
-    {                           // temporary prevention of crash caused by peco + disguise, will look into a better solution [Valaris]
-        clif_displaymessage (fd, "Cannot mount a Peco while in disguise.");
-        return -1;
-    }
-
-    if (!pc_isriding (sd))
-    {                           // if actually no peco
-        clif_displaymessage (fd, "You can not mount a peco with your job.");
-        return -1;
-    }
-    else
-    {
-        pc_setoption (sd, sd->status.option & ~0x0020);
-        clif_displaymessage (fd, "Unmounted Peco.");
-    }
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int atcommand_char_mount_peco (const int fd, struct map_session_data *UNUSED,
-                               const char *UNUSED, const char *message)
-{
-    char character[100];
-    struct map_session_data *pl_sd;
-
-    memset (character, '\0', sizeof (character));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
-    {
-        clif_displaymessage (fd,
-                             "Please, enter a player name (usage: @charmountpeco <char_name>).");
-        return -1;
-    }
-
-    if ((pl_sd = map_nick2sd (character)) != NULL)
-    {
-        if (pl_sd->disguise > 0)
-        {                       // temporary prevention of crash caused by peco + disguise, will look into a better solution [Valaris]
-            clif_displaymessage (fd, "This player cannot mount a Peco while in disguise.");
-            return -1;
-        }
-
-        if (!pc_isriding (pl_sd))
-        {                       // if actually no peco
-            clif_displaymessage (fd, "This player can not mount a peco with his/her job.");
-            return -1;
-        }
-        else
-        {
-            pc_setoption (pl_sd, pl_sd->status.option & ~0x0020);
-            clif_displaymessage (fd, "Now, this player has not more peco.");
-        }
-    }
-    else
-    {
-        clif_displaymessage (fd, "Character not found.");
-        return -1;
     }
 
     return 0;
@@ -6026,11 +5885,6 @@ int atcommand_disguise (const int fd, struct map_session_data *sd,
         (mob_id >= 813 && mob_id <= 834) || // NPC
         (mob_id > 1000 && mob_id < 1521))
     {                           // monsters
-        if (pc_isriding (sd))
-        {                       // temporary prevention of crash caused by peco + disguise, will look into a better solution [Valaris]
-            clif_displaymessage (fd, "Cannot wear disguise while riding a Peco.");
-            return -1;
-        }
         sd->disguiseflag = 1;   // set to override items with disguise script [Valaris]
         sd->disguise = mob_id;
         pc_setpos (sd, sd->mapname, sd->bl.x, sd->bl.y, 3);
@@ -6385,11 +6239,6 @@ int atcommand_chardisguise (const int fd, struct map_session_data *sd,
                 (mob_id >= 813 && mob_id <= 834) || // NPC
                 (mob_id > 1000 && mob_id < 1521))
             {                   // monsters
-                if (pc_isriding (pl_sd))
-                {               // temporary prevention of crash caused by peco + disguise, will look into a better solution [Valaris]
-                    clif_displaymessage (fd, "Character cannot wear disguise while riding a Peco.");
-                    return -1;
-                }
                 pl_sd->disguiseflag = 1;    // set to override items with disguise script [Valaris]
                 pl_sd->disguise = mob_id;
                 pc_setpos (pl_sd, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y,
@@ -6817,121 +6666,6 @@ atcommand_character_storage_list (const int fd, struct map_session_data *sd,
             {
                 clif_displaymessage (fd, "This player has no storage.");
                 return -1;
-            }
-        }
-        else
-        {
-            clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
-            return -1;
-        }
-    }
-    else
-    {
-        clif_displaymessage (fd, "Character not found.");
-        return -1;
-    }
-
-    return 0;
-}
-
-/*==========================================
- * @charcartlist <character>: Displays the items list of a player's cart.
- *------------------------------------------
- */
-int
-atcommand_character_cart_list (const int fd, struct map_session_data *sd,
-                               const char *UNUSED, const char *message)
-{
-    struct map_session_data *pl_sd;
-    struct item_data *item_data, *item_temp;
-    int  i, j, count, counter, counter2;
-    char character[100], output[200], outputtmp[200];
-
-    memset (character, '\0', sizeof (character));
-    memset (output, '\0', sizeof (output));
-    memset (outputtmp, '\0', sizeof (outputtmp));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
-    {
-        clif_displaymessage (fd,
-                             "Please, enter a player name (usage: @charitemlist <char name>).");
-        return -1;
-    }
-
-    if ((pl_sd = map_nick2sd (character)) != NULL)
-    {
-        if (pc_isGM (sd) >= pc_isGM (pl_sd))
-        {                       // you can look items only lower or same level
-            counter = 0;
-            count = 0;
-            for (i = 0; i < MAX_CART; i++)
-            {
-                if (pl_sd->status.cart[i].nameid > 0
-                    && (item_data =
-                        itemdb_search (pl_sd->status.cart[i].nameid)) != NULL)
-                {
-                    counter = counter + pl_sd->status.cart[i].amount;
-                    count++;
-                    if (count == 1)
-                    {
-                        sprintf (output,
-                                 "------ Cart items list of '%s' ------",
-                                 pl_sd->status.name);
-                        clif_displaymessage (fd, output);
-                    }
-                    if (pl_sd->status.cart[i].refine)
-                        sprintf (output, "%d %s %+d (%s %+d, id: %d)",
-                                 pl_sd->status.cart[i].amount,
-                                 item_data->name,
-                                 pl_sd->status.cart[i].refine,
-                                 item_data->jname,
-                                 pl_sd->status.cart[i].refine,
-                                 pl_sd->status.cart[i].nameid);
-                    else
-                        sprintf (output, "%d %s (%s, id: %d)",
-                                 pl_sd->status.cart[i].amount,
-                                 item_data->name, item_data->jname,
-                                 pl_sd->status.cart[i].nameid);
-                    clif_displaymessage (fd, output);
-                    memset (output, '\0', sizeof (output));
-                    counter2 = 0;
-                    for (j = 0; j < item_data->slot; j++)
-                    {
-                        if (pl_sd->status.cart[i].card[j])
-                        {
-                            if ((item_temp =
-                                 itemdb_search (pl_sd->status.
-                                                cart[i].card[j])) != NULL)
-                            {
-                                if (output[0] == '\0')
-                                    sprintf (outputtmp,
-                                             " -> (card(s): #%d %s (%s), ",
-                                             ++counter2, item_temp->name,
-                                             item_temp->jname);
-                                else
-                                    sprintf (outputtmp, "#%d %s (%s), ",
-                                             ++counter2, item_temp->name,
-                                             item_temp->jname);
-                                strcat (output, outputtmp);
-                            }
-                        }
-                    }
-                    if (output[0] != '\0')
-                    {
-                        output[strlen (output) - 2] = ')';
-                        output[strlen (output) - 1] = '\0';
-                        clif_displaymessage (fd, output);
-                    }
-                }
-            }
-            if (count == 0)
-                clif_displaymessage (fd,
-                                     "No item found in the cart of this player.");
-            else
-            {
-                sprintf (output, "%d item(s) found in %d kind(s) of items.",
-                         counter, count);
-                clif_displaymessage (fd, output);
             }
         }
         else
@@ -7523,7 +7257,6 @@ int atcommand_summon (const int UNUSED, struct map_session_data *sd,
         md->deletetimer = add_timer (tick + 60000, mob_timer_delete, id, 0);
         clif_misceffect (&md->bl, 344);
     }
-    clif_skill_poseffect (&sd->bl, AM_CALLHOMUN, 1, x, y, tick);
 
     return 0;
 }
@@ -7617,31 +7350,6 @@ atcommand_trade (const int UNUSED, struct map_session_data *sd,
         return 0;
     }
     return -1;
-}
-
-/*===========================
- * @unmute [Valaris]
- *===========================
-*/
-int atcommand_unmute (const int UNUSED, struct map_session_data *sd,
-                      const char *UNUSED, const char *message)
-{
-    struct map_session_data *pl_sd = NULL;
-    if (!message || !*message)
-        return -1;
-
-    if ((pl_sd = map_nick2sd ((char *) message)) != NULL)
-    {
-        if (pl_sd->sc_data[SC_NOCHAT].timer != -1)
-        {
-            skill_status_change_end (&pl_sd->bl, SC_NOCHAT, -1);
-            clif_displaymessage (sd->fd, "Player unmuted");
-        }
-        else
-            clif_displaymessage (sd->fd, "Player is not muted");
-    }
-
-    return 0;
 }
 
 /* Magic atcommands by Fate */

@@ -114,7 +114,7 @@ int  start_armor = 1202;
 // Initial position (it's possible to set it in conf file)
 struct point start_point = { "new_1-1.gat", 53, 111 };
 
-struct gm_account *gm_account = NULL;
+struct gm_account *gm_accounts = NULL;
 int  GM_num = 0;
 
 // online players by [Yor]
@@ -164,8 +164,8 @@ void char_log (const char *fmt, ...)
 static gm_level_t isGM (int account_id)
 {
     for (int i = 0; i < GM_num; i++)
-        if (gm_account[i].account_id == account_id)
-            return gm_account[i].level;
+        if (gm_accounts[i].account_id == account_id)
+            return gm_accounts[i].level;
     return 0;
 }
 
@@ -253,19 +253,7 @@ static void mmo_char_tofile (FILE *fp, struct mmo_charstatus *p)
         }
     fprintf (fp, "\t");
 
-    for (int i = 0; i < MAX_CART; i++)
-        if (p->cart[i].nameid)
-        {
-            fprintf (fp, "%d,%d,%d,%d," "%d,%d,%d," "%d,%d,%d,%d,%d ",
-                     p->cart[i].id, p->cart[i].nameid,
-                     p->cart[i].amount, p->cart[i].equip,
-
-                     p->cart[i].identify, p->cart[i].refine,
-                     p->cart[i].attribute,
-
-                     p->cart[i].card[0], p->cart[i].card[1],
-                     p->cart[i].card[2], p->cart[i].card[3], p->cart[i].broken);
-        }
+    // cart was here
     fprintf (fp, "\t");
 
     for (int i = 0; i < MAX_SKILL; i++)
@@ -386,14 +374,15 @@ static int mmo_char_fromstr (char *str, struct mmo_charstatus *p)
     for (int i = 0; str[0] && str[0] != '\t'; i++)
     {
         int len;
+        struct item cart;
         switch (sscanf (str, "%d,%hd,%hd,%hu,%hhd,%hhd,%hhd,%hd,%hd,%hd,%hd%n,%hd%n",
-                        &p->cart[i].id, &p->cart[i].nameid, &p->cart[i].amount, &p->cart[i].equip,
-                        &p->cart[i].identify, &p->cart[i].refine, &p->cart[i].attribute,
-                        &p->cart[i].card[0], &p->cart[i].card[1], &p->cart[i].card[2], &p->cart[i].card[3],
-                        &next, &p->cart[i].broken, &len))
+                        &cart.id, &cart.nameid, &cart.amount, &cart.equip,
+                        &cart.identify, &cart.refine, &cart.attribute,
+                        &cart.card[0], &cart.card[1], &cart.card[2], &cart.card[3],
+                        &next, &cart.broken, &len))
         {
         default: return -5;
-        case 11: p->cart[i].broken = 0; break;
+        case 11: cart.broken = 0; break;
         case 12: next = len;
         }
         str += next;
@@ -1524,6 +1513,27 @@ static void parse_tologin (int fd)
         }
             break;
 
+        case 0x7931:
+            if (RFIFOREST (fd) < 10)
+                return;
+        {
+            Version *server_version = (Version *)RFIFOP (login_fd, 2);
+            if (!(server_version->what_server & ATHENA_SERVER_LOGIN))
+            {
+                char_log ("Not a login server!");
+                abort();
+            }
+            if (server_version->major != tmwAthenaVersion.major
+                || server_version->minor != tmwAthenaVersion.minor
+                || server_version->rev != tmwAthenaVersion.rev)
+            {
+                char_log ("Version mismatch!");
+                abort();
+            }
+        }
+            RFIFOSKIP (fd, 10);
+            break;
+
         /// [Fate] Itemfrob package: forwarded from login-server
         // uint16_t packet, uint32_t srcid, uint32_t dstid
         case 0x7924:
@@ -1541,8 +1551,6 @@ static void parse_tologin (int fd)
 #define FIX(v) if (v == source_id) {v = dest_id; ++changes; }
                 for (int j = 0; j < MAX_INVENTORY; j++)
                     FIX (c->inventory[j].nameid);
-                for (int j = 0; j < MAX_CART; j++)
-                    FIX (c->cart[j].nameid);
                 FIX (c->weapon);
                 FIX (c->shield);
                 FIX (c->head_top);
@@ -1642,14 +1650,13 @@ static void parse_tologin (int fd)
             if (RFIFOREST (fd) < 4 || RFIFOREST (fd) < RFIFOW (fd, 2))
                 return;
         {
-            if (gm_account != NULL)
-                free (gm_account);
+            free (gm_accounts);
             GM_num = (RFIFOW (fd, 2) - 4) / 5;
-            CREATE (gm_account, struct gm_account, GM_num);
-            for (int i = 4; i < GM_num; i += 5)
+            CREATE (gm_accounts, struct gm_account, GM_num);
+            for (int i = 0; i < GM_num; i++)
             {
-                gm_account[GM_num].account_id = RFIFOL (fd, i);
-                gm_account[GM_num].level = RFIFOB (fd, i + 4);
+                gm_accounts[i].account_id = RFIFOL (fd, 4 + 5*i);
+                gm_accounts[i].level = RFIFOB (fd, 4 + 5*i + 4);
             }
             char_log ("From login-server: receiving of %d GM accounts information.\n",
                       GM_num);
@@ -2574,8 +2581,8 @@ static void parse_char (int fd)
             WFIFOW (fd, 0) = 0x2b15;
             for (int j = 0; j < GM_num; j++)
             {
-                WFIFOL (fd, len) = gm_account[j].account_id;
-                WFIFOB (fd, len + 4) = gm_account[j].level;
+                WFIFOL (fd, len) = gm_accounts[j].account_id;
+                WFIFOB (fd, len + 4) = gm_accounts[j].level;
                 len += 5;
             }
             WFIFOW (fd, 2) = len;
@@ -2599,13 +2606,9 @@ static void parse_char (int fd)
         case 0x7530:
         {
             WFIFOW (fd, 0) = 0x7531;
-            WFIFOB (fd, 2) = ATHENA_MAJOR_VERSION;
-            WFIFOB (fd, 3) = ATHENA_MINOR_VERSION;
-            WFIFOB (fd, 4) = ATHENA_REVISION;
-            WFIFOB (fd, 5) = ATHENA_RELEASE_FLAG;
-            WFIFOB (fd, 6) = ATHENA_OFFICIAL_FLAG;
+            memcpy (WFIFOP (fd, 2), &tmwAthenaVersion, 8);
+            // WFIFOB (fd, 6) = 0;
             WFIFOB (fd, 7) = ATHENA_SERVER_INTER | ATHENA_SERVER_CHAR;
-            WFIFOW (fd, 8) = ATHENA_MOD_VERSION;
             WFIFOSET (fd, 10);
         }
             RFIFOSKIP (fd, 2);
@@ -2697,6 +2700,9 @@ static void check_connect_login_server (timer_id UNUSED, tick_t UNUSED, custom_i
     WFIFOW (login_fd, 82) = char_maintenance;
     WFIFOW (login_fd, 84) = char_new;
     WFIFOSET (login_fd, 86);
+
+    WFIFOW (login_fd, 0) = 0x7530;
+    WFIFOSET (login_fd, 2);
 }
 
 /// read conf/lan_support.conf

@@ -252,7 +252,7 @@ int  already_exit_function = 0; // sometimes, the exit function is called twice.
 //------------------------------
 // Writing function of logs file
 //------------------------------
-int ladmin_log (const char *fmt, ...) __attribute__((format (printf, 1, 2)));
+static int ladmin_log (const char *fmt, ...) __attribute__((format (printf, 1, 2)));
 int ladmin_log (const char *fmt, ...)
 {
     FILE *logfp;
@@ -2784,31 +2784,31 @@ static void parse_fromlogin (int fd)
             case 0x7531:       // Displaying of the version of the login-server
                 if (RFIFOREST (fd) < 10)
                     return;
+            {
                 Iprintf ("  Login-Server [%s:%d]\n", loginserverip,
                          loginserverport);
-                if (((int) RFIFOB (login_fd, 5)) == 0)
+                Version *server_version = (Version *)RFIFOP (login_fd, 2);
+                if (!(server_version->what_server & ATHENA_SERVER_LOGIN))
                 {
-                    Iprintf ("  eAthena version stable-%d.%d",
-                             (int) RFIFOB (login_fd, 2),
-                             (int) RFIFOB (login_fd, 3));
+                    ladmin_log ("Not a login server!");
+                    abort();
                 }
-                else
+                Iprintf ("tmwAthena %d.%d.%d (%s build, flags: %d) mod %d\n",
+                         server_version->major, server_version->minor,
+                         server_version->rev,
+                         server_version->dev_flag ? "dev" : "stable",
+                         server_version->info_flags,
+                         server_version->mod_version);
+                if (server_version->major != tmwAthenaVersion.major
+                    || server_version->minor != tmwAthenaVersion.minor
+                    || server_version->rev != tmwAthenaVersion.rev)
                 {
-                    Iprintf ("  eAthena version dev-%d.%d",
-                             (int) RFIFOB (login_fd, 2),
-                             (int) RFIFOB (login_fd, 3));
+                    ladmin_log ("Version mismatch! trouble possible");
                 }
-                if (((int) RFIFOB (login_fd, 4)) == 0)
-                    Iprintf (" revision %d", (int) RFIFOB (login_fd, 4));
-                if (((int) RFIFOB (login_fd, 6)) == 0)
-                {
-                    Iprintf ("%d.\n", RFIFOW (login_fd, 8));
-                }
-                else
-                    Iprintf ("-mod%d.\n", RFIFOW (login_fd, 8));
                 bytes_to_read = 0;
                 RFIFOSKIP (fd, 10);
                 break;
+            }
 
             case 0x7925:       // Itemfrob-OK
                 RFIFOSKIP (fd, 2);
@@ -3691,8 +3691,8 @@ void do_init (int argc, char **argv)
     set_defaultparse (parse_fromlogin);
 
     Iprintf ("EAthena login-server administration tool.\n");
-    Iprintf ("(for eAthena version %d.%d.%d.)\n", ATHENA_MAJOR_VERSION,
-             ATHENA_MINOR_VERSION, ATHENA_REVISION);
+    Iprintf ("(for tmwAthena version %d.%d.%d.)\n", tmwAthenaVersion.major,
+             tmwAthenaVersion.minor, tmwAthenaVersion.rev);
 
     ladmin_log ("Ladmin is ready.\n");
     Iprintf ("Ladmin is \033[1;32mready\033[0m.\n\n");

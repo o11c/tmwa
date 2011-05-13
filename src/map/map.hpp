@@ -79,7 +79,7 @@ enum Direction
 };
 
 enum BlockType
-{ BL_NUL, BL_PC, BL_NPC, BL_MOB, BL_ITEM, BL_CHAT, BL_SKILL, BL_SPELL };
+{ BL_NUL, BL_PC, BL_NPC, BL_MOB, BL_ITEM, BL_SKILL, BL_SPELL };
 enum
 { WARP, SHOP, SCRIPT, MONS, MESSAGE };
 struct block_list
@@ -212,7 +212,6 @@ struct map_session_data
         unsigned no_magic_damage:1;
         unsigned no_weapon_damage:1;
         unsigned no_gemstone:1;
-        unsigned infinite_endure:1;
         unsigned unbreakable_weapon:1;
         unsigned unbreakable_armor:1;
         unsigned infinite_autospell:1;
@@ -224,7 +223,6 @@ struct map_session_data
     struct item_data *inventory_data[MAX_INVENTORY];
     short equip_index[11];
     int  weight, max_weight;
-    int  cart_weight, cart_max_weight, cart_num, cart_max_num;
     char mapname[24];
     int  fd, new_fd;
     short to_x, to_y;
@@ -247,7 +245,6 @@ struct map_session_data
         unsigned storage:1;
         unsigned divorce:1;
     } npc_flags;
-    unsigned int chatID;
 
     int  attacktimer;
     int  attacktarget;
@@ -355,8 +352,6 @@ struct map_session_data
     short break_weapon_rate, break_armor_rate;
     short add_steal_rate;
 
-    short spiritball, spiritball_old;
-    int  spirit_timer[MAX_SKILL_LEVEL];
     int  magic_damage_return;   // AppleGirl Was Here
     int  random_attack_increase_add, random_attack_increase_per;    // [Valaris]
     int  perfect_hiding;        // [Valaris]
@@ -372,7 +367,6 @@ struct map_session_data
 
     struct status_change sc_data[MAX_STATUSCHANGE];
     short sc_count;
-    struct square dev;
 
     int  trade_partner;
     int  deal_item_index[10];
@@ -441,7 +435,6 @@ struct npc_data
     short speed;
     char name[24];
     char exname[24];
-    int  chat_id;
     short opt1, opt2, opt3, option;
     short flag;
     union
@@ -654,9 +647,8 @@ enum
     SP_USTR, SP_UAGI, SP_UVIT, SP_UINT, SP_UDEX, SP_ULUK, SP_26, SP_27, // 32-39
     SP_28, SP_ATK1, SP_ATK2, SP_MATK1, SP_MATK2, SP_DEF1, SP_DEF2, SP_MDEF1,    // 40-47
     SP_MDEF2, SP_HIT, SP_FLEE1, SP_FLEE2, SP_CRITICAL, SP_ASPD, SP_36, SP_JOBLEVEL, // 48-55
-    SP_UPPER, SP_PARTNER, SP_CART, SP_FAME, SP_UNBREAKABLE, //56-58
+    SP_UPPER, SP_PARTNER, SP_3a, SP_FAME, SP_UNBREAKABLE, //56-58
     SP_DEAF = 70,
-    SP_CARTINFO = 99,           // 99
     SP_GM = 500,
 
     // original 1000-
@@ -683,7 +675,7 @@ enum
     SP_DISGUISE,                // 1077
 
     SP_RESTART_FULL_RECORVER = 2000, SP_NO_CASTCANCEL, SP_NO_SIZEFIX, SP_NO_MAGIC_DAMAGE, SP_NO_WEAPON_DAMAGE, SP_NO_GEMSTONE,  // 2000-2005
-    SP_NO_CASTCANCEL2, SP_INFINITE_ENDURE, SP_UNBREAKABLE_WEAPON, SP_UNBREAKABLE_ARMOR  // 2006-2009
+    SP_NO_CASTCANCEL2, SP_INFINITE_ENDURE_, SP_UNBREAKABLE_WEAPON, SP_UNBREAKABLE_ARMOR  // 2006-2009
 };
 
 enum
@@ -712,30 +704,12 @@ enum
 
 #define LOOK_LAST LOOK_MISC2
 
-// AFAIK the client doesn't support this
-struct chat_data
-{
-    struct block_list bl;
-
-    char pass[8];      /* password */
-    char title[61];    /* room title MAX 60 */
-    unsigned char limit;        /* join limit */
-    unsigned char trigger;
-    unsigned char users;        /* current users */
-    unsigned char pub;          /* room attribute */
-    struct map_session_data *usersd[20];
-    struct block_list *owner_;
-    struct block_list **owner;
-    char npc_event[50];
-};
-
 extern struct map_data maps[];
 extern int map_num;
 extern int autosave_interval;
 extern bool night_flag;
 
 extern char motd_txt[];
-extern char help_txt[] __attribute__((deprecated));
 
 extern char talkie_mes[];
 
@@ -787,7 +761,6 @@ int  map_addflooritem (struct item *, int amount, uint16_t m, uint16_t x, uint16
 // mappings between character id and names
 void map_addchariddb (charid_t charid, const char *name);
 void map_delchariddb (charid_t charid);
-void map_reqchariddb (struct map_session_data *sd, charid_t charid);
 const char *map_charid2nick (charid_t);
 
 struct map_session_data *map_id2sd (unsigned int);

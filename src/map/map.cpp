@@ -17,7 +17,6 @@
 #include "npc.hpp"
 #include "pc.hpp"
 #include "mob.hpp"
-#include "chat.hpp"
 #include "itemdb.hpp"
 #include "storage.hpp"
 #include "skill.hpp"
@@ -58,12 +57,9 @@ bool night_flag = 0;
 struct charid2nick
 {
     char nick[24];
-    // who wants to know the nick
-    struct map_session_data *req_id;
 };
 
 char motd_txt[256] = "conf/motd.txt";
-char help_txt[256] = "conf/help.txt";
 
 // can be modified in char-server configuration file
 char wisp_server_name[24] = "Server";
@@ -772,31 +768,12 @@ void map_addchariddb (charid_t charid, const char *name)
     {
         // if not in the database, it will need to be added it
         CREATE (p, struct charid2nick, 1);
-        p->req_id = 0;
     }
     else
         // is this really necessary?
         numdb_erase (charid_db, charid);
 
-    struct map_session_data *req = p->req_id;
     STRZCPY (p->nick, name);
-    p->req_id = 0;
-    numdb_insert (charid_db, charid, (void *)p);
-    if (req)
-        clif_solved_charname (req, charid);
-}
-
-/// Put char id request in the db
-void map_reqchariddb (struct map_session_data *sd, charid_t charid)
-{
-    nullpo_retv (sd);
-
-    struct charid2nick *p = (struct charid2nick *)numdb_search (charid_db, charid).p;
-    if (p)
-        // I'm pretty sure this shouldn't happen
-        return;
-    CREATE (p, struct charid2nick, 1);
-    p->req_id = sd;
     numdb_insert (charid_db, charid, (void *)p);
 }
 
@@ -826,9 +803,6 @@ void map_quit (struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
-    if (sd->chatID)
-        chat_leavechat (sd);
-
     if (sd->trade_partner)
         trade_tradecancel (sd);
 
@@ -840,10 +814,6 @@ void map_quit (struct map_session_data *sd)
     pc_cleareventtimer (sd);
 
     skill_castcancel (&sd->bl, 0);
-    skill_stop_dancing (&sd->bl, 1);
-
-    if (sd->sc_data && sd->sc_data[SC_BERSERK].timer != -1)
-        sd->status.hp = 100;
 
     skill_status_change_clear (&sd->bl, 1);
     skill_clear_unitgroup (&sd->bl);
@@ -851,8 +821,6 @@ void map_quit (struct map_session_data *sd)
     pc_stop_walking (sd, 0);
     pc_stopattack (sd);
     pc_delinvincibletimer (sd);
-    pc_delspiritball (sd, sd->spiritball, 1);
-    skill_gangsterparadise (sd, 0);
 
     pc_calcstatus (sd, 4);
 
@@ -899,8 +867,6 @@ const char *map_charid2nick (charid_t id)
     struct charid2nick *p = (struct charid2nick *)numdb_search (charid_db, id).p;
 
     if (!p)
-        return NULL;
-    if (p->req_id)
         return NULL;
     return p->nick;
 }

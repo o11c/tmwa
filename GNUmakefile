@@ -64,11 +64,11 @@ ${BUILD_DIR}/char/char: ${BUILD_DIR}/char/char.o ${BUILD_DIR}/char/inter.o ${BUI
 ${BUILD_DIR}/ladmin/ladmin: ${BUILD_DIR}/ladmin/ladmin.o ${BUILD_DIR}/common/md5calc.o ${BUILD_DIR}/common/core.o ${BUILD_DIR}/common/socket.o ${BUILD_DIR}/common/timer.o ${BUILD_DIR}/common/db.o ${BUILD_DIR}/common/mt_rand.o ${BUILD_DIR}/common/utils.o
 ${BUILD_DIR}/login/login: ${BUILD_DIR}/login/login.o ${BUILD_DIR}/common/core.o ${BUILD_DIR}/common/socket.o ${BUILD_DIR}/common/timer.o ${BUILD_DIR}/common/db.o ${BUILD_DIR}/common/lock.o ${BUILD_DIR}/common/mt_rand.o ${BUILD_DIR}/common/md5calc.o ${BUILD_DIR}/common/utils.o
 ${BUILD_DIR}/map/map: LDLIBS=-lm
-${BUILD_DIR}/map/map: ${BUILD_DIR}/map/map.o ${BUILD_DIR}/map/tmw.o ${BUILD_DIR}/map/magic-interpreter-lexer.o ${BUILD_DIR}/map/magic-interpreter-parser.o ${BUILD_DIR}/map/magic-interpreter-base.o ${BUILD_DIR}/map/magic-expr.o ${BUILD_DIR}/map/magic-stmt.o ${BUILD_DIR}/map/magic.o ${BUILD_DIR}/map/map.o ${BUILD_DIR}/map/chrif.o ${BUILD_DIR}/map/clif.o ${BUILD_DIR}/map/pc.o ${BUILD_DIR}/map/npc.o ${BUILD_DIR}/map/chat.o ${BUILD_DIR}/map/path.o ${BUILD_DIR}/map/itemdb.o ${BUILD_DIR}/map/mob.o ${BUILD_DIR}/map/script.o ${BUILD_DIR}/map/storage.o ${BUILD_DIR}/map/skill.o ${BUILD_DIR}/map/skill-pools.o ${BUILD_DIR}/map/atcommand.o ${BUILD_DIR}/map/battle.o ${BUILD_DIR}/map/intif.o ${BUILD_DIR}/map/trade.o ${BUILD_DIR}/map/party.o ${BUILD_DIR}/common/core.o ${BUILD_DIR}/common/socket.o ${BUILD_DIR}/common/timer.o ${BUILD_DIR}/common/grfio.o ${BUILD_DIR}/common/db.o ${BUILD_DIR}/common/lock.o ${BUILD_DIR}/common/nullpo.o ${BUILD_DIR}/common/mt_rand.o ${BUILD_DIR}/common/md5calc.o ${BUILD_DIR}/common/utils.o
+${BUILD_DIR}/map/map: ${BUILD_DIR}/map/map.o ${BUILD_DIR}/map/tmw.o ${BUILD_DIR}/map/magic-interpreter-lexer.o ${BUILD_DIR}/map/magic-interpreter-parser.o ${BUILD_DIR}/map/magic-interpreter-base.o ${BUILD_DIR}/map/magic-expr.o ${BUILD_DIR}/map/magic-stmt.o ${BUILD_DIR}/map/magic.o ${BUILD_DIR}/map/map.o ${BUILD_DIR}/map/chrif.o ${BUILD_DIR}/map/clif.o ${BUILD_DIR}/map/pc.o ${BUILD_DIR}/map/npc.o ${BUILD_DIR}/map/path.o ${BUILD_DIR}/map/itemdb.o ${BUILD_DIR}/map/mob.o ${BUILD_DIR}/map/script.o ${BUILD_DIR}/map/storage.o ${BUILD_DIR}/map/skill.o ${BUILD_DIR}/map/skill-pools.o ${BUILD_DIR}/map/atcommand.o ${BUILD_DIR}/map/battle.o ${BUILD_DIR}/map/intif.o ${BUILD_DIR}/map/trade.o ${BUILD_DIR}/map/party.o ${BUILD_DIR}/common/core.o ${BUILD_DIR}/common/socket.o ${BUILD_DIR}/common/timer.o ${BUILD_DIR}/common/grfio.o ${BUILD_DIR}/common/db.o ${BUILD_DIR}/common/lock.o ${BUILD_DIR}/common/nullpo.o ${BUILD_DIR}/common/mt_rand.o ${BUILD_DIR}/common/md5calc.o ${BUILD_DIR}/common/utils.o
 ${BUILD_DIR}/tool/eathena-monitor: ${BUILD_DIR}/tool/eathena-monitor.o
 ${BUILD_DIR}/webserver/main: ${BUILD_DIR}/webserver/main.o ${BUILD_DIR}/webserver/parse.o ${BUILD_DIR}/webserver/generate.o ${BUILD_DIR}/webserver/htmlstyle.o ${BUILD_DIR}/webserver/logs.o ${BUILD_DIR}/webserver/pages/about.o ${BUILD_DIR}/webserver/pages/sample.o ${BUILD_DIR}/webserver/pages/notdone.o
 
-deps.make:
+deps.make: src/map/magic-interpreter-parser.cpp src/map/magic-interpreter-lexer.cpp
 	for F in `find src/ -name '*.cpp' | sort`; do \
 	    ${CXX} -MM "$$F" -MT "$$(sed 's/src/$${BUILD_DIR}/;s/\.cpp/.o/' <<< "$$F")"; \
 	done > deps.make
@@ -77,3 +77,4 @@ include deps.make
 
 # It isn't feaible to fix this single use of strftime with nonconstant format string
 ${BUILD_DIR}/map/script.o: override WARNINGS+=-Wno-error=format-nonliteral
+obj/map/magic-interpreter-lexer.o: override WARNINGS+=-Wno-error=unused-but-set-variable

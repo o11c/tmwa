@@ -336,7 +336,7 @@ int path_search (struct walkpath_data *wpd, int m, int x_0, int y_0, int x_1,
     push_heap_path (heap, tp, calc_index (x_0, y_0));
     while (1)
     {
-        int  e = 0, fromdir;
+        int  e = 0;
 
         if (heap[0] == 0)
             return -1;
@@ -359,7 +359,6 @@ int path_search (struct walkpath_data *wpd, int m, int x_0, int y_0, int x_1,
 
             return 0;
         }
-        fromdir = tp[rp].dir;
         if (can_move (md, x, y, x + 1, y - 1, flag))
             e += add_path (heap, tp, x + 1, y - 1, tp[rp].dist + 14, DIR_NE, rp,
                            x_1, y_1);

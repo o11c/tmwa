@@ -153,8 +153,8 @@ struct skill_unit_group *skill_unitsetting (struct block_list *src,
                                             int skillid, int skilllv, int x,
                                             int y, int flag);
 static int skill_check_condition (struct map_session_data *sd, int type);
-static int skill_trap_splash (struct block_list *bl, va_list ap);
-static int skill_count_target (struct block_list *bl, va_list ap);
+static void skill_trap_splash (struct block_list *bl, va_list ap);
+static void skill_count_target (struct block_list *bl, va_list ap);
 
 // [MouseJstr] - skill ok to cast? and when?
 static int skillnotok (int, struct map_session_data *sd)
@@ -1983,57 +1983,53 @@ int skill_castcancel (struct block_list *bl, int type)
  * イドゥンの林檎の回復処理(foreachinarea)
  *------------------------------------------
  */
-static int skill_idun_heal (struct block_list *bl, va_list ap)
+static void skill_idun_heal (struct block_list *bl, va_list ap)
 {
     struct skill_unit *unit;
     struct skill_unit_group *sg;
     int  heal;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, unit = va_arg (ap, struct skill_unit *));
-    nullpo_retr (0, sg = unit->group);
+    nullpo_retv (bl);
+    nullpo_retv (unit = va_arg (ap, struct skill_unit *));
+    nullpo_retv (sg = unit->group);
 
     heal =
         30 + sg->skill_lv * 5 + ((sg->val1) >> 16) * 5 +
         ((sg->val1) & 0xfff) / 2;
 
     if (bl->type == BL_SKILL || bl->id == sg->src_id)
-        return 0;
+        return;
 
     if (bl->type == BL_PC || bl->type == BL_MOB)
     {
         battle_heal (NULL, bl, heal, 0, 0);
     }
-    return 0;
 }
 
 /*==========================================
  * 指定範囲内でsrcに対して有効なターゲットのblの数を数える(foreachinarea)
  *------------------------------------------
  */
-int skill_count_target (struct block_list *bl, va_list ap)
+void skill_count_target (struct block_list *bl, va_list ap)
 {
     struct block_list *src;
     int *c;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
+    nullpo_retv (bl);
 
     if ((src = va_arg (ap, struct block_list *)) == NULL)
-        return 0;
+        return;
     if ((c = va_arg (ap, int *)) == NULL)
-        return 0;
+        return;
     if (battle_check_target (src, bl, BCT_ENEMY) > 0)
         (*c)++;
-    return 0;
 }
 
 /*==========================================
  * トラップ範囲処理(foreachinarea)
  *------------------------------------------
  */
-int skill_trap_splash (struct block_list *bl, va_list ap)
+void skill_trap_splash (struct block_list *bl, va_list ap)
 {
     struct block_list *src;
     int  tick;
@@ -2043,12 +2039,11 @@ int skill_trap_splash (struct block_list *bl, va_list ap)
     struct block_list *ss;
     int  i;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, src = va_arg (ap, struct block_list *));
-    nullpo_retr (0, unit = (struct skill_unit *) src);
-    nullpo_retr (0, sg = unit->group);
-    nullpo_retr (0, ss = map_id2bl (sg->src_id));
+    nullpo_retv (bl);
+    nullpo_retv (src = va_arg (ap, struct block_list *));
+    nullpo_retv (unit = (struct skill_unit *) src);
+    nullpo_retv (sg = unit->group);
+    nullpo_retv (ss = map_id2bl (sg->src_id));
 
     tick = va_arg (ap, int);
     splash_count = va_arg (ap, int);
@@ -2079,8 +2074,6 @@ int skill_trap_splash (struct block_list *bl, va_list ap)
                 break;
         }
     }
-
-    return 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -2595,7 +2588,7 @@ struct skill_unit *skill_initunit (struct skill_unit_group *group, int idx,
     return unit;
 }
 
-static int skill_unit_timer_sub_ondelete (struct block_list *bl, va_list ap);
+static void skill_unit_timer_sub_ondelete (struct block_list *bl, va_list ap);
 /*==========================================
  * スキルユニット削除
  *------------------------------------------
@@ -2841,14 +2834,13 @@ int skill_unitgrouptickset_delete (struct block_list *bl, int group_id)
  * スキルユニットタイマー発動処理用(foreachinarea)
  *------------------------------------------
  */
-static int skill_unit_timer_sub_onplace (struct block_list *bl, va_list ap)
+static void skill_unit_timer_sub_onplace (struct block_list *bl, va_list ap)
 {
     struct block_list *src;
     struct skill_unit *su;
     unsigned int tick;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
+    nullpo_retv (bl);
     src = va_arg (ap, struct block_list *);
 
     tick = va_arg (ap, unsigned int);
@@ -2861,21 +2853,19 @@ static int skill_unit_timer_sub_onplace (struct block_list *bl, va_list ap)
         if (sg && battle_check_target (src, bl, sg->target_flag) > 0)
             skill_unit_onplace (su, bl, tick);
     }
-    return 0;
 }
 
 /*==========================================
  * スキルユニットタイマー削除処理用(foreachinarea)
  *------------------------------------------
  */
-int skill_unit_timer_sub_ondelete (struct block_list *bl, va_list ap)
+void skill_unit_timer_sub_ondelete (struct block_list *bl, va_list ap)
 {
     struct block_list *src;
     struct skill_unit *su;
     unsigned int tick;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
+    nullpo_retv (bl);
     src = va_arg (ap, struct block_list *);
 
     tick = va_arg (ap, unsigned int);
@@ -2888,28 +2878,26 @@ int skill_unit_timer_sub_ondelete (struct block_list *bl, va_list ap)
         if (sg && battle_check_target (src, bl, sg->target_flag) > 0)
             skill_unit_ondelete (su, bl, tick);
     }
-    return 0;
 }
 
 /*==========================================
  * スキルユニットタイマー処理用(foreachobject)
  *------------------------------------------
  */
-static int skill_unit_timer_sub (struct block_list *bl, va_list ap)
+static void skill_unit_timer_sub (struct block_list *bl, va_list ap)
 {
     struct skill_unit *unit;
     struct skill_unit_group *group;
     int  range;
     unsigned int tick;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, unit = (struct skill_unit *) bl);
-    nullpo_retr (0, group = unit->group);
+    nullpo_retv (bl);
+    nullpo_retv (unit = (struct skill_unit *) bl);
+    nullpo_retv (group = unit->group);
     tick = va_arg (ap, unsigned int);
 
     if (!unit->alive)
-        return 0;
+        return;
 
     range = (unit->range != 0) ? unit->range : group->range;
 
@@ -2977,8 +2965,6 @@ static int skill_unit_timer_sub (struct block_list *bl, va_list ap)
         if (unit->val1 <= 0 && unit->limit + group->tick > tick + 700)
             unit->limit = DIFF_TICK (tick + 700, group->tick);
     }
-
-    return 0;
 }
 
 /*==========================================
@@ -2998,7 +2984,7 @@ static void skill_unit_timer (timer_id UNUSED, tick_t tick, custom_id_t UNUSED, 
  * スキルユニット移動時処理用(foreachinarea)
  *------------------------------------------
  */
-static int skill_unit_out_all_sub (struct block_list *bl, va_list ap)
+static void skill_unit_out_all_sub (struct block_list *bl, va_list ap)
 {
     struct skill_unit *unit;
     struct skill_unit_group *group;
@@ -3006,27 +2992,24 @@ static int skill_unit_out_all_sub (struct block_list *bl, va_list ap)
     int  range;
     unsigned int tick;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, src = va_arg (ap, struct block_list *));
-    nullpo_retr (0, unit = (struct skill_unit *) bl);
-    nullpo_retr (0, group = unit->group);
+    nullpo_retv (bl);
+    nullpo_retv (src = va_arg (ap, struct block_list *));
+    nullpo_retv (unit = (struct skill_unit *) bl);
+    nullpo_retv (group = unit->group);
 
     tick = va_arg (ap, unsigned int);
 
     if (!unit->alive || src->prev == NULL)
-        return 0;
+        return;
 
     range = (unit->range != 0) ? unit->range : group->range;
 
     if (range < 0 || battle_check_target (bl, src, group->target_flag) <= 0)
-        return 0;
+        return;
 
     if (src->x >= bl->x - range && src->x <= bl->x + range &&
         src->y >= bl->y - range && src->y <= bl->y + range)
         skill_unit_onout (unit, src, tick);
-
-    return 0;
 }
 
 /*==========================================
@@ -3053,7 +3036,7 @@ int skill_unit_out_all (struct block_list *bl, unsigned int tick, int range)
  * スキルユニット移動時処理用(foreachinarea)
  *------------------------------------------
  */
-static int skill_unit_move_sub (struct block_list *bl, va_list ap)
+static void skill_unit_move_sub (struct block_list *bl, va_list ap)
 {
     struct skill_unit *unit;
     struct skill_unit_group *group;
@@ -3061,30 +3044,27 @@ static int skill_unit_move_sub (struct block_list *bl, va_list ap)
     int  range;
     unsigned int tick;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, unit = (struct skill_unit *) bl);
-    nullpo_retr (0, src = va_arg (ap, struct block_list *));
+    nullpo_retv (bl);
+    nullpo_retv (unit = (struct skill_unit *) bl);
+    nullpo_retv (src = va_arg (ap, struct block_list *));
 
     tick = va_arg (ap, unsigned int);
 
     if (!unit->alive || src->prev == NULL)
-        return 0;
+        return;
 
     if ((group = unit->group) == NULL)
-        return 0;
+        return;
     range = (unit->range != 0) ? unit->range : group->range;
 
     if (range < 0 || battle_check_target (bl, src, group->target_flag) <= 0)
-        return 0;
+        return;
 
     if (src->x >= bl->x - range && src->x <= bl->x + range &&
         src->y >= bl->y - range && src->y <= bl->y + range)
         skill_unit_onplace (unit, src, tick);
     else
         skill_unit_onout (unit, src, tick);
-
-    return 0;
 }
 
 /*==========================================
@@ -3111,7 +3091,7 @@ int skill_unit_move (struct block_list *bl, unsigned int tick, int range)
  * スキルユニット自体の移動時処理(foreachinarea)
  *------------------------------------------
  */
-static int skill_unit_move_unit_group_sub (struct block_list *bl, va_list ap)
+static void skill_unit_move_unit_group_sub (struct block_list *bl, va_list ap)
 {
     struct skill_unit *unit;
     struct skill_unit_group *group;
@@ -3119,27 +3099,25 @@ static int skill_unit_move_unit_group_sub (struct block_list *bl, va_list ap)
     int  range;
     unsigned int tick;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, src = va_arg (ap, struct block_list *));
-    nullpo_retr (0, unit = (struct skill_unit *) src);
-    nullpo_retr (0, group = unit->group);
+    nullpo_retv (bl);
+    nullpo_retv (src = va_arg (ap, struct block_list *));
+    nullpo_retv (unit = (struct skill_unit *) src);
+    nullpo_retv (group = unit->group);
 
     tick = va_arg (ap, unsigned int);
 
     if (!unit->alive || bl->prev == NULL)
-        return 0;
+        return;
 
     range = (unit->range != 0) ? unit->range : group->range;
 
     if (range < 0 || battle_check_target (src, bl, group->target_flag) <= 0)
-        return 0;
+        return;
     if (bl->x >= src->x - range && bl->x <= src->x + range &&
         bl->y >= src->y - range && bl->y <= src->y + range)
         skill_unit_onplace (unit, bl, tick);
     else
         skill_unit_onout (unit, bl, tick);
-    return 0;
 }
 
 /*==========================================

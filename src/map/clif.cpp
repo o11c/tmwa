@@ -184,7 +184,7 @@ int clif_countusers (void)
  * 全てのclientに対してfunc()実行
  *------------------------------------------
  */
-int clif_foreachclient (int (*func) (struct map_session_data *, va_list), ...)
+int clif_foreachclient (void (*func) (struct map_session_data *, va_list), ...)
 {
     int  i;
     va_list ap;
@@ -219,7 +219,7 @@ static uint8_t *clif_validate_chat (struct map_session_data *sd, int type,
  * clif_sendでAREA*指定時用
  *------------------------------------------
  */
-static int clif_send_sub (struct block_list *bl, va_list ap)
+static void clif_send_sub (struct block_list *bl, va_list ap)
 {
     unsigned char *buf;
     int  len;
@@ -227,20 +227,20 @@ static int clif_send_sub (struct block_list *bl, va_list ap)
     int  type;
     struct map_session_data *sd;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, sd = (struct map_session_data *) bl);
+    nullpo_retv (bl);
+    nullpo_retv (ap);
+    nullpo_retv (sd = (struct map_session_data *) bl);
 
     buf = va_arg (ap, unsigned char *);
     len = va_arg (ap, int);
-    nullpo_retr (0, src_bl = va_arg (ap, struct block_list *));
+    nullpo_retv (src_bl = va_arg (ap, struct block_list *));
     type = va_arg (ap, int);
 
     switch (type)
     {
         case AREA_WOS:
             if (bl && bl == src_bl)
-                return 0;
+                return;
             break;
 
         case AREA_CHAT_WOC:
@@ -249,12 +249,12 @@ static int clif_send_sub (struct block_list *bl, va_list ap)
                      && pc_isGM ((struct map_session_data *) src_bl)))
             {
                 clif_emotion_towards (src_bl, bl, EMOTE_IGNORED);
-                return 0;
+                return;
             }
             /* fall through... */
         case AREA_WOC:
             if (bl && bl == src_bl)
-                return 0;
+                return;
             break;
         case AREA_WOSC:
             break;
@@ -280,8 +280,6 @@ static int clif_send_sub (struct block_list *bl, va_list ap)
             }
         }
     }
-
-    return 0;
 }
 
 /*==========================================
@@ -2740,12 +2738,11 @@ static void clif_getareachar_item (struct map_session_data *sd,
  *
  *------------------------------------------
  */
-static int clif_getareachar (struct block_list *bl, va_list ap)
+static void clif_getareachar (struct block_list *bl, va_list ap)
 {
     struct map_session_data *sd;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
+    nullpo_retv (bl);
 
     sd = va_arg (ap, struct map_session_data *);
 
@@ -2772,20 +2769,19 @@ static int clif_getareachar (struct block_list *bl, va_list ap)
                 printf ("get area char ??? %d\n", bl->type);
             break;
     }
-    return 0;
 }
 
 /*==========================================
  *
  *------------------------------------------
  */
-int clif_pcoutsight (struct block_list *bl, va_list ap)
+void clif_pcoutsight (struct block_list *bl, va_list ap)
 {
     struct map_session_data *sd, *dstsd;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, sd = va_arg (ap, struct map_session_data *));
+    nullpo_retv (bl);
+    nullpo_retv (ap);
+    nullpo_retv (sd = va_arg (ap, struct map_session_data *));
 
     switch (bl->type)
     {
@@ -2808,20 +2804,19 @@ int clif_pcoutsight (struct block_list *bl, va_list ap)
             clif_clearflooritem ((struct flooritem_data *) bl, sd->fd);
             break;
     }
-    return 0;
 }
 
 /*==========================================
  *
  *------------------------------------------
  */
-int clif_pcinsight (struct block_list *bl, va_list ap)
+void clif_pcinsight (struct block_list *bl, va_list ap)
 {
     struct map_session_data *sd, *dstsd;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, sd = va_arg (ap, struct map_session_data *));
+    nullpo_retv (bl);
+    nullpo_retv (ap);
+    nullpo_retv (sd = va_arg (ap, struct map_session_data *));
 
     switch (bl->type)
     {
@@ -2843,50 +2838,44 @@ int clif_pcinsight (struct block_list *bl, va_list ap)
             clif_getareachar_item (sd, (struct flooritem_data *) bl);
             break;
     }
-
-    return 0;
 }
 
 /*==========================================
  *
  *------------------------------------------
  */
-int clif_moboutsight (struct block_list *bl, va_list ap)
+void clif_moboutsight (struct block_list *bl, va_list ap)
 {
     struct map_session_data *sd;
     struct mob_data *md;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, md = va_arg (ap, struct mob_data *));
+    nullpo_retv (bl);
+    nullpo_retv (ap);
+    nullpo_retv (md = va_arg (ap, struct mob_data *));
 
     if (bl->type == BL_PC && (sd = (struct map_session_data *) bl))
     {
         clif_clearchar_id (md->bl.id, 0, sd->fd);
     }
-
-    return 0;
 }
 
 /*==========================================
  *
  *------------------------------------------
  */
-int clif_mobinsight (struct block_list *bl, va_list ap)
+void clif_mobinsight (struct block_list *bl, va_list ap)
 {
     struct map_session_data *sd;
     struct mob_data *md;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
+    nullpo_retv (bl);
+    nullpo_retv (ap);
 
     md = va_arg (ap, struct mob_data *);
     if (bl->type == BL_PC && (sd = (struct map_session_data *) bl))
     {
         clif_getareachar_mob (sd, md);
     }
-
-    return 0;
 }
 
 /*==========================================

@@ -94,10 +94,11 @@ int  clif_storageitemremoved (struct map_session_data *sd, int index,
                               int amount);
 int  clif_storageclose (struct map_session_data *sd);
 
-int  clif_pcinsight (struct block_list *, va_list); // map_forallinmovearea callback
-int  clif_pcoutsight (struct block_list *, va_list);    // map_forallinmovearea callback
-int  clif_mobinsight (struct block_list *, va_list);    // map_forallinmovearea callback
-int  clif_moboutsight (struct block_list *, va_list);   // map_forallinmovearea callback
+// map_forallinmovearea callbacks
+void clif_pcinsight (struct block_list *, va_list);
+void clif_pcoutsight (struct block_list *, va_list);
+void clif_mobinsight (struct block_list *, va_list);
+void clif_moboutsight (struct block_list *, va_list);
 
 int  clif_skillinfoblock (struct map_session_data *sd);
 int  clif_skillup (struct map_session_data *sd, int skill_num);
@@ -155,7 +156,7 @@ int  clif_message (struct block_list *bl, char *msg);   // messages (from mobs/n
 int  clif_GM_kick (struct map_session_data *sd, struct map_session_data *tsd,
                    int type);
 
-int  clif_foreachclient (int (*)(struct map_session_data *, va_list), ...);
+int  clif_foreachclient (void (*)(struct map_session_data *, va_list), ...);
 
 int  do_init_clif (void);
 

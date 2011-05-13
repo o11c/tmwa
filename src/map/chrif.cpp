@@ -933,14 +933,14 @@ static void ladmin_itemfrob_fix_item (int source, int dest, struct item *item)
     }
 }
 
-static int ladmin_itemfrob_c2 (struct block_list *bl, int source_id,
+static void ladmin_itemfrob_c2 (struct block_list *bl, int source_id,
                                int dest_id)
 {
 #define IFIX(v) if (v == source_id) {v = dest_id; }
 #define FIX(item) ladmin_itemfrob_fix_item(source_id, dest_id, &item)
 
     if (!bl)
-        return 0;
+        return;
 
     switch (bl->type)
     {
@@ -995,15 +995,13 @@ static int ladmin_itemfrob_c2 (struct block_list *bl, int source_id,
     }
 #undef FIX
 #undef IFIX
-
-    return 0;
 }
 
-static int ladmin_itemfrob_c (struct block_list *bl, va_list va_args)
+static void ladmin_itemfrob_c (struct block_list *bl, va_list va_args)
 {
     int  source_id = va_arg (va_args, int);
     int  dest_id = va_arg (va_args, int);
-    return ladmin_itemfrob_c2 (bl, source_id, dest_id);
+    ladmin_itemfrob_c2 (bl, source_id, dest_id);
 }
 
 static void ladmin_itemfrob (int fd)

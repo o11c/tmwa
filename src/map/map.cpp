@@ -233,7 +233,7 @@ int map_delblock (struct block_list *bl)
 
 /// Runs a function for every block in the area
 // if type is 0, all types, else BL_MOB, BL_PC, BL_SKILL, etc
-void map_foreachinarea (int (*func) (struct block_list *, va_list), int m,
+void map_foreachinarea (void (*func) (struct block_list *, va_list), int m,
                         int x_0, int y_0, int x_1, int y_1, BlockType type, ...)
 {
     if (m < 0)
@@ -331,7 +331,7 @@ void map_foreachinarea (int (*func) (struct block_list *, va_list), int m,
 // once with original location and ds (outsight)
 // then with the new location and -ds (insight)
 
-void map_foreachinmovearea (int (*func) (struct block_list *, va_list), int m,
+void map_foreachinmovearea (void (*func) (struct block_list *, va_list), int m,
                             int x_0, int y_0, int x_1, int y_1, int dx, int dy,
                             BlockType type, ...)
 {
@@ -542,7 +542,7 @@ void map_delobject (obj_id_t id, BlockType type)
 }
 
 /// Execute a function for each temporary object of the given type
-void map_foreachobject (int (*func) (struct block_list *, va_list), BlockType type,
+void map_foreachobject (void (*func) (struct block_list *, va_list), BlockType type,
                         ...)
 {
     int  blockcount = bl_list_count;
@@ -1361,9 +1361,9 @@ static void map_config_read (const char *cfgName)
     fclose_ (fp);
 }
 
-static int cleanup_sub (struct block_list *bl, va_list UNUSED)
+static void cleanup_sub (struct block_list *bl, va_list UNUSED)
 {
-    nullpo_retr (0, bl);
+    nullpo_retv (bl);
 
     switch (bl->type)
     {
@@ -1386,8 +1386,6 @@ static int cleanup_sub (struct block_list *bl, va_list UNUSED)
             spell_free_invocation ((struct invocation *) bl);
             break;
     }
-
-    return 0;
 }
 
 /// server is shutting down

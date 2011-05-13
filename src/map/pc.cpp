@@ -268,22 +268,21 @@ int pc_setrestartvalue (struct map_session_data *sd, int type)
  * 自分をロックしているMOBの数を数える(foreachclient)
  *------------------------------------------
  */
-static int pc_counttargeted_sub (struct block_list *bl, va_list ap)
+static void pc_counttargeted_sub (struct block_list *bl, va_list ap)
 {
     int  id, *c, target_lv;
     struct block_list *src;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
+    nullpo_retv (bl);
 
     id = va_arg (ap, int);
 
-    nullpo_retr (0, c = va_arg (ap, int *));
+    nullpo_retv (c = va_arg (ap, int *));
 
     src = va_arg (ap, struct block_list *);
     target_lv = va_arg (ap, int);
     if (id == bl->id || (src && id == src->id))
-        return 0;
+        return;
     if (bl->type == BL_PC)
     {
         struct map_session_data *sd = (struct map_session_data *) bl;
@@ -300,7 +299,6 @@ static int pc_counttargeted_sub (struct block_list *bl, va_list ap)
             (*c)++;
         //printf("md->target_lv:%d, target_lv:%d\n",((struct mob_data *)bl)->target_lv,target_lv);
     }
-    return 0;
 }
 
 int pc_counttargeted (struct map_session_data *sd, struct block_list *src,
@@ -5722,18 +5720,16 @@ int pc_checkoversp (struct map_session_data *sd)
  * PVP順位計算用(foreachinarea)
  *------------------------------------------
  */
-static int pc_calc_pvprank_sub (struct block_list *bl, va_list ap)
+static void pc_calc_pvprank_sub (struct block_list *bl, va_list ap)
 {
     struct map_session_data *sd1, *sd2 = NULL;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, sd1 = (struct map_session_data *) bl);
-    nullpo_retr (0, sd2 = va_arg (ap, struct map_session_data *));
+    nullpo_retv (bl);
+    nullpo_retv (sd1 = (struct map_session_data *) bl);
+    nullpo_retv (sd2 = va_arg (ap, struct map_session_data *));
 
     if (sd1->pvp_point > sd2->pvp_point)
         sd2->pvp_rank++;
-    return 0;
 }
 
 /*==========================================
@@ -6073,9 +6069,9 @@ pc_quickregenerate_effect (struct quick_regeneration *quick_regen,
     return 0;
 }
 
-static int pc_natural_heal_sub (struct map_session_data *sd, va_list UNUSED)
+static void pc_natural_heal_sub (struct map_session_data *sd, va_list UNUSED)
 {
-    nullpo_retr (0, sd);
+    nullpo_retv (sd);
 
     if (sd->heal_xp > 0)
     {
@@ -6101,7 +6097,7 @@ static int pc_natural_heal_sub (struct map_session_data *sd, va_list UNUSED)
     }
 
     if (sd->sc_data[SC_HALT_REGENERATE].timer != -1)
-        return 0;
+        return;
 
     if (sd->quick_regeneration_hp.amount || sd->quick_regeneration_sp.amount)
     {
@@ -6131,7 +6127,6 @@ static int pc_natural_heal_sub (struct map_session_data *sd, va_list UNUSED)
     }
     sd->inchealspirithptick = 0;
     sd->inchealspiritsptick = 0;
-    return 0;
 }
 
 /*==========================================
@@ -6169,9 +6164,9 @@ int pc_setsavepoint (struct map_session_data *sd, const char *mapname, int x, in
  *------------------------------------------
  */
 static int last_save_fd, save_flag;
-static int pc_autosave_sub (struct map_session_data *sd, va_list UNUSED)
+static void pc_autosave_sub (struct map_session_data *sd, va_list UNUSED)
 {
-    nullpo_retr (0, sd);
+    nullpo_retv (sd);
 
     if (save_flag == 0 && sd->fd > last_save_fd)
     {
@@ -6181,8 +6176,6 @@ static int pc_autosave_sub (struct map_session_data *sd, va_list UNUSED)
         save_flag = 1;
         last_save_fd = sd->fd;
     }
-
-    return 0;
 }
 
 /*==========================================

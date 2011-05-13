@@ -790,17 +790,15 @@ static int mob_attack (struct mob_data *md, unsigned int tick, int UNUSED)
  * The callback function of clif_foreachclient
  *------------------------------------------
  */
-static int mob_stopattacked (struct map_session_data *sd, va_list ap)
+static void mob_stopattacked (struct map_session_data *sd, va_list ap)
 {
     int  id;
 
-    nullpo_retr (0, sd);
-    nullpo_retr (0, ap);
+    nullpo_retv (sd);
 
     id = va_arg (ap, int);
     if (sd->attacktarget == id)
         pc_stopattack (sd);
-    return 0;
 }
 
 /*==========================================
@@ -1365,27 +1363,26 @@ int mob_target (struct mob_data *md, struct block_list *bl, int dist)
  * The ?? routine of an active monster
  *------------------------------------------
  */
-static int mob_ai_sub_hard_activesearch (struct block_list *bl, va_list ap)
+static void mob_ai_sub_hard_activesearch (struct block_list *bl, va_list ap)
 {
     struct map_session_data *tsd = NULL;
     struct mob_data *smd, *tmd = NULL;
     int  mode, race, dist, *pcc;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, smd = va_arg (ap, struct mob_data *));
-    nullpo_retr (0, pcc = va_arg (ap, int *));
+    nullpo_retv (bl);
+    nullpo_retv (smd = va_arg (ap, struct mob_data *));
+    nullpo_retv (pcc = va_arg (ap, int *));
 
     if (bl->type == BL_PC)
         tsd = (struct map_session_data *) bl;
     else if (bl->type == BL_MOB)
         tmd = (struct mob_data *) bl;
     else
-        return 0;
+        return;
 
     //敵味方判定
     if (battle_check_target (&smd->bl, bl, BCT_ENEMY) == 0)
-        return 0;
+        return;
 
     if (!smd->mode)
         mode = mob_db[smd->mob_class].mode;
@@ -1433,22 +1430,20 @@ static int mob_ai_sub_hard_activesearch (struct block_list *bl, va_list ap)
             }
         }
     }
-    return 0;
 }
 
 /*==========================================
  * loot monster item search
  *------------------------------------------
  */
-static int mob_ai_sub_hard_lootsearch (struct block_list *bl, va_list ap)
+static void mob_ai_sub_hard_lootsearch (struct block_list *bl, va_list ap)
 {
     struct mob_data *md;
     int  mode, dist, *itc;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, md = va_arg (ap, struct mob_data *));
-    nullpo_retr (0, itc = va_arg (ap, int *));
+    nullpo_retv (bl);
+    nullpo_retv (md = va_arg (ap, struct mob_data *));
+    nullpo_retv (itc = va_arg (ap, int *));
 
     if (!md->mode)
     {
@@ -1464,7 +1459,7 @@ static int mob_ai_sub_hard_lootsearch (struct block_list *bl, va_list ap)
         if (!md->lootitem
             || (battle_config.monster_loot_type == 1
                 && md->lootitem_count >= LOOTITEM_SIZE))
-            return 0;
+            return;
         if (bl->m == md->bl.m
             && (dist = distance (md->bl.x, md->bl.y, bl->x, bl->y)) < 9)
         {
@@ -1477,24 +1472,22 @@ static int mob_ai_sub_hard_lootsearch (struct block_list *bl, va_list ap)
             }
         }
     }
-    return 0;
 }
 
 /*==========================================
  * The ?? routine of a link monster
  *------------------------------------------
  */
-static int mob_ai_sub_hard_linksearch (struct block_list *bl, va_list ap)
+static void mob_ai_sub_hard_linksearch (struct block_list *bl, va_list ap)
 {
     struct mob_data *tmd;
     struct mob_data *md;
     struct block_list *target;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, tmd = (struct mob_data *) bl);
-    nullpo_retr (0, md = va_arg (ap, struct mob_data *));
-    nullpo_retr (0, target = va_arg (ap, struct block_list *));
+    nullpo_retv (bl);
+    nullpo_retv (tmd = (struct mob_data *) bl);
+    nullpo_retv (md = va_arg (ap, struct mob_data *));
+    nullpo_retv (target = va_arg (ap, struct block_list *));
 
     // same family free in a range at a link monster -- it will be made to lock if MOB is
 /*	if( (md->target_id > 0 && md->state.targettype == ATTACKABLE) && mob_db[md->mob_class].mode&0x08){
@@ -1519,8 +1512,6 @@ static int mob_ai_sub_hard_linksearch (struct block_list *bl, va_list ap)
             }
         }
     }
-
-    return 0;
 }
 
 /*==========================================
@@ -1743,7 +1734,7 @@ static int mob_randomwalk (struct mob_data *md, int tick)
  * AI of MOB whose is near a Player
  *------------------------------------------
  */
-static int mob_ai_sub_hard (struct block_list *bl, va_list ap)
+static void mob_ai_sub_hard (struct block_list *bl, va_list ap)
 {
     struct mob_data *md, *tmd = NULL;
     struct map_session_data *tsd = NULL;
@@ -1754,21 +1745,20 @@ static int mob_ai_sub_hard (struct block_list *bl, va_list ap)
     int  attack_type = 0;
     int  mode, race;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, md = (struct mob_data *) bl);
+    nullpo_retv (bl);
+    nullpo_retv (md = (struct mob_data *) bl);
 
     tick = va_arg (ap, unsigned int);
 
     if (DIFF_TICK (tick, md->last_thinktime) < MIN_MOBTHINKTIME)
-        return 0;
+        return;
     md->last_thinktime = tick;
 
     if (md->skilltimer != -1 || md->bl.prev == NULL)
     {                           // Under a skill aria and death
         if (DIFF_TICK (tick, md->next_walktime) > MIN_MOBTHINKTIME)
             md->next_walktime = tick;
-        return 0;
+        return;
     }
 
     if (!md->mode)
@@ -1780,7 +1770,7 @@ static int mob_ai_sub_hard (struct block_list *bl, va_list ap)
 
     // Abnormalities
     if ((md->opt1 > 0 && md->opt1 != 6) || md->state.state == MS_DELAY)
-        return 0;
+        return;
 
     if (!(mode & 0x80) && md->target_id > 0)
         md->target_id = 0;
@@ -1897,10 +1887,10 @@ static int mob_ai_sub_hard (struct block_list *bl, va_list ap)
                     if (!(mode & 1))
                     {           // 移動しないモード
                         mob_unlocktarget (md, tick);
-                        return 0;
+                        return;
                     }
                     if (!mob_can_move (md)) // 動けない状態にある
-                        return 0;
+                        return;
                     md->state.skillstate = MSS_CHASE;   // 突撃時スキル
                     mobskill_use (md, tick, -1);
 //                  if(md->timer != -1 && (DIFF_TICK(md->next_walktime,tick)<0 || distance(md->to_x,md->to_y,tsd->bl.x,tsd->bl.y)<2) )
@@ -1908,7 +1898,7 @@ static int mob_ai_sub_hard (struct block_list *bl, va_list ap)
                         && (DIFF_TICK (md->next_walktime, tick) < 0
                             || distance (md->to_x, md->to_y, tbl->x,
                                          tbl->y) < 2))
-                        return 0;   // 既に移動中
+                        return;   // 既に移動中
                     if (!mob_can_reach
                         (md, tbl, (md->min_chase > 13) ? md->min_chase : 13))
                         mob_unlocktarget (md, tick);    // 移動できないのでタゲ解除（IWとか？）
@@ -1973,7 +1963,7 @@ static int mob_ai_sub_hard (struct block_list *bl, va_list ap)
                     if (md->state.state == MS_WALK)
                         mob_stop_walking (md, 1);   // 歩行中なら停止
                     if (md->state.state == MS_ATTACK)
-                        return 0;   // 既に攻撃中
+                        return;   // 既に攻撃中
                     mob_changestate (md, MS_ATTACK, attack_type);
 
 /*					if(mode&0x08){	// リンクモンスター
@@ -1983,7 +1973,7 @@ static int mob_ai_sub_hard (struct block_list *bl, va_list ap)
 							BL_MOB,md,&tsd->bl);
 				}*/
                 }
-                return 0;
+                return;
             }
             else
             {                   // ルートモンスター処理
@@ -2002,10 +1992,10 @@ static int mob_ai_sub_hard (struct block_list *bl, va_list ap)
                     if (!(mode & 1))
                     {           // 移動しないモード
                         mob_unlocktarget (md, tick);
-                        return 0;
+                        return;
                     }
                     if (!mob_can_move (md)) // 動けない状態にある
-                        return 0;
+                        return;
                     md->state.skillstate = MSS_LOOT;    // ルート時スキル使用
                     mobskill_use (md, tick, -1);
 //                  if(md->timer != -1 && (DIFF_TICK(md->next_walktime,tick)<0 || distance(md->to_x,md->to_y,tbl->x,tbl->y)<2) )
@@ -2013,7 +2003,7 @@ static int mob_ai_sub_hard (struct block_list *bl, va_list ap)
                         && (DIFF_TICK (md->next_walktime, tick) < 0
                             || distance (md->to_x, md->to_y, tbl->x,
                                          tbl->y) <= 0))
-                        return 0;   // 既に移動中
+                        return;   // 既に移動中
                     md->next_walktime = tick + 500;
                     dx = tbl->x - md->bl.x;
                     dy = tbl->y - md->bl.y;
@@ -2028,7 +2018,7 @@ static int mob_ai_sub_hard (struct block_list *bl, va_list ap)
                 else
                 {               // アイテムまでたどり着いた
                     if (md->state.state == MS_ATTACK)
-                        return 0;   // 攻撃中
+                        return;   // 攻撃中
                     if (md->state.state == MS_WALK)
                         mob_stop_walking (md, 1);   // 歩行中なら停止
                     fitem = (struct flooritem_data *) tbl;
@@ -2039,7 +2029,7 @@ static int mob_ai_sub_hard (struct block_list *bl, va_list ap)
                              && md->lootitem_count >= LOOTITEM_SIZE)
                     {
                         mob_unlocktarget (md, tick);
-                        return 0;
+                        return;
                     }
                     else
                     {
@@ -2052,7 +2042,7 @@ static int mob_ai_sub_hard (struct block_list *bl, va_list ap)
                     map_clearflooritem (tbl->id);
                     mob_unlocktarget (md, tick);
                 }
-                return 0;
+                return;
             }
         }
         else
@@ -2060,13 +2050,13 @@ static int mob_ai_sub_hard (struct block_list *bl, va_list ap)
             mob_unlocktarget (md, tick);
             if (md->state.state == MS_WALK)
                 mob_stop_walking (md, 4);   // 歩行中なら停止
-            return 0;
+            return;
         }
     }
 
     // It is skill use at the time of /standby at the time of a walk.
     if (mobskill_use (md, tick, -1))
-        return 0;
+        return;
 
     // 歩行処理
     if (mode & 1 && mob_can_move (md) &&    // 移動可能MOB&動ける状態にある
@@ -2083,33 +2073,29 @@ static int mob_ai_sub_hard (struct block_list *bl, va_list ap)
 
         // Random movement
         if (mob_randomwalk (md, tick))
-            return 0;
+            return;
     }
 
     // Since he has finished walking, it stands by.
     if (md->walkpath.path_len == 0
         || md->walkpath.path_pos >= md->walkpath.path_len)
         md->state.skillstate = MSS_IDLE;
-    return 0;
 }
 
 /*==========================================
  * Serious processing for mob in PC field of view (foreachclient)
  *------------------------------------------
  */
-static int mob_ai_sub_foreachclient (struct map_session_data *sd, va_list ap)
+static void mob_ai_sub_foreachclient (struct map_session_data *sd, va_list ap)
 {
     unsigned int tick;
-    nullpo_retr (0, sd);
-    nullpo_retr (0, ap);
+    nullpo_retv (sd);
 
     tick = va_arg (ap, unsigned int);
     map_foreachinarea (mob_ai_sub_hard, sd->bl.m,
                        sd->bl.x - AREA_SIZE * 2, sd->bl.y - AREA_SIZE * 2,
                        sd->bl.x + AREA_SIZE * 2, sd->bl.y + AREA_SIZE * 2,
                        BL_MOB, tick);
-
-    return 0;
 }
 
 /*==========================================
@@ -2337,19 +2323,17 @@ void mob_timer_delete (timer_id UNUSED, tick_t UNUSED, custom_id_t id, custom_da
  *
  *------------------------------------------
  */
-static int mob_deleteslave_sub (struct block_list *bl, va_list ap)
+static void mob_deleteslave_sub (struct block_list *bl, va_list ap)
 {
     struct mob_data *md;
     int  id;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, md = (struct mob_data *) bl);
+    nullpo_retv (bl);
+    nullpo_retv (md = (struct mob_data *) bl);
 
     id = va_arg (ap, int);
     if (md->master_id > 0 && md->master_id == id)
         mob_damage (NULL, md, md->hp, 1);
-    return 0;
 }
 
 /*==========================================
@@ -2866,7 +2850,7 @@ int mob_heal (struct mob_data *md, int heal)
  * Added by RoVeRT
  *------------------------------------------
  */
-static int mob_warpslave_sub (struct block_list *bl, va_list ap)
+static void mob_warpslave_sub (struct block_list *bl, va_list ap)
 {
     struct mob_data *md = (struct mob_data *) bl;
     int  id, x, y;
@@ -2877,7 +2861,6 @@ static int mob_warpslave_sub (struct block_list *bl, va_list ap)
     {
         mob_warp (md, -1, x, y, 2);
     }
-    return 0;
 }
 
 /*==========================================
@@ -2979,21 +2962,19 @@ int mob_warp (struct mob_data *md, int m, int x, int y, int type)
  * 画面内の取り巻きの数計算用(foreachinarea)
  *------------------------------------------
  */
-static int mob_countslave_sub (struct block_list *bl, va_list ap)
+static void mob_countslave_sub (struct block_list *bl, va_list ap)
 {
     int  id, *c;
     struct mob_data *md;
 
     id = va_arg (ap, int);
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, c = va_arg (ap, int *));
-    nullpo_retr (0, md = (struct mob_data *) bl);
+    nullpo_retv (bl);
+    nullpo_retv (c = va_arg (ap, int *));
+    nullpo_retv (md = (struct mob_data *) bl);
 
     if (md->master_id == id)
         (*c)++;
-    return 0;
 }
 
 /*==========================================
@@ -3016,20 +2997,19 @@ static int mob_countslave (struct mob_data *md)
  * 自分をロックしているPCの数を数える(foreachclient)
  *------------------------------------------
  */
-static int mob_counttargeted_sub (struct block_list *bl, va_list ap)
+static void mob_counttargeted_sub (struct block_list *bl, va_list ap)
 {
     int  id, *c, target_lv;
     struct block_list *src;
 
     id = va_arg (ap, int);
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, c = va_arg (ap, int *));
+    nullpo_retv (bl);
+    nullpo_retv (c = va_arg (ap, int *));
 
     src = va_arg (ap, struct block_list *);
     target_lv = va_arg (ap, int);
     if (id == bl->id || (src && id == src->id))
-        return 0;
+        return;
     if (bl->type == BL_PC)
     {
         struct map_session_data *sd = (struct map_session_data *) bl;
@@ -3044,7 +3024,6 @@ static int mob_counttargeted_sub (struct block_list *bl, va_list ap)
             && md->state.state == MS_ATTACK && md->target_lv >= target_lv)
             (*c)++;
     }
-    return 0;
 }
 
 /*==========================================
@@ -3342,24 +3321,22 @@ static int mobskill_use_pos (struct mob_data *md,
  * Friendly Mob whose HP is decreasing by a nearby MOB is looked for.
  *------------------------------------------
  */
-static int mob_getfriendhpltmaxrate_sub (struct block_list *bl, va_list ap)
+static void mob_getfriendhpltmaxrate_sub (struct block_list *bl, va_list ap)
 {
     int  rate;
     struct mob_data **fr, *md, *mmd;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, mmd = va_arg (ap, struct mob_data *));
+    nullpo_retv (bl);
+    nullpo_retv (mmd = va_arg (ap, struct mob_data *));
 
     md = (struct mob_data *) bl;
 
     if (mmd->bl.id == bl->id)
-        return 0;
+        return;
     rate = va_arg (ap, int);
     fr = va_arg (ap, struct mob_data **);
     if (md->hp < mob_db[md->mob_class].max_hp * rate / 100)
         (*fr) = md;
-    return 0;
 }
 
 static struct mob_data *mob_getfriendhpltmaxrate (struct mob_data *md, int rate)
@@ -3379,19 +3356,18 @@ static struct mob_data *mob_getfriendhpltmaxrate (struct mob_data *md, int rate)
  * What a status state suits by nearby MOB is looked for.
  *------------------------------------------
  */
-static int mob_getfriendstatus_sub (struct block_list *bl, va_list ap)
+static void mob_getfriendstatus_sub (struct block_list *bl, va_list ap)
 {
     int  cond1, cond2;
     struct mob_data **fr, *md, *mmd;
     int  flag = 0;
 
-    nullpo_retr (0, bl);
-    nullpo_retr (0, ap);
-    nullpo_retr (0, md = (struct mob_data *) bl);
-    nullpo_retr (0, mmd = va_arg (ap, struct mob_data *));
+    nullpo_retv (bl);
+    nullpo_retv (md = (struct mob_data *) bl);
+    nullpo_retv (mmd = va_arg (ap, struct mob_data *));
 
     if (mmd->bl.id == bl->id)
-        return 0;
+        return;
     cond1 = va_arg (ap, int);
     cond2 = va_arg (ap, int);
     fr = va_arg (ap, struct mob_data **);
@@ -3403,8 +3379,6 @@ static int mob_getfriendstatus_sub (struct block_list *bl, va_list ap)
         flag = (md->sc_data[cond2].timer != -1);
     if (flag ^ (cond1 == MSC_FRIENDSTATUSOFF))
         (*fr) = md;
-
-    return 0;
 }
 
 static struct mob_data *mob_getfriendstatus (struct mob_data *md, int cond1,

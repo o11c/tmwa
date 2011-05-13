@@ -160,7 +160,6 @@ extern struct Battle_Config
     int  mvp_hp_rate;
     int  monster_hp_rate;
     int  monster_max_aspd;
-    int  atc_gmonly;
     int  atc_spawn_quantity_limit;
     int  gm_allskill;
     int  gm_allskill_addabra;

@@ -1902,7 +1902,7 @@ int buildin_warp (struct script_state *st)
  * エリア指定ワープ
  *------------------------------------------
  */
-static int buildin_areawarp_sub (struct block_list *bl, va_list ap)
+static void buildin_areawarp_sub (struct block_list *bl, va_list ap)
 {
     int  x, y;
     char *map;
@@ -1913,7 +1913,6 @@ static int buildin_areawarp_sub (struct block_list *bl, va_list ap)
         pc_randomwarp ((struct map_session_data *) bl, 3);
     else
         pc_setpos ((struct map_session_data *) bl, map, x, y, 0);
-    return 0;
 }
 
 int buildin_areawarp (struct script_state *st)
@@ -3672,7 +3671,7 @@ int buildin_areamonster (struct script_state *st)
  * モンスター削除
  *------------------------------------------
  */
-static int buildin_killmonster_sub (struct block_list *bl, va_list ap)
+static void buildin_killmonster_sub (struct block_list *bl, va_list ap)
 {
     char *event = va_arg (ap, char *);
     int  allflag = va_arg (ap, int);
@@ -3681,16 +3680,15 @@ static int buildin_killmonster_sub (struct block_list *bl, va_list ap)
     {
         if (strcmp (event, ((struct mob_data *) bl)->npc_event) == 0)
             mob_delete ((struct mob_data *) bl);
-        return 0;
+        return;
     }
     else if (allflag)
     {
         if (((struct mob_data *) bl)->spawndelay_1 == -1
             && ((struct mob_data *) bl)->spawndelay2 == -1)
             mob_delete ((struct mob_data *) bl);
-        return 0;
+        return;
     }
-    return 0;
 }
 
 int buildin_killmonster (struct script_state *st)
@@ -3709,10 +3707,9 @@ int buildin_killmonster (struct script_state *st)
     return 0;
 }
 
-static int buildin_killmonsterall_sub (struct block_list *bl, va_list UNUSED)
+static void buildin_killmonsterall_sub (struct block_list *bl, va_list UNUSED)
 {
     mob_delete ((struct mob_data *) bl);
-    return 0;
 }
 
 int buildin_killmonsterall (struct script_state *st)
@@ -3920,7 +3917,7 @@ int buildin_announce (struct script_state *st)
  * 天の声アナウンス（特定マップ）
  *------------------------------------------
  */
-static int buildin_mapannounce_sub (struct block_list *bl, va_list ap)
+static void buildin_mapannounce_sub (struct block_list *bl, va_list ap)
 {
     char *str;
     int  len, flag;
@@ -3928,7 +3925,6 @@ static int buildin_mapannounce_sub (struct block_list *bl, va_list ap)
     len = va_arg (ap, int);
     flag = va_arg (ap, int);
     clif_GMmessage (bl, str, len, flag | 3);
-    return 0;
 }
 
 int buildin_mapannounce (struct script_state *st)
@@ -4019,11 +4015,10 @@ int buildin_getmapusers (struct script_state *st)
  * エリア指定ユーザー数所得
  *------------------------------------------
  */
-static int buildin_getareausers_sub (struct block_list *UNUSED, va_list ap)
+static void buildin_getareausers_sub (struct block_list *UNUSED, va_list ap)
 {
     int *users = va_arg (ap, int *);
     (*users)++;
-    return 0;
 }
 
 int buildin_getareausers (struct script_state *st)
@@ -4050,7 +4045,7 @@ int buildin_getareausers (struct script_state *st)
  * エリア指定ドロップアイテム数所得
  *------------------------------------------
  */
-static int buildin_getareadropitem_sub (struct block_list *bl, va_list ap)
+static void buildin_getareadropitem_sub (struct block_list *bl, va_list ap)
 {
     int  item = va_arg (ap, int);
     int *amount = va_arg (ap, int *);
@@ -4058,11 +4053,9 @@ static int buildin_getareadropitem_sub (struct block_list *bl, va_list ap)
 
     if (drop->item_data.nameid == item)
         (*amount) += drop->item_data.amount;
-
-    return 0;
 }
 
-static int buildin_getareadropitem_sub_anddelete (struct block_list *bl, va_list ap)
+static void buildin_getareadropitem_sub_anddelete (struct block_list *bl, va_list ap)
 {
     int  item = va_arg (ap, int);
     int *amount = va_arg (ap, int *);
@@ -4073,7 +4066,6 @@ static int buildin_getareadropitem_sub_anddelete (struct block_list *bl, va_list
         clif_clearflooritem(drop, 0);
         map_delobject(drop->bl.id, drop->bl.type);
     }
-    return 0;
 }
 
 int buildin_getareadropitem (struct script_state *st)
@@ -4872,14 +4864,13 @@ int buildin_stoptimer (struct script_state *st) // Added by RoVeRT
     return 0;
 }
 
-static int buildin_mobcount_sub (struct block_list *bl, va_list ap)    // Added by RoVeRT
+static void buildin_mobcount_sub (struct block_list *bl, va_list ap)    // Added by RoVeRT
 {
     char *event = va_arg (ap, char *);
     int *c = va_arg (ap, int *);
 
     if (strcmp (event, ((struct mob_data *) bl)->npc_event) == 0)
         (*c)++;
-    return 0;
 }
 
 int buildin_mobcount (struct script_state *st)  // Added by RoVeRT
@@ -5655,14 +5646,13 @@ int buildin_getsavepoint (struct script_state *st)
  *     areatimer
  *------------------------------------------
  */
-static int buildin_areatimer_sub (struct block_list *bl, va_list ap)
+static void buildin_areatimer_sub (struct block_list *bl, va_list ap)
 {
     int  tick;
     char *event;
     tick = va_arg (ap, int);
     event = va_arg (ap, char *);
     pc_addeventtimer ((struct map_session_data *) bl, tick, event);
-    return 0;
 }
 
 int buildin_areatimer (struct script_state *st)

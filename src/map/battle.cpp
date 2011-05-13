@@ -3118,7 +3118,6 @@ int battle_config_read (const char *cfgName)
         battle_config.mvp_hp_rate = 100;
         battle_config.monster_hp_rate = 100;
         battle_config.monster_max_aspd = 199;
-        battle_config.atc_gmonly = 0;
         battle_config.gm_allskill = 0;
         battle_config.gm_allequip = 0;
         battle_config.gm_skilluncond = 0;
@@ -3325,7 +3324,6 @@ int battle_config_read (const char *cfgName)
             {"mvp_exp_rate", &battle_config.mvp_exp_rate},
             {"monster_hp_rate", &battle_config.monster_hp_rate},
             {"monster_max_aspd", &battle_config.monster_max_aspd},
-            {"atcommand_gm_only", &battle_config.atc_gmonly},
             {"atcommand_spawn_quantity_limit", &battle_config.atc_spawn_quantity_limit},
             {"gm_all_skill", &battle_config.gm_allskill},
             {"gm_all_skill_add_abra", &battle_config.gm_allskill_addabra},

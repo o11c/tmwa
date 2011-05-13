@@ -35,8 +35,6 @@
 
 #define STATE_BLIND 0x10
 
-static void log_atcommand (struct map_session_data *sd, const char *fmt, ...) __attribute__((format (printf, 2, 3)));
-
 #define ATCOMMAND_FUNC(x) static int atcommand_ ## x (const int fd, struct map_session_data* sd, const char* command, const char* message)
 ATCOMMAND_FUNC (setup);
 ATCOMMAND_FUNC (broadcast);
@@ -118,87 +116,83 @@ ATCOMMAND_FUNC (reloaditemdb);
 ATCOMMAND_FUNC (reloadmobdb);
 ATCOMMAND_FUNC (reloadskilldb);
 ATCOMMAND_FUNC (reloadscript);
-ATCOMMAND_FUNC (reloadgmdb);    // by Yor
+ATCOMMAND_FUNC (reloadgmdb);
 ATCOMMAND_FUNC (mapexit);
 ATCOMMAND_FUNC (idsearch);
 ATCOMMAND_FUNC (mapinfo);
-ATCOMMAND_FUNC (dye);           //** by fritz
-ATCOMMAND_FUNC (hair_style);    //** by fritz
-ATCOMMAND_FUNC (hair_color);    //** by fritz
-ATCOMMAND_FUNC (all_stats);     //** by fritz
-ATCOMMAND_FUNC (char_change_sex);   // by Yor
-ATCOMMAND_FUNC (char_block);    // by Yor
-ATCOMMAND_FUNC (char_ban);      // by Yor
-ATCOMMAND_FUNC (char_unblock);  // by Yor
-ATCOMMAND_FUNC (char_unban);    // by Yor
-ATCOMMAND_FUNC (partyspy);      // [Syrus22]
-ATCOMMAND_FUNC (partyrecall);   // by Yor
+ATCOMMAND_FUNC (dye);
+ATCOMMAND_FUNC (hair_style);
+ATCOMMAND_FUNC (hair_color);
+ATCOMMAND_FUNC (all_stats);
+ATCOMMAND_FUNC (char_change_sex);
+ATCOMMAND_FUNC (char_block);
+ATCOMMAND_FUNC (char_ban);
+ATCOMMAND_FUNC (char_unblock);
+ATCOMMAND_FUNC (char_unban);
+ATCOMMAND_FUNC (partyspy);
+ATCOMMAND_FUNC (partyrecall);
 ATCOMMAND_FUNC (enablenpc);
 ATCOMMAND_FUNC (disablenpc);
-ATCOMMAND_FUNC (servertime);    // by Yor
-ATCOMMAND_FUNC (chardelitem);   // by Yor
-ATCOMMAND_FUNC (jail);          // by Yor
-ATCOMMAND_FUNC (unjail);        // by Yor
-ATCOMMAND_FUNC (disguise);      // [Valaris]
-ATCOMMAND_FUNC (undisguise);    // by Yor
-ATCOMMAND_FUNC (ignorelist);    // by Yor
-ATCOMMAND_FUNC (charignorelist);    // by Yor
-ATCOMMAND_FUNC (inall);         // by Yor
-ATCOMMAND_FUNC (exall);         // by Yor
-ATCOMMAND_FUNC (chardisguise);  // Kalaspuff
-ATCOMMAND_FUNC (charundisguise);    // Kalaspuff
-ATCOMMAND_FUNC (email);         // by Yor
-ATCOMMAND_FUNC (effect);        //by Apple
-ATCOMMAND_FUNC (character_item_list);   // by Yor
-ATCOMMAND_FUNC (character_storage_list);    // by Yor
-ATCOMMAND_FUNC (addwarp);       // by MouseJstr
-ATCOMMAND_FUNC (follow);        // by MouseJstr
-ATCOMMAND_FUNC (skillon);       // by MouseJstr
-ATCOMMAND_FUNC (skilloff);      // by MouseJstr
-ATCOMMAND_FUNC (killer);        // by MouseJstr
-ATCOMMAND_FUNC (npcmove);       // by MouseJstr
-ATCOMMAND_FUNC (killable);      // by MouseJstr
-ATCOMMAND_FUNC (charkillable);  // by MouseJstr
-ATCOMMAND_FUNC (chareffect);    // by MouseJstr
-ATCOMMAND_FUNC (dropall);       // by MouseJstr
-ATCOMMAND_FUNC (chardropall);   // by MouseJstr
-ATCOMMAND_FUNC (storeall);      // by MouseJstr
-ATCOMMAND_FUNC (charstoreall);  // by MouseJstr
-ATCOMMAND_FUNC (skillid);       // by MouseJstr
-ATCOMMAND_FUNC (useskill);      // by MouseJstr
+ATCOMMAND_FUNC (servertime);
+ATCOMMAND_FUNC (chardelitem);
+ATCOMMAND_FUNC (jail);
+ATCOMMAND_FUNC (unjail);
+ATCOMMAND_FUNC (disguise);
+ATCOMMAND_FUNC (undisguise);
+ATCOMMAND_FUNC (ignorelist);
+ATCOMMAND_FUNC (charignorelist);
+ATCOMMAND_FUNC (inall);
+ATCOMMAND_FUNC (exall);
+ATCOMMAND_FUNC (chardisguise);
+ATCOMMAND_FUNC (charundisguise);
+ATCOMMAND_FUNC (email);
+ATCOMMAND_FUNC (effect);
+ATCOMMAND_FUNC (character_item_list);
+ATCOMMAND_FUNC (character_storage_list);
+ATCOMMAND_FUNC (addwarp);
+ATCOMMAND_FUNC (follow);
+ATCOMMAND_FUNC (skillon);
+ATCOMMAND_FUNC (skilloff);
+ATCOMMAND_FUNC (killer);
+ATCOMMAND_FUNC (npcmove);
+ATCOMMAND_FUNC (killable);
+ATCOMMAND_FUNC (charkillable);
+ATCOMMAND_FUNC (chareffect);
+ATCOMMAND_FUNC (dropall);
+ATCOMMAND_FUNC (chardropall);
+ATCOMMAND_FUNC (storeall);
+ATCOMMAND_FUNC (charstoreall);
+ATCOMMAND_FUNC (skillid);
+ATCOMMAND_FUNC (useskill);
 ATCOMMAND_FUNC (summon);
 ATCOMMAND_FUNC (rain);
 ATCOMMAND_FUNC (snow);
 ATCOMMAND_FUNC (sakura);
 ATCOMMAND_FUNC (fog);
 ATCOMMAND_FUNC (leaves);
-ATCOMMAND_FUNC (adjgmlvl);      // by MouseJstr
-ATCOMMAND_FUNC (adjcmdlvl);     // by MouseJstr
-ATCOMMAND_FUNC (trade);         // by MouseJstr
-ATCOMMAND_FUNC (char_wipe);     // [Fate]
-ATCOMMAND_FUNC (set_magic);     // [Fate]
-ATCOMMAND_FUNC (magic_info);    // [Fate]
-ATCOMMAND_FUNC (log);           // [Fate]
-ATCOMMAND_FUNC (tee);           // [Fate]
-ATCOMMAND_FUNC (invisible);     // [Fate]
-ATCOMMAND_FUNC (visible);       // [Fate]
-ATCOMMAND_FUNC (list_nearby);   // [Fate]
-ATCOMMAND_FUNC (iterate_forward_over_players);  // [Fate]
-ATCOMMAND_FUNC (iterate_backwards_over_players);    // [Fate]
-ATCOMMAND_FUNC (skillpool_info);    // [Fate]
-ATCOMMAND_FUNC (skillpool_focus);   // [Fate]
-ATCOMMAND_FUNC (skillpool_unfocus); // [Fate]
-ATCOMMAND_FUNC (skill_learn);   // [Fate]
+ATCOMMAND_FUNC (adjgmlvl);
+ATCOMMAND_FUNC (adjcmdlvl);
+ATCOMMAND_FUNC (trade);
+ATCOMMAND_FUNC (char_wipe);
+ATCOMMAND_FUNC (set_magic);
+ATCOMMAND_FUNC (magic_info);
+ATCOMMAND_FUNC (log);
+ATCOMMAND_FUNC (tee);
+ATCOMMAND_FUNC (invisible);
+ATCOMMAND_FUNC (visible);
+ATCOMMAND_FUNC (list_nearby);
+ATCOMMAND_FUNC (iterate_forward_over_players);
+ATCOMMAND_FUNC (iterate_backwards_over_players);
+ATCOMMAND_FUNC (skillpool_info);
+ATCOMMAND_FUNC (skillpool_focus);
+ATCOMMAND_FUNC (skillpool_unfocus);
+ATCOMMAND_FUNC (skill_learn);
 ATCOMMAND_FUNC (wgm);
 ATCOMMAND_FUNC (ipcheck);
 
-/*==========================================
- *AtCommandInfo atcommand_info[]構造体の定義
- *------------------------------------------
- */
-
-// First char of commands is configured in atcommand_athena.conf. Leave @ in this list for default value.
-// to set default level, read atcommand_athena.conf first please.
+/// atcommand dispatch table
+// sorted by category, then level
+// levels can be overridden in atcommand_athena.conf
 static AtCommandInfo atcommand_info[] = {
     {"@help", 0,        atcommand_help,         ATCC_MISC,
     "[@cmd | cat]",     "Display help about @commands."},
@@ -541,50 +535,31 @@ static AtCommandInfo atcommand_info[] = {
     "",                 "??"},
 };
 
-/*========================================
- * At-command logging
- */
-void log_atcommand (struct map_session_data *sd, const char *fmt, ...)
+/// Log an atcommand
+static void log_atcommand (struct map_session_data *sd, const char *cmd, const char *arg)
 {
-    char message[512];
-    va_list ap;
-
-    va_start (ap, fmt);
-    vsnprintf (message, sizeof (message), fmt, ap);
-    va_end (ap);
-
-    gm_log ("%s(%d,%d) %s(%d) : %s", maps[sd->bl.m].name, sd->bl.x,
-                sd->bl.y, sd->status.name, sd->status.account_id, message);
+    gm_log ("%s(%d,%d) %s(%d) : %s %s", maps[sd->bl.m].name, sd->bl.x,
+                sd->bl.y, sd->status.name, sd->status.account_id, cmd, arg);
 }
 
 char *gm_logfile_name = NULL;
-/*==========================================
- * Log a timestamped line to GM log file
- *------------------------------------------
- */
+
+/// Write to gm logfile with timestamp
+// the log is automatically rotated monthly
 void gm_log (const char *fmt, ...)
 {
     static int last_logfile_nr = 0;
     static FILE *gm_logfile = NULL;
-    time_t time_v;
-    struct tm ctime_;
-    int  month, year, logfile_nr;
-    char message[512];
-    va_list ap;
 
     if (!gm_logfile_name)
         return;
 
-    va_start (ap, fmt);
-    vsnprintf (message, 511, fmt, ap);
-    va_end (ap);
+    time_t time_v = time(NULL);
+    struct tm *time_bits = gmtime(&time_v);
 
-    time (&time_v);
-    gmtime_r (&time_v, &ctime_);
-
-    year = ctime_.tm_year + 1900;
-    month = ctime_.tm_mon + 1;
-    logfile_nr = (year * 12) + month;
+    int year = time_bits->tm_year + 1900;
+    int month = time_bits->tm_mon + 1;
+    int logfile_nr = (year * 12) + month;
 
     if (logfile_nr != last_logfile_nr)
     {
@@ -601,133 +576,111 @@ void gm_log (const char *fmt, ...)
         {
             perror ("GM log file");
             gm_logfile_name = NULL;
+            return;
         }
         last_logfile_nr = logfile_nr;
     }
 
-    fprintf (gm_logfile, "[%04d-%02d-%02d %02d:%02d:%02d] %s\n",
-             year, month, ctime_.tm_mday, ctime_.tm_hour,
-             ctime_.tm_min, ctime_.tm_sec, message);
+    fputs(stamp_time(time_v, NULL), gm_logfile);
 
-    fflush (gm_logfile);
+    va_list ap;
+    va_start (ap, fmt);
+    vfprintf (gm_logfile, fmt, ap);
+    va_end (ap);
+
+    fputc ('\n', gm_logfile);
 }
 
 
-static bool atcommand (gm_level_t level, const char *message, AtCommandInfo *info);
+static AtCommandInfo *atcommand (gm_level_t level, const char *message);
 
 bool is_atcommand (const int fd, struct map_session_data *sd, const char *message,
                    gm_level_t gmlvl)
 {
-    AtCommandInfo info;
-
     nullpo_ret (sd);
 
     if (!message || !*message)
         return 0;
 
-    memset (&info, 0, sizeof (info));
-
-    bool type = atcommand (gmlvl ? gmlvl : pc_isGM (sd), message, &info);
-    if (type)
-    {
-        char command[100];
-        char output[200];
-        const char *str = message;
-        const char *p = message;
-        memset (command, '\0', sizeof (command));
-        memset (output, '\0', sizeof (output));
-        while (*p && !isspace (*p))
-            p++;
-        if (p - str >= sizeof (command))    // too long
-            return 0;
-        strncpy (command, str, p - str);
-        while (isspace (*p))
-            p++;
-
-        if (!type || !info.proc)
-        {
-            sprintf (output, "%s is Unknown Command.", command);
-            clif_displaymessage (fd, output);
-        }
-        else
-        {
-            if (info.proc (fd, sd, command, p) != 0)
-            {
-                // Command can not be executed
-                sprintf (output, "%s failed.", command);
-                clif_displaymessage (fd, output);
-            }
-            else
-            {
-                if (info.level)    // Don't log level 0 commands
-                    log_atcommand (sd, "%s %s", command, p);
-            }
-        }
-
-        return true;
-    }
-
-    return false;
-}
-
-/// get info about command
-bool atcommand (gm_level_t level, const char *message, AtCommandInfo *info)
-{
-    const char *p = message;
-
+    AtCommandInfo *info = atcommand (gmlvl ? gmlvl : pc_isGM (sd), message);
     if (!info)
         return false;
-    if (battle_config.atc_gmonly && !level)    // level = pc_isGM(sd)
-        return false;
-    if (!p || !*p)
+
+    char command[100];
+    const char *str = message;
+    const char *p = message;
+    memset (command, '\0', sizeof (command));
+    while (*p && !isspace (*p))
+        p++;
+    if (p - str >= sizeof (command))    // too long
+        return 0;
+    strncpy (command, str, p - str);
+    while (isspace (*p))
+        p++;
+
+    if (!info->proc)
     {
-        fprintf (stderr, "at command message is empty\n");
-        return false;
+        char output[200];
+        sprintf (output, "%s is Unknown Command.", command);
+        clif_displaymessage (fd, output);
+        return true;
     }
-
-    if (*p == '@')
-    {                           // check first char.
-        char command[101];
-        int  i = 0;
-        memset (info, 0, sizeof (AtCommandInfo));
-        sscanf (p, "%100s", command);
-        command[sizeof (command) - 1] = '\0';
-
-        while (i < ARRAY_SIZEOF(atcommand_info))
-        {
-            if (strcasecmp (command, atcommand_info[i].command) == 0
-                && level >= atcommand_info[i].level)
-                break;
-            i++;
-        }
-
-        if (i == ARRAY_SIZEOF(atcommand_info))
-            return false;
-        *info = atcommand_info[i];
+    if (info->proc (fd, sd, command, p) != 0)
+    {
+        char output[200];
+        // Command can not be executed
+        sprintf (output, "%s failed.", command);
+        clif_displaymessage (fd, output);
+        return true;
     }
-    else
-        return false;
+    // Don't log level 0 commands
+    if (info->level)
+        log_atcommand (sd, command, p);
 
     return true;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-static int atkillmonster_sub (struct block_list *bl, va_list ap)
+/// get info about command
+AtCommandInfo *atcommand (gm_level_t level, const char *message)
+{
+    const char *p = message;
+
+    if (!p || !*p)
+    {
+        fprintf (stderr, "at command message is empty\n");
+        return NULL;
+    }
+
+    if (*p != '@')
+        return NULL;
+
+    char command[101];
+
+    sscanf (p, "%100s", command);
+    command[sizeof (command) - 1] = '\0';
+
+    for (int i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
+    {
+        if (strcasecmp (command, atcommand_info[i].command) == 0
+            && level >= atcommand_info[i].level)
+            return &atcommand_info[i];
+    }
+
+    return NULL;
+}
+
+///
+static void atkillmonster_sub (struct block_list *bl, va_list ap)
 {
     int  flag = va_arg (ap, int);
 
-    nullpo_retr (0, bl);
+    nullpo_retv (bl);
 
     if (flag)
         mob_damage (NULL, (struct mob_data *) bl,
                     ((struct mob_data *) bl)->hp, 2);
     else
         mob_delete ((struct mob_data *) bl);
-
-    return 0;
 }
 
 /*==========================================
@@ -2853,16 +2806,14 @@ int atcommand_killmonster (const int fd, struct map_session_data *sd,
  *
  *------------------------------------------
  */
-static int atlist_nearby_sub (struct block_list *bl, va_list ap)
+static void atlist_nearby_sub (struct block_list *bl, va_list ap)
 {
     char buf[32];
     int  fd = va_arg (ap, int);
-    nullpo_retr (0, bl);
+    nullpo_retv (bl);
 
     sprintf (buf, " - \"%s\"", ((struct map_session_data *) bl)->status.name);
     clif_displaymessage (fd, buf);
-
-    return 0;
 }
 
 /*==========================================

@@ -566,6 +566,8 @@ struct map_data
     char name[24];
     // NULL for maps on other map servers
     uint8_t *gat;
+    // TODO change this into subclasses
+    // also, it would be nice if at least size info was available for remote maps
     union
     {
         struct

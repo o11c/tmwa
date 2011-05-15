@@ -34,7 +34,7 @@ struct AtCommandInfo
 bool is_atcommand (const int fd, struct map_session_data *sd,
                    const char *message, gm_level_t gmlvl);
 
-int  atcommand_config_read (const char *cfgName);
+void atcommand_config_read (const char *cfgName);
 
 void gm_log (const char *fmt, ...) __attribute__((format (printf, 1, 2)));
 

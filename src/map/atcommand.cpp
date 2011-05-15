@@ -669,7 +669,7 @@ AtCommandInfo *atcommand (gm_level_t level, const char *message)
     return NULL;
 }
 
-///
+/// Kill an individual monster (with or without loot)
 static void atkillmonster_sub (struct block_list *bl, va_list ap)
 {
     int  flag = va_arg (ap, int);
@@ -677,16 +677,12 @@ static void atkillmonster_sub (struct block_list *bl, va_list ap)
     nullpo_retv (bl);
 
     if (flag)
-        mob_damage (NULL, (struct mob_data *) bl,
-                    ((struct mob_data *) bl)->hp, 2);
+        mob_damage (NULL, (struct mob_data *) bl, ((struct mob_data *) bl)->hp, 2);
     else
         mob_delete ((struct mob_data *) bl);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Find the @command by name
 static AtCommandInfo *get_atcommandinfo_byname (const char *name)
 {
     for (int i = 0; i < ARRAY_SIZEOF (atcommand_info); i++)
@@ -696,31 +692,28 @@ static AtCommandInfo *get_atcommandinfo_byname (const char *name)
     return NULL;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-int atcommand_config_read (const char *cfgName)
+/// read conf/atcommand_athena.conf, customizing the levels of the GM commands
+void atcommand_config_read (const char *cfgName)
 {
-    char line[1024], w1[1024], w2[1024];
-    AtCommandInfo *p;
-    FILE *fp;
-
-    if ((fp = fopen_ (cfgName, "r")) == NULL)
+    FILE *fp = fopen_ (cfgName, "r");
+    if (!fp)
     {
-        printf ("At commands configuration file not found: %s\n", cfgName);
-        return 1;
+        map_log ("At commands configuration file not found: %s\n", cfgName);
+        return;
     }
 
+    char line[1024];
     while (fgets (line, sizeof (line) - 1, fp))
     {
         if (line[0] == '/' && line[1] == '/')
             continue;
 
+        char w1[1024], w2[1024];
+
         if (sscanf (line, "%1023[^:]:%1023s", w1, w2) != 2)
             continue;
-        p = get_atcommandinfo_byname (w1);
-        if (p != NULL)
+        AtCommandInfo *p = get_atcommandinfo_byname (w1);
+        if (p)
         {
             p->level = atoi (w2);
             if (p->level > 100)
@@ -731,28 +724,17 @@ int atcommand_config_read (const char *cfgName)
             atcommand_config_read (w2);
     }
     fclose_ (fp);
-
-    return 0;
 }
 
-/*==========================================
-// @ command processing functions
- *------------------------------------------
- */
+// The rest of the file is the actual implementations of @commands
 
-/*==========================================
- * @setup - Safely set a chars levels and warp them to a special place
- * TAW Specific
- *------------------------------------------
- */
+/// @setup - Safely set a chars levels and warp them to a special place
+// from TAW, unused by TMW
 int atcommand_setup (const int fd, struct map_session_data *sd,
                      const char *UNUSED, const char *message)
 {
-    char buf[256];
     char character[100];
     int  level = 1;
-
-    memset (character, '\0', sizeof (character));
 
     if (!message || !*message
         || sscanf (message, "%d %99[^\n]", &level, character) < 2)
@@ -762,134 +744,107 @@ int atcommand_setup (const int fd, struct map_session_data *sd,
     }
     level--;
 
-    snprintf (buf, 255, "-255 %s", character);
+    char buf[256];
+    snprintf (buf, sizeof (buf), "-255 %s", character);
     atcommand_character_baselevel (fd, sd, "@charbaselvl", buf);
 
-    snprintf (buf, 255, "%d %s", level, character);
+    snprintf (buf, sizeof (buf), "%d %s", level, character);
     atcommand_character_baselevel (fd, sd, "@charbaselvl", buf);
 
     // Emote skill
-    snprintf (buf, 255, "1 1 %s", character);
+    snprintf (buf, sizeof (buf), "1 1 %s", character);
     atcommand_skill_learn(fd, sd, "@skill-learn", buf);
 
     // Trade skill
-    snprintf (buf, 255, "2 1 %s", character);
+    snprintf (buf, sizeof (buf), "2 1 %s", character);
     atcommand_skill_learn(fd, sd, "@skill-learn", buf);
 
     // Party skill
-    snprintf (buf, 255, "2 2 %s", character);
+    snprintf (buf, sizeof (buf), "2 2 %s", character);
     atcommand_skill_learn(fd, sd, "@skill-learn", buf);
 
-    snprintf (buf, 255, "018-1.gat 24 98 %s", character);
+    snprintf (buf, sizeof (buf), "018-1.gat 24 98 %s", character);
     atcommand_charwarp (fd, sd, "@charwarp", buf);
 
-    return (0);
+    return 0;
 
 }
 
-/*==========================================
- * @rura+
- *------------------------------------------
- */
+/// Warp player to another map
 int atcommand_charwarp (const int fd, struct map_session_data *sd,
                         const char *UNUSED, const char *message)
 {
     char map_name[100];
     char character[100];
-    int  x = 0, y = 0;
-    struct map_session_data *pl_sd;
-    int  m;
-
-    memset (map_name, '\0', sizeof (map_name));
-    memset (character, '\0', sizeof (character));
+    int  x, y;
 
     if (!message || !*message
         || sscanf (message, "%99s %d %d %99[^\n]", map_name, &x, &y,
                    character) < 4)
     {
-        clif_displaymessage (fd,
-                             "Usage: @charwarp/@rura+ <mapname> <x> <y> <char name>");
+        clif_displaymessage (fd, "Usage: @charwarp <mapname> <x> <y> <char name>");
         return -1;
     }
 
+    if (strstr (map_name, ".gat") == NULL && strlen (map_name) < 13)   // 16 - 4 (.gat)
+        strcat (map_name, ".gat");
+
+    struct map_session_data *pl_sd = map_nick2sd (character);
+    if (!pl_sd)
+    {
+        clif_displaymessage (fd, "Character not found.");
+        return -1;
+    }
+    if (pc_isGM (sd) < pc_isGM (pl_sd))
+    {
+        clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
+        return -1;
+    }
+
+    // FIXME: This really should use actual map bounds, but we only have that data for local maps
     if (x <= 0)
         x = MRAND (399) + 1;
     if (y <= 0)
         y = MRAND (399) + 1;
-    if (strstr (map_name, ".gat") == NULL && strstr (map_name, ".afm") == NULL && strlen (map_name) < 13)   // 16 - 4 (.gat)
-        strcat (map_name, ".gat");
 
-    if ((pl_sd = map_nick2sd (character)) != NULL)
+    int m = map_mapname2mapid (map_name);
+    if (m >= 0 && maps[m].flag.nowarpto
+        && battle_config.any_warp_GM_min_level > pc_isGM (sd))
     {
-        if (pc_isGM (sd) >= pc_isGM (pl_sd))
-        {                       // you can rura+ only lower or same GM level
-            if (x > 0 && x < 800 && y > 0 && y < 800)
-            {
-                m = map_mapname2mapid (map_name);
-                if (m >= 0 && maps[m].flag.nowarpto
-                    && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-                {
-                    clif_displaymessage (fd,
-                                         "You are not authorised to warp someone to this map.");
-                    return -1;
-                }
-                if (maps[pl_sd->bl.m].flag.nowarp
-                    && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-                {
-                    clif_displaymessage (fd,
-                                         "You are not authorised to warp this player from its actual map.");
-                    return -1;
-                }
-                if (pc_setpos (pl_sd, map_name, x, y, 3) == 0)
-                {
-                    clif_displaymessage (pl_sd->fd, "Warped.");
-                    clif_displaymessage (fd, "Player warped");
-                }
-                else
-                {
-                    clif_displaymessage (fd, "Map not found.");
-                    return -1;
-                }
-            }
-            else
-            {
-                clif_displaymessage (fd, "Coordinates out of range.");
-                return -1;
-            }
-        }
-        else
-        {
-            clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
-            return -1;
-        }
+        clif_displaymessage (fd, "You are not authorised to warp someone to this map.");
+        return -1;
+    }
+    if (maps[pl_sd->bl.m].flag.nowarp
+        && battle_config.any_warp_GM_min_level > pc_isGM (sd))
+    {
+        clif_displaymessage (fd, "You are not authorised to warp this player from its current map.");
+        return -1;
+    }
+    if (pc_setpos (pl_sd, map_name, x, y, 3) == 0)
+    {
+        clif_displaymessage (pl_sd->fd, "Warped.");
+        clif_displaymessage (fd, "Player warped");
     }
     else
     {
-        clif_displaymessage (fd, "Character not found.");
+        clif_displaymessage (fd, "Map not found.");
         return -1;
     }
 
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Warp yourself to another map
 int atcommand_warp (const int fd, struct map_session_data *sd,
                     const char *UNUSED, const char *message)
 {
     char map_name[100];
     int  x = 0, y = 0;
-    int  m;
-
-    memset (map_name, '\0', sizeof (map_name));
 
     if (!message || !*message
         || sscanf (message, "%99s %d %d", map_name, &x, &y) < 1)
     {
-        clif_displaymessage (fd,
-                             "Please, enter a map (usage: @warp <mapname> <x> <y>).");
+        clif_displaymessage (fd, "Please, enter a map (usage: @warp <mapname> <x> <y>).");
         return -1;
     }
 
@@ -898,230 +853,165 @@ int atcommand_warp (const int fd, struct map_session_data *sd,
     if (y <= 0)
         y = MRAND (399) + 1;
 
-    if (strstr (map_name, ".gat") == NULL && strstr (map_name, ".afm") == NULL && strlen (map_name) < 13)   // 16 - 4 (.gat)
+    if (strstr (map_name, ".gat") == NULL && strlen (map_name) < 13)   // 16 - 4 (.gat)
         strcat (map_name, ".gat");
 
-    if (x > 0 && x < 800 && y > 0 && y < 800)
+    int m = map_mapname2mapid (map_name);
+    if (m >= 0 && maps[m].flag.nowarpto
+        && battle_config.any_warp_GM_min_level > pc_isGM (sd))
     {
-        m = map_mapname2mapid (map_name);
-        if (m >= 0 && maps[m].flag.nowarpto
-            && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-        {
-            clif_displaymessage (fd,
-                                 "You are not authorised to warp you to this map.");
-            return -1;
-        }
-        if (maps[sd->bl.m].flag.nowarp
-            && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-        {
-            clif_displaymessage (fd,
-                                 "You are not authorised to warp you from your actual map.");
-            return -1;
-        }
-        if (pc_setpos (sd, map_name, x, y, 3) == 0)
-            clif_displaymessage (fd, "Warped.");
-        else
-        {
-            clif_displaymessage (fd, "Map not found.");
-            return -1;
-        }
+        clif_displaymessage (fd, "You are not authorised to warp you to this map.");
+        return -1;
     }
+    if (maps[sd->bl.m].flag.nowarp
+        && battle_config.any_warp_GM_min_level > pc_isGM (sd))
+    {
+        clif_displaymessage (fd, "You are not authorised to warp you from your actual map.");
+        return -1;
+    }
+
+    if (pc_setpos (sd, map_name, x, y, 3) == 0)
+        clif_displaymessage (fd, "Warped.");
     else
     {
-        clif_displaymessage (fd, "Coordinates out of range.");
+        clif_displaymessage (fd, "Map not found.");
         return -1;
     }
 
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Find location of a character (or yourself)
 int atcommand_where (const int fd, struct map_session_data *sd,
                      const char *UNUSED, const char *message)
 {
     char character[100];
     char output[200];
-    struct map_session_data *pl_sd;
-
-    memset (character, '\0', sizeof (character));
-    memset (output, '\0', sizeof (output));
 
     if (sscanf (message, "%99[^\n]", character) < 1)
         strcpy (character, sd->status.name);
 
-    if ((pl_sd = map_nick2sd (character)) != NULL &&
-        !((battle_config.hide_GM_session
-           || (pl_sd->status.option & OPTION_HIDE))
-          && (pc_isGM (pl_sd) > pc_isGM (sd))))
-    {                           // you can look only lower or same level
-        sprintf (output, "%s: %s (%d,%d)", pl_sd->status.name, pl_sd->mapname,
-                 pl_sd->bl.x, pl_sd->bl.y);
-        clif_displaymessage (fd, output);
-    }
-    else
+    struct map_session_data *pl_sd = map_nick2sd (character);
+    if (!pl_sd || (
+            (battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE))
+            && pc_isGM (pl_sd) > pc_isGM (sd) ) )
     {
         clif_displaymessage (fd, "Character not found.");
         return -1;
     }
+    sprintf (output, "%s: %s (%d,%d)", pl_sd->status.name, pl_sd->mapname,
+             pl_sd->bl.x, pl_sd->bl.y);
+    clif_displaymessage (fd, output);
 
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// warp to a player
 int atcommand_goto (const int fd, struct map_session_data *sd,
                     const char *UNUSED, const char *message)
 {
     char character[100];
-    char output[200];
-    struct map_session_data *pl_sd;
-
-    memset (character, '\0', sizeof (character));
-    memset (output, '\0', sizeof (output));
 
     if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
     {
-        clif_displaymessage (fd,
-                             "Please, enter a player name (usage: @jumpto/@warpto/@goto <char name>).");
+        clif_displaymessage (fd, "Please, enter a player name (usage: @goto <char name>).");
         return -1;
     }
 
-    if ((pl_sd = map_nick2sd (character)) != NULL)
-    {
-        if (maps[pl_sd->bl.m].flag.nowarpto
-            && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-        {
-            clif_displaymessage (fd,
-                                 "You are not authorised to warp you to the map of this player.");
-            return -1;
-        }
-        if (maps[sd->bl.m].flag.nowarp
-            && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-        {
-            clif_displaymessage (fd,
-                                 "You are not authorised to warp you from your actual map.");
-            return -1;
-        }
-        pc_setpos (sd, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y, 3);
-        sprintf (output, "Jump to %s", character);
-        clif_displaymessage (fd, output);
-    }
-    else
+    struct map_session_data *pl_sd = map_nick2sd (character);
+    if (!pl_sd)
     {
         clif_displaymessage (fd, "Character not found.");
         return -1;
     }
 
+    if (maps[pl_sd->bl.m].flag.nowarpto
+        && battle_config.any_warp_GM_min_level > pc_isGM (sd))
+    {
+        clif_displaymessage (fd, "You are not authorised to warp you to the map of this player.");
+        return -1;
+    }
+    if (maps[sd->bl.m].flag.nowarp
+        && battle_config.any_warp_GM_min_level > pc_isGM (sd))
+    {
+        clif_displaymessage (fd, "You are not authorised to warp you from your actual map.");
+        return -1;
+    }
+    pc_setpos (sd, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y, 3);
+
+    char output[200];
+    sprintf (output, "Jump to %s", character);
+    clif_displaymessage (fd, output);
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// warp, but within a map
 int atcommand_jump (const int fd, struct map_session_data *sd,
                     const char *UNUSED, const char *message)
 {
-    char output[200];
     int  x = 0, y = 0;
 
-    memset (output, '\0', sizeof (output));
-
+    // parameters optional
     sscanf (message, "%d %d", &x, &y);
 
-    if (x <= 0)
-        x = MRAND (399) + 1;
-    if (y <= 0)
-        y = MRAND (399) + 1;
-    if (x > 0 && x < 800 && y > 0 && y < 800)
+    if (x <= 0 || x >= maps[sd->bl.m].xs)
+        x = MRAND (maps[sd->bl.m].xs - 1) + 1;
+    if (y <= 0 || x >= maps[sd->bl.m].xs)
+        y = MRAND (maps[sd->bl.m].xs - 1) + 1;
+
+    if ((maps[sd->bl.m].flag.nowarpto || maps[sd->bl.m].flag.nowarp)
+        && battle_config.any_warp_GM_min_level > pc_isGM (sd))
     {
-        if (maps[sd->bl.m].flag.nowarpto
-            && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-        {
-            clif_displaymessage (fd,
-                                 "You are not authorised to warp you to your actual map.");
-            return -1;
-        }
-        if (maps[sd->bl.m].flag.nowarp
-            && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-        {
-            clif_displaymessage (fd,
-                                 "You are not authorised to warp you from your actual map.");
-            return -1;
-        }
-        pc_setpos (sd, sd->mapname, x, y, 3);
-        sprintf (output, "Jump to %d %d", x, y);
-        clif_displaymessage (fd, output);
-    }
-    else
-    {
-        clif_displaymessage (fd, "Coordinates out of range.");
+        clif_displaymessage (fd, "You are not authorised to warp within your current map.");
         return -1;
     }
+
+    pc_setpos (sd, sd->mapname, x, y, 3);
+
+    char output[200];
+    sprintf (output, "Jump to %d %d", x, y);
+    clif_displaymessage (fd, output);
 
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// List online players with location
 int atcommand_who (const int fd, struct map_session_data *sd,
                    const char *UNUSED, const char *message)
 {
-    char output[200];
-    struct map_session_data *pl_sd;
-    int  i, j, count;
-    int  pl_GM_level, GM_level;
     char match_text[100];
-    char player_name[24];
-
-    memset (output, '\0', sizeof (output));
-    memset (match_text, '\0', sizeof (match_text));
-    memset (player_name, '\0', sizeof (player_name));
 
     if (sscanf (message, "%99[^\n]", match_text) < 1)
         strcpy (match_text, "");
-    for (j = 0; match_text[j]; j++)
-        match_text[j] = tolower (match_text[j]);
 
-    count = 0;
-    GM_level = pc_isGM (sd);
-    for (i = 0; i < fd_max; i++)
+    int count = 0;
+    gm_level_t gm_level = pc_isGM (sd);
+    for (int i = 0; i < fd_max; i++)
     {
-        if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-            && pl_sd->state.auth)
-        {
-            pl_GM_level = pc_isGM (pl_sd);
-            if (!
-                ((battle_config.hide_GM_session
-                  || (pl_sd->status.option & OPTION_HIDE))
-                 && (pl_GM_level > GM_level)))
-            {                   // you can look only lower or same level
-                memcpy (player_name, pl_sd->status.name, 24);
-                for (j = 0; player_name[j]; j++)
-                    player_name[j] = tolower (player_name[j]);
-                if (strstr (player_name, match_text) != NULL)
-                {               // search with no case sensitive
-                    if (pl_GM_level > 0)
-                        sprintf (output,
-                                 "Name: %s (GM:%d) | Location: %s %d %d",
-                                 pl_sd->status.name, pl_GM_level,
-                                 pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y);
-                    else
-                        sprintf (output, "Name: %s | Location: %s %d %d",
-                                 pl_sd->status.name, pl_sd->mapname,
-                                 pl_sd->bl.x, pl_sd->bl.y);
-                    clif_displaymessage (fd, output);
-                    count++;
-                }
-            }
-        }
+        if (!session[i])
+            continue;
+        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        if (!pl_sd || !pl_sd->state.auth)
+            continue;
+
+        gm_level_t pl_gm_level = pc_isGM (pl_sd);
+        if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE))
+                && pl_gm_level > gm_level)
+            continue;
+        if (!strcasestr (pl_sd->status.name, match_text))
+            continue;
+
+        char output[200];
+        if (pl_gm_level)
+            sprintf (output, "Name: %s (GM:%d) | Location: %s %d %d",
+                     pl_sd->status.name, pl_gm_level,
+                     pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y);
+        else
+            sprintf (output, "Name: %s | Location: %s %d %d",
+                     pl_sd->status.name, pl_sd->mapname,
+                     pl_sd->bl.x, pl_sd->bl.y);
+        clif_displaymessage (fd, output);
+        count++;
     }
 
     if (count == 0)
@@ -1130,6 +1020,7 @@ int atcommand_who (const int fd, struct map_session_data *sd,
         clif_displaymessage (fd, "1 player found.");
     else
     {
+        char output[200];
         sprintf (output, "%d players found.", count);
         clif_displaymessage (fd, output);
     }
@@ -1137,70 +1028,45 @@ int atcommand_who (const int fd, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// List online players with party name
 int atcommand_whogroup (const int fd, struct map_session_data *sd,
                         const char *UNUSED, const char *message)
 {
-    char temp0[100];
-    char temp1[100];
-    char output[200];
-    struct map_session_data *pl_sd;
-    int  i, j, count;
-    int  pl_GM_level, GM_level;
     char match_text[100];
-    char player_name[24];
-    struct party *p;
-
-    memset (temp0, '\0', sizeof (temp0));
-    memset (temp1, '\0', sizeof (temp1));
-    memset (output, '\0', sizeof (output));
-    memset (match_text, '\0', sizeof (match_text));
-    memset (player_name, '\0', sizeof (player_name));
-
     if (sscanf (message, "%99[^\n]", match_text) < 1)
         strcpy (match_text, "");
-    for (j = 0; match_text[j]; j++)
-        match_text[j] = tolower (match_text[j]);
 
-    count = 0;
-    GM_level = pc_isGM (sd);
-    for (i = 0; i < fd_max; i++)
+    int count = 0;
+    gm_level_t gm_level = pc_isGM (sd);
+    for (int i = 0; i < fd_max; i++)
     {
-        if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-            && pl_sd->state.auth)
-        {
-            pl_GM_level = pc_isGM (pl_sd);
-            if (!
-                ((battle_config.hide_GM_session
-                  || (pl_sd->status.option & OPTION_HIDE))
-                 && (pl_GM_level > GM_level)))
-            {                   // you can look only lower or same level
-                memcpy (player_name, pl_sd->status.name, 24);
-                for (j = 0; player_name[j]; j++)
-                    player_name[j] = tolower (player_name[j]);
-                if (strstr (player_name, match_text) != NULL)
-                {               // search with no case sensitive
-                    p = party_search (pl_sd->status.party_id);
-                    if (p == NULL)
-                        sprintf (temp0, "None");
-                    else
-                        sprintf (temp0, "%s", p->name);
-                    if (pl_GM_level > 0)
-                        sprintf (output,
-                                 "Name: %s (GM:%d) | Party: '%s'",
-                                 pl_sd->status.name, pl_GM_level, temp0);
-                    else
-                        sprintf (output,
-                                 "Name: %s | Party: '%s'",
-                                 pl_sd->status.name, temp0);
-                    clif_displaymessage (fd, output);
-                    count++;
-                }
-            }
-        }
+        if (!session[i])
+            continue;
+        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        if (!pl_sd || !pl_sd->state.auth)
+            continue;
+        gm_level_t pl_gm_level = pc_isGM (pl_sd);
+        if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE))
+                && (pl_gm_level > gm_level))
+            continue;
+
+        if (!strcasestr (pl_sd->status.name, match_text))
+            continue;
+
+        const char *temp0 = "None";
+        struct party *p = party_search (pl_sd->status.party_id);
+        if (p)
+            temp0 = p->name;
+
+        char output[200];
+        if (pl_gm_level)
+            sprintf (output, "Name: %s (GM:%d) | Party: '%s'",
+                     pl_sd->status.name, pl_gm_level, temp0);
+        else
+            sprintf (output, "Name: %s | Party: '%s'",
+                     pl_sd->status.name, temp0);
+        clif_displaymessage (fd, output);
+        count++;
     }
 
     if (count == 0)
@@ -1209,6 +1075,7 @@ int atcommand_whogroup (const int fd, struct map_session_data *sd,
         clif_displaymessage (fd, "1 player found.");
     else
     {
+        char output[200];
         sprintf (output, "%d players found", count);
         clif_displaymessage (fd, output);
     }
@@ -1216,65 +1083,53 @@ int atcommand_whogroup (const int fd, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// List online players on map, with location
 int atcommand_whomap (const int fd, struct map_session_data *sd,
                       const char *UNUSED, const char *message)
 {
-    char output[200];
-    struct map_session_data *pl_sd;
-    int  i, count;
-    int  pl_GM_level, GM_level;
-    int  map_id;
-    char map_name[100];
-
-    memset (output, '\0', sizeof (output));
-    memset (map_name, '\0', sizeof (map_name));
-
-    if (!message || !*message)
-        map_id = sd->bl.m;
-    else
+    int map_id = sd->bl.m;
+    if (message && *message)
     {
+        char map_name[100];
         sscanf (message, "%99s", map_name);
-        if (strstr (map_name, ".gat") == NULL && strstr (map_name, ".afm") == NULL && strlen (map_name) < 13)   // 16 - 4 (.gat)
+        if (strstr (map_name, ".gat") == NULL && strlen (map_name) < 13)   // 16 - 4 (.gat)
             strcat (map_name, ".gat");
-        if ((map_id = map_mapname2mapid (map_name)) < 0)
-            map_id = sd->bl.m;
+        int m = map_mapname2mapid (map_name);
+        if (m >= 0)
+            map_id = m;
     }
 
-    count = 0;
-    GM_level = pc_isGM (sd);
-    for (i = 0; i < fd_max; i++)
+    int count = 0;
+    gm_level_t gm_level = pc_isGM (sd);
+    for (int i = 0; i < fd_max; i++)
     {
-        if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-            && pl_sd->state.auth)
-        {
-            pl_GM_level = pc_isGM (pl_sd);
-            if (!
-                ((battle_config.hide_GM_session
-                  || (pl_sd->status.option & OPTION_HIDE))
-                 && (pl_GM_level > GM_level)))
-            {                   // you can look only lower or same level
-                if (pl_sd->bl.m == map_id)
-                {
-                    if (pl_GM_level > 0)
-                        sprintf (output,
-                                 "Name: %s (GM:%d) | Location: %s %d %d",
-                                 pl_sd->status.name, pl_GM_level,
-                                 pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y);
-                    else
-                        sprintf (output, "Name: %s | Location: %s %d %d",
-                                 pl_sd->status.name, pl_sd->mapname,
-                                 pl_sd->bl.x, pl_sd->bl.y);
-                    clif_displaymessage (fd, output);
-                    count++;
-                }
-            }
-        }
+        if (!session[i])
+            continue;
+        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        if (!pl_sd || !pl_sd->state.auth)
+            continue;
+        if (pl_sd->bl.m != map_id)
+            continue;
+
+        gm_level_t pl_gm_level = pc_isGM (pl_sd);
+        if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE))
+                && pl_gm_level > gm_level)
+            continue;
+
+        char output[200];
+        if (pl_gm_level)
+            sprintf (output, "Name: %s (GM:%d) | Location: %s %d %d",
+                     pl_sd->status.name, pl_gm_level,
+                     pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y);
+        else
+            sprintf (output, "Name: %s | Location: %s %d %d",
+                     pl_sd->status.name, pl_sd->mapname,
+                     pl_sd->bl.x, pl_sd->bl.y);
+        clif_displaymessage (fd, output);
+        count++;
     }
 
+    char output[200];
     if (count == 0)
         sprintf (output, "No player found in map '%s'.", maps[map_id].name);
     else if (count == 1)
@@ -1288,74 +1143,56 @@ int atcommand_whomap (const int fd, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// List online players on map, with party
 int atcommand_whomapgroup (const int fd, struct map_session_data *sd,
                            const char *UNUSED, const char *message)
 {
-    char temp0[100];
-    char temp1[100];
-    char output[200];
-    struct map_session_data *pl_sd;
-    int  i, count;
-    int  pl_GM_level, GM_level;
-    int  map_id = 0;
-    char map_name[100];
-    struct party *p;
-
-    memset (temp0, '\0', sizeof (temp0));
-    memset (temp1, '\0', sizeof (temp1));
-    memset (output, '\0', sizeof (output));
-    memset (map_name, '\0', sizeof (map_name));
-
-    if (!message || !*message)
-        map_id = sd->bl.m;
-    else
+    int map_id = sd->bl.m;
+    if (message && *message)
     {
+        char map_name[100];
         sscanf (message, "%99s", map_name);
-        if (strstr (map_name, ".gat") == NULL && strstr (map_name, ".afm") == NULL && strlen (map_name) < 13)   // 16 - 4 (.gat)
+        if (strstr (map_name, ".gat") == NULL && strlen (map_name) < 13)   // 16 - 4 (.gat)
             strcat (map_name, ".gat");
-        if ((map_id = map_mapname2mapid (map_name)) < 0)
-            map_id = sd->bl.m;
+        int m = map_mapname2mapid (map_name);
+        if (m >= 0)
+            map_id = m;
     }
 
-    count = 0;
-    GM_level = pc_isGM (sd);
-    for (i = 0; i < fd_max; i++)
+    int count = 0;
+    gm_level_t gm_level = pc_isGM (sd);
+    for (int i = 0; i < fd_max; i++)
     {
-        if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-            && pl_sd->state.auth)
+        if (!session[i])
+            continue;
+        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+
+        if (!pl_sd || !pl_sd->state.auth)
+            continue;
+
+        gm_level_t pl_gm_level = pc_isGM (pl_sd);
+        if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE))
+                && pl_gm_level > gm_level)
+            continue;
+        if (pl_sd->bl.m == map_id)
         {
-            pl_GM_level = pc_isGM (pl_sd);
-            if (!
-                ((battle_config.hide_GM_session
-                  || (pl_sd->status.option & OPTION_HIDE))
-                 && (pl_GM_level > GM_level)))
-            {                   // you can look only lower or same level
-                if (pl_sd->bl.m == map_id)
-                {
-                    p = party_search (pl_sd->status.party_id);
-                    if (p == NULL)
-                        sprintf (temp0, "None");
-                    else
-                        sprintf (temp0, "%s", p->name);
-                    if (pl_GM_level > 0)
-                        sprintf (output,
-                                 "Name: %s (GM:%d) | Party: '%s'",
-                                 pl_sd->status.name, pl_GM_level, temp0);
-                    else
-                        sprintf (output,
-                                 "Name: %s | Party: '%s'",
-                                 pl_sd->status.name, temp0);
-                    clif_displaymessage (fd, output);
-                    count++;
-                }
-            }
+            struct party *p = party_search (pl_sd->status.party_id);
+            const char *temp0 = "None";
+            if (p)
+                temp0 = p->name;
+            char output[200];
+            if (pl_gm_level)
+                sprintf (output, "Name: %s (GM:%d) | Party: '%s'",
+                         pl_sd->status.name, pl_gm_level, temp0);
+            else
+                sprintf (output, "Name: %s | Party: '%s'",
+                         pl_sd->status.name, temp0);
+            clif_displaymessage (fd, output);
+            count++;
         }
     }
 
+    char output[200];
     if (count == 0)
         sprintf (output, "No player found in map '%s'.", maps[map_id].name);
     else if (count == 1)
@@ -1369,77 +1206,49 @@ int atcommand_whomapgroup (const int fd, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// List online GMs, with various info
 int atcommand_whogm (const int fd, struct map_session_data *sd,
                      const char *UNUSED, const char *message)
 {
-    char temp0[100];
-    char temp1[100];
-    char output[200];
-    struct map_session_data *pl_sd;
-    int  i, j, count;
-    int  pl_GM_level, GM_level;
     char match_text[100];
-    char player_name[24];
-    struct party *p;
-
-    memset (temp0, '\0', sizeof (temp0));
-    memset (temp1, '\0', sizeof (temp1));
-    memset (output, '\0', sizeof (output));
-    memset (match_text, '\0', sizeof (match_text));
-    memset (player_name, '\0', sizeof (player_name));
 
     if (sscanf (message, "%99[^\n]", match_text) < 1)
         strcpy (match_text, "");
-    for (j = 0; match_text[j]; j++)
-        match_text[j] = tolower (match_text[j]);
 
-    count = 0;
-    GM_level = pc_isGM (sd);
-    for (i = 0; i < fd_max; i++)
+    int count = 0;
+    gm_level_t gm_level = pc_isGM (sd);
+    for (int i = 0; i < fd_max; i++)
     {
-        if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-            && pl_sd->state.auth)
-        {
-            pl_GM_level = pc_isGM (pl_sd);
-            if (pl_GM_level > 0)
-            {
-                if (!
-                    ((battle_config.hide_GM_session
-                      || (pl_sd->status.option & OPTION_HIDE))
-                     && (pl_GM_level > GM_level)))
-                {               // you can look only lower or same level
-                    memcpy (player_name, pl_sd->status.name, 24);
-                    for (j = 0; player_name[j]; j++)
-                        player_name[j] = tolower (player_name[j]);
-                    if (strstr (player_name, match_text) != NULL)
-                    {           // search with no case sensitive
-                        sprintf (output,
-                                 "Name: %s (GM:%d) | Location: %s %d %d",
-                                 pl_sd->status.name, pl_GM_level,
-                                 pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y);
-                        clif_displaymessage (fd, output);
-                        sprintf (output,
-                                 "       BLvl: %d | Job: %s (Lvl: %d)",
-                                 pl_sd->status.base_level,
-                                 "N/A",
-                                 pl_sd->status.job_level);
-                        clif_displaymessage (fd, output);
-                        p = party_search (pl_sd->status.party_id);
-                        if (p == NULL)
-                            sprintf (temp0, "None");
-                        else
-                            sprintf (temp0, "%s", p->name);
-                        sprintf (output, "       Party: '%s'", temp0);
-                        clif_displaymessage (fd, output);
-                        count++;
-                    }
-                }
-            }
-        }
+        if (!session[i])
+            continue;
+        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        if (!pl_sd || !pl_sd->state.auth)
+            continue;
+
+        gm_level_t pl_gm_level = pc_isGM (pl_sd);
+        if (!pl_gm_level)
+            continue;
+        if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE))
+                && pl_gm_level > gm_level)
+            continue;
+        if (!strcasestr (pl_sd->status.name, match_text))
+            continue;
+
+        char output[200];
+        sprintf (output, "Name: %s (GM:%d) | Location: %s %d %d",
+                 pl_sd->status.name, pl_gm_level,
+                 pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y);
+        clif_displaymessage (fd, output);
+
+        struct party *p = party_search (pl_sd->status.party_id);
+        const char *temp0 = "None";
+        if (p)
+            temp0 = p->name;
+        sprintf (output, "       BLvl: %d | Party: %s",
+                 pl_sd->status.base_level, temp0);
+        clif_displaymessage (fd, output);
+
+        count++;
     }
 
     if (count == 0)
@@ -1448,6 +1257,7 @@ int atcommand_whogm (const int fd, struct map_session_data *sd,
         clif_displaymessage (fd, "1 GM found.");
     else
     {
+        char output[200];
         sprintf (output, "%d GMs found.", count);
         clif_displaymessage (fd, output);
     }

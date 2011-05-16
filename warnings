@@ -33,3 +33,5 @@
 -Wmissing-declarations
 
 -Werror=unused-but-set-variable
+
+-Wno-missing-field-initializers

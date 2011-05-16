@@ -3909,7 +3909,7 @@ int buildin_announce (struct script_state *st)
         clif_GMmessage (bl, str, strlen (str) + 1, flag);
     }
     else
-        intif_GMmessage (str, strlen (str) + 1, flag);
+        intif_GMmessage (str, strlen (str) + 1);
     return 0;
 }
 

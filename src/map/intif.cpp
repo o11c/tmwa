@@ -47,13 +47,11 @@ extern int char_fd;             // inter serverのfdはchar_fdを使う
 // inter serverへの送信
 
 // Message for all GMs on all map servers
-int intif_GMmessage (const char *mes, int len, int flag)
+int intif_GMmessage (const char *mes, int len)
 {
-    int  lp = (flag & 0x10) ? 8 : 4;
     WFIFOW (inter_fd, 0) = 0x3000;
-    WFIFOW (inter_fd, 2) = lp + len;
-    WFIFOL (inter_fd, 4) = 0x65756c62;
-    memcpy (WFIFOP (inter_fd, lp), mes, len);
+    WFIFOW (inter_fd, 2) = 4 + len;
+    memcpy (WFIFOP (inter_fd, 4), mes, len);
     WFIFOSET (inter_fd, WFIFOW (inter_fd, 2));
 
     return 0;

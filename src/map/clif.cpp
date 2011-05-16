@@ -3094,12 +3094,10 @@ int clif_GMmessage (struct block_list *bl, const char *mes, int len, int flag)
     unsigned char lbuf[255];
     unsigned char *buf =
         ((len + 16) >= sizeof (lbuf)) ? (unsigned char*)malloc (len + 16) : lbuf;
-    int  lp = (flag & 0x10) ? 8 : 4;
 
     WBUFW (buf, 0) = 0x9a;
-    WBUFW (buf, 2) = len + lp;
-    WBUFL (buf, 4) = 0x65756c62;
-    memcpy (WBUFP (buf, lp), mes, len);
+    WBUFW (buf, 2) = len + 4;
+    memcpy (WBUFP (buf, 4), mes, len);
     flag &= 0x07;
     clif_send (buf, WBUFW (buf, 2), bl,
                (flag == 1) ? ALL_SAMEMAP :

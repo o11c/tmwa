@@ -7,7 +7,7 @@ CXXFLAGS = ${CFLAGS}
 # We require some c++0x features, from G++ 4.5
 # * Using local types in template arguments
 # * Undoubtedly other stuff I'll forget to put here
-override CXXFLAGS += -std=gnu++0x
+override CXXFLAGS += -std=c++0x
 
 # works on both x86 and x86_64
 override CXX += -m32

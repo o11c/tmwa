@@ -40,12 +40,6 @@ static inline void ip_to_str (in_addr_t ip, char out[16])
 // return true if there already was one, false if we had to add it
 bool strzcpy (char *dst, const char *src, size_t n);
 
-
-#ifndef __cplusplus
-int _ptr_used_(void) __attribute__((error("Pointer used in place of array") ));
-#define ARRAY_SIZEOF(arr) ( __builtin_types_compatible_p(typeof(arr), typeof((arr)[0])*) ? _ptr_used_() : sizeof(arr)/sizeof((arr)[0]) )
-#else // __cplusplus
-
 /// A type that exists
 struct _true_ {};
 
@@ -66,9 +60,7 @@ struct is_an_array<false>
     static _true_ test(B *n);
 };
 
-#define ARRAY_SIZEOF(arr) ({ typedef typeof (is_an_array<(bool)__builtin_constant_p(sizeof(arr))>::test(arr)) type; sizeof (arr) / sizeof ((arr)[0]); })
-
-#endif // __cpluscplus
+#define ARRAY_SIZEOF(arr) ({ typedef decltype (is_an_array<(bool)__builtin_constant_p(sizeof(arr))>::test(arr)) type; sizeof (arr) / sizeof ((arr)[0]); })
 
 #define STRZCPY(dst, src) strzcpy (dst, src, ARRAY_SIZEOF(dst))
 #define STRZCPY2(dst, src) strzcpy (dst, src, ARRAY_SIZEOF(src))

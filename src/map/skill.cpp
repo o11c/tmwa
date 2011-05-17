@@ -592,7 +592,7 @@ typedef int (*SkillFunc) (struct block_list *, struct block_list *, int, int,
  *
  *------------------------------------------
  */
-static void skill_timerskill_ (timer_id UNUSED, tick_t tick, custom_id_t id, custom_data_t data)
+static void skill_timerskill_ (timer_id, tick_t tick, custom_id_t id, custom_data_t data)
 {
     struct map_session_data *sd = NULL;
     struct mob_data *md = NULL;
@@ -755,7 +755,7 @@ int skill_cleartimerskill (struct block_list *src)
  * スキル使用（詠唱完了、ID指定）
  *------------------------------------------
  */
-static void skill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data_t UNUSED)
+static void skill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data_t)
 {
     struct map_session_data *sd = map_id2sd (id) /*,*target_sd=NULL */ ;
     struct block_list *bl;
@@ -1322,7 +1322,7 @@ static int skill_unit_ondelete (struct skill_unit *src, struct block_list *bl,
  * スキルユニットの限界イベント
  *------------------------------------------
  */
-static int skill_unit_onlimit (struct skill_unit *src, unsigned int UNUSED)
+static int skill_unit_onlimit (struct skill_unit *src, unsigned int)
 {
     struct skill_unit_group *sg;
 
@@ -1373,7 +1373,7 @@ static int skill_unit_onlimit (struct skill_unit *src, unsigned int UNUSED)
  *------------------------------------------
  */
 int skill_unit_ondamaged (struct skill_unit *src, struct block_list *bl,
-                          int damage, unsigned int UNUSED)
+                          int damage, unsigned int)
 {
     struct skill_unit_group *sg;
 
@@ -1402,7 +1402,7 @@ int skill_unit_ondamaged (struct skill_unit *src, struct block_list *bl,
  * スキル使用（詠唱完了、場所指定）
  *------------------------------------------
  */
-static void skill_castend_pos (timer_id tid, tick_t tick, custom_id_t id, custom_data_t UNUSED)
+static void skill_castend_pos (timer_id tid, tick_t tick, custom_id_t id, custom_data_t)
 {
     struct map_session_data *sd = map_id2sd (id) /*,*target_sd=NULL */ ;
     int  range, maxcount;
@@ -2971,7 +2971,7 @@ static void skill_unit_timer_sub (struct block_list *bl, va_list ap)
  * スキルユニットタイマー処理
  *------------------------------------------
  */
-static void skill_unit_timer (timer_id UNUSED, tick_t tick, custom_id_t UNUSED, custom_data_t UNUSED)
+static void skill_unit_timer (timer_id, tick_t tick, custom_id_t, custom_data_t)
 {
     map_freeblock_lock ();
 

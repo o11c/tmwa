@@ -52,6 +52,8 @@ ${BUILD_DIR}/ladmin/ladmin.o: src/ladmin/ladmin.cpp \
  src/ladmin/../common/mmo.hpp src/ladmin/../common/utils.hpp \
  src/ladmin/../common/md5calc.hpp
 ${BUILD_DIR}/lib/sexprtest.o: src/lib/sexprtest.cpp src/lib/sexpr.hpp
+${BUILD_DIR}/lib/stringtest.o: src/lib/stringtest.cpp \
+ src/lib/fixed_string.hpp
 ${BUILD_DIR}/login/login.o: src/login/login.cpp src/login/login.hpp \
  src/login/../common/sanity.hpp src/login/../common/mmo.hpp \
  src/login/../common/utils.hpp src/login/../common/sanity.hpp \

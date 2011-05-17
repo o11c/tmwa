@@ -11,11 +11,11 @@
 #include "mt_rand.hpp"
 #include "nullpo.hpp"
 
-static void chld_proc (int UNUSED)
+static void chld_proc (int)
 {
     wait(NULL);
 }
-static void sig_proc (int UNUSED)
+static void sig_proc (int)
 {
     term_func ();
     for (int i = 0; i < fd_max; i++)

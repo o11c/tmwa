@@ -52,7 +52,7 @@ static char *magic_tokenise (char *src, char **parameter)
     return retval;
 }
 
-int magic_message (character_t * caster, uint8_t *spell_, size_t UNUSED)
+int magic_message (character_t * caster, uint8_t *spell_, size_t)
 {
     if (pc_isdead (caster))
         return 0;

@@ -172,7 +172,7 @@ int npc_delete (struct npc_data *nd)
  * イベントの遅延実行
  *------------------------------------------
  */
-void npc_event_timer (timer_id UNUSED, tick_t UNUSED, custom_id_t id, custom_data_t data)
+void npc_event_timer (timer_id, tick_t, custom_id_t id, custom_data_t data)
 {
     struct map_session_data *sd = map_id2sd (id);
     if (sd == NULL)
@@ -266,7 +266,7 @@ int npc_event_do_l (const char *name, int rid, int argc, argrec_t * args)
  * 時計イベント実行
  *------------------------------------------
  */
-static void npc_event_do_clock (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void npc_event_do_clock (timer_id, tick_t, custom_id_t, custom_data_t)
 {
     time_t timer;
     struct tm *t;
@@ -393,7 +393,7 @@ int npc_do_ontimer (int npc_id, struct map_session_data *sd, int option)
  * タイマーイベント実行
  *------------------------------------------
  */
-static void npc_timerevent (timer_id UNUSED, tick_t tick, custom_id_t id, custom_data_t data)
+static void npc_timerevent (timer_id, tick_t tick, custom_id_t id, custom_data_t data)
 {
     int  next, t;
     struct npc_data *nd = (struct npc_data *) map_id2bl (id);
@@ -613,7 +613,7 @@ static void npc_command_sub (db_key_t key, db_val_t data, va_list ap)
     }
 }
 
-int npc_command (struct map_session_data *UNUSED, const char *npcname, const char *command)
+int npc_command (struct map_session_data *, const char *npcname, const char *command)
 {
     strdb_foreach (ev_db, npc_command_sub, npcname, command);
 
@@ -1039,7 +1039,7 @@ void npc_addsrcfile (char *name)
  * warp行解析
  *------------------------------------------
  */
-int npc_parse_warp (char *w1, const char *UNUSED, char *w3, char *w4)
+int npc_parse_warp (char *w1, const char *, char *w3, char *w4)
 {
     int  x, y, xs, ys, to_x, to_y, m;
     int  i, j;
@@ -1114,7 +1114,7 @@ int npc_parse_warp (char *w1, const char *UNUSED, char *w3, char *w4)
  * shop行解析
  *------------------------------------------
  */
-static int npc_parse_shop (char *w1, char *UNUSED, char *w3, char *w4)
+static int npc_parse_shop (char *w1, char *, char *w3, char *w4)
 {
     char *p;
     int  x, y, dir, m;
@@ -1560,7 +1560,7 @@ static int npc_parse_script (char *w1, char *w2, char *w3, char *w4,
  * function行解析
  *------------------------------------------
  */
-static int npc_parse_function (char *UNUSED, char *UNUSED, char *w3, char *UNUSED,
+static int npc_parse_function (char *, char *, char *w3, char *,
                                char *first_line, FILE * fp, int *lines)
 {
     script_ptr srcbuf = NULL, script;
@@ -1634,7 +1634,7 @@ static int npc_parse_function (char *UNUSED, char *UNUSED, char *w3, char *UNUSE
  * mob行解析
  *------------------------------------------
  */
-int npc_parse_mob (char *w1, char *UNUSED, char *w3, char *w4)
+int npc_parse_mob (char *w1, char *, char *w3, char *w4)
 {
     int  m, x, y, xs, ys, mob_class, num, delay_1, delay2;
     int  i;
@@ -1721,7 +1721,7 @@ int npc_parse_mob (char *w1, char *UNUSED, char *w3, char *w4)
  * マップフラグ行の解析
  *------------------------------------------
  */
-static int npc_parse_mapflag (char *w1, char *UNUSED, char *w3, char *w4)
+static int npc_parse_mapflag (char *w1, char *, char *w3, char *w4)
 {
     int  m;
     char mapname[24], savemap[16];

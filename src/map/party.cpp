@@ -42,7 +42,7 @@ struct party *party_search (int party_id)
     return (struct party *)numdb_search (party_db, party_id).p;
 }
 
-static void party_searchname_sub (db_key_t UNUSED, db_val_t data, va_list ap)
+static void party_searchname_sub (db_key_t, db_val_t data, va_list ap)
 {
     struct party *p = (struct party *) data.p, **dst;
     char *str;
@@ -369,7 +369,7 @@ int party_member_added (int party_id, int account_id, int flag)
 
 // パーティ除名要求
 int party_removemember (struct map_session_data *sd, int account_id,
-                        char *UNUSED)
+                        char *)
 {
     struct party *p;
     int  i;
@@ -628,7 +628,7 @@ int party_check_conflict (struct map_session_data *sd)
 }
 
 // 位置やＨＰ通知用
-static void party_send_xyhp_timer_sub (db_key_t UNUSED, db_val_t data, va_list UNUSED)
+static void party_send_xyhp_timer_sub (db_key_t, db_val_t data, va_list)
 {
     struct party *p = (struct party *) data.p;
     int  i;
@@ -659,7 +659,7 @@ static void party_send_xyhp_timer_sub (db_key_t UNUSED, db_val_t data, va_list U
 }
 
 // 位置やＨＰ通知
-void party_send_xyhp_timer (timer_id UNUSED, tick_t tick, custom_id_t UNUSED, custom_data_t UNUSED)
+void party_send_xyhp_timer (timer_id, tick_t tick, custom_id_t, custom_data_t)
 {
     numdb_foreach (party_db, party_send_xyhp_timer_sub, tick);
 }

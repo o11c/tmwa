@@ -1179,7 +1179,7 @@ static void chrif_parse (int fd)
  * 今このmap鯖に繋がっているクライアント人数をchar鯖へ送る
  *------------------------------------------
  */
-static void send_users_tochar (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void send_users_tochar (timer_id, tick_t, custom_id_t, custom_data_t)
 {
     int  users = 0, i;
     struct map_session_data *sd;
@@ -1209,7 +1209,7 @@ static void send_users_tochar (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSE
  * char鯖との接続を確認し、もし切れていたら再度接続する
  *------------------------------------------
  */
-static void check_connect_char_server (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void check_connect_char_server (timer_id, tick_t, custom_id_t, custom_data_t)
 {
     if (char_fd <= 0 || session[char_fd] == NULL)
     {

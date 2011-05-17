@@ -40,7 +40,7 @@ int storage_comp_item (const void *_i1, const void *_i2)
     return i1->nameid - i2->nameid;
 }
 
-static void storage_db_final (db_key_t UNUSED, db_val_t data, va_list UNUSED)
+static void storage_db_final (db_key_t, db_val_t data, va_list)
 {
     struct storage *stor = (struct storage *) data.p;
     free (stor);

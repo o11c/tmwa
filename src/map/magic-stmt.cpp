@@ -61,7 +61,7 @@ static void clear_activation_record (cont_activation_record_t * ar)
 }
 
 static void
-invocation_timer_callback (timer_id UNUSED, tick_t UNUSED, custom_id_t id, custom_data_t UNUSED)
+invocation_timer_callback (timer_id, tick_t, custom_id_t id, custom_data_t)
 {
     invocation_t *invocation = (invocation_t *) map_id2bl (id);
 
@@ -219,7 +219,7 @@ static void char_update (character_t * character)
                  character->bl.y);
 }
 
-static void timer_callback_effect (timer_id UNUSED, tick_t UNUSED, custom_id_t id, custom_data_t data)
+static void timer_callback_effect (timer_id, tick_t, custom_id_t id, custom_data_t data)
 {
     entity_t *target = map_id2bl (id);
     if (target)
@@ -242,8 +242,8 @@ void magic_unshroud (character_t *other_char)
 }
 
 static void
-timer_callback_effect_npc_delete (timer_id UNUSED, tick_t UNUSED,
-                                  custom_id_t npc_id, custom_data_t UNUSED)
+timer_callback_effect_npc_delete (timer_id, tick_t,
+                                  custom_id_t npc_id, custom_data_t)
 {
     struct npc_data *effect_npc = (struct npc_data *) map_id2bl (npc_id);
     npc_free (effect_npc);
@@ -264,7 +264,7 @@ static struct npc_data *local_spell_effect (int m, int x, int y, int effect,
     return effect_npc;
 }
 
-static int op_sfx (env_t *UNUSED, int UNUSED, val_t *args)
+static int op_sfx (env_t *, int, val_t *args)
 {
     int  delay = ARGINT (2);
 
@@ -284,7 +284,7 @@ static int op_sfx (env_t *UNUSED, int UNUSED, val_t *args)
     return 0;
 }
 
-static int op_instaheal (env_t *env, int UNUSED, val_t *args)
+static int op_instaheal (env_t *env, int, val_t *args)
 {
     entity_t *caster = (VAR (VAR_CASTER).ty == TY_ENTITY)
         ? map_id2bl (VAR (VAR_CASTER).v.v_int) : NULL;
@@ -324,7 +324,7 @@ static int op_itemheal (env_t * env, int args_nr, val_t * args)
 
 #define ARGCHAR(n) (ARGENTITY(n)->type == BL_PC) ? (character_t *)(ARGENTITY(n)) : NULL
 
-static int op_shroud (env_t *UNUSED, int UNUSED, val_t * args)
+static int op_shroud (env_t *, int, val_t * args)
 {
     character_t *subject = ARGCHAR (0);
     int  arg = ARGINT (1);
@@ -342,7 +342,7 @@ static int op_shroud (env_t *UNUSED, int UNUSED, val_t * args)
     return 0;
 }
 
-static int op_reveal (env_t *UNUSED, int UNUSED, val_t * args)
+static int op_reveal (env_t *, int, val_t * args)
 {
     character_t *subject = ARGCHAR (0);
 
@@ -352,7 +352,7 @@ static int op_reveal (env_t *UNUSED, int UNUSED, val_t * args)
     return 0;
 }
 
-static int op_message (env_t *UNUSED, int UNUSED, val_t * args)
+static int op_message (env_t *, int, val_t * args)
 {
     character_t *subject = ARGCHAR (0);
 
@@ -363,15 +363,15 @@ static int op_message (env_t *UNUSED, int UNUSED, val_t * args)
 }
 
 static void
-timer_callback_kill_npc (timer_id UNUSED, tick_t UNUSED, custom_id_t npc_id,
-                         custom_data_t UNUSED)
+timer_callback_kill_npc (timer_id, tick_t, custom_id_t npc_id,
+                         custom_data_t)
 {
     struct npc_data *npc = (struct npc_data *) map_id2bl (npc_id);
     if (npc)
         npc_free (npc);
 }
 
-static int op_messenger_npc (env_t *UNUSED, int UNUSED, val_t *args)
+static int op_messenger_npc (env_t *, int, val_t *args)
 {
     struct npc_data *npc;
     location_t *loc = &ARGLOCATION (0);
@@ -424,7 +424,7 @@ static void entity_warp (entity_t * target, int destm, int destx, int desty)
     }
 }
 
-static int op_move (env_t *UNUSED, int UNUSED, val_t *args)
+static int op_move (env_t *, int, val_t *args)
 {
     entity_t *subject = ARGENTITY (0);
     int  dir = ARGDIR (1);
@@ -438,7 +438,7 @@ static int op_move (env_t *UNUSED, int UNUSED, val_t *args)
     return 0;
 }
 
-static int op_warp (env_t *UNUSED, int UNUSED, val_t *args)
+static int op_warp (env_t *, int, val_t *args)
 {
     entity_t *subject = ARGENTITY (0);
     location_t *loc = &ARGLOCATION (1);
@@ -448,7 +448,7 @@ static int op_warp (env_t *UNUSED, int UNUSED, val_t *args)
     return 0;
 }
 
-static int op_banish (env_t *UNUSED, int UNUSED, val_t *args)
+static int op_banish (env_t *, int, val_t *args)
 {
     entity_t *subject = ARGENTITY (0);
 
@@ -477,7 +477,7 @@ record_status_change (invocation_t *invocation, int bl_id, int sc_id)
     cr->bl_id = bl_id;
 }
 
-static int op_status_change (env_t *env, int UNUSED, val_t *args)
+static int op_status_change (env_t *env, int, val_t *args)
 {
     entity_t *subject = ARGENTITY (0);
     int  invocation_id = VAR (VAR_INVOCATION).ty == TY_INVOCATION
@@ -494,7 +494,7 @@ static int op_status_change (env_t *env, int UNUSED, val_t *args)
     return 0;
 }
 
-static int op_stop_status_change (env_t *UNUSED, int UNUSED, val_t *args)
+static int op_stop_status_change (env_t *, int, val_t *args)
 {
     entity_t *subject = ARGENTITY (0);
 
@@ -503,7 +503,7 @@ static int op_stop_status_change (env_t *UNUSED, int UNUSED, val_t *args)
     return 0;
 }
 
-static int op_override_attack (env_t *env, int UNUSED, val_t *args)
+static int op_override_attack (env_t *env, int, val_t *args)
 {
     entity_t *psubject = ARGENTITY (0);
     int  charges = ARGINT (1);
@@ -545,7 +545,7 @@ static int op_override_attack (env_t *env, int UNUSED, val_t *args)
     return 0;
 }
 
-static int op_create_item (env_t *UNUSED, int UNUSED, val_t *args)
+static int op_create_item (env_t *, int, val_t *args)
 {
     struct item item;
     entity_t *entity = ARGENTITY (0);
@@ -574,7 +574,7 @@ static int op_create_item (env_t *UNUSED, int UNUSED, val_t *args)
 #define AGGRAVATION_MODE_ATTACKS_CASTER(n) 	((n) == 0 || (n) == 2)
 #define AGGRAVATION_MODE_MAKES_AGGRESSIVE(n)	((n) > 0)
 
-static int op_aggravate (env_t *UNUSED, int UNUSED, val_t *args)
+static int op_aggravate (env_t *, int, val_t *args)
 {
     entity_t *victim = ARGENTITY (2);
     int  mode = ARGINT (1);
@@ -605,7 +605,7 @@ static int op_aggravate (env_t *UNUSED, int UNUSED, val_t *args)
 #define MONSTER_ATTITUDE_SERVANT	2
 #define MONSTER_ATTITUDE_FROZEN		3
 
-static int op_spawn (env_t *UNUSED, int UNUSED, val_t *args)
+static int op_spawn (env_t *, int, val_t *args)
 {
     area_t *area = ARGAREA (0);
     entity_t *owner_e = ARGENTITY (1);
@@ -693,7 +693,7 @@ static const char *get_invocation_name (env_t *env)
         return "??";
 }
 
-static int op_injure (env_t *env, int UNUSED, val_t *args)
+static int op_injure (env_t *env, int, val_t *args)
 {
     entity_t *caster = ARGENTITY (0);
     entity_t *target = ARGENTITY (1);
@@ -737,7 +737,7 @@ static int op_injure (env_t *env, int UNUSED, val_t *args)
     return 0;
 }
 
-static int op_emote (env_t *UNUSED, int UNUSED, val_t *args)
+static int op_emote (env_t *, int, val_t *args)
 {
     entity_t *victim = ARGENTITY (0);
     int  emotion = ARGINT (1);
@@ -746,7 +746,7 @@ static int op_emote (env_t *UNUSED, int UNUSED, val_t *args)
     return 0;
 }
 
-static int op_set_script_variable (env_t *UNUSED, int UNUSED, val_t *args)
+static int op_set_script_variable (env_t *, int, val_t *args)
 {
     character_t *c = (ETY (0) == BL_PC) ? ARGPC (0) : NULL;
 
@@ -758,7 +758,7 @@ static int op_set_script_variable (env_t *UNUSED, int UNUSED, val_t *args)
     return 0;
 }
 
-static int op_set_hair_colour (env_t *UNUSED, int UNUSED, val_t *args)
+static int op_set_hair_colour (env_t *, int, val_t *args)
 {
     character_t *c = (ETY (0) == BL_PC) ? ARGPC (0) : NULL;
 
@@ -770,7 +770,7 @@ static int op_set_hair_colour (env_t *UNUSED, int UNUSED, val_t *args)
     return 0;
 }
 
-static int op_set_hair_style (env_t *UNUSED, int UNUSED, val_t *args)
+static int op_set_hair_style (env_t *, int, val_t *args)
 {
     character_t *c = (ETY (0) == BL_PC) ? ARGPC (0) : NULL;
 
@@ -782,7 +782,7 @@ static int op_set_hair_style (env_t *UNUSED, int UNUSED, val_t *args)
     return 0;
 }
 
-static int op_drop_item_for (env_t *UNUSED, int args_nr, val_t *args)
+static int op_drop_item_for (env_t *, int args_nr, val_t *args)
 {
     struct item item;
     int  stackable;
@@ -807,7 +807,7 @@ static int op_drop_item_for (env_t *UNUSED, int args_nr, val_t *args)
     return 0;
 }
 
-static int op_gain_exp (env_t *UNUSED, int UNUSED, val_t *args)
+static int op_gain_exp (env_t *, int, val_t *args)
 {
     character_t *c = (ETY (0) == BL_PC) ? ARGPC (0) : NULL;
 
@@ -884,7 +884,7 @@ op_t *magic_get_op (char *name, int *idx)
 
 void
 spell_effect_report_termination (int invocation_id, int bl_id, int sc_id,
-                                 int UNUSED)
+                                 int)
 {
     int  i;
     int  idx = -1;

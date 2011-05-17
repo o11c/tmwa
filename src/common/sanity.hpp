@@ -23,10 +23,6 @@
 #  error "please compile with -m32"
 # endif
 
-/// Deprecated - it had a complicated implementation in C
-/// but in C++ you can just give the variable no name
-# define UNUSED
-
 /// Convert type assumptions to use the standard types here
 # include <stdint.h>
 /// size_t, NULL

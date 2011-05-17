@@ -209,7 +209,7 @@ static void inter_accreg_init (void)
 }
 
 /// saving the variables of an account
-static void inter_accreg_save_sub (db_key_t UNUSED, db_val_t data, va_list ap)
+static void inter_accreg_save_sub (db_key_t, db_val_t data, va_list ap)
 {
     FILE *fp = va_arg (ap, FILE *);
     struct accreg *reg = (struct accreg *) data.p;
@@ -383,7 +383,7 @@ static void mapif_account_reg_reply (int fd, account_t account_id)
 
 
 /// Check whisper data to time out
-static void check_ttl_whisdata_sub (db_key_t UNUSED, db_val_t data, va_list ap)
+static void check_ttl_whisdata_sub (db_key_t, db_val_t data, va_list ap)
 {
     struct WhisperData *wd = (struct WhisperData *) data.p;
     tick_t tick = va_arg (ap, tick_t);

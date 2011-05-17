@@ -40,7 +40,7 @@ static int itemdb_read_noequip (void);
  *------------------------------------------
  */
 // name = item alias, so we should find items aliases first. if not found then look for "jname" (full name)
-static void itemdb_searchname_sub (db_key_t UNUSED, db_val_t data, va_list ap)
+static void itemdb_searchname_sub (db_key_t, db_val_t data, va_list ap)
 {
     struct item_data *item = (struct item_data *) data.p, **dst;
     char *str;
@@ -617,7 +617,7 @@ static int itemdb_read_noequip (void)
  *
  *------------------------------------------
  */
-static void itemdb_final (db_key_t UNUSED, db_val_t data, va_list UNUSED)
+static void itemdb_final (db_key_t, db_val_t data, va_list)
 {
     struct item_data *id;
 

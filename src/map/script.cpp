@@ -3707,7 +3707,7 @@ int buildin_killmonster (struct script_state *st)
     return 0;
 }
 
-static void buildin_killmonsterall_sub (struct block_list *bl, va_list UNUSED)
+static void buildin_killmonsterall_sub (struct block_list *bl, va_list)
 {
     mob_delete ((struct mob_data *) bl);
 }
@@ -4015,7 +4015,7 @@ int buildin_getmapusers (struct script_state *st)
  * エリア指定ユーザー数所得
  *------------------------------------------
  */
-static void buildin_getareausers_sub (struct block_list *UNUSED, va_list ap)
+static void buildin_getareausers_sub (struct block_list *, va_list ap)
 {
     int *users = va_arg (ap, int *);
     (*users)++;
@@ -6128,7 +6128,7 @@ int run_func (struct script_state *st)
  * スクリプトの実行メイン部分
  *------------------------------------------
  */
-static int run_script_main (script_ptr script, int pos, int UNUSED, int UNUSED,
+static int run_script_main (script_ptr script, int pos, int, int,
                      struct script_state *st, script_ptr rootscript)
 {
     int  c, rerun_pos;
@@ -6462,8 +6462,8 @@ static int script_save_mapreg (void)
     return 0;
 }
 
-static void script_autosave_mapreg (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED,
-                                    custom_data_t UNUSED)
+static void script_autosave_mapreg (timer_id, tick_t, custom_id_t,
+                                    custom_data_t)
 {
     if (mapreg_dirty)
         script_save_mapreg ();
@@ -6541,12 +6541,12 @@ int script_config_read (const char *cfgName)
  *------------------------------------------
  */
 
-static void mapregstr_db_final (db_key_t UNUSED, db_val_t data, va_list UNUSED)
+static void mapregstr_db_final (db_key_t, db_val_t data, va_list)
 {
     free (data.p);
 }
 
-static void userfunc_db_final (db_key_t key, db_val_t data, va_list UNUSED)
+static void userfunc_db_final (db_key_t key, db_val_t data, va_list)
 {
     free ((char*)key.s);
     free (data.p);

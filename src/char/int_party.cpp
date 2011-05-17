@@ -105,7 +105,7 @@ bool inter_party_init (void)
 }
 
 /// Save a party
-static void inter_party_save_sub (db_key_t UNUSED, db_val_t data, va_list ap)
+static void inter_party_save_sub (db_key_t, db_val_t data, va_list ap)
 {
     FILE *fp = va_arg (ap, FILE *);
     inter_party_tofile (fp, (struct party *) data.p);
@@ -127,7 +127,7 @@ bool inter_party_save (void)
 }
 
 /// Check if a party has the name
-static void search_partyname_sub (db_key_t UNUSED, db_val_t data, va_list ap)
+static void search_partyname_sub (db_key_t, db_val_t data, va_list ap)
 {
     struct party *p = (struct party *) data.p;
     const char *str = va_arg (ap, const char *);
@@ -179,7 +179,7 @@ bool party_check_empty (struct party *p)
 }
 
 /// Checks if player is in the party, but only if it isn't the target party
-static void party_check_conflict_sub (db_key_t UNUSED, db_val_t data, va_list ap)
+static void party_check_conflict_sub (db_key_t, db_val_t data, va_list ap)
 {
     struct party *p = (struct party *) data.p;
 
@@ -448,7 +448,7 @@ static void mapif_parse_PartyChangeOption (int fd, party_t party_id, account_t a
 }
 
 /// Somebody leaves the party
-void mapif_parse_PartyLeave (int UNUSED, party_t party_id, account_t account_id)
+void mapif_parse_PartyLeave (int, party_t party_id, account_t account_id)
 {
     struct party *p = (struct party *)numdb_search (party_db, (numdb_key_t)party_id).p;
     if (!p)

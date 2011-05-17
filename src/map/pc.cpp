@@ -178,7 +178,7 @@ static int distance (int x_0, int y_0, int x_1, int y_1)
     return dx > dy ? dx : dy;
 }
 
-static void pc_invincible_timer (timer_id tid, tick_t UNUSED, custom_id_t id, custom_data_t UNUSED)
+static void pc_invincible_timer (timer_id tid, tick_t, custom_id_t id, custom_data_t)
 {
     struct map_session_data *sd;
 
@@ -363,7 +363,7 @@ int pc_makesavestatus (struct map_session_data *sd)
  *------------------------------------------
  */
 int pc_setnewpc (struct map_session_data *sd, int account_id, int char_id,
-                 int login_id1, int client_tick, int sex, int UNUSED)
+                 int login_id1, int client_tick, int sex, int)
 {
     nullpo_retr (0, sd);
 
@@ -3255,7 +3255,7 @@ int pc_checkequip (struct map_session_data *sd, int pos)
  * PCの攻撃 (timer関数)
  *------------------------------------------
  */
-static void pc_attack_timer (timer_id tid, tick_t tick, custom_id_t id, custom_data_t UNUSED)
+static void pc_attack_timer (timer_id tid, tick_t tick, custom_id_t id, custom_data_t)
 {
     struct map_session_data *sd;
     struct block_list *bl;
@@ -3427,7 +3427,7 @@ int pc_stopattack (struct map_session_data *sd)
     return 0;
 }
 
-static void pc_follow_timer (timer_id tid, tick_t tick, custom_id_t id, custom_data_t UNUSED)
+static void pc_follow_timer (timer_id tid, tick_t tick, custom_id_t id, custom_data_t)
 {
     struct map_session_data *sd, *bl;
 
@@ -5253,7 +5253,7 @@ int pc_percentrefinery (struct map_session_data *, struct item *item)
  * イベントタイマー処理
  *------------------------------------------
  */
-static void pc_eventtimer (timer_id tid, tick_t UNUSED, custom_id_t id, custom_data_t data)
+static void pc_eventtimer (timer_id tid, tick_t, custom_id_t id, custom_data_t data)
 {
     struct map_session_data *sd = map_id2sd (id);
     int  i;
@@ -5755,7 +5755,7 @@ int pc_calc_pvprank (struct map_session_data *sd)
  * PVP順位計算(timer)
  *------------------------------------------
  */
-void pc_calc_pvprank_timer (timer_id UNUSED, tick_t UNUSED, custom_id_t id, custom_data_t data)
+void pc_calc_pvprank_timer (timer_id, tick_t, custom_id_t id, custom_data_t data)
 {
     struct map_session_data *sd = NULL;
     if (battle_config.pk_mode)  // disable pvp ranking if pk_mode on [Valaris]
@@ -6069,7 +6069,7 @@ pc_quickregenerate_effect (struct quick_regeneration *quick_regen,
     return 0;
 }
 
-static void pc_natural_heal_sub (struct map_session_data *sd, va_list UNUSED)
+static void pc_natural_heal_sub (struct map_session_data *sd, va_list)
 {
     nullpo_retv (sd);
 
@@ -6133,7 +6133,7 @@ static void pc_natural_heal_sub (struct map_session_data *sd, va_list UNUSED)
  * HP/SP自然回復 (interval timer関数)
  *------------------------------------------
  */
-static void pc_natural_heal (timer_id UNUSED, tick_t tick, custom_id_t UNUSED, custom_data_t UNUSED)
+static void pc_natural_heal (timer_id, tick_t tick, custom_id_t, custom_data_t)
 {
     natural_heal_tick = tick;
     natural_heal_diff_tick =
@@ -6164,7 +6164,7 @@ int pc_setsavepoint (struct map_session_data *sd, const char *mapname, int x, in
  *------------------------------------------
  */
 static int last_save_fd, save_flag;
-static void pc_autosave_sub (struct map_session_data *sd, va_list UNUSED)
+static void pc_autosave_sub (struct map_session_data *sd, va_list)
 {
     nullpo_retv (sd);
 
@@ -6182,7 +6182,7 @@ static void pc_autosave_sub (struct map_session_data *sd, va_list UNUSED)
  * 自動セーブ (timer関数)
  *------------------------------------------
  */
-static void pc_autosave (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void pc_autosave (timer_id, tick_t, custom_id_t, custom_data_t)
 {
     int  interval;
 
@@ -6219,7 +6219,7 @@ int pc_read_gm_account (int fd)
  * timer to do the day
  *------------------------------------------
  */
-void map_day_timer (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+void map_day_timer (timer_id, tick_t, custom_id_t, custom_data_t)
 {                               // by [yor]
     struct map_session_data *pl_sd = NULL;
     int  i;
@@ -6250,7 +6250,7 @@ void map_day_timer (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_d
  * timer to do the night
  *------------------------------------------
  */
-void map_night_timer (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+void map_night_timer (timer_id, tick_t, custom_id_t, custom_data_t)
 {                               // by [yor]
     struct map_session_data *pl_sd = NULL;
     int  i;

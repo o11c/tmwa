@@ -625,7 +625,7 @@ static void mmo_auth_sync (void)
 
 /// Timer to sync the DB to disk as little as possible
 // this is resource-intensive, so fork() if possible
-static void check_auth_sync (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void check_auth_sync (timer_id, tick_t, custom_id_t, custom_data_t)
 {
     if (pid && !waitpid (pid, NULL, WNOHANG))
         // if already running
@@ -681,8 +681,8 @@ static void send_GM_accounts (void)
 
 /// Timer to check if GM file account have been changed
 // TODO replace this with inotify on systems where it is available
-static void check_GM_file (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED,
-                    custom_data_t UNUSED)
+static void check_GM_file (timer_id, tick_t, custom_id_t,
+                    custom_data_t)
 {
     // if checking is disabled
     if (!gm_account_filename_check_timer)
@@ -857,8 +857,8 @@ static enum auth_failure mmo_auth (struct mmo_account *account, int fd)
 }
 
 /// Kill char servers that don't send the common packet after 5 calls
-static void char_anti_freeze_system (timer_id UNUSED, tick_t UNUSED,
-                              custom_id_t UNUSED, custom_data_t UNUSED)
+static void char_anti_freeze_system (timer_id, tick_t,
+                              custom_id_t, custom_data_t)
 {
     for (int i = 0; i < MAX_SERVERS; i++)
     {
@@ -2664,7 +2664,7 @@ static bool lan_ip_check (uint8_t *p)
 /// Client is alive
 // uint16_t packet, char userid[24]
 // this packet is not sent by any known TMW server/client
-static void x200(int UNUSED)
+static void x200(int)
 {
 }
 
@@ -2672,7 +2672,7 @@ static void x200(int UNUSED)
 // uint16_t packet, char crypted_userid[16]
 // (new ragexe from 22 june 2004)
 // this packet is not sent by any known TMW server/client
-static void x204 (int UNUSED)
+static void x204 (int)
 {
 }
 

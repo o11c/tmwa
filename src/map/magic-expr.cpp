@@ -243,7 +243,7 @@ static void make_spell (val_t * v)
     }
 }
 
-static int fun_add (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_add (env_t *, int, val_t *result, val_t *args)
 {
     if (TY (0) == TY_INT && TY (1) == TY_INT)
     {
@@ -276,19 +276,19 @@ static int fun_add (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
     return 0;
 }
 
-static int fun_sub (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_sub (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = ARGINT (0) - ARGINT (1);
     return 0;
 }
 
-static int fun_mul (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_mul (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = ARGINT (0) * ARGINT (1);
     return 0;
 }
 
-static int fun_div (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_div (env_t *, int, val_t *result, val_t *args)
 {
     if (!ARGINT (1))
         return 1;               /* division by zero */
@@ -296,7 +296,7 @@ static int fun_div (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
     return 0;
 }
 
-static int fun_mod (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_mod (env_t *, int, val_t *result, val_t *args)
 {
     if (!ARGINT (1))
         return 1;               /* division by zero */
@@ -304,31 +304,31 @@ static int fun_mod (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
     return 0;
 }
 
-static int fun_or (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_or (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = ARGINT (0) || ARGINT (1);
     return 0;
 }
 
-static int fun_and (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_and (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = ARGINT (0) && ARGINT (1);
     return 0;
 }
 
-static int fun_not (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_not (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = !ARGINT (0);
     return 0;
 }
 
-static int fun_neg (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_neg (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = ~ARGINT (0);
     return 0;
 }
 
-static int fun_gte (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_gte (env_t *, int, val_t *result, val_t *args)
 {
     if (TY (0) == TY_STRING || TY (1) == TY_STRING)
     {
@@ -345,7 +345,7 @@ static int fun_gte (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
     return 0;
 }
 
-static int fun_gt (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_gt (env_t *, int, val_t *result, val_t *args)
 {
     if (TY (0) == TY_STRING || TY (1) == TY_STRING)
     {
@@ -362,7 +362,7 @@ static int fun_gt (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
     return 0;
 }
 
-static int fun_eq (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_eq (env_t *, int, val_t *result, val_t *args)
 {
     if (TY (0) == TY_STRING || TY (1) == TY_STRING)
     {
@@ -393,50 +393,50 @@ static int fun_eq (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
     return 0;
 }
 
-static int fun_bitand (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_bitand (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = ARGINT (0) & ARGINT (1);
     return 0;
 }
 
-static int fun_bitor (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_bitor (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = ARGINT (0) | ARGINT (1);
     return 0;
 }
 
-static int fun_bitxor (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_bitxor (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = ARGINT (0) ^ ARGINT (1);
     return 0;
 }
 
-static int fun_bitshl (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_bitshl (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = ARGINT (0) << ARGINT (1);
     return 0;
 }
 
-static int fun_bitshr (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_bitshr (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = ARGINT (0) >> ARGINT (1);
     return 0;
 }
 
-static int fun_max (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_max (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = MAX (ARGINT (0), ARGINT (1));
     return 0;
 }
 
-static int fun_min (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_min (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = MIN (ARGINT (0), ARGINT (1));
     return 0;
 }
 
 static int
-fun_if_then_else (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_if_then_else (env_t *, int, val_t *result, val_t *args)
 {
     if (ARGINT (0))
         magic_copy_var (result, &args[1]);
@@ -544,7 +544,7 @@ int magic_location_in_area (int m, int x, int y, area_t * area)
     }
 }
 
-static int fun_is_in (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_is_in (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = magic_location_in_area (ARGLOCATION (0).m,
                                         ARGLOCATION (0).x,
@@ -552,7 +552,7 @@ static int fun_is_in (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
     return 0;
 }
 
-static int fun_skill (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_skill (env_t *, int, val_t *result, val_t *args)
 {
     if (ETY (0) != BL_PC
         || ARGINT (1) < 0
@@ -565,14 +565,14 @@ static int fun_skill (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
 }
 
 static int
-fun_has_shroud (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_has_shroud (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = (ETY (0) == BL_PC && ARGPC (0)->state.shroud_active);
     return 0;
 }
 
 #define BATTLE_GETTER(name) \
-static int fun_get_##name(env_t *UNUSED, int UNUSED, val_t *result, val_t *args) \
+static int fun_get_##name(env_t *, int, val_t *result, val_t *args) \
 { \
     RESULTINT = battle_get_##name(ARGENTITY(0)); \
     return 0; \
@@ -592,7 +592,7 @@ BATTLE_GETTER (max_hp);
 BATTLE_GETTER (dir);
 
 #define MMO_GETTER(name) \
-static int fun_get_##name(env_t *UNUSED, int UNUSED, val_t *result, val_t *args) \
+static int fun_get_##name(env_t *, int, val_t *result, val_t *args) \
 { \
     if (ETY(0) == BL_PC) \
         RESULTINT = ARGPC(0)->status.name; \
@@ -605,7 +605,7 @@ MMO_GETTER (sp);
 MMO_GETTER (max_sp);
 
 static int
-fun_name_of (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_name_of (env_t *, int, val_t *result, val_t *args)
 {
     if (TY (0) == TY_ENTITY)
     {
@@ -627,7 +627,7 @@ fun_name_of (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
 
 /* [Freeyorp] I'm putting this one in as name_of seems to have issues with summoned or spawned mobs. */
 static int
-fun_mob_id (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_mob_id (env_t *, int, val_t *result, val_t *args)
 {
     if (ETY (0) != BL_MOB) return 1;
     RESULTINT = ((struct mob_data *) (ARGENTITY(0)))->mob_class;
@@ -637,13 +637,13 @@ fun_mob_id (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
 #define COPY_LOCATION(dest, src) (dest).x = (src).x; (dest).y = (src).y; (dest).m = (src).m;
 
 static int
-fun_location (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_location (env_t *, int, val_t *result, val_t *args)
 {
     COPY_LOCATION (RESULTLOCATION, *(ARGENTITY (0)));
     return 0;
 }
 
-static int fun_random (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_random (env_t *, int, val_t *result, val_t *args)
 {
     int  delta = ARGINT (0);
     if (delta < 0)
@@ -661,7 +661,7 @@ static int fun_random (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
 }
 
 static int
-fun_random_dir (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_random_dir (env_t *, int, val_t *result, val_t *args)
 {
     if (ARGINT (0))
         RESULTDIR = mt_random () & 0x7;
@@ -671,7 +671,7 @@ fun_random_dir (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
 }
 
 static int
-fun_hash_entity (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_hash_entity (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = ARGENTITY (0)->id;
     return 0;
@@ -706,7 +706,7 @@ int magic_find_item (val_t *args, int idx, struct item *item, int *stackable)
 }
 
 static int
-fun_count_item (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_count_item (env_t *, int, val_t *result, val_t *args)
 {
     character_t *chr = (ETY (0) == BL_PC) ? ARGPC (0) : NULL;
     int  stackable;
@@ -722,7 +722,7 @@ fun_count_item (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
 }
 
 static int
-fun_is_equipped (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_is_equipped (env_t *, int, val_t *result, val_t *args)
 {
     character_t *chr = (ETY (0) == BL_PC) ? ARGPC (0) : NULL;
     int  stackable;
@@ -749,27 +749,27 @@ fun_is_equipped (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
 }
 
 static int
-fun_is_married (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_is_married (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = (ETY (0) == BL_PC && ARGPC (0)->status.partner_id);
     return 0;
 }
 
 static int
-fun_is_dead (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_is_dead (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = (ETY (0) == BL_PC && pc_isdead (ARGPC (0)));
     return 0;
 }
 
-static int fun_is_pc (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_is_pc (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = (ETY (0) == BL_PC);
     return 0;
 }
 
 static int
-fun_partner (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_partner (env_t *, int, val_t *result, val_t *args)
 {
     if (ETY (0) == BL_PC && ARGPC (0)->status.partner_id)
     {
@@ -783,7 +783,7 @@ fun_partner (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
 }
 
 static int
-fun_awayfrom (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_awayfrom (env_t *, int, val_t *result, val_t *args)
 {
     location_t *loc = &ARGLOCATION (0);
     int  dx = heading_x[ARGDIR (1)];
@@ -799,26 +799,26 @@ fun_awayfrom (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
     return 0;
 }
 
-static int fun_failed (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_failed (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = TY (0) == TY_FAIL;
     return 0;
 }
 
-static int fun_npc (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_npc (env_t *, int, val_t *result, val_t *args)
 {
     RESULTENTITY = (entity_t *) npc_name2id (ARGSTR (0));
     return RESULTENTITY == NULL;
 }
 
-static int fun_pc (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_pc (env_t *, int, val_t *result, val_t *args)
 {
     RESULTENTITY = (entity_t *) map_nick2sd (ARGSTR (0));
     return RESULTENTITY == NULL;
 }
 
 static int
-fun_distance (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_distance (env_t *, int, val_t *result, val_t *args)
 {
     if (ARGLOCATION (0).m != ARGLOCATION (1).m)
         RESULTINT = INT_MAX;
@@ -829,7 +829,7 @@ fun_distance (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
 }
 
 static int
-fun_rdistance (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_rdistance (env_t *, int, val_t *result, val_t *args)
 {
     if (ARGLOCATION (0).m != ARGLOCATION (1).m)
         RESULTINT = INT_MAX;
@@ -842,7 +842,7 @@ fun_rdistance (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
     return 0;
 }
 
-static int fun_anchor (env_t *env, int UNUSED, val_t *result, val_t *args)
+static int fun_anchor (env_t *env, int, val_t *result, val_t *args)
 {
     teleport_anchor_t *anchor = magic_find_anchor (ARGSTR (0));
 
@@ -862,7 +862,7 @@ static int fun_anchor (env_t *env, int UNUSED, val_t *result, val_t *args)
 }
 
 static int
-fun_line_of_sight (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_line_of_sight (env_t *, int, val_t *result, val_t *args)
 {
     entity_t e1, e2;
 
@@ -943,14 +943,14 @@ void magic_random_location (location_t * dest, area_t * area)
 }
 
 static int
-fun_pick_location (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_pick_location (env_t *, int, val_t *result, val_t *args)
 {
     magic_random_location (&result->v.v_location, ARGAREA (0));
     return 0;
 }
 
 static int
-fun_read_script_int (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_read_script_int (env_t *, int, val_t *result, val_t *args)
 {
     entity_t *subject_p = ARGENTITY (0);
     char *var_name = ARGSTR (1);
@@ -962,7 +962,7 @@ fun_read_script_int (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
     return 0;
 }
 
-static int fun_rbox (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_rbox (env_t *, int, val_t *result, val_t *args)
 {
     location_t loc = ARGLOCATION (0);
     int  radius = ARGINT (1);
@@ -978,7 +978,7 @@ static int fun_rbox (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
 }
 
 static int
-fun_running_status_update (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_running_status_update (env_t *, int, val_t *result, val_t *args)
 {
     if (ETY (0) != BL_PC && ETY (0) != BL_MOB)
         return 1;
@@ -988,7 +988,7 @@ fun_running_status_update (env_t *UNUSED, int UNUSED, val_t *result, val_t *args
 }
 
 static int
-fun_status_option (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_status_option (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT =
         ((((struct map_session_data *) ARGENTITY (0))->
@@ -997,53 +997,53 @@ fun_status_option (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
 }
 
 static int
-fun_element (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_element (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = battle_get_element (ARGENTITY (0)) % 10;
     return 0;
 }
 
 static int
-fun_element_level (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_element_level (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = battle_get_element (ARGENTITY (0)) / 10;
     return 0;
 }
 
-static int fun_index (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_index (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = ARGSPELL (0)->idx;
     return 0;
 }
 
 static int
-fun_is_exterior (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_is_exterior (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = maps[ARGLOCATION (0).m].name[4] == '1';
     return 0;
 }
 
 static int
-fun_contains_string (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_contains_string (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = NULL != strstr (ARGSTR (0), ARGSTR (1));
     return 0;
 }
 
-static int fun_strstr (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_strstr (env_t *, int, val_t *result, val_t *args)
 {
     char *offset = strstr (ARGSTR (0), ARGSTR (1));
     RESULTINT = offset - ARGSTR (0);
     return offset == NULL;
 }
 
-static int fun_strlen (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_strlen (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = strlen (ARGSTR (0));
     return 0;
 }
 
-static int fun_substr (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_substr (env_t *, int, val_t *result, val_t *args)
 {
     const char *src = ARGSTR (0);
     const int slen = strlen (src);
@@ -1067,20 +1067,20 @@ static int fun_substr (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
     return 0;
 }
 
-static int fun_sqrt (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_sqrt (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = sqrt (ARGINT (0));
     return 0;
 }
 
 static int
-fun_map_level (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_map_level (env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = maps[ARGLOCATION (0).m].name[4] - '0';
     return 0;
 }
 
-static int fun_map_nr (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+static int fun_map_nr (env_t *, int, val_t *result, val_t *args)
 {
     const char *mapname = maps[ARGLOCATION (0).m].name;
 
@@ -1090,7 +1090,7 @@ static int fun_map_nr (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
 }
 
 static int
-fun_dir_towards (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_dir_towards (env_t *, int, val_t *result, val_t *args)
 {
     int  dx;
     int  dy;
@@ -1156,7 +1156,7 @@ fun_dir_towards (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
 }
 
 static int
-fun_extract_healer_xp (env_t *UNUSED, int UNUSED, val_t *result, val_t *args)
+fun_extract_healer_xp (env_t *, int, val_t *result, val_t *args)
 {
     character_t *sd = (ETY (0) == BL_PC) ? ARGPC (0) : NULL;
 

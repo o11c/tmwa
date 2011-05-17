@@ -125,7 +125,7 @@ bool inter_storage_init (void)
     return 0;
 }
 
-static void storage_db_final (db_key_t UNUSED, db_val_t data, va_list UNUSED)
+static void storage_db_final (db_key_t, db_val_t data, va_list)
 {
     free (data.p);
 }
@@ -136,7 +136,7 @@ void inter_storage_final (void)
 }
 
 /// Save somebody's storage
-static void inter_storage_save_sub (db_key_t UNUSED, db_val_t data, va_list ap)
+static void inter_storage_save_sub (db_key_t, db_val_t data, va_list ap)
 {
     FILE *fp = va_arg (ap, FILE *);
     storage_tofile (fp, (struct storage *) data.p);

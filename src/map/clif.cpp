@@ -614,7 +614,7 @@ int clif_clearchar (struct block_list *bl, int type)
     return 0;
 }
 
-static void clif_clearchar_delay_sub (timer_id UNUSED, tick_t UNUSED, custom_id_t id,
+static void clif_clearchar_delay_sub (timer_id, tick_t, custom_id_t id,
                                      custom_data_t data)
 {
     struct block_list *bl = (struct block_list *) id;
@@ -1175,7 +1175,7 @@ int clif_movechar (struct map_session_data *sd)
  *
  *------------------------------------------
  */
-static void clif_quitsave (int UNUSED, struct map_session_data *sd)
+static void clif_quitsave (int, struct map_session_data *sd)
 {
     map_quit (sd);
 }
@@ -1184,7 +1184,7 @@ static void clif_quitsave (int UNUSED, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-static void clif_waitclose (timer_id UNUSED, tick_t UNUSED, custom_id_t id, custom_data_t UNUSED)
+static void clif_waitclose (timer_id, tick_t, custom_id_t id, custom_data_t)
 {
     if (session[id])
         session[id]->eof = 1;
@@ -3412,7 +3412,7 @@ int clif_party_message (struct party *p, int account_id, char *mes, int len)
  * パーティ座標通知
  *------------------------------------------
  */
-int clif_party_xy (struct party *UNUSED, struct map_session_data *sd)
+int clif_party_xy (struct party *, struct map_session_data *sd)
 {
     unsigned char buf[16];
 
@@ -3432,7 +3432,7 @@ int clif_party_xy (struct party *UNUSED, struct map_session_data *sd)
  * パーティHP通知
  *------------------------------------------
  */
-int clif_party_hp (struct party *UNUSED, struct map_session_data *sd)
+int clif_party_hp (struct party *, struct map_session_data *sd)
 {
     unsigned char buf[16];
 
@@ -3647,7 +3647,7 @@ void clif_wedding_effect (struct block_list *bl)
  * 座る
  *------------------------------------------
  */
-void clif_sitting (int UNUSED, struct map_session_data *sd)
+void clif_sitting (int, struct map_session_data *sd)
 {
     unsigned char buf[64];
 
@@ -3835,7 +3835,7 @@ static void clif_parse_WantToConnection (int fd, struct map_session_data *sd)
  * map侵入時に必要なデータを全て送りつける
  *------------------------------------------
  */
-static void clif_parse_LoadEndAck (int UNUSED, struct map_session_data *sd)
+static void clif_parse_LoadEndAck (int, struct map_session_data *sd)
 {
 //  struct item_data* item;
     int  i;
@@ -4154,7 +4154,7 @@ static void clif_parse_Emotion (int fd, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-static void clif_parse_HowManyConnections (int fd, struct map_session_data *UNUSED)
+static void clif_parse_HowManyConnections (int fd, struct map_session_data *)
 {
     WFIFOW (fd, 0) = 0xc2;
     WFIFOL (fd, 2) = map_getusers ();
@@ -4571,7 +4571,7 @@ static void clif_parse_NpcSellListSend (int fd, struct map_session_data *sd)
  * 取引要請を相手に送る
  *------------------------------------------
  */
-static void clif_parse_TradeRequest (int UNUSED, struct map_session_data *sd)
+static void clif_parse_TradeRequest (int, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -4586,7 +4586,7 @@ static void clif_parse_TradeRequest (int UNUSED, struct map_session_data *sd)
  * 取引要請
  *------------------------------------------
  */
-static void clif_parse_TradeAck (int UNUSED, struct map_session_data *sd)
+static void clif_parse_TradeAck (int, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -4597,7 +4597,7 @@ static void clif_parse_TradeAck (int UNUSED, struct map_session_data *sd)
  * アイテム追加
  *------------------------------------------
  */
-static void clif_parse_TradeAddItem (int UNUSED, struct map_session_data *sd)
+static void clif_parse_TradeAddItem (int, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -4608,7 +4608,7 @@ static void clif_parse_TradeAddItem (int UNUSED, struct map_session_data *sd)
  * アイテム追加完了(ok押し)
  *------------------------------------------
  */
-static void clif_parse_TradeOk (int UNUSED, struct map_session_data *sd)
+static void clif_parse_TradeOk (int, struct map_session_data *sd)
 {
     trade_tradeok (sd);
 }
@@ -4617,7 +4617,7 @@ static void clif_parse_TradeOk (int UNUSED, struct map_session_data *sd)
  * 取引キャンセル
  *------------------------------------------
  */
-static void clif_parse_TradeCansel (int UNUSED, struct map_session_data *sd)
+static void clif_parse_TradeCansel (int, struct map_session_data *sd)
 {
     trade_tradecancel (sd);
 }
@@ -4626,7 +4626,7 @@ static void clif_parse_TradeCansel (int UNUSED, struct map_session_data *sd)
  * 取引許諾(trade押し)
  *------------------------------------------
  */
-static void clif_parse_TradeCommit (int UNUSED, struct map_session_data *sd)
+static void clif_parse_TradeCommit (int, struct map_session_data *sd)
 {
     trade_tradecommit (sd);
 }
@@ -4907,7 +4907,7 @@ static void clif_parse_MoveFromKafra (int fd, struct map_session_data *sd)
  * カプラ倉庫を閉じる
  *------------------------------------------
  */
-static void clif_parse_CloseKafra (int UNUSED, struct map_session_data *sd)
+static void clif_parse_CloseKafra (int, struct map_session_data *sd)
 {
     nullpo_retv (sd);
 
@@ -4967,7 +4967,7 @@ static void clif_parse_ReplyPartyInvite (int fd, struct map_session_data *sd)
  * パーティ脱退要求
  *------------------------------------------
  */
-static void clif_parse_LeaveParty (int UNUSED, struct map_session_data *sd)
+static void clif_parse_LeaveParty (int, struct map_session_data *sd)
 {
     party_leave (sd);
 }

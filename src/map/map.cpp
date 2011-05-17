@@ -575,7 +575,7 @@ void map_foreachobject (void (*func) (struct block_list *, va_list), BlockType t
 }
 
 /// Delete floor items
-void map_clearflooritem_timer (timer_id tid, tick_t UNUSED, custom_id_t id, custom_data_t data)
+void map_clearflooritem_timer (timer_id tid, tick_t, custom_id_t id, custom_data_t data)
 {
     struct flooritem_data *fitem = (struct flooritem_data *) object[id];
     if (!fitem || fitem->bl.type != BL_ITEM)
@@ -1361,7 +1361,7 @@ static void map_config_read (const char *cfgName)
     fclose_ (fp);
 }
 
-static void cleanup_sub (struct block_list *bl, va_list UNUSED)
+static void cleanup_sub (struct block_list *bl, va_list)
 {
     nullpo_retv (bl);
 

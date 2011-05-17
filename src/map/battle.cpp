@@ -983,7 +983,7 @@ struct battle_delay_damage_
     int  damage;
     int  flag;
 };
-static void battle_delay_damage_sub (timer_id UNUSED, tick_t UNUSED, custom_id_t id, custom_data_t data)
+static void battle_delay_damage_sub (timer_id, tick_t, custom_id_t id, custom_data_t data)
 {
     struct battle_delay_damage_ *dat = (struct battle_delay_damage_ *) data;
     if (dat && map_id2bl (id) == dat->src && dat->target->prev != NULL)
@@ -1131,7 +1131,7 @@ int battle_attr_fix (int damage, int atk_elem, int def_elem)
  *------------------------------------------
  */
 int battle_calc_damage (struct block_list *, struct block_list *bl,
-                        int damage, int div_, int, int UNUSED,
+                        int damage, int div_, int, int,
                         int flag)
 {
     struct mob_data *md = NULL;

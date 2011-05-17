@@ -565,7 +565,7 @@ static void mmo_char_sync (void)
 //----------------------------------------------------
 // Function to save (in a periodic way) datas in files
 //----------------------------------------------------
-static void mmo_char_sync_timer (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void mmo_char_sync_timer (timer_id, tick_t, custom_id_t, custom_data_t)
 {
     if (pid && !waitpid (pid, NULL, WNOHANG))
         // still running
@@ -1705,7 +1705,7 @@ static void parse_tologin (int fd)
 }
 
 /// Map-server anti-freeze system
-static void map_anti_freeze_system (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void map_anti_freeze_system (timer_id, tick_t, custom_id_t, custom_data_t)
 {
     for (int i = 0; i < MAX_MAP_SERVERS; i++)
     {
@@ -2659,7 +2659,7 @@ void mapif_send (int fd, const uint8_t *buf, unsigned int len)
 }
 
 /// Report number of users on maps to login server and all map servers
-static void send_users_tologin (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void send_users_tologin (timer_id, tick_t, custom_id_t, custom_data_t)
 {
     int  users = count_users ();
     uint8_t buf[16];
@@ -2677,7 +2677,7 @@ static void send_users_tologin (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUS
     mapif_sendall (buf, 6);
 }
 
-static void check_connect_login_server (timer_id UNUSED, tick_t UNUSED, custom_id_t UNUSED, custom_data_t UNUSED)
+static void check_connect_login_server (timer_id, tick_t, custom_id_t, custom_data_t)
 {
     // can both conditions really happen?
     if (login_fd >= 0 && session[login_fd])

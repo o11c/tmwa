@@ -754,7 +754,7 @@ static int mob_check_attack (struct mob_data *md)
  * Attack processing of mob
  *------------------------------------------
  */
-static int mob_attack (struct mob_data *md, unsigned int tick, int UNUSED)
+static int mob_attack (struct mob_data *md, unsigned int tick, int)
 {
     struct block_list *tbl = NULL;
 
@@ -985,7 +985,7 @@ int mob_walktoxy (struct mob_data *md, int x, int y, int easy)
  * mob spawn with delay (timer function)
  *------------------------------------------
  */
-static void mob_delayspawn (timer_id UNUSED, tick_t UNUSED, custom_id_t m, custom_data_t UNUSED)
+static void mob_delayspawn (timer_id, tick_t, custom_id_t m, custom_data_t)
 {
     mob_spawn (m);
 }
@@ -2102,7 +2102,7 @@ static void mob_ai_sub_foreachclient (struct map_session_data *sd, va_list ap)
  * Serious processing for mob in PC field of view   (interval timer function)
  *------------------------------------------
  */
-static void mob_ai_hard (timer_id UNUSED, tick_t tick, custom_id_t UNUSED, custom_data_t UNUSED)
+static void mob_ai_hard (timer_id, tick_t tick, custom_id_t, custom_data_t)
 {
     clif_foreachclient (mob_ai_sub_foreachclient, tick);
 }
@@ -2111,7 +2111,7 @@ static void mob_ai_hard (timer_id UNUSED, tick_t tick, custom_id_t UNUSED, custo
  * Negligent mode MOB AI (PC is not in near)
  *------------------------------------------
  */
-static void mob_ai_sub_lazy (db_key_t UNUSED, db_val_t data, va_list app)
+static void mob_ai_sub_lazy (db_key_t, db_val_t data, va_list app)
 {
     struct mob_data *md = (struct mob_data *)data.p;
     unsigned int tick;
@@ -2178,7 +2178,7 @@ static void mob_ai_sub_lazy (db_key_t UNUSED, db_val_t data, va_list app)
  * Negligent processing for mob outside PC field of view   (interval timer function)
  *------------------------------------------
  */
-static void mob_ai_lazy (timer_id UNUSED, tick_t tick, custom_id_t UNUSED, custom_data_t UNUSED)
+static void mob_ai_lazy (timer_id, tick_t tick, custom_id_t, custom_data_t)
 {
     map_foreachiddb (mob_ai_sub_lazy, tick);
 }
@@ -2207,7 +2207,7 @@ struct delay_item_drop2
  * item drop with delay (timer function)
  *------------------------------------------
  */
-static void mob_delay_item_drop (timer_id UNUSED, tick_t UNUSED, custom_id_t id, custom_data_t UNUSED)
+static void mob_delay_item_drop (timer_id, tick_t, custom_id_t id, custom_data_t)
 {
     struct delay_item_drop *ditem;
     struct item temp_item;
@@ -2245,7 +2245,7 @@ static void mob_delay_item_drop (timer_id UNUSED, tick_t UNUSED, custom_id_t id,
  * item drop (timer function)-lootitem with delay
  *------------------------------------------
  */
-static void mob_delay_item_drop2 (timer_id UNUSED, tick_t UNUSED, custom_id_t id, custom_data_t UNUSED)
+static void mob_delay_item_drop2 (timer_id, tick_t, custom_id_t id, custom_data_t)
 {
     struct delay_item_drop2 *ditem;
     int  flag;
@@ -2308,7 +2308,7 @@ int mob_catch_delete (struct mob_data *md, int type)
     return 0;
 }
 
-void mob_timer_delete (timer_id UNUSED, tick_t UNUSED, custom_id_t id, custom_data_t UNUSED)
+void mob_timer_delete (timer_id, tick_t, custom_id_t id, custom_data_t)
 {
     struct block_list *bl = map_id2bl (id);
     struct mob_data *md;
@@ -3045,7 +3045,7 @@ int mob_counttargeted (struct mob_data *md, struct block_list *src,
 }
 
 
-void mobskill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data_t UNUSED)
+void mobskill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data_t)
 {
     struct mob_data *md = NULL;
     struct block_list *bl;
@@ -3103,7 +3103,7 @@ void mobskill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_data
  * スキル使用（詠唱完了、場所指定）
  *------------------------------------------
  */
-void mobskill_castend_pos (timer_id tid, tick_t tick, custom_id_t id, custom_data_t UNUSED)
+void mobskill_castend_pos (timer_id tid, tick_t tick, custom_id_t id, custom_data_t)
 {
     struct mob_data *md = NULL;
     struct block_list *bl;

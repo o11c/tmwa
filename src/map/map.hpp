@@ -609,12 +609,6 @@ struct map_data
         unsigned nowarp:1;
         unsigned nowarpto:1;
         unsigned nopvp:1;       // [Valaris]
-        unsigned noicewall:1;   // [Valaris]
-        unsigned snow:1;        // [Valaris]
-        unsigned fog:1;         // [Valaris]
-        unsigned sakura:1;      // [Valaris]
-        unsigned leaves:1;      // [Valaris]
-        unsigned rain:1;        // [Valaris]
         unsigned no_player_drops:1; // [Jaxad0127]
         unsigned town:1;        // [remoitnane]
     } flag;

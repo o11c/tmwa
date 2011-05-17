@@ -989,17 +989,6 @@ int clif_spawnpc (struct map_session_data *sd)
     WBUFW (buf, 51) = 0;
     clif_send (buf, packet_len_table[0x1d9], &sd->bl, AREA_WOS);
 
-    if (maps[sd->bl.m].flag.snow)
-        clif_specialeffect (&sd->bl, 162, 1);
-    if (maps[sd->bl.m].flag.fog)
-        clif_specialeffect (&sd->bl, 233, 1);
-    if (maps[sd->bl.m].flag.sakura)
-        clif_specialeffect (&sd->bl, 163, 1);
-    if (maps[sd->bl.m].flag.leaves)
-        clif_specialeffect (&sd->bl, 333, 1);
-    if (maps[sd->bl.m].flag.rain)
-        clif_specialeffect (&sd->bl, 161, 1);
-
 //        clif_changelook_accessories(&sd->bl, NULL);
 
     return 0;

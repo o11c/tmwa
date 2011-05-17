@@ -1849,30 +1849,6 @@ static int npc_parse_mapflag (char *w1, char *, char *w3, char *w4)
         maps[m].flag.nopvp = 1;
         maps[m].flag.pvp = 0;
     }
-    else if (strcasecmp (w3, "noicewall") == 0)
-    {                           // noicewall [Valaris]
-        maps[m].flag.noicewall = 1;
-    }
-    else if (strcasecmp (w3, "snow") == 0)
-    {                           // snow [Valaris]
-        maps[m].flag.snow = 1;
-    }
-    else if (strcasecmp (w3, "fog") == 0)
-    {                           // fog [Valaris]
-        maps[m].flag.fog = 1;
-    }
-    else if (strcasecmp (w3, "sakura") == 0)
-    {                           // sakura [Valaris]
-        maps[m].flag.sakura = 1;
-    }
-    else if (strcasecmp (w3, "leaves") == 0)
-    {                           // leaves [Valaris]
-        maps[m].flag.leaves = 1;
-    }
-    else if (strcasecmp (w3, "rain") == 0)
-    {                           // rain [Valaris]
-        maps[m].flag.rain = 1;
-    }
     else if (strcasecmp (w3, "no_player_drops") == 0)
     {                           // no player drops [Jaxad0127]
         maps[m].flag.no_player_drops = 1;

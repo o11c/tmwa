@@ -159,11 +159,6 @@ ATCOMMAND_FUNC (charstoreall);
 ATCOMMAND_FUNC (skillid);
 ATCOMMAND_FUNC (useskill);
 ATCOMMAND_FUNC (summon);
-ATCOMMAND_FUNC (rain);
-ATCOMMAND_FUNC (snow);
-ATCOMMAND_FUNC (sakura);
-ATCOMMAND_FUNC (fog);
-ATCOMMAND_FUNC (leaves);
 ATCOMMAND_FUNC (adjgmlvl);
 ATCOMMAND_FUNC (adjcmdlvl);
 ATCOMMAND_FUNC (trade);
@@ -486,16 +481,6 @@ static AtCommandInfo atcommand_info[] = {
     "",                 "Enable skills on a map."},
     {"@skilloff", 20,   atcommand_skilloff,     ATCC_ENV,
     "",                 "Disable skills on a map."},
-    {"@rain", 99,       atcommand_rain,         ATCC_ENV,
-    "",                 "??"},
-    {"@snow", 99,       atcommand_snow,         ATCC_ENV,
-    "",                 "??"},
-    {"@sakura", 99,     atcommand_sakura,       ATCC_ENV,
-    "",                 "??"},
-    {"@fog", 99,        atcommand_fog,          ATCC_ENV,
-    "",                 "??"},
-    {"@leaves", 99,     atcommand_leaves,       ATCC_ENV,
-    "",                 "??"},
     {"@email", 0,       atcommand_email,        ATCC_MISC,
     "old@e.mail new@e.mail",
                         "change stored email"},
@@ -5684,102 +5669,6 @@ int atcommand_useskill (int, struct map_session_data *sd,
     else
         skill_use_id (sd, pl_sd->bl.id, skillnum, skilllv);
 
-    return 0;
-}
-
-/*==========================================
- * It is made to rain.
- *------------------------------------------
- */
-int
-atcommand_rain (int, struct map_session_data *sd,
-                const char *, const char *)
-{
-    int  effno = 0;
-    effno = 161;
-    nullpo_retr (-1, sd);
-    if (effno < 0 || maps[sd->bl.m].flag.rain)
-        return -1;
-
-    maps[sd->bl.m].flag.rain = 1;
-    clif_specialeffect (&sd->bl, effno, 2);
-    return 0;
-}
-
-/*==========================================
- * It is made to snow.
- *------------------------------------------
- */
-int
-atcommand_snow (int, struct map_session_data *sd,
-                const char *, const char *)
-{
-    int  effno = 0;
-    effno = 162;
-    nullpo_retr (-1, sd);
-    if (effno < 0 || maps[sd->bl.m].flag.snow)
-        return -1;
-
-    maps[sd->bl.m].flag.snow = 1;
-    clif_specialeffect (&sd->bl, effno, 2);
-    return 0;
-}
-
-/*==========================================
- * Cherry tree snowstorm is made to fall. (Sakura)
- *------------------------------------------
- */
-int
-atcommand_sakura (int, struct map_session_data *sd,
-                  const char *, const char *)
-{
-    int  effno = 0;
-    effno = 163;
-    nullpo_retr (-1, sd);
-    if (effno < 0 || maps[sd->bl.m].flag.sakura)
-        return -1;
-
-    maps[sd->bl.m].flag.sakura = 1;
-    clif_specialeffect (&sd->bl, effno, 2);
-    return 0;
-}
-
-/*==========================================
- * Fog hangs over.
- *------------------------------------------
- */
-int
-atcommand_fog (int, struct map_session_data *sd,
-               const char *, const char *)
-{
-    int  effno = 0;
-    effno = 233;
-    nullpo_retr (-1, sd);
-    if (effno < 0 || maps[sd->bl.m].flag.fog)
-        return -1;
-
-    maps[sd->bl.m].flag.fog = 1;
-    clif_specialeffect (&sd->bl, effno, 2);
-
-    return 0;
-}
-
-/*==========================================
- * Fallen leaves fall.
- *------------------------------------------
- */
-int
-atcommand_leaves (int, struct map_session_data *sd,
-                  const char *, const char *)
-{
-    int  effno = 0;
-    effno = 333;
-    nullpo_retr (-1, sd);
-    if (effno < 0 || maps[sd->bl.m].flag.leaves)
-        return -1;
-
-    maps[sd->bl.m].flag.leaves = 1;
-    clif_specialeffect (&sd->bl, effno, 2);
     return 0;
 }
 

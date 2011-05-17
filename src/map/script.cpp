@@ -4387,11 +4387,10 @@ int buildin_isloggedin (struct script_state *st)
  *------------------------------------------
  */
 enum
-{ MF_NOMEMO, MF_NOTELEPORT, MF_NOSAVE, MF_NOBRANCH, MF_NOPENALTY,
+{
+    MF_NOMEMO, MF_NOTELEPORT, MF_NOSAVE, MF_NOBRANCH, MF_NOPENALTY,
     MF_NOZENYPENALTY, MF_PVP, MF_PVP_NOPARTY,
     MF_NOTRADE, MF_NOSKILL, MF_NOWARP, MF_NOPVP,
-    MF_NOICEWALL,
-    MF_SNOW, MF_FOG, MF_SAKURA, MF_LEAVES, MF_RAIN
 };
 
 int buildin_setmapflagnosave (struct script_state *st)
@@ -4457,24 +4456,6 @@ int buildin_setmapflag (struct script_state *st)
             case MF_NOPVP:
                 maps[m].flag.nopvp = 1;
                 break;
-            case MF_NOICEWALL: // [Valaris]
-                maps[m].flag.noicewall = 1;
-                break;
-            case MF_SNOW:      // [Valaris]
-                maps[m].flag.snow = 1;
-                break;
-            case MF_FOG:       // [Valaris]
-                maps[m].flag.fog = 1;
-                break;
-            case MF_SAKURA:    // [Valaris]
-                maps[m].flag.sakura = 1;
-                break;
-            case MF_LEAVES:    // [Valaris]
-                maps[m].flag.leaves = 1;
-                break;
-            case MF_RAIN:      // [Valaris]
-                maps[m].flag.rain = 1;
-                break;
         }
     }
 
@@ -4522,24 +4503,6 @@ int buildin_removemapflag (struct script_state *st)
                 break;
             case MF_NOPVP:
                 maps[m].flag.nopvp = 0;
-                break;
-            case MF_NOICEWALL: // [Valaris]
-                maps[m].flag.noicewall = 0;
-                break;
-            case MF_SNOW:      // [Valaris]
-                maps[m].flag.snow = 0;
-                break;
-            case MF_FOG:       // [Valaris]
-                maps[m].flag.fog = 0;
-                break;
-            case MF_SAKURA:    // [Valaris]
-                maps[m].flag.sakura = 0;
-                break;
-            case MF_LEAVES:    // [Valaris]
-                maps[m].flag.leaves = 0;
-                break;
-            case MF_RAIN:      // [Valaris]
-                maps[m].flag.rain = 0;
                 break;
         }
     }

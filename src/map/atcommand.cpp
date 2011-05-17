@@ -70,14 +70,11 @@ ATCOMMAND_FUNC (gm);
 ATCOMMAND_FUNC (pvpoff);
 ATCOMMAND_FUNC (pvpon);
 ATCOMMAND_FUNC (model);
-ATCOMMAND_FUNC (go);
 ATCOMMAND_FUNC (spawn);
 ATCOMMAND_FUNC (killmonster);
 ATCOMMAND_FUNC (killmonster2);
-ATCOMMAND_FUNC (produce);
 ATCOMMAND_FUNC (memo);
 ATCOMMAND_FUNC (gat);
-ATCOMMAND_FUNC (packet);
 ATCOMMAND_FUNC (statuspoint);
 ATCOMMAND_FUNC (skillpoint);
 ATCOMMAND_FUNC (zeny);
@@ -207,8 +204,6 @@ static AtCommandInfo atcommand_info[] = {
     "",                 "Display your server-side ignore list. Defunct."},
     {"@die", 1,         atcommand_die,          ATCC_SELF,
     "",                 "Suicide."},
-    {"@go", 10,         atcommand_go,           ATCC_SELF,
-    "number|name",      "Warp yourself to a city or memo point. Defunct."},
     {"@follow", 10,     atcommand_follow,       ATCC_SELF,
     "charname",         "Set yourself to automatically follow a player."},
     {"@goto", 20,       atcommand_goto,         ATCC_SELF,
@@ -441,9 +436,6 @@ static AtCommandInfo atcommand_info[] = {
     "name",             "List items by substring."},
     {"@itemcheck", 60,  atcommand_itemcheck,    ATCC_ITEM,
     "",                 "check authorization of your inventory"},
-    {"@produce", 60,    atcommand_produce,      ATCC_ITEM,
-    "name|ID element strength",
-                        "Manufacture an item. Probably defunct."},
     {"@npcmove", 20,    atcommand_npcmove,      ATCC_ADMIN,
     "",                 "??"},
     {"@ipcheck", 60,    atcommand_ipcheck,      ATCC_ADMIN,
@@ -454,8 +446,6 @@ static AtCommandInfo atcommand_info[] = {
     "npcname",          "Disable an NPC."},
     {"@gat", 99,        atcommand_gat,          ATCC_ADMIN,
     "",                 "Display the map's collision information."},
-    {"@packet", 99,     atcommand_packet,       ATCC_ADMIN,
-    "",                 "Display packet information."},
     {"@mapexit", 99,    atcommand_mapexit,      ATCC_ADMIN,
     "",                 "Shut the map server down."},
     {"@adjgmlvl", 99,   atcommand_adjgmlvl,     ATCC_ADMIN,
@@ -659,7 +649,7 @@ AtCommandInfo *atcommand (gm_level_t level, const char *message)
 /// Kill an individual monster (with or without loot)
 static void atkillmonster_sub (struct block_list *bl, va_list ap)
 {
-    int  flag = va_arg (ap, int);
+    bool flag = (bool)va_arg (ap, int);
 
     nullpo_retv (bl);
 
@@ -1892,9 +1882,6 @@ int atcommand_pvpoff (int fd, struct map_session_data *sd,
 int atcommand_pvpon (int fd, struct map_session_data *sd,
                      const char *UNUSED, const char *UNUSED)
 {
-    struct map_session_data *pl_sd;
-    int  i;
-
     if (battle_config.pk_mode)
     {
         clif_displaymessage (fd, "This option cannot be used in PK Mode.");
@@ -1929,417 +1916,116 @@ int atcommand_pvpon (int fd, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Change your appearance (hairstyle, hair color, clothes color (unused))
 int atcommand_model (int fd, struct map_session_data *sd,
                      const char *UNUSED, const char *message)
 {
-    int  hair_style = 0, hair_color = 0, cloth_color = 0;
-    char output[200];
-
-    memset (output, '\0', sizeof (output));
-
-    if (!message || !*message
-        || sscanf (message, "%d %d %d", &hair_style, &hair_color,
-                   &cloth_color) < 1)
+    if (!message || !*message)
+        return -1;
+    unsigned int hair_style, hair_color, cloth_color;
+    if (sscanf (message, "%u %u %u", &hair_style, &hair_color, &cloth_color) < 3)
         return -1;
 
-    if (hair_style >= 0 && hair_style < NUM_HAIR_STYLES &&
-        hair_color >= 0 && hair_color < NUM_HAIR_COLORS &&
-        cloth_color >= 0 && cloth_color < NUM_CLOTHES_COLORS)
-    {
-        pc_changelook (sd, LOOK_HAIR, hair_style);
-        pc_changelook (sd, LOOK_HAIR_COLOR, hair_color);
-        pc_changelook (sd, LOOK_CLOTHES_COLOR, cloth_color);
-        clif_displaymessage (fd, "Appearence changed.");
-    }
-    else
+    if (hair_style >= NUM_HAIR_STYLES || hair_color >= NUM_HAIR_COLORS || cloth_color >= NUM_CLOTHES_COLORS)
     {
         clif_displaymessage (fd, "An invalid number was specified.");
         return -1;
     }
+    pc_changelook (sd, LOOK_HAIR, hair_style);
+    pc_changelook (sd, LOOK_HAIR_COLOR, hair_color);
+    pc_changelook (sd, LOOK_CLOTHES_COLOR, cloth_color);
+    clif_displaymessage (fd, "Appearance changed.");
 
     return 0;
 }
 
-/*==========================================
- * @dye && @ccolor
- *------------------------------------------
- */
+/// Change clothing color (unimplemented in the Mana client)
 int atcommand_dye (int fd, struct map_session_data *sd,
                    const char *UNUSED, const char *message)
 {
-    int  cloth_color = 0;
-    char output[200];
-
-    memset (output, '\0', sizeof (output));
-
-    if (!message || !*message || sscanf (message, "%d", &cloth_color) < 1)
+    if (!message || !*message)
+        return -1;
+    unsigned int cloth_color;
+    if (sscanf (message, "%u", &cloth_color) < 1)
         return -1;
 
-    if (cloth_color >= 0 && cloth_color <= NUM_CLOTHES_COLORS)
-    {
-        pc_changelook (sd, LOOK_CLOTHES_COLOR, cloth_color);
-        clif_displaymessage (fd, "Appearance changed.");
-    }
-    else
+    if (cloth_color >= NUM_CLOTHES_COLORS)
     {
         clif_displaymessage (fd, "An invalid number was specified.");
         return -1;
     }
 
+    pc_changelook (sd, LOOK_CLOTHES_COLOR, cloth_color);
+    clif_displaymessage (fd, "Appearance changed.");
+
     return 0;
 }
 
-/*==========================================
- * @hairstyle && @hstyle
- *------------------------------------------
- */
+/// Change hair style
 int atcommand_hair_style (int fd, struct map_session_data *sd,
                           const char *UNUSED, const char *message)
 {
-    int  hair_style = 0;
-    char output[200];
-
-    memset (output, '\0', sizeof (output));
-
-    if (!message || !*message || sscanf (message, "%d", &hair_style) < 1)
+    if (!message || !*message)
+        return -1;
+    unsigned int hair_style = 0;
+    if (sscanf (message, "%u", &hair_style) < 1)
         return -1;
 
-    if (hair_style >= 0 && hair_style < NUM_HAIR_STYLES)
-    {
-        pc_changelook (sd, LOOK_HAIR, hair_style);
-        clif_displaymessage (fd, "Appearance changed.");
-    }
-    else
+    if (hair_style >= NUM_HAIR_STYLES)
     {
         clif_displaymessage (fd, "An invalid number was specified.");
         return -1;
     }
+    pc_changelook (sd, LOOK_HAIR, hair_style);
+    clif_displaymessage (fd, "Appearance changed.");
 
     return 0;
 }
 
 
-/*==========================================
- * @haircolor && @hcolor
- *------------------------------------------
- */
+/// Change hair color
 int atcommand_hair_color (int fd, struct map_session_data *sd,
                           const char *UNUSED, const char *message)
 {
-    int  hair_color = 0;
-    char output[200];
-
-    memset (output, '\0', sizeof (output));
-
-    if (!message || !*message || sscanf (message, "%d", &hair_color) < 1)
+    if (!message || !*message)
+        return -1;
+    unsigned int hair_color;
+    if (sscanf (message, "%d", &hair_color) < 1)
         return -1;
 
-    if (hair_color >= 0 && hair_color < NUM_HAIR_COLORS)
-    {
-        pc_changelook (sd, LOOK_HAIR_COLOR, hair_color);
-        clif_displaymessage (fd, "Appearance changed.");
-    }
-    else
+    if (hair_color >= NUM_HAIR_COLORS)
     {
         clif_displaymessage (fd, "An invalid number was specified.");
         return -1;
     }
 
-    return 0;
-}
-
-
-/*==========================================
- * @go [city_number/city_name]: improved by [yor] to add city names and help
- *------------------------------------------
- */
-int atcommand_go (int fd, struct map_session_data *sd,
-                  const char *UNUSED, const char *message)
-{
-    int  i;
-    int  town;
-    char map_name[100];
-    char output[200];
-    int  m;
-
-    struct
-    {
-        char map[16];
-        int  x, y;
-    } data[] =
-    {
-        {
-        "prontera.gat", 156, 191},  //   0=Prontera
-        {
-        "morocc.gat", 156, 93}, //   1=Morroc
-        {
-        "geffen.gat", 119, 59}, //   2=Geffen
-        {
-        "payon.gat", 162, 233}, //   3=Payon
-        {
-        "alberta.gat", 192, 147},   //   4=Alberta
-        {
-        "izlude.gat", 128, 114},    //   5=Izlude
-        {
-        "aldebaran.gat", 140, 131}, //   6=Al de Baran
-        {
-        "xmas.gat", 147, 134},  //   7=Lutie
-        {
-        "comodo.gat", 209, 143},    //   8=Comodo
-        {
-        "yuno.gat", 157, 51},   //   9=Yuno
-        {
-        "amatsu.gat", 198, 84}, //  10=Amatsu
-        {
-        "gonryun.gat", 160, 120},   //  11=Gon Ryun
-        {
-        "umbala.gat", 89, 157}, //  12=Umbala
-        {
-        "niflheim.gat", 21, 153},   //  13=Niflheim
-        {
-        "louyang.gat", 217, 40},    //  14=Lou Yang
-        {
-        "new_1-1.gat", 53, 111},    //  15=Start point
-        {
-        "sec_pri.gat", 23, 61}, //  16=Prison
-    };
-
-    memset (map_name, '\0', sizeof (map_name));
-    memset (output, '\0', sizeof (output));
-
-    // get the number
-    town = atoi (message);
-
-    // if no value, display all value
-    if (!message || !*message || sscanf (message, "%99s", map_name) < 1
-        || town < -3 || town >= (int) (sizeof (data) / sizeof (data[0])))
-    {
-        clif_displaymessage (fd, "Invalid location number or name.");
-        clif_displaymessage (fd, "Please, use one of this number/name:");
-        clif_displaymessage (fd,
-                             "-3=(Memo point 2)   4=Alberta       11=Gon Ryun");
-        clif_displaymessage (fd,
-                             "-2=(Memo point 1)   5=Izlude        12=Umbala");
-        clif_displaymessage (fd,
-                             "-1=(Memo point 0)   6=Al de Baran   13=Niflheim");
-        clif_displaymessage (fd,
-                             " 0=Prontera         7=Lutie         14=Lou Yang");
-        clif_displaymessage (fd,
-                             " 1=Morroc           8=Comodo        15=Start point");
-        clif_displaymessage (fd,
-                             " 2=Geffen           9=Yuno          16=Prison");
-        clif_displaymessage (fd, " 3=Payon           10=Amatsu");
-        return -1;
-    }
-    else
-    {
-        // get possible name of the city and add .gat if not in the name
-        map_name[sizeof (map_name) - 1] = '\0';
-        for (i = 0; map_name[i]; i++)
-            map_name[i] = tolower (map_name[i]);
-        if (strstr (map_name, ".gat") == NULL && strstr (map_name, ".afm") == NULL && strlen (map_name) < 13)   // 16 - 4 (.gat)
-            strcat (map_name, ".gat");
-        // try to see if it's a name, and not a number (try a lot of possibilities, write errors and abbreviations too)
-        if (strncmp (map_name, "prontera.gat", 3) == 0)
-        {                       // 3 first characters
-            town = 0;
-        }
-        else if (strncmp (map_name, "morocc.gat", 3) == 0)
-        {                       // 3 first characters
-            town = 1;
-        }
-        else if (strncmp (map_name, "geffen.gat", 3) == 0)
-        {                       // 3 first characters
-            town = 2;
-        }
-        else if (strncmp (map_name, "payon.gat", 3) == 0 || // 3 first characters
-                 strncmp (map_name, "paion.gat", 3) == 0)
-        {                       // writing error (3 first characters)
-            town = 3;
-        }
-        else if (strncmp (map_name, "alberta.gat", 3) == 0)
-        {                       // 3 first characters
-            town = 4;
-        }
-        else if (strncmp (map_name, "izlude.gat", 3) == 0 ||    // 3 first characters
-                 strncmp (map_name, "islude.gat", 3) == 0)
-        {                       // writing error (3 first characters)
-            town = 5;
-        }
-        else if (strncmp (map_name, "aldebaran.gat", 3) == 0 || // 3 first characters
-                 strcmp (map_name, "al.gat") == 0)
-        {                       // al (de baran)
-            town = 6;
-        }
-        else if (strncmp (map_name, "lutie.gat", 3) == 0 || // name of the city, not name of the map (3 first characters)
-                 strcmp (map_name, "christmas.gat") == 0 || // name of the symbol
-                 strncmp (map_name, "xmas.gat", 3) == 0 ||  // 3 first characters
-                 strncmp (map_name, "x-mas.gat", 3) == 0)
-        {                       // writing error (3 first characters)
-            town = 7;
-        }
-        else if (strncmp (map_name, "comodo.gat", 3) == 0)
-        {                       // 3 first characters
-            town = 8;
-        }
-        else if (strncmp (map_name, "yuno.gat", 3) == 0)
-        {                       // 3 first characters
-            town = 9;
-        }
-        else if (strncmp (map_name, "amatsu.gat", 3) == 0 ||    // 3 first characters
-                 strncmp (map_name, "ammatsu.gat", 3) == 0)
-        {                       // writing error (3 first characters)
-            town = 10;
-        }
-        else if (strncmp (map_name, "gonryun.gat", 3) == 0)
-        {                       // 3 first characters
-            town = 11;
-        }
-        else if (strncmp (map_name, "umbala.gat", 3) == 0)
-        {                       // 3 first characters
-            town = 12;
-        }
-        else if (strncmp (map_name, "niflheim.gat", 3) == 0)
-        {                       // 3 first characters
-            town = 13;
-        }
-        else if (strncmp (map_name, "louyang.gat", 3) == 0)
-        {                       // 3 first characters
-            town = 14;
-        }
-        else if (strncmp (map_name, "new_1-1.gat", 3) == 0 ||   // 3 first characters (or "newbies")
-                 strncmp (map_name, "startpoint.gat", 3) == 0 ||    // name of the position (3 first characters)
-                 strncmp (map_name, "begining.gat", 3) == 0)
-        {                       // name of the position (3 first characters)
-            town = 15;
-        }
-        else if (strncmp (map_name, "sec_pri.gat", 3) == 0 ||   // 3 first characters
-                 strncmp (map_name, "prison.gat", 3) == 0 ||    // name of the position (3 first characters)
-                 strncmp (map_name, "jails.gat", 3) == 0)
-        {                       // name of the position
-            town = 16;
-        }
-
-        if (town >= -3 && town <= -1)
-        {
-            if (sd->status.memo_point[-town - 1].map[0])
-            {
-                m = map_mapname2mapid (sd->status.memo_point[-town - 1].map);
-                if (m >= 0 && maps[m].flag.nowarpto
-                    && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-                {
-                    clif_displaymessage (fd,
-                                         "You are not authorised to warp you to this memo map.");
-                    return -1;
-                }
-                if (maps[sd->bl.m].flag.nowarp
-                    && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-                {
-                    clif_displaymessage (fd,
-                                         "You are not authorised to warp you from your actual map.");
-                    return -1;
-                }
-                if (pc_setpos
-                    (sd, sd->status.memo_point[-town - 1].map,
-                     sd->status.memo_point[-town - 1].x,
-                     sd->status.memo_point[-town - 1].y, 3) == 0)
-                {
-                    clif_displaymessage (fd, "Warped.");
-                }
-                else
-                {
-                    clif_displaymessage (fd, "Map not found.");
-                    return -1;
-                }
-            }
-            else
-            {
-                sprintf (output, "Your memo point #%d doesn't exist.", -town - 1);
-                clif_displaymessage (fd, output);
-                return -1;
-            }
-        }
-        else if (town >= 0 && town < (int) (sizeof (data) / sizeof (data[0])))
-        {
-            m = map_mapname2mapid (data[town].map);
-            if (m >= 0 && maps[m].flag.nowarpto
-                && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-            {
-                clif_displaymessage (fd,
-                                     "You are not authorised to warp you to this destination map.");
-                return -1;
-            }
-            if (maps[sd->bl.m].flag.nowarp
-                && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-            {
-                clif_displaymessage (fd,
-                                     "You are not authorised to warp you from your actual map.");
-                return -1;
-            }
-            if (pc_setpos (sd, data[town].map, data[town].x, data[town].y, 3)
-                == 0)
-            {
-                clif_displaymessage (fd, "Warped.");
-            }
-            else
-            {
-                clif_displaymessage (fd, "Map not found.");
-                return -1;
-            }
-        }
-        else
-        {                       // if you arrive here, you have an error in town variable when reading of names
-            clif_displaymessage (fd, "Invalid location number or name.");
-            return -1;
-        }
-    }
+    pc_changelook (sd, LOOK_HAIR_COLOR, hair_color);
+    clif_displaymessage (fd, "Appearance changed.");
 
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Create monsters
 int atcommand_spawn (int fd, struct map_session_data *sd,
                      const char *command, const char *message)
 {
-    char monster[100];
-    char output[200];
-    int  mob_id;
-    int  number = 0;
-    int  x = 0, y = 0;
-    int  count;
-    int  i, j, k;
-    int  mx, my, range;
-
-    memset (monster, '\0', sizeof (monster));
-    memset (output, '\0', sizeof (output));
-
-    if (!message || !*message
-        || sscanf (message, "%99s %d %d %d", monster, &number, &x, &y) < 1)
-    {
-        clif_displaymessage (fd, "Give a monster name/id please.");
+    if (!message || !*message)
         return -1;
-    }
+
+    char monster[100];
+    unsigned int number = 0, x = 0, y = 0;
+    if (sscanf (message, "%99s %u %u %u", monster, &number, &x, &y) < 1)
+        return -1;
 
     // If monster identifier/name argument is a name
-    if ((mob_id = mobdb_searchname (monster)) == 0) // check name first (to avoid possible name begining by a number)
+    // check name first (to avoid possible name begining by a number)
+    int mob_id = mobdb_searchname (monster);
+    if (!mob_id)
         mob_id = mobdb_checkid (atoi (monster));
 
-    if (mob_id == 0)
+    if (!mob_id)
     {
         clif_displaymessage (fd, "Invalid monster ID or name.");
-        return -1;
-    }
-
-    if (mob_id == 1288)
-    {
-        clif_displaymessage (fd, "Cannot spawn emperium.");
         return -1;
     }
 
@@ -2347,23 +2033,21 @@ int atcommand_spawn (int fd, struct map_session_data *sd,
         number = 1;
 
     // If value of atcommand_spawn_quantity_limit directive is greater than or equal to 1 and quantity of monsters is greater than value of the directive
-    if (battle_config.atc_spawn_quantity_limit >= 1
-        && number > battle_config.atc_spawn_quantity_limit)
+    if (battle_config.atc_spawn_quantity_limit && number > battle_config.atc_spawn_quantity_limit)
         number = battle_config.atc_spawn_quantity_limit;
 
-    if (battle_config.etc_log)
-        printf ("%s monster='%s' id=%d count=%d (%d,%d)\n", command, monster,
-                mob_id, number, x, y);
+    map_log ("%s monster='%s' id=%d count=%d at (%d,%d)\n", command, monster,
+             mob_id, number, x, y);
 
-    count = 0;
-    range = sqrt (number) / 2;
-    range = range * 2 + 5;      // calculation of an odd number (+ 4 area around)
-    for (i = 0; i < number; i++)
+    int count = 0;
+    int range = sqrt (number) + 5;
+    for (int i = 0; i < number; i++)
     {
-        j = 0;
-        k = 0;
+        int j = 0;
+        bool k = 0;
         while (j++ < 8 && k == 0)
         {                       // try 8 times to spawn the monster (needed for close area)
+            int mx, my;
             if (x <= 0)
                 mx = sd->bl.x + (MRAND (range) - (range / 2));
             else
@@ -2375,184 +2059,93 @@ int atcommand_spawn (int fd, struct map_session_data *sd,
             k = mob_once_spawn ((struct map_session_data *) sd, "this", mx,
                                 my, "", mob_id, 1, "");
         }
-        count += (k != 0) ? 1 : 0;
+        count += k;
     }
 
-    if (count != 0)
-        if (number == count)
-            clif_displaymessage (fd, "All monster summoned!");
-        else
-        {
-            sprintf (output, "%d monster(s) summoned!", count);
-            clif_displaymessage (fd, output);
-        }
+    if (!count)
+    {
+        clif_displaymessage (fd, "Failed to summon monsters.");
+        return -1;
+    }
+    else if (count == number)
+        clif_displaymessage (fd, "All monster summoned!");
     else
     {
-        clif_displaymessage (fd, "Invalid monster ID or name.");
-        return -1;
+        char output[200];
+        sprintf (output, "Summoned only %d/%d monsters", count, number);
+        clif_displaymessage (fd, output);
     }
 
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Kill a monster, optionally dropping loot
 static void atcommand_killmonster_sub (int fd, struct map_session_data *sd,
-                                const char *message, int drop)
+                                       const char *message, bool drop)
 {
-    int  map_id;
-    char map_name[100];
-
-    memset (map_name, '\0', sizeof (map_name));
-
-    if (!message || !*message || sscanf (message, "%99s", map_name) < 1)
-        map_id = sd->bl.m;
-    else
+    int map_id = sd->bl.m;
+    if (message && *message)
     {
-        if (strstr (map_name, ".gat") == NULL && strstr (map_name, ".afm") == NULL && strlen (map_name) < 13)   // 16 - 4 (.gat)
+        char map_name[100];
+        sscanf (message, "%99s", map_name);
+        if (strstr (map_name, ".gat") == NULL && strlen (map_name) < 13)   // 16 - 4 (.gat)
             strcat (map_name, ".gat");
-        if ((map_id = map_mapname2mapid (map_name)) < 0)
-            map_id = sd->bl.m;
+        int m = map_mapname2mapid (map_name);
+        if (m >= 0)
+            map_id = m;
     }
 
     map_foreachinarea (atkillmonster_sub, map_id, 0, 0, maps[map_id].xs,
                        maps[map_id].ys, BL_MOB, drop);
 
     clif_displaymessage (fd, "All monsters killed!");
-
-    return;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Kill monsters, with loot
 int atcommand_killmonster (int fd, struct map_session_data *sd,
                            const char *UNUSED, const char *message)
 {
     atcommand_killmonster_sub (fd, sd, message, 1);
-
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Print a nearby player
 static void atlist_nearby_sub (struct block_list *bl, va_list ap)
 {
-    char buf[32];
-    int  fd = va_arg (ap, int);
     nullpo_retv (bl);
 
+    char buf[32];
     sprintf (buf, " - \"%s\"", ((struct map_session_data *) bl)->status.name);
+
+    int fd = va_arg (ap, int);
     clif_displaymessage (fd, buf);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Print all nearby players
 int atcommand_list_nearby (int fd, struct map_session_data *sd,
                            const char *UNUSED, const char *UNUSED)
 {
     clif_displaymessage (fd, "Nearby players:");
     map_foreachinarea (atlist_nearby_sub, sd->bl.m, sd->bl.x - 1,
                        sd->bl.y - 1, sd->bl.x + 1, sd->bl.x + 1, BL_PC, fd);
-
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Kill monsters, without loot
 int atcommand_killmonster2 (int fd, struct map_session_data *sd,
                             const char *UNUSED, const char *message)
 {
     atcommand_killmonster_sub (fd, sd, message, 0);
-
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-int atcommand_produce (int fd, struct map_session_data *sd,
-                       const char *UNUSED, const char *message)
-{
-    char item_name[100];
-    int  item_id, attribute = 0, star = 0;
-    int  flag = 0;
-    struct item_data *item_data;
-    struct item tmp_item;
-    char output[200];
-
-    memset (output, '\0', sizeof (output));
-    memset (item_name, '\0', sizeof (item_name));
-
-    if (!message || !*message
-        || sscanf (message, "%99s %d %d", item_name, &attribute, &star) < 1)
-        return -1;
-
-    item_id = 0;
-    if ((item_data = itemdb_searchname (item_name)) != NULL ||
-        (item_data = itemdb_exists (atoi (item_name))) != NULL)
-        item_id = item_data->nameid;
-
-    if (itemdb_exists (item_id) &&
-        (item_id <= 500 || item_id > 1099) &&
-        (item_id < 4001 || item_id > 4148) &&
-        (item_id < 7001 || item_id > 10019) && itemdb_isequip (item_id))
-    {
-        if (attribute < MIN_ATTRIBUTE || attribute > MAX_ATTRIBUTE)
-            attribute = ATTRIBUTE_NORMAL;
-        if (star < MIN_STAR || star > MAX_STAR)
-            star = 0;
-        memset (&tmp_item, 0, sizeof tmp_item);
-        tmp_item.nameid = item_id;
-        tmp_item.amount = 1;
-        tmp_item.identify = 1;
-        tmp_item.card[0] = 0x00ff;
-        tmp_item.card[1] = ((star * 5) << 8) + attribute;
-        *((unsigned long *) (&tmp_item.card[2])) = sd->char_id;
-        clif_misceffect (&sd->bl, 3);   // 他人にも成功を通知
-        if ((flag = pc_additem (sd, &tmp_item, 1)))
-            clif_additem (sd, 0, 0, flag);
-    }
-    else
-    {
-        if (battle_config.error_log)
-            printf ("@produce NOT WEAPON [%d]\n", item_id);
-        if (item_id != 0 && itemdb_exists (item_id))
-            sprintf (output, "This item (%d: '%s') is not an equipment.", item_id, item_data->name);
-        else
-            sprintf (output, "This item is not an equipment.");
-        clif_displaymessage (fd, output);
-        return -1;
-    }
-
-    return 0;
-}
-
-/*==========================================
- * Sub-function to display actual memo points
- *------------------------------------------
- */
+/// Display memo points
 static void atcommand_memo_sub (struct map_session_data *sd)
 {
-    int  i;
-    char output[200];
-
-    memset (output, '\0', sizeof (output));
-
-    clif_displaymessage (sd->fd,
-                         "Your actual memo positions are (except respawn point):");
-    for (i = MIN_PORTAL_MEMO; i <= MAX_PORTAL_MEMO; i++)
+    clif_displaymessage (sd->fd, "Your actual memo positions are:");
+    for (int i = 0; i <= 2; i++)
     {
+        char output[200];
         if (sd->status.memo_point[i].map[0])
             sprintf (output, "%d - %s (%d,%d)", i,
                      sd->status.memo_point[i].map, sd->status.memo_point[i].x,
@@ -2561,60 +2154,47 @@ static void atcommand_memo_sub (struct map_session_data *sd)
             sprintf (output, "%d - void", i);
         clif_displaymessage (sd->fd, output);
     }
-
-    return;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Set a memo point
 int atcommand_memo (int fd, struct map_session_data *sd,
                     const char *UNUSED, const char *message)
 {
-    int  position = 0;
-    char output[200];
-
-    memset (output, '\0', sizeof (output));
+    int position;
 
     if (!message || !*message || sscanf (message, "%d", &position) < 1)
-        atcommand_memo_sub (sd);
-    else
     {
-        if (position >= MIN_PORTAL_MEMO && position <= MAX_PORTAL_MEMO)
-        {
-            if (maps[sd->bl.m].flag.nowarpto
-                && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-            {
-                clif_displaymessage (fd,
-                                     "You are not authorised to memo this map.");
-                return -1;
-            }
-            if (sd->status.memo_point[position].map[0])
-            {
-                sprintf (output, "You replace previous memo position %d - %s (%d,%d).", position, sd->status.memo_point[position].map, sd->status.memo_point[position].x, sd->status.memo_point[position].y);
-                clif_displaymessage (fd, output);
-            }
-            memcpy (sd->status.memo_point[position].map, maps[sd->bl.m].name,
-                    24);
-            sd->status.memo_point[position].x = sd->bl.x;
-            sd->status.memo_point[position].y = sd->bl.y;
-            atcommand_memo_sub (sd);
-        }
-        else
-        {
-            atcommand_memo_sub (sd);
-            return -1;
-        }
+        atcommand_memo_sub (sd);
+        return 0;
     }
+    if (position < 0 || position > 2)
+    {
+        atcommand_memo_sub (sd);
+        return -1;
+    }
+
+    if (maps[sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM (sd))
+    {
+        clif_displaymessage (fd, "You are not authorised to set a memo point on this map.");
+        return -1;
+    }
+    if (sd->status.memo_point[position].map[0])
+    {
+        char output[200];
+        sprintf (output, "You replace previous memo position %d - %s (%d,%d).",
+                 position, sd->status.memo_point[position].map,
+                 sd->status.memo_point[position].x, sd->status.memo_point[position].y);
+        clif_displaymessage (fd, output);
+    }
+    STRZCPY (sd->status.memo_point[position].map, maps[sd->bl.m].name);
+    sd->status.memo_point[position].x = sd->bl.x;
+    sd->status.memo_point[position].y = sd->bl.y;
+    atcommand_memo_sub (sd);
 
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// print the collision of the map around you
 int atcommand_gat (int fd, struct map_session_data *sd,
                    const char *UNUSED, const char *UNUSED)
 {
@@ -2623,7 +2203,7 @@ int atcommand_gat (int fd, struct map_session_data *sd,
 
     memset (output, '\0', sizeof (output));
 
-    for (y = 2; y >= -2; y--)
+    for (y = -2; y <= 2; y++)
     {
         sprintf (output, "%s (x= %d, y= %d) %02X %02X %02X %02X %02X",
                  maps[sd->bl.m].name, sd->bl.x - 2, sd->bl.y + y,
@@ -2638,120 +2218,85 @@ int atcommand_gat (int fd, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-int atcommand_packet (int, struct map_session_data *sd,
-                      const char *UNUSED, const char *message)
-{
-    int  x = 0, y = 0;
-
-    if (!message || !*message || sscanf (message, "%d %d", &x, &y) < 2)
-        return -1;
-
-    clif_status_change (&sd->bl, x, y);
-
-    return 0;
-}
-
-/*==========================================
- * @stpoint (Rewritten by [Yor])
- *------------------------------------------
- */
+/// modify number of status points
 int atcommand_statuspoint (int fd, struct map_session_data *sd,
                            const char *UNUSED, const char *message)
 {
-    int  point, new_status_point;
-
-    if (!message || !*message || (point = atoi (message)) == 0)
+    if (!message || !*message)
+        return -1;
+    int points = atoi (message);
+    if (!points)
         return -1;
 
-    new_status_point = (int) sd->status.status_point + point;
-    if (point > 0 && (point > 0x7FFF || new_status_point > 0x7FFF)) // fix positiv overflow
-        new_status_point = 0x7FFF;
-    else if (point < 0 && (point < -0x7FFF || new_status_point < 0))    // fix negativ overflow
-        new_status_point = 0;
+    int new_status_points = sd->status.status_point + points;
+    if (new_status_points > 0x7FFF)
+        new_status_points = 0x7FFF;
+    if (new_status_points < 0)
+        new_status_points = 0;
 
-    if (new_status_point != (int) sd->status.status_point)
+    if (new_status_points == sd->status.status_point)
     {
-        sd->status.status_point = (short) new_status_point;
-        clif_updatestatus (sd, SP_STATUSPOINT);
-        clif_displaymessage (fd, "Number of status points changed!");
-    }
-    else
-    {
-        if (point < 0)
+        if (points < 0)
             clif_displaymessage (fd, "Impossible to decrease the number/value.");
         else
             clif_displaymessage (fd, "Impossible to increase the number/value.");
         return -1;
     }
+    sd->status.status_point = (short) new_status_points;
+    clif_updatestatus (sd, SP_STATUSPOINT);
+    clif_displaymessage (fd, "Number of status points changed!");
 
     return 0;
 }
 
-/*==========================================
- * @skpoint (Rewritten by [Yor])
- *------------------------------------------
- */
+/// Modify number of skill points
 int atcommand_skillpoint (int fd, struct map_session_data *sd,
                           const char *UNUSED, const char *message)
 {
-    int  point, new_skill_point;
-
-    if (!message || !*message || (point = atoi (message)) == 0)
+    if (!message || !*message)
+        return -1;
+    int points = atoi (message);
+    if (!points)
         return -1;
 
-    new_skill_point = (int) sd->status.skill_point + point;
-    if (point > 0 && (point > 0x7FFF || new_skill_point > 0x7FFF))  // fix positiv overflow
-        new_skill_point = 0x7FFF;
-    else if (point < 0 && (point < -0x7FFF || new_skill_point < 0)) // fix negativ overflow
-        new_skill_point = 0;
+    int new_skill_points = sd->status.skill_point + points;
+    if (new_skill_points > 0x7FFF)
+        new_skill_points = 0x7FFF;
+    if (new_skill_points < 0)
+        new_skill_points = 0;
 
-    if (new_skill_point != (int) sd->status.skill_point)
+    if (new_skill_points == sd->status.skill_point)
     {
-        sd->status.skill_point = (short) new_skill_point;
-        clif_updatestatus (sd, SP_SKILLPOINT);
-        clif_displaymessage (fd, "Number of skill points changed!");
-    }
-    else
-    {
-        if (point < 0)
+        if (points < 0)
             clif_displaymessage (fd, "Impossible to decrease the number/value.");
         else
             clif_displaymessage (fd, "Impossible to increase the number/value.");
         return -1;
     }
+    sd->status.skill_point = (short) new_skill_points;
+    clif_updatestatus (sd, SP_SKILLPOINT);
+    clif_displaymessage (fd, "Number of skill points changed!");
 
     return 0;
 }
 
-/*==========================================
- * @zeny (Rewritten by [Yor])
- *------------------------------------------
- */
+/// Change your amount of gold
 int atcommand_zeny (int fd, struct map_session_data *sd,
                     const char *UNUSED, const char *message)
 {
-    int  zeny, new_zeny;
-
-    if (!message || !*message || (zeny = atoi (message)) == 0)
+    if (!message || !*message)
+        return -1;
+    int zeny = atoi (message);
+    if (!zeny)
         return -1;
 
-    new_zeny = sd->status.zeny + zeny;
-    if (zeny > 0 && (zeny > MAX_ZENY || new_zeny > MAX_ZENY))   // fix positiv overflow
+    int new_zeny = sd->status.zeny + zeny;
+    if (new_zeny > MAX_ZENY)
         new_zeny = MAX_ZENY;
-    else if (zeny < 0 && (zeny < -MAX_ZENY || new_zeny < 0))    // fix negativ overflow
+    if (new_zeny < 0)
         new_zeny = 0;
 
-    if (new_zeny != sd->status.zeny)
-    {
-        sd->status.zeny = new_zeny;
-        clif_updatestatus (sd, SP_ZENY);
-        clif_displaymessage (fd, "Number of zenys changed!");
-    }
-    else
+    if (new_zeny == sd->status.zeny)
     {
         if (zeny < 0)
             clif_displaymessage (fd, "Impossible to decrease the number/value.");
@@ -2759,60 +2304,43 @@ int atcommand_zeny (int fd, struct map_session_data *sd,
             clif_displaymessage (fd, "Impossible to increase the number/value.");
         return -1;
     }
+    sd->status.zeny = new_zeny;
+    clif_updatestatus (sd, SP_ZENY);
+    clif_displaymessage (fd, "Number of zenys changed!");
 
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Set a stat (str, agi, vit ...)
 int atcommand_param (int fd, struct map_session_data *sd,
                      const char *command, const char *message)
 {
-    int  i, idx, value = 0, new_value;
-    const char *param[] =
-        { "@str", "@agi", "@vit", "@int", "@dex", "@luk", NULL };
-    short *status[] = {
-        &sd->status.str, &sd->status.agi, &sd->status.vit,
-        &sd->status.int_, &sd->status.dex, &sd->status.luk
-    };
-    char output[200];
-
-    memset (output, '\0', sizeof (output));
-
-    if (!message || !*message || sscanf (message, "%d", &value) < 1
-        || value == 0)
+    if (!message || !*message)
+        return -1;
+    int value;
+    if (sscanf (message, "%d", &value) < 1 || value == 0)
         return -1;
 
-    idx = -1;
-    for (i = 0; param[i] != NULL; i++)
+    short *status = 0;
+    int idx;
+    switch(command[1])
     {
-        if (strcasecmp (command, param[i]) == 0)
-        {
-            idx = i;
-            break;
-        }
+    case 's': idx = 0; status = &sd->status.str; break;
+    case 'a': idx = 1; status = &sd->status.agi; break;
+    case 'v': idx = 2; status = &sd->status.vit; break;
+    case 'i': idx = 3; status = &sd->status.int_; break;
+    case 'd': idx = 4; status = &sd->status.dex; break;
+    case 'l': idx = 5; status = &sd->status.luk; break;
+    default: abort();
     }
-    if (idx < 0)
-        // shouldn't happen
-        return -1;
 
-    new_value = (int) *status[idx] + value;
-    if (value > 0 && (value > battle_config.max_parameter || new_value > battle_config.max_parameter))  // fix positiv overflow
+    int new_value = *status + value;
+    if (new_value > battle_config.max_parameter)
         new_value = battle_config.max_parameter;
-    else if (value < 0 && (value < -battle_config.max_parameter || new_value < 1))  // fix negativ overflow
+    if (new_value < 1)
         new_value = 1;
 
-    if (new_value != (int) *status[idx])
-    {
-        *status[idx] = new_value;
-        clif_updatestatus (sd, SP_STR + idx);
-        clif_updatestatus (sd, SP_USTR + idx);
-        pc_calcstatus (sd, 0);
-        clif_displaymessage (fd, "Stat changed.");
-    }
-    else
+    if (new_value == *status)
     {
         if (value < 0)
             clif_displaymessage (fd, "Impossible to decrease the number/value.");
@@ -2820,209 +2348,176 @@ int atcommand_param (int fd, struct map_session_data *sd,
             clif_displaymessage (fd, "Impossible to increase the number/value.");
         return -1;
     }
+    *status = (short)new_value;
+    clif_updatestatus (sd, SP_STR + idx);
+    clif_updatestatus (sd, SP_USTR + idx);
+    pc_calcstatus (sd, 0);
+    clif_displaymessage (fd, "Stat changed.");
 
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-//** Stat all by fritz (rewritten by [Yor])
+/// Add points to *all* status
 int atcommand_all_stats (int fd, struct map_session_data *sd,
                          const char *UNUSED, const char *message)
 {
-    int  idx, count, value = 0, new_value;
-    short *status[] = {
+    short *status[] =
+    {
         &sd->status.str, &sd->status.agi, &sd->status.vit,
         &sd->status.int_, &sd->status.dex, &sd->status.luk
     };
 
-    if (!message || !*message || sscanf (message, "%d", &value) < 1
-        || value == 0)
+    int value;
+    if (!message || !*message || sscanf (message, "%d", &value) < 1 || value == 0)
         value = battle_config.max_parameter;
 
-    count = 0;
-    for (idx = 0; idx < (int) (sizeof (status) / sizeof (status[0]));
-         idx++)
+    int count = 0;
+    for (int idx = 0; idx < 6; idx++)
     {
-
-        new_value = (int) *status[idx] + value;
-        if (value > 0 && (value > battle_config.max_parameter || new_value > battle_config.max_parameter))  // fix positiv overflow
+        int new_value = (int) *status[idx] + value;
+        if (new_value > battle_config.max_parameter)
             new_value = battle_config.max_parameter;
-        else if (value < 0 && (value < -battle_config.max_parameter || new_value < 1))  // fix negativ overflow
+        if (new_value < 1)
             new_value = 1;
 
-        if (new_value != (int) *status[idx])
-        {
-            *status[idx] = new_value;
-            clif_updatestatus (sd, SP_STR + idx);
-            clif_updatestatus (sd, SP_USTR + idx);
-            pc_calcstatus (sd, 0);
-            count++;
-        }
+        if (new_value == *status[idx])
+            continue;
+
+        *status[idx] = new_value;
+        clif_updatestatus (sd, SP_STR + idx);
+        clif_updatestatus (sd, SP_USTR + idx);
+        pc_calcstatus (sd, 0);
+        count++;
     }
 
-    if (count > 0)              // if at least 1 stat modified
+    if (count == 6)
         clif_displaymessage (fd, "All stats changed!");
+    else if (count > 0)
+        clif_displaymessage (fd, "Some stats changed!");
     else
     {
         if (value < 0)
-            clif_displaymessage (fd, "Impossible to decrease a stat.");
+            clif_displaymessage (fd, "Impossible to decrease stats.");
         else
-            clif_displaymessage (fd, "Impossible to increase a stat.");
+            clif_displaymessage (fd, "Impossible to increase stats.");
         return -1;
     }
 
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Summon a player to you
 int atcommand_recall (int fd, struct map_session_data *sd,
                       const char *UNUSED, const char *message)
 {
+    if (!message || !*message)
+        return -1;
     char character[100];
-    char output[200];
-    struct map_session_data *pl_sd;
-
-    memset (character, '\0', sizeof (character));
-    memset (output, '\0', sizeof (output));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
+    if (sscanf (message, "%99[^\n]", character) < 1)
         return -1;
 
-    if ((pl_sd = map_nick2sd (character)) != NULL)
-    {
-        if (pc_isGM (sd) >= pc_isGM (pl_sd))
-        {                       // you can recall only lower or same level
-            if (maps[sd->bl.m].flag.nowarpto
-                && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-            {
-                clif_displaymessage (fd,
-                                     "You are not authorised to warp somenone to your actual map.");
-                return -1;
-            }
-            if (maps[pl_sd->bl.m].flag.nowarp
-                && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-            {
-                clif_displaymessage (fd,
-                                     "You are not authorised to warp this player from its actual map.");
-                return -1;
-            }
-            pc_setpos (pl_sd, sd->mapname, sd->bl.x, sd->bl.y, 2);
-            sprintf (output, "%s recalled!", character);
-            clif_displaymessage (fd, output);
-        }
-        else
-        {
-            clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
-            return -1;
-        }
-    }
-    else
+    struct map_session_data *pl_sd = map_nick2sd (character);
+
+    if (!pl_sd)
     {
         clif_displaymessage (fd, "Character not found.");
         return -1;
     }
+    if (pc_isGM (sd) < pc_isGM (pl_sd))
+    {
+        clif_displaymessage (fd, "Your GM level doesn't authorise you to do this action on this player.");
+        return -1;
+    }
+    if (maps[sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM (sd))
+    {
+        clif_displaymessage (fd, "You are not authorised to warp anyone to your current map.");
+        return -1;
+    }
+    if (maps[pl_sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM (sd))
+    {
+        clif_displaymessage (fd, "You are not authorised to warp from this player's current map.");
+        return -1;
+    }
+    pc_setpos (pl_sd, sd->mapname, sd->bl.x, sd->bl.y, 2);
+    char output[200];
+    sprintf (output, "%s recalled!", character);
+    clif_displaymessage (fd, output);
 
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Resurrect someone else
 int atcommand_revive (int fd, struct map_session_data *sd,
                       const char *UNUSED, const char *message)
 {
+    if (!message || !*message)
+        return -1;
     char character[100];
-    struct map_session_data *pl_sd;
-
-    memset (character, '\0', sizeof (character));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
+    if (sscanf (message, "%99[^\n]", character) < 1)
         return -1;
 
-    if ((pl_sd = map_nick2sd (character)) != NULL)
-    {
-        pl_sd->status.hp = pl_sd->status.max_hp;
-        pc_setstand (pl_sd);
-        if (battle_config.pc_invincible_time > 0)
-            pc_setinvincibletimer (sd, battle_config.pc_invincible_time);
-        clif_updatestatus (pl_sd, SP_HP);
-        clif_updatestatus (pl_sd, SP_SP);
-        clif_resurrection (&pl_sd->bl, 1);
-        clif_displaymessage (fd, "Character revived.");
-    }
-    else
+    struct map_session_data *pl_sd = map_nick2sd (character);
+    if (!pl_sd)
     {
         clif_displaymessage (fd, "Character not found.");
         return -1;
     }
+    pl_sd->status.hp = pl_sd->status.max_hp;
+    pc_setstand (pl_sd);
+    if (battle_config.pc_invincible_time > 0)
+        pc_setinvincibletimer (sd, battle_config.pc_invincible_time);
+    clif_updatestatus (pl_sd, SP_HP);
+    clif_updatestatus (pl_sd, SP_SP);
+    clif_resurrection (&pl_sd->bl, 1);
+    clif_displaymessage (fd, "Character revived.");
 
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Show stats of another character
 int atcommand_character_stats (int fd, struct map_session_data *UNUSED,
                                const char *UNUSED, const char *message)
 {
+    if (!message || !*message)
+        return -1;
     char character[100];
-    char job_jobname[100];
-    char output[200];
-    struct map_session_data *pl_sd;
-    int  i;
-
-    memset (character, '\0', sizeof (character));
-    memset (job_jobname, '\0', sizeof (job_jobname));
-    memset (output, '\0', sizeof (output));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
+    if (sscanf (message, "%99[^\n]", character) < 1)
         return -1;
 
-    if ((pl_sd = map_nick2sd (character)) != NULL)
-    {
-        struct
-        {
-            const char *name;
-            int  value;
-        } output_table[] =
-        {
-            {"Base Level", pl_sd->status.base_level},
-            {job_jobname, pl_sd->status.job_level},
-            {"Hp", pl_sd->status.hp},
-            {"MaxHp", pl_sd->status.max_hp},
-            {"Sp", pl_sd->status.sp},
-            {"MaxSp", pl_sd->status.max_sp},
-            {"Str", pl_sd->status.str},
-            {"Agi", pl_sd->status.agi},
-            {"Vit", pl_sd->status.vit},
-            {"Int", pl_sd->status.int_},
-            {"Dex", pl_sd->status.dex},
-            {"Luk", pl_sd->status.luk},
-            {"Zeny", pl_sd->status.zeny},
-            {NULL, 0}
-        };
-        sprintf (job_jobname, "Job - %s %s", "N/A",
-                 "(level %d)");
-                 sprintf (output, "'%s' stats:", pl_sd->status.name);
-        clif_displaymessage (fd, output);
-        for (i = 0; output_table[i].name; i++)
-        {
-            sprintf (output, "%s - %d", output_table[i].name, output_table[i].value);
-            clif_displaymessage (fd, output);
-        }
-    }
-    else
+    struct map_session_data *pl_sd = map_nick2sd (character);
+    if (!pl_sd)
     {
         clif_displaymessage (fd, "Character not found.");
         return -1;
+    }
+
+    struct
+    {
+        const char *name;
+        int value;
+    } output_table[] =
+    {
+        {"Base Level", pl_sd->status.base_level},
+        {"Job level", pl_sd->status.job_level},
+        {"Hp", pl_sd->status.hp},
+        {"MaxHp", pl_sd->status.max_hp},
+        {"Sp", pl_sd->status.sp},
+        {"MaxSp", pl_sd->status.max_sp},
+        {"Str", pl_sd->status.str},
+        {"Agi", pl_sd->status.agi},
+        {"Vit", pl_sd->status.vit},
+        {"Int", pl_sd->status.int_},
+        {"Dex", pl_sd->status.dex},
+        {"Luk", pl_sd->status.luk},
+        {"Zeny", pl_sd->status.zeny},
+    };
+    char output[200];
+    sprintf (output, "'%s' stats:", pl_sd->status.name);
+    clif_displaymessage (fd, output);
+    for (int i = 0; i < ARRAY_SIZEOF(output_table); i++)
+    {
+        sprintf (output, "%s - %d", output_table[i].name, output_table[i].value);
+        clif_displaymessage (fd, output);
     }
 
     return 0;

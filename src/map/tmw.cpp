@@ -114,7 +114,7 @@ void tmw_AutoBan(struct map_session_data *sd, const char *reason, int length)
 
     clif_displaymessage (sd->fd, anotherbuf);
     /* type: 2 - ban (year, month, day, hour, minute, second) */
-    chrif_char_ask_name (-1, sd->status.name, 2, 0, 0, 0, length, 0, 0);
+    chrif_char_ask_name (-1, sd->status.name, CharOperation::BAN, 0, 0, 0, length, 0, 0);
     clif_setwaitclose (sd->fd);
 }
 

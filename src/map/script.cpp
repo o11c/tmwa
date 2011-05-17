@@ -4343,7 +4343,7 @@ int buildin_changesex (struct script_state *st)
         sd->status.sex = 0;
         sd->sex = 0;
     }
-    chrif_char_ask_name (-1, sd->status.name, 5, 0, 0, 0, 0, 0, 0); // type: 5 - changesex
+    chrif_char_ask_name (-1, sd->status.name, CharOperation::CHANGE_SEX);
     chrif_save (sd);
     return 0;
 }

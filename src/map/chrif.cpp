@@ -411,15 +411,15 @@ int chrif_changeemail (int id, const char *actual_email,
  *   5: changesex
  *------------------------------------------
  */
-int chrif_char_ask_name (int id, char *character_name, short operation_type,
+int chrif_char_ask_name (int id, char *character_name, CharOperation operation_type,
                          int year, int month, int day, int hour, int minute,
                          int second)
 {
     WFIFOW (char_fd, 0) = 0x2b0e;
     WFIFOL (char_fd, 2) = id;   // account_id of who ask (for answer) -1 if nobody
     memcpy (WFIFOP (char_fd, 6), character_name, 24);
-    WFIFOW (char_fd, 30) = operation_type;  // type of operation
-    if (operation_type == 2)
+    WFIFOW (char_fd, 30) = (uint16_t)operation_type;  // type of operation
+    if (operation_type == CharOperation::BAN)
     {
         WFIFOW (char_fd, 32) = year;
         WFIFOW (char_fd, 34) = month;

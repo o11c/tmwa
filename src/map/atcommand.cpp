@@ -2523,50 +2523,43 @@ int atcommand_character_stats (int fd, struct map_session_data *,
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-//** Character Stats All by fritz
+/// All stats of characters
 int atcommand_character_stats_all (int fd, struct map_session_data *,
                                    const char *, const char *)
 {
-    char output[1024], gmlevel[1024];
-    int  i;
-    int  count;
-    struct map_session_data *pl_sd;
-
-    memset (output, '\0', sizeof (output));
-    memset (gmlevel, '\0', sizeof (gmlevel));
-
-    count = 0;
-    for (i = 0; i < fd_max; i++)
+    int count = 0;
+    for (int i = 0; i < fd_max; i++)
     {
-        if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-            && pl_sd->state.auth)
-        {
+        if (!session[i])
+            continue;
+        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        if (!pl_sd || !pl_sd->state.auth)
+            continue;
 
-            if (pc_isGM (pl_sd) > 0)
-                sprintf (gmlevel, "| GM Lvl: %d", pc_isGM (pl_sd));
-            else
-                sprintf (gmlevel, " ");
+        char gmlevel[1024] = "";
+        if (pc_isGM (pl_sd))
+            sprintf (gmlevel, "| GM Lvl: %d", pc_isGM (pl_sd));
+        else
+            sprintf (gmlevel, " ");
 
-            sprintf (output,
-                     "Name: %s | BLvl: %d | Job: %s (Lvl: %d) | HP: %d/%d | SP: %d/%d",
-                     pl_sd->status.name, pl_sd->status.base_level,
-                     "N/A", pl_sd->status.job_level,
-                     pl_sd->status.hp, pl_sd->status.max_hp, pl_sd->status.sp,
-                     pl_sd->status.max_sp);
-            clif_displaymessage (fd, output);
-            sprintf (output,
-                     "STR: %d | AGI: %d | VIT: %d | INT: %d | DEX: %d | LUK: %d | Zeny: %d %s",
-                     pl_sd->status.str, pl_sd->status.agi, pl_sd->status.vit,
-                     pl_sd->status.int_, pl_sd->status.dex, pl_sd->status.luk,
-                     pl_sd->status.zeny, gmlevel);
-            clif_displaymessage (fd, output);
-            clif_displaymessage (fd, "--------");
-            count++;
-        }
+        char output[1024];
+        sprintf (output,
+                 "Name: %s | BLvl: %d | Job: %s (Lvl: %d) | HP: %d/%d | SP: %d/%d",
+                 pl_sd->status.name, pl_sd->status.base_level,
+                 "N/A", pl_sd->status.job_level,
+                 pl_sd->status.hp, pl_sd->status.max_hp, pl_sd->status.sp,
+                 pl_sd->status.max_sp);
+        clif_displaymessage (fd, output);
+
+        sprintf (output,
+                 "STR: %d | AGI: %d | VIT: %d | INT: %d | DEX: %d | LUK: %d | Zeny: %d %s",
+                 pl_sd->status.str, pl_sd->status.agi, pl_sd->status.vit,
+                 pl_sd->status.int_, pl_sd->status.dex, pl_sd->status.luk,
+                 pl_sd->status.zeny, gmlevel);
+        clif_displaymessage (fd, output);
+        clif_displaymessage (fd, "--------");
+
+        count++;
     }
 
     if (count == 0)
@@ -2575,6 +2568,7 @@ int atcommand_character_stats_all (int fd, struct map_session_data *,
         clif_displaymessage (fd, "1 player found.");
     else
     {
+        char output[1024];
         sprintf (output, "%d players found.", count);
         clif_displaymessage (fd, output);
     }
@@ -2582,249 +2576,193 @@ int atcommand_character_stats_all (int fd, struct map_session_data *,
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Change display options of a character
 int atcommand_character_option (int fd, struct map_session_data *sd,
                                 const char *, const char *message)
 {
+    if (!message || !*message)
+        return -1;
     char character[100];
     int  opt1 = 0, opt2 = 0, opt3 = 0;
-    struct map_session_data *pl_sd;
-
-    memset (character, '\0', sizeof (character));
-
-    if (!message || !*message
-        || sscanf (message, "%d %d %d %99[^\n]", &opt1, &opt2, &opt3,
-                   character) < 4 || opt1 < 0 || opt2 < 0 || opt3 < 0)
+    if (sscanf (message, "%d %d %d %99[^\n]", &opt1, &opt2, &opt3, character) < 4
+            || opt1 < 0 || opt2 < 0 || opt3 < 0)
         return -1;
 
-    if ((pl_sd = map_nick2sd (character)) != NULL)
-    {
-        if (pc_isGM (sd) >= pc_isGM (pl_sd))
-        {                       // you can change option only to lower or same level
-            pl_sd->opt1 = opt1;
-            pl_sd->opt2 = opt2;
-            pl_sd->status.option = opt3;
-            clif_changeoption (&pl_sd->bl);
-            pc_calcstatus (pl_sd, 0);
-            clif_displaymessage (fd, "Character's options changed.");
-        }
-        else
-        {
-            clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
-            return -1;
-        }
-    }
-    else
+    struct map_session_data *pl_sd = map_nick2sd (character);
+
+    if (!pl_sd)
     {
         clif_displaymessage (fd, "Character not found.");
         return -1;
     }
+    if (pc_isGM (sd) < pc_isGM (pl_sd))
+    {
+        clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
+        return -1;
+    }
+    pl_sd->opt1 = opt1;
+    pl_sd->opt2 = opt2;
+    pl_sd->status.option = opt3;
+    clif_changeoption (&pl_sd->bl);
+    pc_calcstatus (pl_sd, 0);
+    clif_displaymessage (fd, "Character's options changed.");
 
     return 0;
 }
 
-/*==========================================
- * charchangesex command (usage: charchangesex <player_name>)
- *------------------------------------------
- */
+/// Toggle a character's sex
 int atcommand_char_change_sex (int fd, struct map_session_data *sd,
                                const char *, const char *message)
 {
+    if (!message || !*message)
+        return -1;
     char character[100];
-
-    memset (character, '\0', sizeof (character));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
+    if (sscanf (message, "%99[^\n]", character) < 1)
         return -1;
 
-    // check player name
-    if (strlen (character) < 4)
-    {
-        clif_displaymessage (fd, "Sorry, but a player name have at least 4 characters.");
-        return -1;
-    }
-    else if (strlen (character) > 23)
+    if (strlen (character) > 23)
     {
         clif_displaymessage (fd, "Sorry, but a player name have 23 characters maximum.");
         return -1;
     }
     else
     {
-        chrif_char_ask_name (sd->status.account_id, character, 5, 0, 0, 0, 0, 0, 0);    // type: 5 - changesex
+        // type: 5 - changesex
+        chrif_char_ask_name (sd->status.account_id, character, CharOperation::CHANGE_SEX);
         clif_displaymessage (fd, "Character name sends to char-server to ask it.");
     }
 
     return 0;
 }
 
-/*==========================================
- * charblock command (usage: charblock <player_name>)
- * This command do a definitiv ban on a player
- *------------------------------------------
- */
+/// Block the account a character indefinitely
 int atcommand_char_block (int fd, struct map_session_data *sd,
                           const char *, const char *message)
 {
+    if (!message || !*message)
+        return -1;
     char character[100];
-
-    memset (character, '\0', sizeof (character));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
+    if (sscanf (message, "%99[^\n]", character) < 1)
         return -1;
 
-    // check player name
-    if (strlen (character) < 4)
-    {
-        clif_displaymessage (fd, "Sorry, but a player name have at least 4 characters.");
-        return -1;
-    }
-    else if (strlen (character) > 23)
+    if (strlen (character) > 23)
     {
         clif_displaymessage (fd, "Sorry, but a player name have 23 characters maximum.");
         return -1;
     }
     else
     {
-        chrif_char_ask_name (sd->status.account_id, character, 1, 0, 0, 0, 0, 0, 0);    // type: 1 - block
+        chrif_char_ask_name (sd->status.account_id, character, CharOperation::BLOCK);
         clif_displaymessage (fd, "Character name sends to char-server to ask it.");
     }
 
     return 0;
 }
 
-/*==========================================
+/**
  * charban command (usage: charban <time> <player_name>)
  * This command do a limited ban on a player
  * Time is done as follows:
  *   Adjustment value (-1, 1, +1, etc...)
  *   Modified element:
- *     a or y: year
+ *     y: year
  *     m:  month
- *     j or d: day
+ *     d: day
  *     h:  hour
  *     mn: minute
  *     s:  second
  * <example> @ban +1m-2mn1s-6y test_player
  *           this example adds 1 month and 1 second, and substracts 2 minutes and 6 years at the same time.
- *------------------------------------------
  */
 int atcommand_char_ban (int fd, struct map_session_data *sd,
                         const char *, const char *message)
 {
+    if (!message || !*message)
+        return -1;
     char modif[100], character[100];
-    char *modif_p;
-    int  year, month, day, hour, minute, second, value;
-
-    memset (modif, '\0', sizeof (modif));
-    memset (character, '\0', sizeof (character));
-
-    if (!message || !*message
-        || sscanf (message, "%s %99[^\n]", modif, character) < 2)
+    if (sscanf (message, "%s %99[^\n]", modif, character) < 2)
         return -1;
 
-    modif[sizeof (modif) - 1] = '\0';
-    character[sizeof (character) - 1] = '\0';
-
-    modif_p = modif;
-    year = month = day = hour = minute = second = 0;
-    while (modif_p[0] != '\0')
+    const char *modif_p = modif;
+    int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
+    while (*modif_p)
     {
-        value = atoi (modif_p);
+        int value = atoi (modif_p);
         if (value == 0)
-            modif_p++;
-        else
         {
-            if (modif_p[0] == '-' || modif_p[0] == '+')
-                modif_p++;
-            while (modif_p[0] >= '0' && modif_p[0] <= '9')
-                modif_p++;
-            if (modif_p[0] == 's')
-            {
-                second = value;
-                modif_p++;
-            }
-            else if (modif_p[0] == 'm' && modif_p[1] == 'n')
-            {
-                minute = value;
-                modif_p = modif_p + 2;
-            }
-            else if (modif_p[0] == 'h')
-            {
-                hour = value;
-                modif_p++;
-            }
-            else if (modif_p[0] == 'd' || modif_p[0] == 'j')
-            {
-                day = value;
-                modif_p++;
-            }
-            else if (modif_p[0] == 'm')
-            {
-                month = value;
-                modif_p++;
-            }
-            else if (modif_p[0] == 'y' || modif_p[0] == 'a')
-            {
-                year = value;
-                modif_p++;
-            }
-            else if (modif_p[0] != '\0')
-            {
-                modif_p++;
-            }
+            modif_p++;
+            continue;
+        }
+        if (modif_p[0] == '-' || modif_p[0] == '+')
+            modif_p++;
+        while (modif_p[0] >= '0' && modif_p[0] <= '9')
+            modif_p++;
+        if (modif_p[0] == 's')
+        {
+            second = value;
+            modif_p++;
+        }
+        else if (modif_p[0] == 'm' && modif_p[1] == 'n')
+        {
+            minute = value;
+            modif_p += 2;
+        }
+        else if (modif_p[0] == 'h')
+        {
+            hour = value;
+            modif_p++;
+        }
+        else if (modif_p[0] == 'd')
+        {
+            day = value;
+            modif_p++;
+        }
+        else if (modif_p[0] == 'm')
+        {
+            month = value;
+            modif_p++;
+        }
+        else if (modif_p[0] == 'y')
+        {
+            year = value;
+            modif_p++;
+        }
+        else if (modif_p[0])
+        {
+            modif_p++;
         }
     }
-    if (year == 0 && month == 0 && day == 0 && hour == 0 && minute == 0
-        && second == 0)
+    if (!year && !month && !day && !hour && !minute && !second)
     {
-        clif_displaymessage (fd, "Invalid time for ban command.");
+        clif_displaymessage (fd, "Can't ban for no time.");
         return -1;
     }
 
-    // check player name
-    if (strlen (character) < 4)
-    {
-        clif_displaymessage (fd, "Sorry, but a player name have at least 4 characters.");
-        return -1;
-    }
-    else if (strlen (character) > 23)
+    if (strlen (character) > 23)
     {
         clif_displaymessage (fd, "Sorry, but a player name have 23 characters maximum.");
         return -1;
     }
     else
     {
-        chrif_char_ask_name (sd->status.account_id, character, 2, year, month, day, hour, minute, second);  // type: 2 - ban
+        chrif_char_ask_name (sd->status.account_id, character, CharOperation::BAN, year, month, day, hour, minute, second);
         clif_displaymessage (fd, "Character name sends to char-server to ask it.");
     }
 
     return 0;
 }
 
-/*==========================================
- * charunblock command (usage: charunblock <player_name>)
- *------------------------------------------
- */
+/// Remove an indefinite block
 int atcommand_char_unblock (int fd, struct map_session_data *sd,
                             const char *, const char *message)
 {
+    if (!message || !*message)
+        return -1;
     char character[100];
-
-    memset (character, '\0', sizeof (character));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
+    if (sscanf (message, "%99[^\n]", character) < 1)
         return -1;
 
-    // check player name
-    if (strlen (character) < 4)
-    {
-        clif_displaymessage (fd, "Sorry, but a player name have at least 4 characters.");
-        return -1;
-    }
-    else if (strlen (character) > 23)
+    if (strlen (character) > 23)
     {
         clif_displaymessage (fd, "Sorry, but a player name have 23 characters maximum.");
         return -1;
@@ -2832,34 +2770,24 @@ int atcommand_char_unblock (int fd, struct map_session_data *sd,
     else
     {
         // send answer to login server via char-server
-        chrif_char_ask_name (sd->status.account_id, character, 3, 0, 0, 0, 0, 0, 0);    // type: 3 - unblock
+        chrif_char_ask_name (sd->status.account_id, character, CharOperation::UNBLOCK);
         clif_displaymessage (fd, "Character name sends to char-server to ask it.");
     }
 
     return 0;
 }
 
-/*==========================================
- * charunban command (usage: charunban <player_name>)
- *------------------------------------------
- */
+/// Remove a temporary ban
 int atcommand_char_unban (int fd, struct map_session_data *sd,
                           const char *, const char *message)
 {
+    if (!message || !*message)
+        return -1;
     char character[100];
-
-    memset (character, '\0', sizeof (character));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
+    if (sscanf (message, "%99[^\n]", character) < 1)
         return -1;
 
-    // check player name
-    if (strlen (character) < 4)
-    {
-        clif_displaymessage (fd, "Sorry, but a player name have at least 4 characters.");
-        return -1;
-    }
-    else if (strlen (character) > 23)
+    if (strlen (character) > 23)
     {
         clif_displaymessage (fd, "Sorry, but a player name have 23 characters maximum.");
         return -1;
@@ -2867,71 +2795,54 @@ int atcommand_char_unban (int fd, struct map_session_data *sd,
     else
     {
         // send answer to login server via char-server
-        chrif_char_ask_name (sd->status.account_id, character, 4, 0, 0, 0, 0, 0, 0);    // type: 4 - unban
+        chrif_char_ask_name (sd->status.account_id, character, CharOperation::UNBAN);
         clif_displaymessage (fd, "Character name sends to char-server to ask it.");
     }
 
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Set save point for a character
 int atcommand_character_save (int fd, struct map_session_data *sd,
                               const char *, const char *message)
 {
+    if (!message || !*message)
+        return -1;
     char map_name[100];
+    int x, y;
     char character[100];
-    struct map_session_data *pl_sd;
-    int  x = 0, y = 0;
-    int  m;
-
-    memset (map_name, '\0', sizeof (map_name));
-    memset (character, '\0', sizeof (character));
-
-    if (!message || !*message
-        || sscanf (message, "%99s %d %d %99[^\n]", map_name, &x, &y,
-                   character) < 4 || x < 0 || y < 0)
+    if (sscanf (message, "%99s %d %d %99[^\n]", map_name, &x, &y, character) < 4
+            || x < 0 || y < 0)
         return -1;
 
-    if (strstr (map_name, ".gat") == NULL && strstr (map_name, ".afm") == NULL && strlen (map_name) < 13)   // 16 - 4 (.gat)
+    if (strstr (map_name, ".gat") == NULL && strlen (map_name) < 13)   // 16 - 4 (.gat)
         strcat (map_name, ".gat");
 
-    if ((pl_sd = map_nick2sd (character)) != NULL)
-    {
-        if (pc_isGM (sd) >= pc_isGM (pl_sd))
-        {                       // you can change save point only to lower or same gm level
-            m = map_mapname2mapid (map_name);
-            if (m < 0)
-            {
-                clif_displaymessage (fd, "Map not found.");
-                return -1;
-            }
-            else
-            {
-                if (m >= 0 && maps[m].flag.nowarpto
-                    && battle_config.any_warp_GM_min_level > pc_isGM (sd))
-                {
-                    clif_displaymessage (fd,
-                                         "You are not authorised to set this map as a save map.");
-                    return -1;
-                }
-                pc_setsavepoint (pl_sd, map_name, x, y);
-                clif_displaymessage (fd, "Character's respawn point changed.");
-            }
-        }
-        else
-        {
-            clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
-            return -1;
-        }
-    }
-    else
+    struct map_session_data *pl_sd = map_nick2sd (character);
+
+    if (!pl_sd)
     {
         clif_displaymessage (fd, "Character not found.");
         return -1;
     }
+    if (pc_isGM (sd) < pc_isGM (pl_sd))
+    {
+        clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
+        return -1;
+    }
+    int m = map_mapname2mapid (map_name);
+    if (m < 0)
+    {
+        clif_displaymessage (fd, "Map not found.");
+        return -1;
+    }
+    if (maps[m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM (sd))
+    {
+        clif_displaymessage (fd, "You are not authorised to set this map as a save map.");
+        return -1;
+    }
+    pc_setsavepoint (pl_sd, map_name, x, y);
+    clif_displaymessage (fd, "Character's respawn point changed.");
 
     return 0;
 }

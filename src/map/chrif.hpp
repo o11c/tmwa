@@ -21,9 +21,17 @@ int  chrif_searchcharid (int char_id);
 int  chrif_changegm (int id, const char *pass, int len);
 int  chrif_changeemail (int id, const char *actual_email,
                         const char *new_email);
-int  chrif_char_ask_name (int id, char *character_name, short operation_type,
-                          int year, int month, int day, int hour, int minute,
-                          int second);
+enum class CharOperation
+{
+    BLOCK = 1,
+    BAN = 2,
+    UNBLOCK = 3,
+    UNBAN = 4,
+    CHANGE_SEX = 5
+};
+int  chrif_char_ask_name (int id, char *character_name, CharOperation operation_type,
+                          int year = 0, int month = 0, int day = 0,
+                          int hour = 0, int minute = 0, int second = 0);
 int  chrif_saveaccountreg2 (struct map_session_data *sd);
 int  chrif_reloadGMdb (void);
 int  chrif_send_divorce (int char_id);

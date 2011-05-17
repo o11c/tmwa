@@ -1065,7 +1065,7 @@ int npc_parse_warp (char *w1, const char *, char *w3, char *w4)
     nd->bl.m = m;
     nd->bl.x = x;
     nd->bl.y = y;
-    nd->dir = 0;
+    nd->dir = DIR_S;
     nd->flag = 0;
     memcpy (nd->name, w3, 24);
     memcpy (nd->exname, w3, 24);
@@ -1183,7 +1183,7 @@ static int npc_parse_shop (char *w1, char *, char *w3, char *w4)
     nd->bl.x = x;
     nd->bl.y = y;
     nd->bl.id = npc_get_new_npc_id ();
-    nd->dir = dir;
+    nd->dir = (Direction)dir;
     nd->flag = 0;
     memcpy (nd->name, w3, 24);
     nd->npc_class = atoi (w4);
@@ -1425,7 +1425,7 @@ static int npc_parse_script (char *w1, char *w2, char *w3, char *w4,
     nd->bl.x = x;
     nd->bl.y = y;
     nd->bl.id = npc_get_new_npc_id ();
-    nd->dir = dir;
+    nd->dir = (Direction)dir;
     nd->flag = 0;
     nd->npc_class = npc_class;
     nd->speed = 200;

@@ -431,7 +431,8 @@ struct npc_data
 {
     struct block_list bl;
     short n;
-    short npc_class, dir;
+    short npc_class;
+    Direction dir;
     short speed;
     char name[24];
     char exname[24];

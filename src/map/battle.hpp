@@ -278,9 +278,6 @@ extern struct Battle_Config
     int  disp_experience;
     int  backstab_bow_penalty;
 
-    int  night_at_start;        // added by [Yor]
-    int  day_duration;          // added by [Yor]
-    int  night_duration;        // added by [Yor]
     int  hack_info_GM_level;    // added by [Yor]
     int  any_warp_GM_min_level; // added by [Yor]
     int  packet_ver_flag;       // added by [Yor]

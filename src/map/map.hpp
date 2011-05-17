@@ -709,7 +709,6 @@ enum
 extern struct map_data maps[];
 extern int map_num;
 extern int autosave_interval;
-extern bool night_flag;
 
 extern char motd_txt[];
 

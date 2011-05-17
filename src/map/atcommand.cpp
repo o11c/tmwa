@@ -86,8 +86,6 @@ ATCOMMAND_FUNC (character_stats);
 ATCOMMAND_FUNC (character_stats_all);
 ATCOMMAND_FUNC (character_option);
 ATCOMMAND_FUNC (character_save);
-ATCOMMAND_FUNC (night);
-ATCOMMAND_FUNC (day);
 ATCOMMAND_FUNC (doom);
 ATCOMMAND_FUNC (doommap);
 ATCOMMAND_FUNC (raise);
@@ -488,10 +486,6 @@ static AtCommandInfo atcommand_info[] = {
     "",                 "Enable skills on a map."},
     {"@skilloff", 20,   atcommand_skilloff,     ATCC_ENV,
     "",                 "Disable skills on a map."},
-    {"@night", 80,      atcommand_night,        ATCC_ENV,
-    "",                 "sets all players the darkness option"},
-    {"@day", 80,        atcommand_day,          ATCC_ENV,
-    "",                 "unsets all players the darkness option"},
     {"@rain", 99,       atcommand_rain,         ATCC_ENV,
     "",                 "??"},
     {"@snow", 99,       atcommand_snow,         ATCC_ENV,
@@ -2851,72 +2845,6 @@ int atcommand_character_save (int fd, struct map_session_data *sd,
  *
  *------------------------------------------
  */
-int atcommand_night (int fd, struct map_session_data *,
-                     const char *, const char *)
-{
-    struct map_session_data *pl_sd;
-    int  i;
-
-    if (night_flag != 1)
-    {
-        night_flag = 1;         // 0=day, 1=night [Yor]
-        for (i = 0; i < fd_max; i++)
-        {
-            if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-                && pl_sd->state.auth)
-            {
-                pl_sd->opt2 |= STATE_BLIND;
-                clif_changeoption (&pl_sd->bl);
-                clif_displaymessage (pl_sd->fd, "Night has fallen.");
-            }
-        }
-    }
-    else
-    {
-        clif_displaymessage (fd, "Sorry, it's already the night. Impossible to execute the command.");
-        return -1;
-    }
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-int atcommand_day (int fd, struct map_session_data *,
-                   const char *, const char *)
-{
-    struct map_session_data *pl_sd;
-    int  i;
-
-    if (night_flag != 0)
-    {
-        night_flag = 0;         // 0=day, 1=night [Yor]
-        for (i = 0; i < fd_max; i++)
-        {
-            if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-                && pl_sd->state.auth)
-            {
-                pl_sd->opt2 &= ~STATE_BLIND;
-                clif_changeoption (&pl_sd->bl);
-                clif_displaymessage (pl_sd->fd, "Day has arrived.");
-            }
-        }
-    }
-    else
-    {
-        clif_displaymessage (fd, "Sorry, it's already the day. Impossible to execute the command.");
-        return -1;
-    }
-
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
 int atcommand_doom (int fd, struct map_session_data *sd,
                     const char *, const char *)
 {
@@ -4339,46 +4267,6 @@ int atcommand_disablenpc (int fd, struct map_session_data *,
 }
 
 /*==========================================
- * time in txt for time command (by [Yor])
- *------------------------------------------
- */
-static char *txt_time (unsigned int duration)
-{
-    int  days, hours, minutes, seconds;
-    char temp[256];
-    static char temp1[256];
-
-    memset (temp, '\0', sizeof (temp));
-    memset (temp1, '\0', sizeof (temp1));
-
-    days = duration / (60 * 60 * 24);
-    duration = duration - (60 * 60 * 24 * days);
-    hours = duration / (60 * 60);
-    duration = duration - (60 * 60 * hours);
-    minutes = duration / 60;
-    seconds = duration - (60 * minutes);
-
-    if (days < 2)
-        sprintf (temp, "%d day", days);
-    else
-        sprintf (temp, "%d days", days);
-    if (hours < 2)
-        sprintf (temp1, "%s %d hour", temp, hours);
-    else
-        sprintf (temp1, "%s %d hours", temp, hours);
-    if (minutes < 2)
-        sprintf (temp, "%s %d minute", temp1, minutes);
-    else
-        sprintf (temp, "%s %d minutes", temp1, minutes);
-    if (seconds < 2)
-        sprintf (temp1, "%s and %d second", temp, seconds);
-    else
-        sprintf (temp1, "%s and %d seconds", temp, seconds);
-
-    return temp1;
-}
-
-/*==========================================
  * @time/@date/@server_date/@serverdate/@server_time/@servertime: Display the date/time of the server (by [Yor]
  * Calculation management of GM modification (@day/@night GM commands) is done
  *------------------------------------------
@@ -4386,8 +4274,6 @@ static char *txt_time (unsigned int duration)
 int atcommand_servertime (int fd, struct map_session_data *,
                           const char *, const char *)
 {
-    struct TimerData *timer_data;
-    struct TimerData *timer_data2;
     time_t time_server;         // variable for number of seconds (used with time() function)
     struct tm *datetime;        // variable for time in structure ->tm_mday, ->tm_sec, ...
     char temp[256];
@@ -4399,65 +4285,6 @@ int atcommand_servertime (int fd, struct map_session_data *,
     // like sprintf, but only for date/time (Sunday, November 02 2003 15:12:52)
     strftime (temp, sizeof (temp) - 1, "Server time (normal time): %A, %B %d %Y %X.", datetime);
     clif_displaymessage (fd, temp);
-
-    if (battle_config.night_duration == 0 && battle_config.day_duration == 0)
-    {
-        if (night_flag == 0)
-            clif_displaymessage (fd, "Game time: The game is in permanent daylight.");
-        else
-            clif_displaymessage (fd, "Game time: The game is in permanent night.");
-    }
-    else if (battle_config.night_duration == 0)
-        if (night_flag == 1)
-        {                       // we start with night
-            timer_data = get_timer (day_timer_tid);
-            sprintf (temp, "Game time: The game is actualy in night for %s.", txt_time ((timer_data->tick - gettick ()) / 1000));
-            clif_displaymessage (fd, temp);
-            clif_displaymessage (fd, "Game time: After, the game will be in permanent daylight.");
-        }
-        else
-            clif_displaymessage (fd, "Game time: The game is in permanent daylight.");
-    else if (battle_config.day_duration == 0)
-        if (night_flag == 0)
-        {                       // we start with day
-            timer_data = get_timer (night_timer_tid);
-            sprintf (temp, "Game time: The game is actualy in daylight for %s.", txt_time ((timer_data->tick - gettick ()) / 1000));
-            clif_displaymessage (fd, temp);
-            clif_displaymessage (fd, "Game time: After, the game will be in permanent night.");
-        }
-        else
-            clif_displaymessage (fd, "Game time: The game is in permanent night.");
-    else
-    {
-        if (night_flag == 0)
-        {
-            timer_data = get_timer (night_timer_tid);
-            timer_data2 = get_timer (day_timer_tid);
-            sprintf (temp, "Game time: The game is actualy in daylight for %s.", txt_time ((timer_data->tick - gettick ()) / 1000));
-            clif_displaymessage (fd, temp);
-            if (timer_data->tick > timer_data2->tick)
-                sprintf (temp, "Game time: After, the game will be in night for %s.", txt_time ((timer_data->interval - abs (timer_data->tick - timer_data2->tick)) / 1000));
-            else
-                sprintf (temp, "Game time: After, the game will be in night for %s.", txt_time (abs (timer_data->tick - timer_data2->tick) / 1000));
-            clif_displaymessage (fd, temp);
-            sprintf (temp, "Game time: A day cycle has a normal duration of %s.", txt_time (timer_data->interval / 1000));
-            clif_displaymessage (fd, temp);
-        }
-        else
-        {
-            timer_data = get_timer (day_timer_tid);
-            timer_data2 = get_timer (night_timer_tid);
-            sprintf (temp, "Game time: The game is actualy in daylight for %s.", txt_time ((timer_data->tick - gettick ()) / 1000));
-            clif_displaymessage (fd, temp);
-            if (timer_data->tick > timer_data2->tick)
-                sprintf (temp, "Game time: After, the game will be in daylight for %s.", txt_time ((timer_data->interval - abs (timer_data->tick - timer_data2->tick)) / 1000));
-            else
-                sprintf (temp, "Game time: After, the game will be in daylight for %s.", txt_time (abs (timer_data->tick - timer_data2->tick) / 1000));
-            clif_displaymessage (fd, temp);
-            sprintf (temp, "Game time: A day cycle has a normal duration of %s.", txt_time (timer_data->interval / 1000));
-            clif_displaymessage (fd, temp);
-        }
-    }
 
     return 0;
 }

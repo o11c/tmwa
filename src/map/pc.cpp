@@ -68,10 +68,6 @@ static int pc_nextbaseafter (struct map_session_data *);
 static int pc_nextjobafter (struct map_session_data *);
 static int pc_calc_pvprank (struct map_session_data *sd);
 static int pc_ismarried (struct map_session_data *sd);
-static void map_day_timer (timer_id, tick_t, custom_id_t, custom_data_t);
-static void map_night_timer (timer_id, tick_t, custom_id_t, custom_data_t);
-
-
 
 static int max_weight_base[MAX_PC_CLASS];
 static int hp_coefficient[MAX_PC_CLASS];
@@ -108,10 +104,6 @@ static unsigned int equip_pos[11] =
 //static struct dbt *gm_account_db;
 static struct gm_account *gm_account = NULL;
 static int GM_num = 0;
-
-
-timer_id day_timer_tid;
-timer_id night_timer_tid;
 
 int pc_isGM (struct map_session_data *sd)
 {
@@ -733,15 +725,6 @@ int pc_authok (int id, int login_id2, time_t connect_until_time,
 
     //スパノビ用死にカウンターのスクリプト変数からの読み出しとsdへのセット
     sd->die_counter = pc_readglobalreg (sd, "PC_DIE_COUNTER");
-
-    if (night_flag == 1)
-    {
-        char tmpstr[1024];
-        strcpy (tmpstr, "Actually, it's the night...");
-        clif_wis_message (sd->fd, wisp_server_name, tmpstr,
-                          strlen (tmpstr) + 1);
-        sd->opt2 |= STATE_BLIND;
-    }
 
     // ステータス初期計算など
     pc_calcstatus (sd, 1);
@@ -6215,68 +6198,6 @@ int pc_read_gm_account (int fd)
     return GM_num;
 }
 
-/*==========================================
- * timer to do the day
- *------------------------------------------
- */
-void map_day_timer (timer_id, tick_t, custom_id_t, custom_data_t)
-{                               // by [yor]
-    struct map_session_data *pl_sd = NULL;
-    int  i;
-    char tmpstr[1024];
-
-    if (battle_config.day_duration > 0)
-    {                           // if we want a day
-        if (night_flag != 0)
-        {
-            strcpy (tmpstr, "The day has arrived!");
-            night_flag = 0;     // 0=day, 1=night [Yor]
-            for (i = 0; i < fd_max; i++)
-            {
-                if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-                    && pl_sd->state.auth)
-                {
-                    pl_sd->opt2 &= ~STATE_BLIND;
-                    clif_changeoption (&pl_sd->bl);
-                    clif_wis_message (pl_sd->fd, wisp_server_name, tmpstr,
-                                      strlen (tmpstr) + 1);
-                }
-            }
-        }
-    }
-}
-
-/*==========================================
- * timer to do the night
- *------------------------------------------
- */
-void map_night_timer (timer_id, tick_t, custom_id_t, custom_data_t)
-{                               // by [yor]
-    struct map_session_data *pl_sd = NULL;
-    int  i;
-    char tmpstr[1024];
-
-    if (battle_config.night_duration > 0)
-    {                           // if we want a night
-        if (night_flag == 0)
-        {
-            strcpy (tmpstr, "The night has fallen...");
-            night_flag = 1;     // 0=day, 1=night [Yor]
-            for (i = 0; i < fd_max; i++)
-            {
-                if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-                    && pl_sd->state.auth)
-                {
-                    pl_sd->opt2 |= STATE_BLIND;
-                    clif_changeoption (&pl_sd->bl);
-                    clif_wis_message (pl_sd->fd, wisp_server_name, tmpstr,
-                                      strlen (tmpstr) + 1);
-                }
-            }
-        }
-    }
-}
-
 void pc_setstand (struct map_session_data *sd)
 {
     nullpo_retv (sd);
@@ -6684,40 +6605,6 @@ int do_init_pc (void)
                          gettick () + NATURAL_HEAL_INTERVAL), pc_natural_heal,
                         0, 0, NATURAL_HEAL_INTERVAL);
     add_timer (gettick () + autosave_interval, pc_autosave, 0, 0);
-
-    {
-        int  day_duration = battle_config.day_duration;
-        int  night_duration = battle_config.night_duration;
-        if (day_duration < 60000)
-            day_duration = 60000;
-        if (night_duration < 60000)
-            night_duration = 60000;
-        if (battle_config.night_at_start == 0)
-        {
-            night_flag = 0;     // 0=day, 1=night [Yor]
-            day_timer_tid =
-                add_timer_interval (gettick () + day_duration +
-                                    night_duration, map_day_timer, 0, 0,
-                                    day_duration + night_duration);
-            night_timer_tid =
-                add_timer_interval (gettick () + day_duration,
-                                    map_night_timer, 0, 0,
-                                    day_duration + night_duration);
-        }
-        else
-        {
-            night_flag = 1;     // 0=day, 1=night [Yor]
-            day_timer_tid =
-                add_timer_interval (gettick () + night_duration,
-                                    map_day_timer, 0, 0,
-                                    day_duration + night_duration);
-            night_timer_tid =
-                add_timer_interval (gettick () + day_duration +
-                                    night_duration, map_night_timer, 0, 0,
-                                    day_duration + night_duration);
-        }
-    }
-
     return 0;
 }
 

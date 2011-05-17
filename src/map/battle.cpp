@@ -3237,9 +3237,6 @@ int battle_config_read (const char *cfgName)
         battle_config.pk_mode = 0;  // [Valaris]
         battle_config.multi_level_up = 0;   // [Valaris]
         battle_config.backstab_bow_penalty = 0; // Akaru
-        battle_config.night_at_start = 0;   // added by [Yor]
-        battle_config.day_duration = 2 * 60 * 60 * 1000;    // added by [Yor] (2 hours)
-        battle_config.night_duration = 30 * 60 * 1000;  // added by [Yor] (30 minutes)
         battle_config.show_mob_hp = 0;  // [Valaris]
         battle_config.hack_info_GM_level = 60;  // added by [Yor] (default: 60, GM level)
         battle_config.any_warp_GM_min_level = 20;   // added by [Yor]
@@ -3442,9 +3439,6 @@ int battle_config_read (const char *cfgName)
             {"pk_mode", &battle_config.pk_mode}, // [Valaris]
             {"multi_level_up", &battle_config.multi_level_up},   // [Valaris]
             {"backstab_bow_penalty", &battle_config.backstab_bow_penalty},
-            {"night_at_start", &battle_config.night_at_start},   // added by [Yor]
-            {"day_duration", &battle_config.day_duration},   // added by [Yor]
-            {"night_duration", &battle_config.night_duration},   // added by [Yor]
             {"show_mob_hp", &battle_config.show_mob_hp}, // [Valaris]
             {"hack_info_GM_level", &battle_config.hack_info_GM_level},   // added by [Yor]
             {"any_warp_GM_min_level", &battle_config.any_warp_GM_min_level}, // added by [Yor]
@@ -3549,15 +3543,6 @@ int battle_config_read (const char *cfgName)
             battle_config.item_drop_mvp_min = 1;
         if (battle_config.item_drop_mvp_max > 10000)
             battle_config.item_drop_mvp_max = 10000;    // End Addition
-
-        if (battle_config.night_at_start < 0)   // added by [Yor]
-            battle_config.night_at_start = 0;
-        else if (battle_config.night_at_start > 1)  // added by [Yor]
-            battle_config.night_at_start = 1;
-        if (battle_config.day_duration < 0) // added by [Yor]
-            battle_config.day_duration = 0;
-        if (battle_config.night_duration < 0)   // added by [Yor]
-            battle_config.night_duration = 0;
 
         if (battle_config.hack_info_GM_level < 0)   // added by [Yor]
             battle_config.hack_info_GM_level = 0;

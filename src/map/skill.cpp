@@ -2175,13 +2175,6 @@ int skill_status_change_end (struct block_list *bl, int type, int tid)
                 break;
         }
 
-        if (night_flag == 1 && (*opt2 & STATE_BLIND) == 0
-            && bl->type == BL_PC)
-        {                       // by [Yor]
-            *opt2 |= STATE_BLIND;
-            opt_flag = 1;
-        }
-
         if (opt_flag)           /* optionの変更を伝える */
             clif_changeoption (bl);
 
@@ -2521,9 +2514,6 @@ int skill_status_change_clear (struct block_list *bl, int type)
     *opt2 = 0;
     *opt3 = 0;
     *option &= OPTION_MASK;
-
-    if (night_flag == 1 && type == BL_PC)   // by [Yor]
-        *opt2 |= STATE_BLIND;
 
     if (!type || type & 2)
         clif_changeoption (bl);

@@ -55,7 +55,6 @@ int  map_num = 0;
 in_port_t map_port = 0;
 
 int  autosave_interval = DEFAULT_AUTOSAVE_INTERVAL;
-bool night_flag = 0;
 
 struct charid2nick
 {

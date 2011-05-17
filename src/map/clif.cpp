@@ -4002,8 +4002,7 @@ void clif_parse_QuitGame (int fd, struct map_session_data *sd)
 
     WFIFOW (fd, 0) = 0x18b;
     if ((!pc_isdead (sd)
-         && (sd->opt1
-             || (sd->opt2 && !(night_flag == 1 && sd->opt2 == STATE_BLIND))))
+         && (sd->opt1 || sd->opt2))
         || sd->skilltimer != -1 || (DIFF_TICK (tick, sd->canact_tick) < 0))
     {
         WFIFOW (fd, 2) = 1;

@@ -145,8 +145,4 @@ int  do_init_pc (void);
 enum
 { ADDITEM_EXIST, ADDITEM_NEW, ADDITEM_OVERAMOUNT };
 
-// timer for night.day
-extern timer_id day_timer_tid;
-extern timer_id night_timer_tid;
-
 #endif // PC_H

@@ -28,7 +28,6 @@
 static int skill_get_hp (int id, int lv);
 static int skill_get_mhp (int id, int lv);
 static int skill_get_zeny (int id, int lv);
-static int skill_get_cast (int id, int lv);
 static int skill_get_time2 (int id, int lv);
 static int skill_delunitgroup (struct skill_unit_group *group);
 static int skill_unitgrouptickset_delete (struct block_list *bl, int group_id);
@@ -101,11 +100,6 @@ int skill_get_zeny (int id, int lv)
 int skill_get_num (int id, int lv)
 {
     return (lv <= 0) ? 0 : skill_db[id].num[lv - 1];
-}
-
-int skill_get_cast (int id, int lv)
-{
-    return (lv <= 0) ? 0 : skill_db[id].cast[lv - 1];
 }
 
 int skill_get_delay (int id, int lv)
@@ -832,33 +826,6 @@ static void skill_castend_id (timer_id tid, tick_t tick, custom_id_t id, custom_
     if (battle_config.pc_skill_log)
         printf ("PC %d skill castend skill=%d\n", sd->bl.id, sd->skillid);
     pc_stop_walking (sd, 0);
-}
-
-/*==========================================
- * スキル使用（詠唱完了、map指定）
- *------------------------------------------
- */
-int skill_castend_map (struct map_session_data *sd, int skill_num,
-                       const char *map)
-{
-    nullpo_retr (0, sd);
-    if (sd->bl.prev == NULL || pc_isdead (sd))
-        return 0;
-
-    if (sd->opt1 > 0 || sd->status.option & 2)
-        return 0;
-
-    if (skill_num != sd->skillid)   /* 不正パケットらしい */
-        return 0;
-
-    pc_stopattack (sd);
-
-    if (battle_config.pc_skill_log)
-        printf ("PC %d skill castend skill =%d map=%s\n", sd->bl.id,
-                skill_num, map);
-    pc_stop_walking (sd, 0);
-
-    return 0;
 }
 
 /*==========================================
@@ -1732,178 +1699,6 @@ int skill_delayfix (struct block_list *bl, int time_)
         time_ = time_ * battle_config.delay_rate / 100;
     }
     return (time_ > 0) ? time_ : 0;
-}
-
-/*==========================================
- * スキル使用（ID指定）
- *------------------------------------------
- */
-int skill_use_id (struct map_session_data *sd, int target_id,
-                  int skill_num, int skill_lv)
-{
-    unsigned int tick;
-    int  casttime = 0, delay = 0, range;
-    int  forcecast = 0;
-    struct block_list *bl;
-    tick = gettick ();
-
-    nullpo_retr (0, sd);
-
-    if ((bl = map_id2bl (target_id)) == NULL)
-    {
-/*		if(battle_config.error_log)
-			printf("skill target not found %d\n",target_id); */
-        return 0;
-    }
-    if (sd->bl.m != bl->m || pc_isdead (sd))
-        return 0;
-
-    /* 沈黙や異常（ただし、グリムなどの判定をする） */
-    if (sd->opt1 > 0)
-        return 0;
-
-    if (sd->status.option & 2)
-        return 0;
-
-    if (skill_get_inf2 (skill_num) & 0x200 && sd->bl.id == target_id)
-        return 0;
-
-    sd->skillid = skill_num;
-    sd->skilllv = skill_lv;
-
-    if (!skill_check_condition (sd, 0))
-        return 0;
-
-    /* 射程と障害物チェック */
-    range = skill_get_range (skill_num, skill_lv);
-    if (range < 0)
-        range = battle_get_range (&sd->bl) - (range + 1);
-    if (!battle_check_range (&sd->bl, bl, range))
-        return 0;
-
-    pc_stopattack (sd);
-
-    casttime = skill_castfix (&sd->bl, skill_get_cast (skill_num, skill_lv));
-    delay = skill_delayfix (&sd->bl, skill_get_delay (skill_num, skill_lv));
-    sd->state.skillcastcancel = skill_db[skill_num].castcancel;
-
-    if (battle_config.pc_skill_log)
-        printf ("PC %d skill use target_id=%d skill=%d lv=%d cast=%d\n",
-                sd->bl.id, target_id, skill_num, skill_lv, casttime);
-
-//  if(sd->skillitem == skill_num)
-//      casttime = delay = 0;
-
-    if (casttime > 0 || forcecast)
-    {                           /* 詠唱が必要 */
-        struct mob_data *md;
-
-        /* 詠唱反応モンスター */
-        if (bl->type == BL_MOB && (md = (struct mob_data *) bl)
-            && mob_db[md->mob_class].mode & 0x10 && md->state.state != MS_ATTACK
-            && sd->invincible_timer == -1)
-        {
-            md->target_id = sd->bl.id;
-            md->state.targettype = ATTACKABLE;
-            md->min_chase = 13;
-        }
-    }
-
-    if (casttime <= 0)          /* 詠唱の無いものはキャンセルされない */
-        sd->state.skillcastcancel = 0;
-
-    sd->skilltarget = target_id;
-/*	sd->cast_target_bl	= bl; */
-    sd->skillx = 0;
-    sd->skilly = 0;
-    sd->canact_tick = tick + casttime + delay;
-    sd->canmove_tick = tick;
-    if (casttime > 0)
-    {
-        sd->skilltimer = add_timer (tick + casttime, skill_castend_id, sd->bl.id, 0);
-        pc_stop_walking (sd, 0);
-    }
-    else
-    {
-        sd->skilltimer = -1;
-        skill_castend_id (sd->skilltimer, tick, sd->bl.id, 0);
-    }
-
-    return 0;
-}
-
-/*==========================================
- * スキル使用（場所指定）
- *------------------------------------------
- */
-int skill_use_pos (struct map_session_data *sd,
-                   int skill_x, int skill_y, int skill_num, int skill_lv)
-{
-    struct block_list bl;
-    unsigned int tick;
-    int  casttime = 0, delay = 0, range;
-
-    nullpo_retr (0, sd);
-
-    if (pc_isdead (sd))
-        return 0;
-
-    if (sd->opt1 > 0)
-        return 0;
-
-    if (sd->status.option & 2)
-        return 0;
-
-    sd->skillid = skill_num;
-    sd->skilllv = skill_lv;
-    sd->skillx = skill_x;
-    sd->skilly = skill_y;
-    if (!skill_check_condition (sd, 0))
-        return 0;
-
-    /* 射程と障害物チェック */
-    bl.type = BL_NUL;
-    bl.m = sd->bl.m;
-    bl.x = skill_x;
-    bl.y = skill_y;
-    range = skill_get_range (skill_num, skill_lv);
-    if (range < 0)
-        range = battle_get_range (&sd->bl) - (range + 1);
-    if (!battle_check_range (&sd->bl, &bl, range))
-        return 0;
-
-    pc_stopattack (sd);
-
-    casttime = skill_castfix (&sd->bl, skill_get_cast (skill_num, skill_lv));
-    delay = skill_delayfix (&sd->bl, skill_get_delay (skill_num, skill_lv));
-    sd->state.skillcastcancel = skill_db[skill_num].castcancel;
-
-    if (battle_config.pc_skill_log)
-        printf ("PC %d skill use target_pos=(%d,%d) skill=%d lv=%d cast=%d\n",
-                sd->bl.id, skill_x, skill_y, skill_num, skill_lv, casttime);
-
-    casttime /= 3;
-
-    if (casttime <= 0)          /* 詠唱の無いものはキャンセルされない */
-        sd->state.skillcastcancel = 0;
-
-    sd->skilltarget = 0;
-/*	sd->cast_target_bl	= NULL; */
-    tick = gettick ();
-    sd->canact_tick = tick + casttime + delay;
-    sd->canmove_tick = tick;
-    if (casttime > 0)
-    {
-        sd->skilltimer = add_timer (tick + casttime, skill_castend_pos, sd->bl.id, 0);
-        pc_stop_walking (sd, 0);
-    }
-    else
-    {
-        sd->skilltimer = -1;
-        skill_castend_pos (sd->skilltimer, tick, sd->bl.id, 0);
-    }
-
-    return 0;
 }
 
 /*==========================================

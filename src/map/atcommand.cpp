@@ -149,7 +149,6 @@ ATCOMMAND_FUNC (chardropall);
 ATCOMMAND_FUNC (storeall);
 ATCOMMAND_FUNC (charstoreall);
 ATCOMMAND_FUNC (skillid);
-ATCOMMAND_FUNC (useskill);
 ATCOMMAND_FUNC (summon);
 ATCOMMAND_FUNC (adjgmlvl);
 ATCOMMAND_FUNC (adjcmdlvl);
@@ -236,8 +235,6 @@ static AtCommandInfo atcommand_info[] = {
     "",                 "Change your hair color."},
     {"@effect", 40,     atcommand_effect,       ATCC_SELF,
     "ID [flag]",        "Apply an effect to yourself."},
-    {"@useskill", 40,   atcommand_useskill,     ATCC_SELF,
-    "ID lvl target",    "Use a skill."},
     {"@sp-info", 40,    atcommand_skillpool_info, ATCC_SELF,
     "charname",         "display magic skills"},
     {"@option", 40,     atcommand_option,       ATCC_SELF,
@@ -4841,40 +4838,6 @@ atcommand_skillid (int fd, struct map_session_data *,
         }
         idx++;
     }
-    return 0;
-}
-
-/*==========================================
- * @useskill by [MouseJstr]
- *
- * A way of using skills without having to find them in the skills menu
- *------------------------------------------
- */
-int atcommand_useskill (int, struct map_session_data *sd,
-                        const char *, const char *message)
-{
-    struct map_session_data *pl_sd = NULL;
-    int  skillnum;
-    int  skilllv;
-    int  inf;
-    char target[255];
-
-    if (!message || !*message)
-        return -1;
-    if (sscanf (message, "%d %d %s", &skillnum, &skilllv, target) != 3)
-        return -1;
-    if ((pl_sd = map_nick2sd (target)) == NULL)
-    {
-        return -1;
-    }
-
-    inf = skill_get_inf (skillnum);
-
-    if ((inf == 2) || (inf == 1))
-        skill_use_pos (sd, pl_sd->bl.x, pl_sd->bl.y, skillnum, skilllv);
-    else
-        skill_use_id (sd, pl_sd->bl.id, skillnum, skilllv);
-
     return 0;
 }
 

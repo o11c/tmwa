@@ -64,15 +64,6 @@ int  skill_get_inf2 (int id);
 int  skill_get_maxcount (int id);
 int  skill_get_blewcount (int id, int lv);
 
-// スキルの使用
-int  skill_use_id (struct map_session_data *sd, int target_id,
-                   int skill_num, int skill_lv);
-int  skill_use_pos (struct map_session_data *sd,
-                    int skill_x, int skill_y, int skill_num, int skill_lv);
-
-int  skill_castend_map (struct map_session_data *sd, int skill_num,
-                        const char *map);
-
 int  skill_cleartimerskill (struct block_list *src);
 int  skill_addtimerskill (struct block_list *src, unsigned int tick,
                           int target, int x, int y, int skill_id,

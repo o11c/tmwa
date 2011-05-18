@@ -1513,7 +1513,7 @@ static void parse_tologin (int fd)
         }
             break;
 
-        case 0x7931:
+        case 0x7531:
             if (RFIFOREST (fd) < 10)
                 return;
         {
@@ -2689,20 +2689,20 @@ static void check_connect_login_server (timer_id, tick_t, custom_id_t, custom_da
     session[login_fd]->func_parse = parse_tologin;
     realloc_fifo (login_fd, FIFOSIZE_SERVERLINK, FIFOSIZE_SERVERLINK);
 
+    WFIFOW (login_fd, 0) = 0x7530;
+    WFIFOSET (login_fd, 2);
+
     WFIFOW (login_fd, 0) = 0x2710;
     STRZCPY2 ((char *)WFIFOP (login_fd, 2), userid);
     STRZCPY2 ((char *)WFIFOP (login_fd, 26), passwd);
     WFIFOL (login_fd, 50) = 0;
     WFIFOL (login_fd, 54) = char_ip;
-    WFIFOL (login_fd, 58) = char_port;
+    WFIFOW (login_fd, 58) = char_port;
     STRZCPY2 ((char *)WFIFOP (login_fd, 60), server_name);
     WFIFOW (login_fd, 80) = 0;
     WFIFOW (login_fd, 82) = char_maintenance;
     WFIFOW (login_fd, 84) = char_new;
     WFIFOSET (login_fd, 86);
-
-    WFIFOW (login_fd, 0) = 0x7530;
-    WFIFOSET (login_fd, 2);
 }
 
 /// read conf/lan_support.conf

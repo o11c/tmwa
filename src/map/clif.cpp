@@ -4016,6 +4016,110 @@ void clif_parse_QuitGame (int fd, struct map_session_data *sd)
 }
 
 /*==========================================
+ *
+ *------------------------------------------
+ */
+static void clif_parse_GetCharNameRequest (int fd, struct map_session_data *sd)
+{
+    struct block_list *bl;
+    int  account_id;
+
+    account_id = RFIFOL (fd, 2);
+    bl = map_id2bl (account_id);
+    if (bl == NULL)
+        return;
+
+    WFIFOW (fd, 0) = 0x95;
+    WFIFOL (fd, 2) = account_id;
+
+    switch (bl->type)
+    {
+        case BL_PC:
+        {
+            struct map_session_data *ssd = (struct map_session_data *) bl;
+
+            nullpo_retv (ssd);
+
+            if (ssd->state.shroud_active)
+                memset (WFIFOP (fd, 6), 0, 24);
+            else
+                memcpy (WFIFOP (fd, 6), ssd->status.name, 24);
+            WFIFOSET (fd, packet_len_table[0x95]);
+
+            struct party *p = NULL;
+
+            const char *party_name = "";
+
+            bool will_send = 0;
+
+            if (ssd->status.party_id > 0 && (p = party_search (ssd->status.party_id)) != NULL)
+            {
+                party_name = p->name;
+                will_send = 1;
+            }
+
+            if (will_send)
+            {
+                WFIFOW (fd, 0) = 0x195;
+                WFIFOL (fd, 2) = account_id;
+                memcpy (WFIFOP (fd, 6), party_name, 24);
+                memset (WFIFOP (fd, 30), 0, 24);
+                memset (WFIFOP (fd, 54), 0, 24);
+                memset (WFIFOP (fd, 78), 0, 24); // We send this value twice because the client expects it
+                WFIFOSET (fd, packet_len_table[0x195]);
+
+            }
+
+            if (pc_isGM(sd) >= battle_config.hack_info_GM_level)
+            {
+                in_addr_t ip = ssd->ip;
+                WFIFOW (fd, 0) = 0x20C;
+
+                // Mask the IP using the char-server password
+                if (battle_config.mask_ip_gms)
+                    ip = MD5_ip(chrif_getpasswd (), ssd->ip);
+
+                WFIFOL (fd, 2) = account_id;
+                WFIFOL (fd, 6) = ip;
+                WFIFOSET (fd, packet_len_table[0x20C]);
+             }
+
+        }
+            break;
+        case BL_NPC:
+            memcpy (WFIFOP (fd, 6), ((struct npc_data *) bl)->name, 24);
+            {
+                char *start = (char *)WFIFOP (fd, 6);
+                char *end = strchr (start, '#');    // [fate] elim hashed out/invisible names for the client
+                if (end)
+                    while (*end)
+                        *end++ = 0;
+
+                // [fate] Elim preceding underscores for (hackish) name position fine-tuning
+                while (*start == '_')
+                    *start++ = ' ';
+            }
+            WFIFOSET (fd, packet_len_table[0x95]);
+            break;
+        case BL_MOB:
+        {
+            struct mob_data *md = (struct mob_data *) bl;
+
+            nullpo_retv (md);
+
+            memcpy (WFIFOP (fd, 6), md->name, 24);
+            WFIFOSET (fd, packet_len_table[0x95]);
+        }
+            break;
+        default:
+            if (battle_config.error_log)
+                printf ("clif_parse_GetCharNameRequest : bad type %d(%d)\n",
+                        bl->type, account_id);
+            break;
+    }
+}
+
+/*==========================================
  * Validate and process transmission of a
  * global/public message.
  *
@@ -5154,7 +5258,7 @@ func_table clif_parse_func_table[0x220] =
     { 0, 0 }, // 91
     { 0, 0 }, // 92
     { 0, 0 }, // 93
-    { 0, 0 }, // 94
+    { -1, clif_parse_GetCharNameRequest }, // 94
     { 0, 0 }, // 95
     { 300, clif_parse_Wis }, // 96
     { 0, 0 }, // 97

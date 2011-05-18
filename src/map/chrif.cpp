@@ -61,6 +61,11 @@ void chrif_setpasswd (char *pwd)
     passwd[sizeof(passwd)-1] = '\0';
 }
 
+char *chrif_getpasswd (void)
+{
+    return passwd;
+}
+
 /*==========================================
  *
  *------------------------------------------
@@ -123,6 +128,9 @@ int chrif_save (struct map_session_data *sd)
  */
 static int chrif_connect (int fd)
 {
+    WFIFOW (fd, 0) = 0x7530;
+    WFIFOSET (fd, 2);
+
     WFIFOW (fd, 0) = 0x2af8;
     memcpy (WFIFOP (fd, 2), userid, 24);
     memcpy (WFIFOP (fd, 26), passwd, 24);
@@ -130,9 +138,6 @@ static int chrif_connect (int fd)
     WFIFOL (fd, 54) = clif_getip ();
     WFIFOW (fd, 58) = clif_getport ();  // [Valaris] thanks to fov
     WFIFOSET (fd, 60);
-
-    WFIFOW (fd, 0) = 0x7530;
-    WFIFOSET (fd, 2);
 
     return 0;
 }
@@ -1049,7 +1054,7 @@ static void chrif_parse (int fd)
     while (RFIFOREST (fd) >= 2)
     {
         cmd = RFIFOW (fd, 0);
-        if (cmd == 0x7931)
+        if (cmd == 0x7531)
         {
             if (RFIFOREST (fd) < 10)
                 return;

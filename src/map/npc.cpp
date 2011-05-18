@@ -87,7 +87,7 @@ int npc_enable (const char *name, int flag)
 {
     struct npc_data *nd = (struct npc_data *)strdb_search (npcname_db, name).p;
     if (nd == NULL)
-        return 0;
+        return -1;
 
     if (flag & 1)
     {                           // 有効化

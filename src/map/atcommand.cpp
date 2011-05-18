@@ -129,8 +129,6 @@ ATCOMMAND_FUNC (enablenpc);
 ATCOMMAND_FUNC (disablenpc);
 ATCOMMAND_FUNC (servertime);
 ATCOMMAND_FUNC (chardelitem);
-ATCOMMAND_FUNC (jail);
-ATCOMMAND_FUNC (unjail);
 ATCOMMAND_FUNC (disguise);
 ATCOMMAND_FUNC (undisguise);
 ATCOMMAND_FUNC (ignorelist);
@@ -368,10 +366,6 @@ static AtCommandInfo atcommand_info[] = {
     {"@chardelitem", 60, atcommand_chardelitem, ATCC_CHAR,
     "name|ID qty charname",
                         "Remove an amount of a specified item from a player's inventory."},
-    {"@jail", 60,       atcommand_jail,         ATCC_CHAR,
-    "charname",         "Put a player in prison. Defunct."},
-    {"@unjail", 60,     atcommand_unjail,       ATCC_CHAR,
-    "charname",         "Release a player from prison. Defunct."},
     {"@chardisguise", 60, atcommand_chardisguise, ATCC_CHAR,
     "name|ID charname", "Disguise a player as a monster."},
     {"@charundisguise", 60, atcommand_charundisguise, ATCC_CHAR,
@@ -3905,25 +3899,18 @@ int atcommand_mapinfo (int fd, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Enable an NPC
 int atcommand_enablenpc (int fd, struct map_session_data *,
                          const char *, const char *message)
 {
+    if (!message || !*message)
+        return -1;
     char NPCname[100];
-
-    memset (NPCname, '\0', sizeof (NPCname));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", NPCname) < 1)
+    if (sscanf (message, "%99[^\n]", NPCname) < 1)
         return -1;
 
-    if (npc_name2id (NPCname) != NULL)
-    {
-        npc_enable (NPCname, 1);
+    if (npc_enable (NPCname, 1) == 0)
         clif_displaymessage (fd, "Npc Enabled.");
-    }
     else
     {
         clif_displaymessage (fd, "This NPC doesn't exist.");
@@ -3933,25 +3920,18 @@ int atcommand_enablenpc (int fd, struct map_session_data *,
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Disable an NPC
 int atcommand_disablenpc (int fd, struct map_session_data *,
                           const char *, const char *message)
 {
+    if (!message || !*message)
+        return -1;
     char NPCname[100];
-
-    memset (NPCname, '\0', sizeof (NPCname));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", NPCname) < 1)
+    if (sscanf (message, "%99[^\n]", NPCname) < 1)
         return -1;
 
-    if (npc_name2id (NPCname) != NULL)
-    {
-        npc_enable (NPCname, 0);
+    if (npc_enable (NPCname, 0) == 0)
         clif_displaymessage (fd, "Npc Disabled.");
-    }
     else
     {
         clif_displaymessage (fd, "This NPC doesn't exist.");
@@ -3961,218 +3941,79 @@ int atcommand_disablenpc (int fd, struct map_session_data *,
     return 0;
 }
 
-/*==========================================
- * @time/@date/@server_date/@serverdate/@server_time/@servertime: Display the date/time of the server (by [Yor]
- * Calculation management of GM modification (@day/@night GM commands) is done
- *------------------------------------------
- */
+/// Display the date/time of the server (should be UTC)
 int atcommand_servertime (int fd, struct map_session_data *,
                           const char *, const char *)
 {
-    time_t time_server;         // variable for number of seconds (used with time() function)
-    struct tm *datetime;        // variable for time in structure ->tm_mday, ->tm_sec, ...
+    time_t time_server = time (&time_server);
+    struct tm *datetime = gmtime (&time_server);
+
     char temp[256];
-
-    memset (temp, '\0', sizeof (temp));
-
-    time (&time_server);        // get time in seconds since 1/1/1970
-    datetime = gmtime (&time_server);   // convert seconds in structure
-    // like sprintf, but only for date/time (Sunday, November 02 2003 15:12:52)
-    strftime (temp, sizeof (temp) - 1, "Server time (normal time): %A, %B %d %Y %X.", datetime);
+    strftime (temp, sizeof (temp), "Server time (normal time): %A, %B %d %Y %X.", datetime);
     clif_displaymessage (fd, temp);
 
     return 0;
 }
 
-/*==========================================
- * @chardelitem <item_name_or_ID> <quantity> <player> (by [Yor]
+/**
+ * @chardelitem <item_name_or_ID> <quantity> <player>
  * removes <quantity> item from a character
- * item can be equiped or not.
- * Inspired from a old command created by RoVeRT
- *------------------------------------------
+ * item can be equipped or not.
  */
 int atcommand_chardelitem (int fd, struct map_session_data *sd,
                            const char *, const char *message)
 {
-    struct map_session_data *pl_sd;
-    char character[100];
+    if (!message || !*message)
+        return -1;
     char item_name[100];
-    int  i, number = 0, item_id, item_position, count;
-    char output[200];
-    struct item_data *item_data;
-
-    memset (character, '\0', sizeof (character));
-    memset (item_name, '\0', sizeof (item_name));
-    memset (output, '\0', sizeof (output));
-
-    if (!message || !*message
-        || sscanf (message, "%s %d %99[^\n]", item_name, &number,
-                   character) < 3 || number < 1)
+    int number;
+    char character[100];
+    if (sscanf (message, "%s %d %99[^\n]", item_name, &number, character) < 3 || number < 1)
         return -1;
 
-    item_id = 0;
-    if ((item_data = itemdb_searchname (item_name)) != NULL ||
-        (item_data = itemdb_exists (atoi (item_name))) != NULL)
-        item_id = item_data->nameid;
-
-    if (item_id > 500)
-    {
-        if ((pl_sd = map_nick2sd (character)) != NULL)
-        {
-            if (pc_isGM (sd) >= pc_isGM (pl_sd))
-            {                   // you can kill only lower or same level
-                item_position = pc_search_inventory (pl_sd, item_id);
-                if (item_position >= 0)
-                {
-                    count = 0;
-                    for (i = 0; i < number && item_position >= 0; i++)
-                    {
-                        pc_delitem (pl_sd, item_position, 1, 0);
-                        count++;
-                        item_position = pc_search_inventory (pl_sd, item_id);   // for next loop
-                    }
-                    sprintf (output, "%d item(s) removed by a GM.", count);
-                    clif_displaymessage (pl_sd->fd, output);
-                    if (number == count)
-                        sprintf (output, "%d item(s) removed from the player.", count);
-                    else
-                        sprintf (output, "%d item(s) removed. Player had only %d of %d items.", count, count, number);
-                    clif_displaymessage (fd, output);
-                }
-                else
-                {
-                    clif_displaymessage (fd, "Character does not have the item.");
-                    return -1;
-                }
-            }
-            else
-            {
-                clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
-                return -1;
-            }
-        }
-        else
-        {
-            clif_displaymessage (fd, "Character not found.");
-            return -1;
-        }
-    }
-    else
+    struct item_data *item_data = itemdb_searchname (item_name);
+    if (!item_data)
+        item_data = itemdb_exists (atoi (item_name));
+    if (!item_data)
     {
         clif_displaymessage (fd, "Invalid item ID or name.");
         return -1;
     }
+    int item_id = item_data->nameid;
 
-    return 0;
-}
-
-/*==========================================
- * @jail <char_name> by [Yor]
- * Special warp! No check with nowarp and nowarpto flag
- *------------------------------------------
- */
-int atcommand_jail (int fd, struct map_session_data *sd,
-                    const char *, const char *message)
-{
-    char character[100];
-    struct map_session_data *pl_sd;
-    int  x, y;
-
-    memset (character, '\0', sizeof (character));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
-        return -1;
-
-    if ((pl_sd = map_nick2sd (character)) != NULL)
-    {
-        if (pc_isGM (sd) >= pc_isGM (pl_sd))
-        {                       // you can jail only lower or same GM
-            switch (MRAND (2))
-            {
-                case 0:
-                    x = 24;
-                    y = 75;
-                    break;
-                default:
-                    x = 49;
-                    y = 75;
-                    break;
-            }
-            if (pc_setpos (pl_sd, "sec_pri.gat", x, y, 3) == 0)
-            {
-                pc_setsavepoint (pl_sd, "sec_pri.gat", x, y);   // Save Char Respawn Point in the jail room [Lupus]
-                clif_displaymessage (pl_sd->fd, "GM has send you in jails.");
-                clif_displaymessage (fd, "Player warped in jails.");
-            }
-            else
-            {
-                clif_displaymessage (fd, "Map not found.");
-                return -1;
-            }
-        }
-        else
-        {
-            clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
-            return -1;
-        }
-    }
-    else
+    struct map_session_data *pl_sd = map_nick2sd (character);
+    if (!pl_sd)
     {
         clif_displaymessage (fd, "Character not found.");
         return -1;
     }
-
-    return 0;
-}
-
-/*==========================================
- * @unjail/@discharge <char_name> by [Yor]
- * Special warp! No check with nowarp and nowarpto flag
- *------------------------------------------
- */
-int atcommand_unjail (int fd, struct map_session_data *sd,
-                      const char *, const char *message)
-{
-    char character[100];
-    struct map_session_data *pl_sd;
-
-    memset (character, '\0', sizeof (character));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
-        return -1;
-
-    if ((pl_sd = map_nick2sd (character)) != NULL)
+    if (pc_isGM (sd) < pc_isGM (pl_sd))
     {
-        if (pc_isGM (sd) >= pc_isGM (pl_sd))
-        {                       // you can jail only lower or same GM
-            if (pl_sd->bl.m != map_mapname2mapid ("sec_pri.gat"))
-            {
-                clif_displaymessage (fd, "This player is not in jails.");
-                return -1;
-            }
-            else if (pc_setpos (pl_sd, "prontera.gat", 156, 191, 3) == 0)
-            {
-                pc_setsavepoint (pl_sd, "prontera.gat", 156, 191);  // Save char respawn point in Prontera
-                clif_displaymessage (pl_sd->fd, "GM has discharge you.");
-                clif_displaymessage (fd, "Player warped to Prontera.");
-            }
-            else
-            {
-                clif_displaymessage (fd, "Map not found.");
-                return -1;
-            }
-        }
-        else
-        {
-            clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
-            return -1;
-        }
+        clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
+        return -1;
     }
+    int item_position = pc_search_inventory (pl_sd, item_id);
+    if (item_position < 0)
+    {
+        clif_displaymessage (fd, "Character does not have the item.");
+        return -1;
+    }
+    int count = 0;
+    for (int i = 0; i < number && item_position >= 0; i++)
+    {
+        pc_delitem (pl_sd, item_position, pl_sd->status.inventory[item_position].amount, 0);
+        count++;
+        // items might not all be stacked
+        item_position = pc_search_inventory (pl_sd, item_id);
+    }
+    char output[200];
+    sprintf (output, "%d item(s) removed by a GM.", count);
+    clif_displaymessage (pl_sd->fd, output);
+    if (number == count)
+        sprintf (output, "%d item(s) removed from the player.", count);
     else
-    {
-        clif_displaymessage (fd, "Character not found.");
-        return -1;
-    }
+        sprintf (output, "%d item(s) removed, not %d items.", count, number);
+    clif_displaymessage (fd, output);
 
     return 0;
 }

@@ -4174,7 +4174,7 @@ static void clif_parse_GlobalMessage (int fd, struct map_session_data *sd)
     return;
 }
 
-int clif_message (struct block_list *bl, char *msg)
+int clif_message (struct block_list *bl, const char *msg)
 {
     unsigned short msg_len = strlen (msg) + 1;
     unsigned char buf[512];

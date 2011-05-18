@@ -151,7 +151,7 @@ int  clif_GMmessage (struct block_list *bl, const char *mes, int len, int flag);
 int  clif_resurrection (struct block_list *bl, int type);
 
 int  clif_specialeffect (struct block_list *bl, int type, int flag);    // special effects [Valaris]
-int  clif_message (struct block_list *bl, char *msg);   // messages (from mobs/npcs) [Valaris]
+int  clif_message (struct block_list *bl, const char *msg);   // messages (from mobs/npcs/@tee)
 
 int  clif_GM_kick (struct map_session_data *sd, struct map_session_data *tsd,
                    int type);

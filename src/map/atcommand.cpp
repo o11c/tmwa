@@ -4791,8 +4791,15 @@ int atcommand_trade (int, struct map_session_data *sd,
 
 static int magic_base = TMW_MAGIC;
 static const char *magic_skill_names[] =
-    { "magic", "life", "war", "transmute", "nature", "astral" };
+{
+    "magic",
+    "life",
+    "war",
+    "transmute",
+    "nature",
+    "astral" };
 
+/// Display magic info for a character
 int atcommand_magic_info (int fd, struct map_session_data *,
                           const char *, const char *message)
 {
@@ -4829,6 +4836,7 @@ static void set_skill (struct map_session_data *sd, int i, int level)
     sd->status.skill[i].lv = level;
 }
 
+/// Grant somebody some magic skills
 int atcommand_set_magic (int fd, struct map_session_data *,
                          const char *, const char *message)
 {
@@ -4837,7 +4845,7 @@ int atcommand_set_magic (int fd, struct map_session_data *,
     char magic_type[20];
     int value;
     char character[100];
-    if (sscanf (message, "%19s %i %99s", magic_type, &value, character) < 1)
+    if (sscanf (message, "%19s %i %99s", magic_type, &value, character) < 3)
         return -1;
 
     int skill_index = -1;
@@ -4853,99 +4861,86 @@ int atcommand_set_magic (int fd, struct map_session_data *,
         return -1;
     }
 
-    struct map_session_data *pl_sd;
-    if ((pl_sd = map_nick2sd (character)) != NULL)
+    struct map_session_data *pl_sd = map_nick2sd (character);
+    if (!pl_sd)
     {
-        int  i;
-        if (skill_index == 0)
-            for (i = 0; i < ARRAY_SIZEOF(magic_skill_names); i++)
-                set_skill (pl_sd, i + magic_base, value);
-        else
-            set_skill (pl_sd, skill_index, value);
-
-        clif_skillinfoblock (pl_sd);
-        return 0;
-    }
-    else
         clif_displaymessage (fd, "Character not found.");
+        return -1;
+    }
+    if (skill_index == 0)
+        for (int i = 0; i < ARRAY_SIZEOF(magic_skill_names); i++)
+            set_skill (pl_sd, i + magic_base, value);
+    else
+        set_skill (pl_sd, skill_index, value);
 
-    return -1;
-}
-
-int
-atcommand_log (int, struct map_session_data *,
-               const char *, const char *)
-{
-    return 0;                   // only used for (implicit) logging
-}
-
-int
-atcommand_tee (int, struct map_session_data *sd,
-               const char *, const char *message)
-{
-    char data[strlen (message) + 28];
-    strcpy (data, sd->status.name);
-    strcat (data, " : ");
-    strcat (data, message);
-    clif_message (&sd->bl, data);
+    clif_skillinfoblock (pl_sd);
     return 0;
 }
 
-int
-atcommand_invisible (int, struct map_session_data *sd,
-                     const char *, const char *)
+/// @commands are logged anyway, this function doesn't need to do anything
+int atcommand_log (int, struct map_session_data *,
+                   const char *, const char *)
+{
+    return 0;
+}
+
+/// say something in chat, that is also recorded in the GM log
+int atcommand_tee (int, struct map_session_data *sd,
+                   const char *, const char *message)
+{
+    clif_message (&sd->bl, message);
+    return 0;
+}
+
+/// Become completely undetectable to players
+int atcommand_invisible (int, struct map_session_data *sd,
+                         const char *, const char *)
 {
     pc_invisibility (sd, 1);
     return 0;
 }
 
-int
-atcommand_visible (int, struct map_session_data *sd,
-                   const char *, const char *)
+/// Become detectable to players again
+int atcommand_visible (int, struct map_session_data *sd,
+                       const char *, const char *)
 {
     pc_invisibility (sd, 0);
     return 0;
 }
 
+/// Implementation for the player iterators
 static int atcommand_jump_iterate (int fd, struct map_session_data *sd,
-                            const char *, const char *,
-                            struct map_session_data *(*get_start) (void),
-                            struct map_session_data *(*get_next) (struct
-                                                                  map_session_data
-                                                                  * current))
+                                   struct map_session_data *(*get_start) (void),
+                                   struct map_session_data *(*get_next) (struct map_session_data* current))
 {
     char output[200];
-    struct map_session_data *pl_sd;
 
     memset (output, '\0', sizeof (output));
 
-    pl_sd = (struct map_session_data *) map_id2bl (sd->followtarget);
+    struct map_session_data *pl_sd = (struct map_session_data *) map_id2bl (sd->followtarget);
 
     if (pl_sd)
         pl_sd = get_next (pl_sd);
 
-    if (!pl_sd)
-        pl_sd = get_start ();
-
     if (pl_sd == sd)
-    {
         pl_sd = get_next (pl_sd);
-        if (!pl_sd)
-            pl_sd = get_start ();
+    if (pl_sd == sd)
+        clif_displaymessage(fd, "No other players");
+    if (!pl_sd)
+    {
+        pl_sd = get_start ();
+        clif_displaymessage(fd, "Reached end of players, wrapped");
     }
-
     if (maps[pl_sd->bl.m].flag.nowarpto
         && battle_config.any_warp_GM_min_level > pc_isGM (sd))
     {
-        clif_displaymessage (fd,
-                             "You are not authorised to warp you to the map of this player.");
+        clif_displaymessage (fd, "You are not authorised to warp you to the map of this player.");
         return -1;
     }
     if (maps[sd->bl.m].flag.nowarp
         && battle_config.any_warp_GM_min_level > pc_isGM (sd))
     {
-        clif_displaymessage (fd,
-                             "You are not authorised to warp you from your actual map.");
+        clif_displaymessage (fd, "You are not authorised to warp you from your actual map.");
         return -1;
     }
     pc_setpos (sd, maps[pl_sd->bl.m].name, pl_sd->bl.x, pl_sd->bl.y, 3);
@@ -4957,28 +4952,21 @@ static int atcommand_jump_iterate (int fd, struct map_session_data *sd,
     return 0;
 }
 
-int
-atcommand_iterate_forward_over_players (int fd,
-                                        struct map_session_data *sd,
-                                        const char *command,
-                                        const char *message)
+/// Warp to next player
+int atcommand_iterate_forward_over_players (int fd, struct map_session_data *sd,
+                                            const char *, const char *)
 {
-    return atcommand_jump_iterate (fd, sd, command, message,
-                                   map_get_first_session,
-                                   map_get_next_session);
+    return atcommand_jump_iterate (fd, sd, map_get_first_session, map_get_next_session);
 }
 
-int
-atcommand_iterate_backwards_over_players (int fd,
-                                          struct map_session_data *sd,
-                                          const char *command,
-                                          const char *message)
+/// Warp to previous player
+int atcommand_iterate_backwards_over_players (int fd, struct map_session_data *sd,
+                                              const char *, const char *)
 {
-    return atcommand_jump_iterate (fd, sd, command, message,
-                                   map_get_last_session,
-                                   map_get_prev_session);
+    return atcommand_jump_iterate (fd, sd, map_get_last_session, map_get_prev_session);
 }
 
+/// Report something to all GMs
 int atcommand_wgm (int fd, struct map_session_data *sd,
                    const char *, const char *message)
 {
@@ -4989,179 +4977,157 @@ int atcommand_wgm (int fd, struct map_session_data *sd,
     return 0;
 }
 
-
+/// Display a character's skill pool use
 int atcommand_skillpool_info (int fd, struct map_session_data *,
                               const char *, const char *message)
 {
+    if (!message || !*message)
+        return -1;
     char character[100];
-    struct map_session_data *pl_sd;
-
-    if (!message || !*message || sscanf (message, "%99s", character) < 1)
+    if (sscanf (message, "%99s", character) < 1)
         return -1;
 
-    if ((pl_sd = map_nick2sd (character)) != NULL)
+    struct map_session_data *pl_sd = map_nick2sd (character);
+    if (!pl_sd)
     {
-        char buf[200];
-        int  pool_skills[MAX_SKILL_POOL];
-        int  pool_skills_nr = skill_pool (pl_sd, pool_skills);
-        int  i;
-
-        sprintf (buf, "Active skills %d out of %d for %s:", pool_skills_nr,
-                 skill_pool_max (pl_sd), character);
-        clif_displaymessage (fd, buf);
-        for (i = 0; i < pool_skills_nr; ++i)
-        {
-            sprintf (buf, " - %s [%d]: power %d", skill_name (pool_skills[i]),
-                     pool_skills[i], skill_power (pl_sd, pool_skills[i]));
-            clif_displaymessage (fd, buf);
-        }
-
-        sprintf (buf, "Learned skills out of %d for %s:",
-                 skill_pool_skills_size, character);
-        clif_displaymessage (fd, buf);
-
-        for (i = 0; i < skill_pool_skills_size; ++i)
-        {
-            const char *name = skill_name (skill_pool_skills[i]);
-            int  lvl = pl_sd->status.skill[skill_pool_skills[i]].lv;
-
-            if (lvl)
-            {
-                sprintf (buf, " - %s [%d]: lvl %d", name,
-                         skill_pool_skills[i], lvl);
-                clif_displaymessage (fd, buf);
-            }
-        }
-
-    }
-    else
         clif_displaymessage (fd, "Character not found.");
+        return -1;
+    }
+    char buf[200];
+    int pool_skills[MAX_SKILL_POOL];
+    int pool_skills_nr = skill_pool (pl_sd, pool_skills);
 
+    sprintf (buf, "Active skills %d out of %d for %s:", pool_skills_nr,
+             skill_pool_max (pl_sd), character);
+    clif_displaymessage (fd, buf);
+    for (int i = 0; i < pool_skills_nr; ++i)
+    {
+        sprintf (buf, " - %s [%d]: power %d", skill_name (pool_skills[i]),
+                 pool_skills[i], skill_power (pl_sd, pool_skills[i]));
+        clif_displaymessage (fd, buf);
+    }
+
+    sprintf (buf, "Learned skills out of %d for %s:",
+             skill_pool_skills_size, character);
+    clif_displaymessage (fd, buf);
+
+    for (int i = 0; i < skill_pool_skills_size; ++i)
+    {
+        const char *name = skill_name (skill_pool_skills[i]);
+        int lvl = pl_sd->status.skill[skill_pool_skills[i]].lv;
+        if (!lvl)
+            continue;
+        sprintf (buf, " - %s [%d]: lvl %d", name, skill_pool_skills[i], lvl);
+        clif_displaymessage (fd, buf);
+    }
     return 0;
 }
 
+/// Focus somebody on a skill
 int atcommand_skillpool_focus (int fd, struct map_session_data *,
                                const char *, const char *message)
 {
+    if (!message || !*message)
+        return -1;
+    int skill;
     char character[100];
-    int  skill;
-    struct map_session_data *pl_sd;
-
-    if (!message || !*message
-        || sscanf (message, "%d %99[^\n]", &skill, character) < 1)
+    if (sscanf (message, "%d %99[^\n]", &skill, character) < 1)
         return -1;
 
-    if ((pl_sd = map_nick2sd (character)) != NULL)
+    struct map_session_data *pl_sd = map_nick2sd (character);
+    if (!pl_sd)
     {
-        if (skill_pool_activate (pl_sd, skill))
-            clif_displaymessage (fd, "Activation failed.");
-        else
-            clif_displaymessage (fd, "Activation successful.");
-    }
-    else
         clif_displaymessage (fd, "Character not found.");
+        return -1;
+    }
+    if (skill_pool_activate (pl_sd, skill))
+        clif_displaymessage (fd, "Activation failed.");
+    else
+        clif_displaymessage (fd, "Activation successful.");
 
     return 0;
 }
 
+/// Unfocus somebody's skill
 int atcommand_skillpool_unfocus (int fd, struct map_session_data *,
                                  const char *, const char *message)
 {
+    if (!message || !*message)
+        return -1;
+    int skill;
     char character[100];
-    int  skill;
-    struct map_session_data *pl_sd;
-
-    if (!message || !*message
-        || sscanf (message, "%d %99[^\n]", &skill, character) < 1)
+    if (sscanf (message, "%d %99[^\n]", &skill, character) < 1)
         return -1;
 
-    if ((pl_sd = map_nick2sd (character)) != NULL)
+    struct map_session_data *pl_sd = map_nick2sd (character);
+    if (!pl_sd)
     {
-        if (skill_pool_deactivate (pl_sd, skill))
-            clif_displaymessage (fd, "Deactivation failed.");
-        else
-            clif_displaymessage (fd, "Deactivation successful.");
-    }
-    else
         clif_displaymessage (fd, "Character not found.");
+        return -1;
+    }
+    if (skill_pool_deactivate (pl_sd, skill))
+        clif_displaymessage (fd, "Deactivation failed.");
+    else
+        clif_displaymessage (fd, "Deactivation successful.");
 
     return 0;
 }
 
+/// Learn a skill
 int atcommand_skill_learn (int fd, struct map_session_data *,
                            const char *, const char *message)
 {
+    if (!message || !*message)
+        return -1;
+    int skill, level;
     char character[100];
-    int  skill, level;
-    struct map_session_data *pl_sd;
-
-    if (!message || !*message
-        || sscanf (message, "%d %d %99[^\n]", &skill, &level, character) < 1)
+    if (sscanf (message, "%d %d %99[^\n]", &skill, &level, character) < 1)
         return -1;
 
-    if ((pl_sd = map_nick2sd (character)) != NULL)
+    struct map_session_data *pl_sd = map_nick2sd (character);
+    if (!pl_sd)
     {
-        set_skill (pl_sd, skill, level);
-        clif_skillinfoblock (pl_sd);
-    }
-    else
         clif_displaymessage (fd, "Character not found.");
+        return -1;
+    }
+    set_skill (pl_sd, skill, level);
+    clif_skillinfoblock (pl_sd);
 
     return 0;
 }
 
+/// Check what players are from the same IP
 int atcommand_ipcheck (int fd, struct map_session_data *,
                        const char *, const char *message)
 {
-    struct map_session_data *pl_sd;
-    struct sockaddr_in sai;
-    char output[200];
     char character[25];
-    int i;
-    socklen_t sa_len = sizeof (struct sockaddr);
-    unsigned long ip;
-
-    memset(character, '\0', sizeof(character));
 
     if (sscanf (message, "%24[^\n]", character) < 1)
         return -1;
 
-    if ((pl_sd = map_nick2sd (character)) == NULL)
+    struct map_session_data *pl_sd = map_nick2sd (character);
+    if (!pl_sd)
     {
         clif_displaymessage (fd, "Character not found.");
         return -1;
     }
 
-    if (getpeername (pl_sd->fd, (struct sockaddr *)&sai, &sa_len))
+    in_addr_t ip = session[pl_sd->fd]->client_addr.sin_addr.s_addr;
+
+    for (int i = 0; i < fd_max; i++)
     {
-        clif_displaymessage (fd,
-                             "Guru Meditation Error: getpeername() failed");
-        return -1;
-    }
+        if (!session[i])
+            continue;
+        pl_sd = (struct map_session_data *)session[i]->session_data;
+        if (!pl_sd || !pl_sd->state.auth)
+            continue;
+        if (ip != session[pl_sd->fd]->client_addr.sin_addr.s_addr)
+            continue;
 
-    ip = sai.sin_addr.s_addr;
-
-    // We now have the IP address of a character.
-    // Loop over all logged in sessions looking for matches.
-
-    for (i = 0; i < fd_max; i++)
-    {
-        if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-            && pl_sd->state.auth)
-        {
-            if (getpeername (pl_sd->fd, (struct sockaddr *)&sai, &sa_len))
-                continue;
-
-            // Is checking GM levels really needed here?
-            if (ip == sai.sin_addr.s_addr)
-            {
-                snprintf (output, sizeof(output),
-                         "Name: %s | Location: %s %d %d",
-                         pl_sd->status.name, pl_sd->mapname,
-                         pl_sd->bl.x, pl_sd->bl.y);
-                clif_displaymessage (fd, output);
-            }
-        }
+        char output[200];
+        snprintf (output, sizeof(output), "Name: %s | Location: %s %d %d",
+                  pl_sd->status.name, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y);
+        clif_displaymessage (fd, output);
     }
 
     clif_displaymessage (fd, "End of list");

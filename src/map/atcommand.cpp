@@ -138,7 +138,6 @@ ATCOMMAND_FUNC (effect);
 ATCOMMAND_FUNC (character_item_list);
 ATCOMMAND_FUNC (character_storage_list);
 ATCOMMAND_FUNC (addwarp);
-ATCOMMAND_FUNC (follow);
 ATCOMMAND_FUNC (killer);
 ATCOMMAND_FUNC (npcmove);
 ATCOMMAND_FUNC (killable);
@@ -186,8 +185,6 @@ static AtCommandInfo atcommand_info[] = {
     "message",          "Make a global announcement on the current server."},
     {"@die", 1,         atcommand_die,          ATCC_SELF,
     "",                 "Suicide."},
-    {"@follow", 10,     atcommand_follow,       ATCC_SELF,
-    "charname",         "Set yourself to automatically follow a player."},
     {"@goto", 20,       atcommand_goto,         ATCC_SELF,
     "charname",         "Warp yourself to a player."},
     {"@model", 20,      atcommand_model,        ATCC_SELF,
@@ -3997,59 +3994,48 @@ int atcommand_chardelitem (int fd, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- * @disguise <mob_id> by [Valaris] (simplified by [Yor])
- *------------------------------------------
- */
+/// Make yourself appear as a monster to all other players
 int atcommand_disguise (int fd, struct map_session_data *sd,
                         const char *, const char *message)
 {
-    int  mob_id;
 
     if (!message || !*message)
         return -1;
 
-    if ((mob_id = mobdb_searchname (message)) == 0) // check name first (to avoid possible name begining by a number)
+    int mob_id = mobdb_searchname (message);
+    if (!mob_id)
         mob_id = atoi (message);
-
-    if ((mob_id >= 46 && mob_id <= 125) || (mob_id >= 700 && mob_id <= 718) ||  // NPC
-        (mob_id >= 721 && mob_id <= 755) || (mob_id >= 757 && mob_id <= 811) || // NPC
-        (mob_id >= 813 && mob_id <= 834) || // NPC
-        (mob_id > 1000 && mob_id < 1521))
-    {                           // monsters
-        sd->disguiseflag = 1;   // set to override items with disguise script [Valaris]
-        sd->disguise = mob_id;
-        pc_setpos (sd, sd->mapname, sd->bl.x, sd->bl.y, 3);
-        clif_displaymessage (fd, "Disguise applied.");
-    }
-    else
+    // NPCs are 46..1000, mobs are 1001..2000
+    // (this is hard-coded into the client)
+    if (mob_id <= 45 || mob_id > 2000)
     {
-        clif_displaymessage (fd, "Monster/NPC name/id hasn't been found.");
+        clif_displaymessage (fd, "Monster/NPC name/id not found.");
         return -1;
     }
+
+    // disguiseflag is distinct to override items with a disguise script
+    // (is it *really* necessary?)
+    sd->disguiseflag = 1;
+    sd->disguise = mob_id;
+    pc_setpos (sd, sd->mapname, sd->bl.x, sd->bl.y, 3);
+    clif_displaymessage (fd, "Disguise applied.");
 
     return 0;
 }
 
-/*==========================================
- * @undisguise by [Yor]
- *------------------------------------------
- */
+/// Appear as yourself again
 int atcommand_undisguise (int fd, struct map_session_data *sd,
                           const char *, const char *)
 {
-    if (sd->disguise)
-    {
-        clif_clearchar (&sd->bl, 9);
-        sd->disguise = 0;
-        pc_setpos (sd, sd->mapname, sd->bl.x, sd->bl.y, 3);
-        clif_displaymessage (fd, "Undisguise applied.");
-    }
-    else
+    if (!sd->disguise)
     {
         clif_displaymessage (fd, "You're not disguised.");
         return -1;
     }
+    clif_clearchar (&sd->bl, 9);
+    sd->disguise = 0;
+    pc_setpos (sd, sd->mapname, sd->bl.x, sd->bl.y, 3);
+    clif_displaymessage (fd, "Undisguise applied.");
 
     return 0;
 }
@@ -4076,7 +4062,7 @@ int atcommand_localbroadcast (int, struct map_session_data *sd,
     if (!message || !*message)
         return -1;
 
-    char output[200];
+    char output[512];
     snprintf (output, sizeof(output), "%s : %s", sd->status.name, message);
 
     // flag 1 becomes ALL_SAMEMAP
@@ -4085,108 +4071,79 @@ int atcommand_localbroadcast (int, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- * @chardisguise <mob_id> <character> by Kalaspuff (based off Valaris' and Yor's work)
- *------------------------------------------
- */
+/// Make someone appear to everyone else as a monster
 int atcommand_chardisguise (int fd, struct map_session_data *sd,
                             const char *, const char *message)
 {
-    int  mob_id;
-    char character[100];
+    if (!message || !*message)
+        return -1;
     char mob_name[100];
-    struct map_session_data *pl_sd;
-
-    memset (character, '\0', sizeof (character));
-    memset (mob_name, '\0', sizeof (mob_name));
-
-    if (!message || !*message
-        || sscanf (message, "%s %99[^\n]", mob_name, character) < 2)
+    char character[100];
+    if (sscanf (message, "%s %99[^\n]", mob_name, character) < 2)
         return -1;
 
-    if ((mob_id = mobdb_searchname (mob_name)) == 0)    // check name first (to avoid possible name begining by a number)
+    int mob_id = mobdb_searchname (mob_name);
+    if (!mob_id)
         mob_id = atoi (mob_name);
-
-    if ((pl_sd = map_nick2sd (character)) != NULL)
+    // NPCs are 46..1000, mobs are 1001..2000
+    // (this is hard-coded into the client)
+    if (mob_id <= 45 || mob_id > 2000)
     {
-        if (pc_isGM (sd) >= pc_isGM (pl_sd))
-        {                       // you can disguise only lower or same level
-            if ((mob_id >= 46 && mob_id <= 125) || (mob_id >= 700 && mob_id <= 718) ||  // NPC
-                (mob_id >= 721 && mob_id <= 755) || (mob_id >= 757 && mob_id <= 811) || // NPC
-                (mob_id >= 813 && mob_id <= 834) || // NPC
-                (mob_id > 1000 && mob_id < 1521))
-            {                   // monsters
-                pl_sd->disguiseflag = 1;    // set to override items with disguise script [Valaris]
-                pl_sd->disguise = mob_id;
-                pc_setpos (pl_sd, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y,
-                           3);
-                clif_displaymessage (fd, "Character's disguise applied.");
-            }
-            else
-            {
-                clif_displaymessage (fd, "Monster/NPC name/id hasn't been found.");
-                return -1;
-            }
-        }
-        else
-        {
-            clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
-            return -1;
-        }
+        clif_displaymessage (fd, "Monster/NPC name/id not found.");
+        return -1;
     }
-    else
+
+    struct map_session_data *pl_sd = map_nick2sd (character);
+    if (!pl_sd)
     {
         clif_displaymessage (fd, "Character not found.");
         return -1;
     }
+    if (pc_isGM (sd) < pc_isGM (pl_sd))
+    {
+        clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
+        return -1;
+    }
+    // disguiseflag is distinct to override items with a disguise script
+    // (is it *really* necessary?)
+    pl_sd->disguiseflag = 1;
+    pl_sd->disguise = mob_id;
+    pc_setpos (pl_sd, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y, 3);
+    clif_displaymessage (fd, "Character's disguise applied.");
 
     return 0;
 }
 
-/*==========================================
- * @charundisguise <character> by Kalaspuff (based off Yor's work)
- *------------------------------------------
- */
+/// Remove someone's disguise
 int atcommand_charundisguise (int fd, struct map_session_data *sd,
                               const char *, const char *message)
 {
+    if (!message || !*message)
+        return -1;
     char character[100];
-    struct map_session_data *pl_sd;
-
-    memset (character, '\0', sizeof (character));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
+    if (sscanf (message, "%99[^\n]", character) < 1)
         return -1;
 
-    if ((pl_sd = map_nick2sd (character)) != NULL)
-    {
-        if (pc_isGM (sd) >= pc_isGM (pl_sd))
-        {                       // you can undisguise only lower or same level
-            if (pl_sd->disguise)
-            {
-                clif_clearchar (&pl_sd->bl, 9);
-                pl_sd->disguise = 0;
-                pc_setpos (pl_sd, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y,
-                           3);
-                clif_displaymessage (fd, "Character's undisguise applied.");
-            }
-            else
-            {
-                clif_displaymessage (fd, "Character is not disguised.");
-                return -1;
-            }
-        }
-        else
-        {
-            clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
-            return -1;
-        }
-    }
-    else
+    struct map_session_data *pl_sd = map_nick2sd (character);
+    if (!pl_sd)
     {
         clif_displaymessage (fd, "Character not found.");
         return -1;
     }
+    if (pc_isGM (sd) < pc_isGM (pl_sd))
+    {
+        clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
+        return -1;
+    }
+    if (!pl_sd->disguise)
+    {
+        clif_displaymessage (fd, "Character is not disguised.");
+        return -1;
+    }
+    clif_clearchar (&pl_sd->bl, 9);
+    pl_sd->disguise = 0;
+    pc_setpos (pl_sd, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y, 3);
+    clif_displaymessage (fd, "Character's undisguise applied.");
 
     return 0;
 }
@@ -4537,33 +4494,23 @@ int atcommand_charkillable (int fd, struct map_session_data *,
     return 0;
 }
 
-/*==========================================
- * @npcmove by MouseJstr
- *
- * move a npc
- *------------------------------------------
- */
-int
-atcommand_npcmove (int, struct map_session_data *sd,
-                   const char *, const char *message)
+/// Move an NPC
+int atcommand_npcmove (int, struct map_session_data *sd,
+                       const char *, const char *message)
 {
-    char character[100];
-    int  x = 0, y = 0;
-    struct npc_data *nd = 0;
-
-    if (sd == NULL)
+    if (!sd)
         return -1;
 
     if (!message || !*message)
         return -1;
 
-    memset (character, '\0', sizeof character);
-
+    int x, y;
+    char character[100];
     if (sscanf (message, "%d %d %99[^\n]", &x, &y, character) < 3)
         return -1;
 
-    nd = npc_name2id (character);
-    if (nd == NULL)
+    struct npc_data *nd = npc_name2id (character);
+    if (!nd)
         return -1;
 
     npc_enable (character, 0);
@@ -4574,68 +4521,31 @@ atcommand_npcmove (int, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- * @addwarp by MouseJstr
- *
- * Create a new static warp point.
- *------------------------------------------
- */
-int
-atcommand_addwarp (int fd, struct map_session_data *sd,
-                   const char *, const char *message)
+/// Create a new semipermanent warp (a type of NPC)
+int atcommand_addwarp (int fd, struct map_session_data *sd,
+                       const char *, const char *message)
 {
-    char w1[64], w3[64], w4[64];
-    char map[30], output[200];
-    int  x, y, ret;
-
     if (!message || !*message)
         return -1;
 
-    if (sscanf (message, "%99s %d %d[^\n]", map, &x, &y) < 3)
+    char map[30];
+    int x, y;
+    if (sscanf (message, "%30s %d %d[^\n]", map, &x, &y) < 3)
         return -1;
 
+    char w1[64], w3[64], w4[64];
     sprintf (w1, "%s,%d,%d", sd->mapname, sd->bl.x, sd->bl.y);
     sprintf (w3, "%s%d%d%d%d", map, sd->bl.x, sd->bl.y, x, y);
     sprintf (w4, "1,1,%s.gat,%d,%d", map, x, y);
 
-    ret = npc_parse_warp (w1, "warp", w3, w4);
+    int ret = npc_parse_warp (w1, "warp", w3, w4);
 
+    char output[200];
     sprintf (output, "New warp NPC => %s", w3);
 
     clif_displaymessage (fd, output);
 
     return ret;
-}
-
-/*==========================================
- * @follow by [MouseJstr]
- *
- * Follow a player .. staying no more then 5 spaces away
- *------------------------------------------
- */
-int
-atcommand_follow (int fd, struct map_session_data *,
-                  const char *, const char *)
-{
-#if 0
-    struct map_session_data *pl_sd = NULL;
-
-    if (!message || !*message)
-        return -1;
-    if ((pl_sd = map_nick2sd ((char *) message)) != NULL)
-        pc_follow (sd, pl_sd->bl.id);
-    else
-        return 1;
-#endif
-
-    /*
-     * Command disabled - it's incompatible with the TMW
-     * client.
-     */
-    clif_displaymessage (fd, "@follow command not available");
-
-    return 0;
-
 }
 
 /*==========================================

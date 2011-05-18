@@ -73,8 +73,6 @@ int  pc_modifysellvalue (struct map_session_data *, int);
 int  pc_attack (struct map_session_data *, int, int);
 int  pc_stopattack (struct map_session_data *);
 
-int  pc_follow (struct map_session_data *, int);    // [MouseJstr]
-
 int  pc_gainexp (struct map_session_data *, int, int);
 
 #define PC_GAINEXP_REASON_KILLING	0

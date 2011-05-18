@@ -250,7 +250,7 @@ struct map_session_data
     short attacktarget_lv;
     unsigned int attackabletime;
 
-    int  followtimer;           // [MouseJstr]
+    /// Used with the GM commands to iterate over players
     int  followtarget;
 
     unsigned int cast_tick;     // [Fate] Next tick at which spellcasting is allowed

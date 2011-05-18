@@ -5390,23 +5390,24 @@ int buildin_gmcommand (struct script_state *st)
  * movenpc [MouseJstr]
  *------------------------------------------
  */
-
-int buildin_movenpc (struct script_state *)
+int buildin_movenpc (struct script_state *st)
 {
-#if 0
-    struct map_session_data *sd;
-    const char *map, *npc;
-    int  x, y;
+//     struct map_session_data *sd = script_rid2sd (st);
 
-    sd = script_rid2sd (st);
+//     const char *map = conv_str (st, &(st->stack->stack_data[st->start + 2]));
+    int x = conv_num (st, &(st->stack->stack_data[st->start + 3]));
+    int y = conv_num (st, &(st->stack->stack_data[st->start + 4]));
+    const char *npc = conv_str (st, &(st->stack->stack_data[st->start + 5]));
 
-    map = conv_str (st, &(st->stack->stack_data[st->start + 2]));
-    x = conv_num (st, &(st->stack->stack_data[st->start + 3]));
-    y = conv_num (st, &(st->stack->stack_data[st->start + 4]));
-    npc = conv_str (st, &(st->stack->stack_data[st->start + 5]));
+    struct npc_data *nd = npc_name2id (npc);
+    if (!nd)
+        return 0;
 
-    // TODO actually implement this - the next function might be useful
-#endif
+    npc_enable (npc, 0);
+    nd->bl.x = x;
+    nd->bl.y = y;
+    npc_enable (npc, 1);
+
     return 0;
 }
 

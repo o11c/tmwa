@@ -635,7 +635,6 @@ int pc_authok (int id, int login_id2, time_t connect_until_time,
     sd->state.auth = 1;
     sd->walktimer = -1;
     sd->attacktimer = -1;
-    sd->followtimer = -1;       // [MouseJstr]
     sd->skilltimer = -1;
     sd->skillitem = -1;
     sd->skillitemlv = -1;
@@ -3403,72 +3402,6 @@ int pc_stopattack (struct map_session_data *sd)
     }
     sd->attacktarget = 0;
     sd->state.attack_continue = 0;
-
-    return 0;
-}
-
-static void pc_follow_timer (timer_id tid, tick_t tick, custom_id_t id, custom_data_t)
-{
-    struct map_session_data *sd, *bl;
-
-    sd = map_id2sd (id);
-    if (sd == NULL || sd->followtimer != tid)
-        return;
-
-    sd->followtimer = -1;
-
-    do
-    {
-        if (sd->bl.prev == NULL)
-            break;
-
-        bl = (struct map_session_data *) map_id2bl (sd->followtarget);
-
-        if (bl == NULL)
-            return;
-
-        if (bl->bl.prev == NULL)
-            break;
-
-        if (bl->bl.type == BL_PC
-            && pc_isdead ((struct map_session_data *) bl))
-            return;
-
-        if (sd->skilltimer == -1 && sd->attacktimer == -1
-            && sd->walktimer == -1)
-        {
-            if ((sd->bl.m == bl->bl.m)
-                && pc_can_reach (sd, bl->bl.x, bl->bl.y))
-            {
-                if (distance (sd->bl.x, sd->bl.y, bl->bl.x, bl->bl.y) > 5)
-                    pc_walktoxy (sd, bl->bl.x, bl->bl.y);
-            }
-            else
-                pc_setpos ((struct map_session_data *) sd, bl->mapname,
-                           bl->bl.x, bl->bl.y, 3);
-        }
-    }
-    while (0);
-
-    sd->followtimer =
-        add_timer (tick + sd->aspd, pc_follow_timer, sd->bl.id, 0);
-}
-
-int pc_follow (struct map_session_data *sd, int target_id)
-{
-    struct block_list *bl;
-
-    bl = map_id2bl (target_id);
-    if (bl == NULL)
-        return 1;
-    sd->followtarget = target_id;
-    if (sd->followtimer != -1)
-    {
-        delete_timer (sd->followtimer, pc_follow_timer);
-        sd->followtimer = -1;
-    }
-
-    pc_follow_timer (-1, gettick (), sd->bl.id, 0);
 
     return 0;
 }

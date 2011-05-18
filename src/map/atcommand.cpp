@@ -2630,7 +2630,7 @@ int atcommand_char_ban (int fd, struct map_session_data *sd,
     if (!message || !*message)
         return -1;
     char modif[100], character[100];
-    if (sscanf (message, "%s %99[^\n]", modif, character) < 2)
+    if (sscanf (message, "%99s %99[^\n]", modif, character) < 2)
         return -1;
 
     const char *modif_p = modif;
@@ -3944,7 +3944,7 @@ int atcommand_chardelitem (int fd, struct map_session_data *sd,
     char item_name[100];
     int number;
     char character[100];
-    if (sscanf (message, "%s %d %99[^\n]", item_name, &number, character) < 3 || number < 1)
+    if (sscanf (message, "%99s %d %99[^\n]", item_name, &number, character) < 3 || number < 1)
         return -1;
 
     struct item_data *item_data = itemdb_searchname (item_name);
@@ -4079,7 +4079,7 @@ int atcommand_chardisguise (int fd, struct map_session_data *sd,
         return -1;
     char mob_name[100];
     char character[100];
-    if (sscanf (message, "%s %99[^\n]", mob_name, character) < 2)
+    if (sscanf (message, "%99s %99[^\n]", mob_name, character) < 2)
         return -1;
 
     int mob_id = mobdb_searchname (mob_name);
@@ -4548,49 +4548,36 @@ int atcommand_addwarp (int fd, struct map_session_data *sd,
     return ret;
 }
 
-/*==========================================
- * @chareffect by [MouseJstr]
- *
- * Create a effect localized on another character
- *------------------------------------------
- */
-int
-atcommand_chareffect (int fd, struct map_session_data *,
-                      const char *, const char *message)
+/// Apply a visual effect on a player (is this useful?)
+int atcommand_chareffect (int fd, struct map_session_data *,
+                          const char *, const char *message)
 {
-    struct map_session_data *pl_sd = NULL;
+    if (!message || !*message)
+        return -1;
+    int type = 0;
     char target[255];
-    int  type = 0;
-
-    if (!message || !*message
-        || sscanf (message, "%d %s", &type, target) != 2)
+    if (sscanf (message, "%d %255s", &type, target) != 2)
         return -1;
 
-    if ((pl_sd = map_nick2sd ((char *) target)) == NULL)
+    struct map_session_data *pl_sd = map_nick2sd ((char *) target);
+    if (!pl_sd)
         return -1;
 
     clif_specialeffect (&pl_sd->bl, type, 0);
-    clif_displaymessage (fd, "Your effect has changed.");   // Your effect has changed.
+    clif_displaymessage (fd, "Effect changed.");
 
     return 0;
 }
 
-/*==========================================
- * @dropall by [MouseJstr]
- *
- * Drop all your possession on the ground
- *------------------------------------------
- */
-int
-atcommand_dropall (int, struct map_session_data *sd,
-                   const char *, const char *)
+/// Drop everything on the ground
+int atcommand_dropall (int, struct map_session_data *sd,
+                       const char *, const char *)
 {
-    int  i;
-    for (i = 0; i < MAX_INVENTORY; i++)
+    for (int i = 0; i < MAX_INVENTORY; i++)
     {
         if (sd->status.inventory[i].amount)
         {
-            if (sd->status.inventory[i].equip != 0)
+            if (sd->status.inventory[i].equip)
                 pc_unequipitem (sd, i, 0);
             pc_dropitem (sd, i, sd->status.inventory[i].amount);
         }
@@ -4598,29 +4585,20 @@ atcommand_dropall (int, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- * @chardropall by [MouseJstr]
- *
- * Throw all the characters possessions on the ground.  Normally
- * done in response to them being disrespectful of a GM
- *------------------------------------------
- */
-int
-atcommand_chardropall (int fd, struct map_session_data *,
-                       const char *, const char *message)
+/// Force a player to drop everything on the ground
+int atcommand_chardropall (int fd, struct map_session_data *,
+                           const char *, const char *message)
 {
-    int  i;
-    struct map_session_data *pl_sd = NULL;
-
     if (!message || !*message)
         return -1;
-    if ((pl_sd = map_nick2sd ((char *) message)) == NULL)
+    struct map_session_data *pl_sd = map_nick2sd ((char *) message);
+    if (!pl_sd)
         return -1;
-    for (i = 0; i < MAX_INVENTORY; i++)
+    for (int i = 0; i < MAX_INVENTORY; i++)
     {
         if (pl_sd->status.inventory[i].amount)
         {
-            if (pl_sd->status.inventory[i].equip != 0)
+            if (pl_sd->status.inventory[i].equip)
                 pc_unequipitem (pl_sd, i, 0);
             pc_dropitem (pl_sd, i, pl_sd->status.inventory[i].amount);
         }
@@ -4628,43 +4606,30 @@ atcommand_chardropall (int fd, struct map_session_data *,
 
     clif_displaymessage (pl_sd->fd, "Ever play 52 card pickup?");
     clif_displaymessage (fd, "It is done");
-    //clif_displaymessage(fd, "It is offical.. your a jerk");
+    clif_displaymessage(fd, "It is offical.. you're a jerk");
 
     return 0;
 }
 
-/*==========================================
- * @storeall by [MouseJstr]
- *
- * Put everything into storage to simplify your inventory to make
- * debugging easie
- *------------------------------------------
- */
-int
-atcommand_storeall (int fd, struct map_session_data *sd,
-                    const char *, const char *)
+/// Put everything into storage to simplify your inventory. Intended as a debugging aid
+int atcommand_storeall (int fd, struct map_session_data *sd,
+                        const char *, const char *)
 {
-    int  i;
     nullpo_retr (-1, sd);
 
     if (sd->state.storage_flag != 1)
-    {                           //Open storage.
-        switch (storage_storageopen (sd))
+    {
+        if (storage_storageopen (sd) != 0)
         {
-            case 2:            //Try again
-                clif_displaymessage (fd, "run this command again..");
-                return 0;
-            case 1:            //Failure
-                clif_displaymessage (fd,
-                                     "You can't open the storage currently.");
-                return 1;
+            clif_displaymessage (fd, "You can't open the storage currently.");
+            return 1;
         }
     }
-    for (i = 0; i < MAX_INVENTORY; i++)
+    for (int i = 0; i < MAX_INVENTORY; i++)
     {
         if (sd->status.inventory[i].amount)
         {
-            if (sd->status.inventory[i].equip != 0)
+            if (sd->status.inventory[i].equip)
                 pc_unequipitem (sd, i, 0);
             storage_storageadd (sd, i, sd->status.inventory[i].amount);
         }
@@ -4675,46 +4640,34 @@ atcommand_storeall (int fd, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- * @charstoreall by [MouseJstr]
- *
- * A way to screw with players who piss you off
- *------------------------------------------
- */
-int
-atcommand_charstoreall (int fd, struct map_session_data *sd,
-                        const char *, const char *message)
+/// Force a player's inventory to be moved into storage
+int atcommand_charstoreall (int fd, struct map_session_data *sd,
+                            const char *, const char *message)
 {
-    int  i;
-    struct map_session_data *pl_sd = NULL;
-
     if (!message || !*message)
         return -1;
-    if ((pl_sd = map_nick2sd ((char *) message)) == NULL)
+    struct map_session_data *pl_sd = map_nick2sd ((char *) message);
+    if (!pl_sd)
         return -1;
 
     if (storage_storageopen (pl_sd) == 1)
     {
-        clif_displaymessage (fd,
-                             "Had to open the characters storage window...");
-        clif_displaymessage (fd, "run this command again..");
+        clif_displaymessage (fd, "Had to open the characters storage window...");
+        clif_displaymessage (fd, "run this command again.");
         return 0;
     }
-    for (i = 0; i < MAX_INVENTORY; i++)
+    for (int i = 0; i < MAX_INVENTORY; i++)
     {
         if (pl_sd->status.inventory[i].amount)
         {
-            if (pl_sd->status.inventory[i].equip != 0)
+            if (pl_sd->status.inventory[i].equip)
                 pc_unequipitem (pl_sd, i, 0);
             storage_storageadd (pl_sd, i, sd->status.inventory[i].amount);
         }
     }
     storage_storageclose (pl_sd);
 
-    clif_displaymessage (pl_sd->fd,
-                         "Everything you own has been put away for safe keeping.");
-    clif_displaymessage (pl_sd->fd,
-                         "go to the nearest kafka to retrieve it..");
+    clif_displaymessage (pl_sd->fd, "Everything you own has been put in storage for safekeeping.");
     clif_displaymessage (pl_sd->fd, "   -- the management");
 
     clif_displaymessage (fd, "It is done");
@@ -4722,31 +4675,22 @@ atcommand_charstoreall (int fd, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- * @skillid by [MouseJstr]
- *
- * lookup a skill by name
- *------------------------------------------
- */
-int
-atcommand_skillid (int fd, struct map_session_data *,
+/// lookup a skill by name
+int atcommand_skillid (int fd, struct map_session_data *,
                    const char *, const char *message)
 {
-    int  skillen = 0, idx = 0;
     if (!message || !*message)
         return -1;
-    skillen = strlen (message);
-    while (skill_names[idx].id != 0)
+    for (int idx = 0; skill_names[idx].id; idx++)
     {
-        if ((strncasecmp (skill_names[idx].name, message, skillen) == 0) ||
-            (strncasecmp (skill_names[idx].desc, message, skillen) == 0))
+        if ((strcasecmp (skill_names[idx].name, message) == 0) ||
+            (strcasecmp (skill_names[idx].desc, message) == 0))
         {
             char output[255];
             sprintf (output, "skill %d: %s", skill_names[idx].id,
                      skill_names[idx].desc);
             clif_displaymessage (fd, output);
         }
-        idx++;
     }
     return 0;
 }
@@ -4795,7 +4739,7 @@ int atcommand_adjcmdlvl (int fd, struct map_session_data *,
         return -1;
     int newlev;
     char cmd[100];
-    if (sscanf (message, "%d %s", &newlev, cmd) != 2)
+    if (sscanf (message, "%d %99s", &newlev, cmd) != 2)
         return -1;
 
     for (int i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
@@ -4818,7 +4762,7 @@ int atcommand_adjgmlvl (int, struct map_session_data *,
         return -1;
     int newlev;
     char user[100];
-    if (sscanf (message, "%d %s", &newlev, user) != 2)
+    if (sscanf (message, "%d %99s", &newlev, user) != 2)
         return -1;
 
     struct map_session_data *pl_sd = map_nick2sd ((char *) user);

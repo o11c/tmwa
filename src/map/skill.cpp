@@ -33,11 +33,27 @@ static int skill_delunitgroup (struct skill_unit_group *group);
 static int skill_unitgrouptickset_delete (struct block_list *bl, int group_id);
 static void skill_status_change_timer (timer_id, tick_t, custom_id_t, custom_data_t);
 
-struct skill_name_db skill_names[] = {
-    {AC_OWL, "OWL", "Owl's_Eye"},
-    {NV_EMOTE, "EMOTE", "Emote_Skill"},
-    {NV_TRADE, "TRADE", "Trade_Skill"},
-    {NV_PARTY, "PARTY", "Party_Skill"},
+struct skill_name_db skill_names[] =
+{
+    {NV_EMOTE,          "EMOTE",        "Emote_Skill"},
+    {NV_TRADE,          "TRADE",        "Trade_Skill"},
+    {NV_PARTY,          "PARTY",        "Party_Skill"},
+    {AC_OWL,            "MALLARD",      "Mallard's_Eye"},
+    {TMW_SKILLPOOL,     "POOL",         "Skill_Pool"},
+
+    {TMW_MAGIC,         "MAGIC",        "General_Magic"},
+    {TMW_MAGIC_LIFE,    "LIFE",         "Life_Magic"},
+    {TMW_MAGIC_WAR,     "WAR",          "War_Magic"},
+    {TMW_MAGIC_TRANSMUTE,"TRANSMUTE",   "Transmutation_Magic"},
+    {TMW_MAGIC_NATURE,  "NATURE",       "Nature_Magic" },
+    {TMW_MAGIC_ETHER,   "ASTRAL",       "Astral_Magic"},
+
+    {TMW_BRAWLING,      "BRAWL",        "Brawling"},
+    {TMW_LUCKY_COUNTER, "LUCKY",        "Lucky_Counter"},
+    {TMW_SPEED,         "SPEED",        "Speed"},
+    {TMW_RESIST_POISON, "RESIST_POISON","Resist_Poison"},
+    {TMW_ASTRAL_SOUL,   "ASTRAL_SOUL",  "Astral_Soul"},
+    {TMW_RAGING,        "RAGE",         "Raging"},
     {0, 0, 0}
 };
 

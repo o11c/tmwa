@@ -21,7 +21,7 @@ static void sig_proc (int)
     for (int i = 0; i < fd_max; i++)
         if (session[i])
             close (i);
-    exit (0);
+    _exit (0);
 }
 
 // Added by Gabuzomeu

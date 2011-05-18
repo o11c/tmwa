@@ -283,8 +283,6 @@ int intif_party_checkconflict (int party_id, int account_id, char *nick)
 static int intif_parse_WisMessage (int fd)
 {                               // rewritten by [Yor]
     struct map_session_data *sd;
-    int  i;
-    char *wisp_source;
 
     if (battle_config.etc_log)
         printf
@@ -294,28 +292,9 @@ static int intif_parse_WisMessage (int fd)
     sd = map_nick2sd ((char *)RFIFOP (fd, 32)); // Searching destination player
     if (sd != NULL && strcmp (sd->status.name, (char *)RFIFOP (fd, 32)) == 0)
     {                           // exactly same name (inter-server have checked the name before)
-        // if player ignore all
-        if (sd->ignoreAll == 1)
-            intif_wis_replay (RFIFOL (fd, 4), 2);   // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
-        else
-        {
-            wisp_source = (char *)RFIFOP (fd, 8);   // speed up
-            // if player ignore the source character
-            for (i = 0; i < (sizeof (sd->ignore) / sizeof (sd->ignore[0]));
-                 i++)
-                if (strcmp (sd->ignore[i].name, wisp_source) == 0)
-                {
-                    intif_wis_replay (RFIFOL (fd, 4), 2);   // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
-                    break;
-                }
-            // if source player not found in ignore list
-            if (i == (sizeof (sd->ignore) / sizeof (sd->ignore[0])))
-            {
-                clif_wis_message (sd->fd, (char *)RFIFOP (fd, 8), (char *)RFIFOP (fd, 56),
-                                  RFIFOW (fd, 2) - 56);
-                intif_wis_replay (RFIFOL (fd, 4), 0);   // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
-            }
-        }
+        clif_wis_message (sd->fd, (char *)RFIFOP (fd, 8), (char *)RFIFOP (fd, 56),
+                          RFIFOW (fd, 2) - 56);
+        intif_wis_replay (RFIFOL (fd, 4), 0);   // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
     }
     else
         intif_wis_replay (RFIFOL (fd, 4), 1);   // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target

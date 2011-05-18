@@ -4311,33 +4311,10 @@ static void clif_parse_Wis (int fd, struct map_session_data *sd)
         }
         else
         {
-            /* The target is ignoring all whispers. */
-            if (dstsd->ignoreAll == 1)
-                /* Ignored by target. */
-                clif_wis_end (fd, 2);
-            else
-            {
-                int i;
-                size_t end = sizeof (dstsd->ignore) / sizeof (dstsd->ignore[0]);
-
-                /* See if the source player is being ignored. */
-                for (i = 0; i < end; ++i)
-                    if (strcmp (dstsd->ignore[i].name, sd->status.name) == 0)
-                    {
-                        /* Ignored by target. */
-                        clif_wis_end (fd, 2);
-                        break;
-                    }
-
-                /* The player is not being ignored. */
-                if (i == end)
-                {
-                    clif_wis_message (dstsd->fd, sd->status.name, message,
-                                      RFIFOW (fd, 2) - 28);
-                    /* The whisper was sent successfully. */
-                    clif_wis_end (fd, 0);
-                }
-            }
+            clif_wis_message (dstsd->fd, sd->status.name, message,
+                              RFIFOW (fd, 2) - 28);
+            /* The whisper was sent successfully. */
+            clif_wis_end (fd, 0);
         }
     }
 

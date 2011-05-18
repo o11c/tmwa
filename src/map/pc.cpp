@@ -687,9 +687,6 @@ int pc_authok (int id, int login_id2, time_t connect_until_time,
     memset (sd->skillunit, 0, sizeof (sd->skillunit));
     memset (sd->skillunittick, 0, sizeof (sd->skillunittick));
 
-    // init ignore list
-    memset (sd->ignore, 0, sizeof (sd->ignore));
-
     // パーティー関係の初期化
     sd->party_sended = 0;
     sd->party_invite = 0;

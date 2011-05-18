@@ -389,11 +389,6 @@ struct map_session_data
     int  eventtimer[MAX_EVENTTIMER];
 
     int  last_skillid, last_skilllv;    // Added by RoVeRT
-    struct
-    {
-        char name[24];
-    } ignore[80];
-    int  ignoreAll;
     short sg_count;
 
     struct

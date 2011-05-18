@@ -131,10 +131,6 @@ ATCOMMAND_FUNC (servertime);
 ATCOMMAND_FUNC (chardelitem);
 ATCOMMAND_FUNC (disguise);
 ATCOMMAND_FUNC (undisguise);
-ATCOMMAND_FUNC (ignorelist);
-ATCOMMAND_FUNC (charignorelist);
-ATCOMMAND_FUNC (inall);
-ATCOMMAND_FUNC (exall);
 ATCOMMAND_FUNC (chardisguise);
 ATCOMMAND_FUNC (charundisguise);
 ATCOMMAND_FUNC (email);
@@ -191,8 +187,6 @@ static AtCommandInfo atcommand_info[] = {
     "message",          "Make a global announcement across all servers."},
     {"@localbroadcast", 40, atcommand_localbroadcast, ATCC_MSG,
     "message",          "Make a global announcement on the current server."},
-    {"@ignorelist", 0,  atcommand_ignorelist,   ATCC_SELF,
-    "",                 "Display your server-side ignore list. Defunct."},
     {"@die", 1,         atcommand_die,          ATCC_SELF,
     "",                 "Suicide."},
     {"@follow", 10,     atcommand_follow,       ATCC_SELF,
@@ -304,12 +298,6 @@ static AtCommandInfo atcommand_info[] = {
                         "learn a skill"},
     {"@kick", 20,       atcommand_kick,         ATCC_CHAR,
     "charname",         "Disconnect a player from the server."},
-    {"@charignorelist", 20, atcommand_charignorelist, ATCC_CHAR,
-    "charname",         "Display a player's ignore list."},
-    {"@exall", 20,      atcommand_exall,        ATCC_CHAR,
-    "charname",         "Block whispers sent to a specified player."},
-    {"@inall", 20,      atcommand_inall,        ATCC_CHAR,
-    "charname",         "Allow whispers sent to a specified player."},
     {"@charitemlist", 40, atcommand_character_item_list, ATCC_CHAR,
     "charname",         "List the contents of a player's inventory."},
     {"@charstoragelist", 40, atcommand_character_storage_list, ATCC_CHAR,
@@ -4112,227 +4100,6 @@ int atcommand_localbroadcast (int, struct map_session_data *sd,
     snprintf (output, 199, "%s : %s", sd->status.name, message);
 
     clif_GMmessage (&sd->bl, output, strlen (output) + 1, 1);   // 1: ALL_SAMEMAP
-
-    return 0;
-}
-
-/*==========================================
- * @ignorelist by [Yor]
- *------------------------------------------
- */
-int atcommand_ignorelist (int fd, struct map_session_data *sd,
-                          const char *, const char *)
-{
-    char output[200];
-    int  count;
-    int  i;
-
-    memset (output, '\0', sizeof (output));
-
-    count = 0;
-    for (i = 0; i < (int) (sizeof (sd->ignore) / sizeof (sd->ignore[0])); i++)
-        if (sd->ignore[i].name[0])
-            count++;
-
-    if (sd->ignoreAll == 0)
-        if (count == 0)
-            clif_displaymessage (fd, "You accept all whispers");
-        else
-        {
-            sprintf (output, "You accept all whispers, except from %d player(s):", count);
-            clif_displaymessage (fd, output);
-        }
-    else if (count == 0)
-        clif_displaymessage (fd, "You refuse all whispers");
-    else
-    {
-        sprintf (output, "You refuse all whispers, especially from %d player(s):", count);
-        clif_displaymessage (fd, output);
-    }
-
-    if (count > 0)
-        for (i = 0; i < (int) (sizeof (sd->ignore) / sizeof (sd->ignore[0]));
-             i++)
-            if (sd->ignore[i].name[0])
-                clif_displaymessage (fd, sd->ignore[i].name);
-
-    return 0;
-}
-
-/*==========================================
- * @charignorelist <player_name> by [Yor]
- *------------------------------------------
- */
-int atcommand_charignorelist (int fd, struct map_session_data *,
-                              const char *, const char *message)
-{
-    char character[100];
-    struct map_session_data *pl_sd;
-    char output[200];
-    int  count;
-    int  i;
-
-    memset (character, '\0', sizeof (character));
-    memset (output, '\0', sizeof (output));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
-        return -1;
-
-    if ((pl_sd = map_nick2sd (character)) != NULL)
-    {
-        count = 0;
-        for (i = 0;
-             i < (int) (sizeof (pl_sd->ignore) / sizeof (pl_sd->ignore[0]));
-             i++)
-            if (pl_sd->ignore[i].name[0])
-                count++;
-
-        if (pl_sd->ignoreAll == 0)
-            if (count == 0)
-            {
-                sprintf (output, "'%s' accepts any whispers.", pl_sd->status.name);
-                clif_displaymessage (fd, output);
-            }
-            else
-            {
-                sprintf (output, "'%s' accepts all whispers, except from %d player(s):", pl_sd->status.name, count);
-                clif_displaymessage (fd, output);
-            }
-        else if (count == 0)
-        {
-            sprintf (output, "'%s' refuses all whispers.", pl_sd->status.name);
-            clif_displaymessage (fd, output);
-        }
-        else
-        {
-            sprintf (output, "'%s' refuses all whisps, especially from %d player(s):", pl_sd->status.name, count);
-            clif_displaymessage (fd, output);
-        }
-
-        if (count > 0)
-            for (i = 0;
-                 i <
-                 (int) (sizeof (pl_sd->ignore) / sizeof (pl_sd->ignore[0]));
-                 i++)
-                if (pl_sd->ignore[i].name[0])
-                    clif_displaymessage (fd, pl_sd->ignore[i].name);
-
-    }
-    else
-    {
-        clif_displaymessage (fd, "Character not found.");
-        return -1;
-    }
-
-    return 0;
-}
-
-/*==========================================
- * @inall <player_name> by [Yor]
- *------------------------------------------
- */
-int atcommand_inall (int fd, struct map_session_data *sd,
-                     const char *, const char *message)
-{
-    char character[100];
-    char output[200];
-    struct map_session_data *pl_sd;
-
-    memset (character, '\0', sizeof (character));
-    memset (output, '\0', sizeof (output));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
-        return -1;
-
-    if ((pl_sd = map_nick2sd (character)) != NULL)
-    {
-        if (pc_isGM (sd) >= pc_isGM (pl_sd))
-        {                       // you can change whisper option only to lower or same level
-            if (pl_sd->ignoreAll == 0)
-            {
-                sprintf (output, "'%s' already accepts all whispers.", pl_sd->status.name);
-                clif_displaymessage (fd, output);
-                return -1;
-            }
-            else
-            {
-                pl_sd->ignoreAll = 0;
-                sprintf (output, "'%s' now accepts all whispers.", pl_sd->status.name);
-                clif_displaymessage (fd, output);
-                // message to player
-                clif_displaymessage (pl_sd->fd, "A GM has authorised all whispers for you.");
-                WFIFOW (pl_sd->fd, 0) = 0x0d2;  // R 00d2 <type>.B <fail>.B: type: 0: deny, 1: allow, fail: 0: success, 1: fail
-                WFIFOB (pl_sd->fd, 2) = 1;
-                WFIFOB (pl_sd->fd, 3) = 0;  // success
-                WFIFOSET (pl_sd->fd, 4);    // packet_len_table[0x0d2]
-            }
-        }
-        else
-        {
-            clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
-            return -1;
-        }
-    }
-    else
-    {
-        clif_displaymessage (fd, "Character not found.");
-        return -1;
-    }
-
-    return 0;
-}
-
-/*==========================================
- * @exall <player_name> by [Yor]
- *------------------------------------------
- */
-int atcommand_exall (int fd, struct map_session_data *sd,
-                     const char *, const char *message)
-{
-    char character[100];
-    char output[200];
-    struct map_session_data *pl_sd;
-
-    memset (character, '\0', sizeof (character));
-    memset (output, '\0', sizeof (output));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
-        return -1;
-
-    if ((pl_sd = map_nick2sd (character)) != NULL)
-    {
-        if (pc_isGM (sd) >= pc_isGM (pl_sd))
-        {                       // you can change whisper option only to lower or same level
-            if (pl_sd->ignoreAll == 1)
-            {
-                sprintf (output, "'%s' already blocks all whispers.", pl_sd->status.name);
-                clif_displaymessage (fd, output);
-                return -1;
-            }
-            else
-            {
-                pl_sd->ignoreAll = 1;
-                sprintf (output, "'%s' blocks now all whispers.", pl_sd->status.name);
-                clif_displaymessage (fd, output);
-                // message to player
-                clif_displaymessage (pl_sd->fd, "A GM has blocked all whispers for you.");
-                WFIFOW (pl_sd->fd, 0) = 0x0d2;  // R 00d2 <type>.B <fail>.B: type: 0: deny, 1: allow, fail: 0: success, 1: fail
-                WFIFOB (pl_sd->fd, 2) = 0;
-                WFIFOB (pl_sd->fd, 3) = 0;  // success
-                WFIFOSET (pl_sd->fd, 4);    // packet_len_table[0x0d2]
-            }
-        }
-        else
-        {
-            clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
-            return -1;
-        }
-    }
-    else
-    {
-        clif_displaymessage (fd, "Character not found.");
-        return -1;
-    }
 
     return 0;
 }

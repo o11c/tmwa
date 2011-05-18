@@ -1840,10 +1840,6 @@ static int npc_parse_mapflag (char *w1, char *, char *w3, char *w4)
     {
         maps[m].flag.notrade = 1;
     }
-    else if (strcasecmp (w3, "noskill") == 0)
-    {
-        maps[m].flag.noskill = 1;
-    }
     else if (battle_config.pk_mode && strcasecmp (w3, "nopvp") == 0)
     {                           // nopvp for pk mode [Valaris]
         maps[m].flag.nopvp = 1;

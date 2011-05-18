@@ -4729,8 +4729,6 @@ static void clif_parse_UseSkillToId (int fd, struct map_session_data *sd)
 
     nullpo_retv (sd);
 
-    if (maps[sd->bl.m].flag.noskill)
-        return;
     if (sd->npc_id || sd->state.storage_flag)
         return;
 
@@ -4781,8 +4779,6 @@ static void clif_parse_UseSkillToPos (int fd, struct map_session_data *sd)
 
     nullpo_retv (sd);
 
-    if (maps[sd->bl.m].flag.noskill)
-        return;
     if (sd->npc_id != 0 || sd->state.storage_flag)
         return;
 
@@ -4837,9 +4833,6 @@ static void clif_parse_UseSkillToPos (int fd, struct map_session_data *sd)
 static void clif_parse_UseSkillMap (int fd, struct map_session_data *sd)
 {
     nullpo_retv (sd);
-
-    if (maps[sd->bl.m].flag.noskill)
-        return;
 
     if (sd->npc_id != 0)
         return;
@@ -5385,15 +5378,15 @@ func_table clif_parse_func_table[0x220] =
     { 0, 0 }, // 110
     { 0, 0 }, // 111
     { -1, clif_parse_SkillUp }, // 112
-    { 0, clif_parse_UseSkillToId }, // 113
+    { 0, clif_parse_UseSkillToId }, // 113 - implemented but not called in Mana
     { 0, 0 }, // 114
     { 0, 0 }, // 115
-    { 0, clif_parse_UseSkillToPos }, // 116
+    { 0, clif_parse_UseSkillToPos }, // 116 - implemented but not called in Mana
     { 0, 0 }, // 117
     { 0, 0 }, // 118
     { 0, 0 }, // 119
     { 0, 0 }, // 11a
-    { 0, clif_parse_UseSkillMap }, // 11b
+    { 0, clif_parse_UseSkillMap }, // 11b - implemented but not called in Mana
     { 0, 0 }, // 11c
     { 0, 0 }, // 11d
     { 0, 0 }, // 11e
@@ -5510,7 +5503,7 @@ func_table clif_parse_func_table[0x220] =
     { 0, 0 }, // 18d
     { 0, 0 }, // 18e
     { 0, 0 }, // 18f
-    { 0, clif_parse_UseSkillToPos }, // 190
+    { 0, clif_parse_UseSkillToPos }, // 190 - unimplemented in Mana client
     { 0, 0 }, // 191
     { 0, 0 }, // 192
     { 0, 0 }, // 193

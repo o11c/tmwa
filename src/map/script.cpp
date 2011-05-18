@@ -4447,9 +4447,6 @@ int buildin_setmapflag (struct script_state *st)
             case MF_NOTRADE:
                 maps[m].flag.notrade = 1;
                 break;
-            case MF_NOSKILL:
-                maps[m].flag.noskill = 1;
-                break;
             case MF_NOWARP:
                 maps[m].flag.nowarp = 1;
                 break;
@@ -4494,9 +4491,6 @@ int buildin_removemapflag (struct script_state *st)
                 break;
             case MF_NOZENYPENALTY:
                 maps[m].flag.nozenypenalty = 0;
-                break;
-            case MF_NOSKILL:
-                maps[m].flag.noskill = 0;
                 break;
             case MF_NOWARP:
                 maps[m].flag.nowarp = 0;

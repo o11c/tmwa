@@ -139,8 +139,6 @@ ATCOMMAND_FUNC (character_item_list);
 ATCOMMAND_FUNC (character_storage_list);
 ATCOMMAND_FUNC (addwarp);
 ATCOMMAND_FUNC (follow);
-ATCOMMAND_FUNC (skillon);
-ATCOMMAND_FUNC (skilloff);
 ATCOMMAND_FUNC (killer);
 ATCOMMAND_FUNC (npcmove);
 ATCOMMAND_FUNC (killable);
@@ -459,10 +457,6 @@ static AtCommandInfo atcommand_info[] = {
                         "Summon an amount of specified mobs around you."},
     {"@addwarp", 20,    atcommand_addwarp,      ATCC_ENV,
     "map x y",          "Add a semipermanent warp to a location from your current position."},
-    {"@skillon", 20,    atcommand_skillon,      ATCC_ENV,
-    "",                 "Enable skills on a map."},
-    {"@skilloff", 20,   atcommand_skilloff,     ATCC_ENV,
-    "",                 "Disable skills on a map."},
     {"@email", 0,       atcommand_email,        ATCC_MISC,
     "old@e.mail new@e.mail",
                         "change stored email"},
@@ -4063,43 +4057,33 @@ int atcommand_undisguise (int fd, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- * @broadcast by [Valaris]
- *------------------------------------------
- */
+/// Broadcast a message, including name, to all map servers
 int atcommand_broadcast (int, struct map_session_data *sd,
                          const char *, const char *message)
 {
-    char output[200];
-
-    memset (output, '\0', sizeof (output));
-
     if (!message || !*message)
         return -1;
 
-    snprintf (output, 199, "%s : %s", sd->status.name, message);
+    // increased the size a bit because GM announcements were sometimes cut off
+    char output[512];
+    snprintf (output, sizeof(output), "%s : %s", sd->status.name, message);
     intif_GMmessage (output, strlen (output) + 1);
 
     return 0;
 }
 
-/*==========================================
- * @localbroadcast by [Valaris]
- *------------------------------------------
- */
+/// Broadcast a message, including name, on the current map server
 int atcommand_localbroadcast (int, struct map_session_data *sd,
                               const char *, const char *message)
 {
-    char output[200];
-
-    memset (output, '\0', sizeof (output));
-
     if (!message || !*message)
         return -1;
 
-    snprintf (output, 199, "%s : %s", sd->status.name, message);
+    char output[200];
+    snprintf (output, sizeof(output), "%s : %s", sd->status.name, message);
 
-    clif_GMmessage (&sd->bl, output, strlen (output) + 1, 1);   // 1: ALL_SAMEMAP
+    // flag 1 becomes ALL_SAMEMAP
+    clif_GMmessage (&sd->bl, output, strlen (output) + 1, 1);
 
     return 0;
 }
@@ -4210,21 +4194,16 @@ int atcommand_charundisguise (int fd, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- * @email <actual@email> <new@email> by [Yor]
- *------------------------------------------
- */
+/// Change an account's recorded email address
+// Note that we can't guaranteed the address actually points to somebody
 int atcommand_email (int fd, struct map_session_data *sd,
                      const char *, const char *message)
 {
+    if (!message || !*message)
+        return -1;
     char actual_email[100];
     char new_email[100];
-
-    memset (actual_email, '\0', sizeof (actual_email));
-    memset (new_email, '\0', sizeof (new_email));
-
-    if (!message || !*message
-        || sscanf (message, "%99s %99s", actual_email, new_email) < 2)
+    if (sscanf (message, "%99s %99s", actual_email, new_email) < 2)
         return -1;
 
     if (e_mail_check (actual_email) == 0)
@@ -4256,15 +4235,11 @@ int atcommand_email (int fd, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- *@effect
- *------------------------------------------
- */
+/// Display an effect on yourself
 int atcommand_effect (int fd, struct map_session_data *sd,
                       const char *, const char *message)
 {
-    struct map_session_data *pl_sd;
-    int  type = 0, flag = 0, i;
+    int type = 0, flag = 0;
 
     if (!message || !*message || sscanf (message, "%d %d", &type, &flag) < 2)
         return -1;
@@ -4272,301 +4247,253 @@ int atcommand_effect (int fd, struct map_session_data *sd,
     {
         clif_specialeffect (&sd->bl, type, flag);
         clif_displaymessage (fd, "Your effect has changed.");
+        return 0;
     }
-    else
+    for (int i = 0; i < fd_max; i++)
     {
-        for (i = 0; i < fd_max; i++)
-        {
-            if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-                && pl_sd->state.auth)
-            {
-                clif_specialeffect (&pl_sd->bl, type, flag);
-                clif_displaymessage (pl_sd->fd, "Your effect has changed.");
-            }
-        }
+        if (!session[i])
+            continue;
+        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        if (!pl_sd || !pl_sd->state.auth)
+            continue;
+        clif_specialeffect (&pl_sd->bl, type, flag);
+        clif_displaymessage (pl_sd->fd, "Your effect has changed.");
     }
 
     return 0;
 }
 
-/*==========================================
- * @charitemlist <character>: Displays the list of a player's items.
- *------------------------------------------
- */
-int
-atcommand_character_item_list (int fd, struct map_session_data *sd,
-                               const char *, const char *message)
+/// List someone's inventory
+int atcommand_character_item_list (int fd, struct map_session_data *sd,
+                                   const char *, const char *message)
 {
-    struct map_session_data *pl_sd;
-    struct item_data *item_data, *item_temp;
-    int  i, j, equip, count, counter, counter2;
-    char character[100], output[200], equipstr[100], outputtmp[200];
-
-    memset (character, '\0', sizeof (character));
-    memset (output, '\0', sizeof (output));
-    memset (equipstr, '\0', sizeof (equipstr));
-    memset (outputtmp, '\0', sizeof (outputtmp));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
+    if (!message || !*message)
+        return -1;
+    char character[100];
+    if (sscanf (message, "%99[^\n]", character) < 1)
         return -1;
 
-    if ((pl_sd = map_nick2sd (character)) != NULL)
-    {
-        if (pc_isGM (sd) >= pc_isGM (pl_sd))
-        {                       // you can look items only lower or same level
-            counter = 0;
-            count = 0;
-            for (i = 0; i < MAX_INVENTORY; i++)
-            {
-                if (pl_sd->status.inventory[i].nameid > 0
-                    && (item_data =
-                        itemdb_search (pl_sd->status.inventory[i].nameid)) !=
-                    NULL)
-                {
-                    counter = counter + pl_sd->status.inventory[i].amount;
-                    count++;
-                    if (count == 1)
-                    {
-                        sprintf (output, "------ Items list of '%s' ------",
-                                 pl_sd->status.name);
-                        clif_displaymessage (fd, output);
-                    }
-                    if ((equip = pl_sd->status.inventory[i].equip))
-                    {
-                        strcpy (equipstr, "| equiped: ");
-                        if (equip & 4)
-                            strcat (equipstr, "robe/gargment, ");
-                        if (equip & 8)
-                            strcat (equipstr, "left accessory, ");
-                        if (equip & 16)
-                            strcat (equipstr, "body/armor, ");
-                        if ((equip & 34) == 2)
-                            strcat (equipstr, "right hand, ");
-                        if ((equip & 34) == 32)
-                            strcat (equipstr, "left hand, ");
-                        if ((equip & 34) == 34)
-                            strcat (equipstr, "both hands, ");
-                        if (equip & 64)
-                            strcat (equipstr, "feet, ");
-                        if (equip & 128)
-                            strcat (equipstr, "right accessory, ");
-                        if ((equip & 769) == 1)
-                            strcat (equipstr, "lower head, ");
-                        if ((equip & 769) == 256)
-                            strcat (equipstr, "top head, ");
-                        if ((equip & 769) == 257)
-                            strcat (equipstr, "lower/top head, ");
-                        if ((equip & 769) == 512)
-                            strcat (equipstr, "mid head, ");
-                        if ((equip & 769) == 512)
-                            strcat (equipstr, "lower/mid head, ");
-                        if ((equip & 769) == 769)
-                            strcat (equipstr, "lower/mid/top head, ");
-                        // remove final ', '
-                        equipstr[strlen (equipstr) - 2] = '\0';
-                    }
-                    else
-                        memset (equipstr, '\0', sizeof (equipstr));
-                    if (sd->status.inventory[i].refine)
-                        sprintf (output, "%d %s %+d (%s %+d, id: %d) %s",
-                                 pl_sd->status.inventory[i].amount,
-                                 item_data->name,
-                                 pl_sd->status.inventory[i].refine,
-                                 item_data->jname,
-                                 pl_sd->status.inventory[i].refine,
-                                 pl_sd->status.inventory[i].nameid, equipstr);
-                    else
-                        sprintf (output, "%d %s (%s, id: %d) %s",
-                                 pl_sd->status.inventory[i].amount,
-                                 item_data->name, item_data->jname,
-                                 pl_sd->status.inventory[i].nameid, equipstr);
-                    clif_displaymessage (fd, output);
-                    memset (output, '\0', sizeof (output));
-                    counter2 = 0;
-                    for (j = 0; j < item_data->slot; j++)
-                    {
-                        if (pl_sd->status.inventory[i].card[j])
-                        {
-                            if ((item_temp =
-                                 itemdb_search (pl_sd->status.
-                                                inventory[i].card[j])) !=
-                                NULL)
-                            {
-                                if (output[0] == '\0')
-                                    sprintf (outputtmp,
-                                             " -> (card(s): #%d %s (%s), ",
-                                             ++counter2, item_temp->name,
-                                             item_temp->jname);
-                                else
-                                    sprintf (outputtmp, "#%d %s (%s), ",
-                                             ++counter2, item_temp->name,
-                                             item_temp->jname);
-                                strcat (output, outputtmp);
-                            }
-                        }
-                    }
-                    if (output[0] != '\0')
-                    {
-                        output[strlen (output) - 2] = ')';
-                        output[strlen (output) - 1] = '\0';
-                        clif_displaymessage (fd, output);
-                    }
-                }
-            }
-            if (count == 0)
-                clif_displaymessage (fd, "No item found on this player.");
-            else
-            {
-                sprintf (output, "%d item(s) found in %d kind(s) of items.",
-                         counter, count);
-                clif_displaymessage (fd, output);
-            }
-        }
-        else
-        {
-            clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
-            return -1;
-        }
-    }
-    else
+    struct map_session_data *pl_sd = map_nick2sd (character);
+    if (!pl_sd)
     {
         clif_displaymessage (fd, "Character not found.");
         return -1;
     }
+    if (pc_isGM (sd) >= pc_isGM (pl_sd))
+    {
+        clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
+        return -1;
+    }
+    int counter = 0;
+    int count = 0;
+    for (int i = 0; i < MAX_INVENTORY; i++)
+    {
+        if (!pl_sd->status.inventory[i].nameid)
+            continue;
+        struct item_data *item_data = itemdb_search (pl_sd->status.inventory[i].nameid);
+        if (!item_data)
+            continue;
+
+        counter += pl_sd->status.inventory[i].amount;
+        count++;
+        char output[200];
+        if (count == 1)
+        {
+            sprintf (output, "------ Items list of '%s' ------", pl_sd->status.name);
+            clif_displaymessage (fd, output);
+        }
+        int equip = pl_sd->status.inventory[i].equip;
+
+        char equipstr[100] = "";
+        if (equip)
+            strcpy (equipstr, "| equipped: ");
+        if (equip & 4)
+            strcat (equipstr, "robe/garment, ");
+        if (equip & 8)
+            strcat (equipstr, "left accessory, ");
+        if (equip & 16)
+            strcat (equipstr, "body/armor, ");
+        if ((equip & 34) == 2)
+            strcat (equipstr, "right hand, ");
+        if ((equip & 34) == 32)
+            strcat (equipstr, "left hand, ");
+        if ((equip & 34) == 34)
+            strcat (equipstr, "both hands, ");
+        if (equip & 64)
+            strcat (equipstr, "feet, ");
+        if (equip & 128)
+            strcat (equipstr, "right accessory, ");
+        if ((equip & 769) == 1)
+            strcat (equipstr, "lower head, ");
+        if ((equip & 769) == 256)
+            strcat (equipstr, "top head, ");
+        if ((equip & 769) == 257)
+            strcat (equipstr, "lower/top head, ");
+        if ((equip & 769) == 512)
+            strcat (equipstr, "mid head, ");
+        if ((equip & 769) == 513)
+            strcat (equipstr, "lower/mid head, ");
+        if ((equip & 769) == 769)
+            strcat (equipstr, "lower/mid/top head, ");
+        // remove final ', '
+        equipstr[strlen (equipstr) - 2] = '\0';
+
+        if (sd->status.inventory[i].refine)
+            sprintf (output, "%d %s %+d (%s %+d, id: %d) %s",
+                     pl_sd->status.inventory[i].amount,
+                     item_data->name,
+                     pl_sd->status.inventory[i].refine,
+                     item_data->jname,
+                     pl_sd->status.inventory[i].refine,
+                     pl_sd->status.inventory[i].nameid, equipstr);
+        else
+            sprintf (output, "%d %s (%s, id: %d) %s",
+                     pl_sd->status.inventory[i].amount,
+                     item_data->name, item_data->jname,
+                     pl_sd->status.inventory[i].nameid, equipstr);
+        clif_displaymessage (fd, output);
+
+        *output = '\0';
+
+        char outputtmp[200];
+        int counter2 = 0;
+        for (int j = 0; j < item_data->slot; j++)
+        {
+            if (!pl_sd->status.inventory[i].card[j])
+                continue;
+            struct item_data *item_temp = itemdb_search (pl_sd->status.inventory[i].card[j]);
+            if (!item_temp)
+                continue;
+            if (output[0] == '\0')
+                sprintf (outputtmp, " -> (card(s): #%d %s (%s), ", ++counter2,
+                         item_temp->name, item_temp->jname);
+            else
+                sprintf (outputtmp, "#%d %s (%s), ", ++counter2,
+                         item_temp->name, item_temp->jname);
+            strcat (output, outputtmp);
+        }
+        if (output[0])
+        {
+            output[strlen (output) - 2] = ')';
+            output[strlen (output) - 1] = '\0';
+            clif_displaymessage (fd, output);
+        }
+    }
+
+    if (count == 0)
+        clif_displaymessage (fd, "No item found on this player.");
+    else
+    {
+        char output[200];
+        sprintf (output, "%d item(s) found in %d kind(s) of items.",
+                 counter, count);
+        clif_displaymessage (fd, output);
+    }
 
     return 0;
 }
 
-/*==========================================
- * @charstoragelist <character>: Displays the items list of a player's storage.
- *------------------------------------------
- */
-int
-atcommand_character_storage_list (int fd, struct map_session_data *sd,
+/// List someone's storage
+int atcommand_character_storage_list (int fd, struct map_session_data *sd,
                                   const char *, const char *message)
 {
-    struct storage *stor;
-    struct map_session_data *pl_sd;
-    struct item_data *item_data, *item_temp;
-    int  i, j, count, counter, counter2;
-    char character[100], output[200], outputtmp[200];
-
-    memset (character, '\0', sizeof (character));
-    memset (output, '\0', sizeof (output));
-    memset (outputtmp, '\0', sizeof (outputtmp));
-
-    if (!message || !*message || sscanf (message, "%99[^\n]", character) < 1)
+    if (!message || !*message)
+        return -1;
+    char character[100];
+    if (sscanf (message, "%99[^\n]", character) < 1)
         return -1;
 
-    if ((pl_sd = map_nick2sd (character)) != NULL)
-    {
-        if (pc_isGM (sd) >= pc_isGM (pl_sd))
-        {                       // you can look items only lower or same level
-            if ((stor = account2storage2 (pl_sd->status.account_id)) != NULL)
-            {
-                counter = 0;
-                count = 0;
-                for (i = 0; i < MAX_STORAGE; i++)
-                {
-                    if (stor->storage_[i].nameid > 0
-                        && (item_data =
-                            itemdb_search (stor->storage_[i].nameid)) != NULL)
-                    {
-                        counter = counter + stor->storage_[i].amount;
-                        count++;
-                        if (count == 1)
-                        {
-                            sprintf (output,
-                                     "------ Storage items list of '%s' ------",
-                                     pl_sd->status.name);
-                            clif_displaymessage (fd, output);
-                        }
-                        if (stor->storage_[i].refine)
-                            sprintf (output, "%d %s %+d (%s %+d, id: %d)",
-                                     stor->storage_[i].amount,
-                                     item_data->name,
-                                     stor->storage_[i].refine,
-                                     item_data->jname,
-                                     stor->storage_[i].refine,
-                                     stor->storage_[i].nameid);
-                        else
-                            sprintf (output, "%d %s (%s, id: %d)",
-                                     stor->storage_[i].amount,
-                                     item_data->name, item_data->jname,
-                                     stor->storage_[i].nameid);
-                        clif_displaymessage (fd, output);
-                        memset (output, '\0', sizeof (output));
-                        counter2 = 0;
-                        for (j = 0; j < item_data->slot; j++)
-                        {
-                            if (stor->storage_[i].card[j])
-                            {
-                                if ((item_temp =
-                                     itemdb_search (stor->
-                                                    storage_[i].card[j])) !=
-                                    NULL)
-                                {
-                                    if (output[0] == '\0')
-                                        sprintf (outputtmp,
-                                                 " -> (card(s): #%d %s (%s), ",
-                                                 ++counter2, item_temp->name,
-                                                 item_temp->jname);
-                                    else
-                                        sprintf (outputtmp, "#%d %s (%s), ",
-                                                 ++counter2, item_temp->name,
-                                                 item_temp->jname);
-                                    strcat (output, outputtmp);
-                                }
-                            }
-                        }
-                        if (output[0] != '\0')
-                        {
-                            output[strlen (output) - 2] = ')';
-                            output[strlen (output) - 1] = '\0';
-                            clif_displaymessage (fd, output);
-                        }
-                    }
-                }
-                if (count == 0)
-                    clif_displaymessage (fd,
-                                         "No item found in the storage of this player.");
-                else
-                {
-                    sprintf (output,
-                             "%d item(s) found in %d kind(s) of items.",
-                             counter, count);
-                    clif_displaymessage (fd, output);
-                }
-            }
-            else
-            {
-                clif_displaymessage (fd, "This player has no storage.");
-                return -1;
-            }
-        }
-        else
-        {
-            clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
-            return -1;
-        }
-    }
-    else
+    struct map_session_data *pl_sd = map_nick2sd (character);
+    if (!pl_sd)
     {
         clif_displaymessage (fd, "Character not found.");
         return -1;
+    }
+    if (pc_isGM (sd) < pc_isGM (pl_sd))
+    {
+        clif_displaymessage (fd, "Your GM level don't authorise you to do this action on this player.");
+        return -1;
+    }
+    struct storage *stor = account2storage2 (pl_sd->status.account_id);
+    if (!stor)
+    {
+        clif_displaymessage (fd, "This player has no storage.");
+        return -1;
+    }
+
+    int counter = 0;
+    int count = 0;
+    for (int i = 0; i < MAX_STORAGE; i++)
+    {
+        char output[200];
+
+        if (!stor->storage_[i].nameid)
+            continue;
+
+        struct item_data *item_data = itemdb_search (stor->storage_[i].nameid);
+        if (!item_data)
+            continue;
+        counter += stor->storage_[i].amount;
+        count++;
+        if (count == 1)
+        {
+            sprintf (output, "------ Storage items list of '%s' ------", pl_sd->status.name);
+            clif_displaymessage (fd, output);
+        }
+        if (stor->storage_[i].refine)
+            sprintf (output, "%d %s %+d (%s %+d, id: %d)", stor->storage_[i].amount,
+                     item_data->name, stor->storage_[i].refine,
+                     item_data->jname, stor->storage_[i].refine,
+                     stor->storage_[i].nameid);
+        else
+            sprintf (output, "%d %s (%s, id: %d)", stor->storage_[i].amount,
+                     item_data->name, item_data->jname,
+                     stor->storage_[i].nameid);
+        clif_displaymessage (fd, output);
+        *output = '\0';
+        int counter2 = 0;
+        for (int j = 0; j < item_data->slot; j++)
+        {
+            if (!stor->storage_[i].card[j])
+                continue;
+            struct item_data *item_temp = itemdb_search (stor->storage_[i].card[j]);
+            if (!item_temp)
+                continue;
+            char outputtmp[200];
+            if (output[0] == '\0')
+                sprintf (outputtmp, " -> (card(s): #%d %s (%s), ",
+                         ++counter2, item_temp->name,
+                         item_temp->jname);
+            else
+                sprintf (outputtmp, "#%d %s (%s), ",
+                         ++counter2, item_temp->name,
+                         item_temp->jname);
+            strcat (output, outputtmp);
+        }
+        if (output[0])
+        {
+            output[strlen (output) - 2] = ')';
+            output[strlen (output) - 1] = '\0';
+            clif_displaymessage (fd, output);
+        }
+    }
+    if (count == 0)
+        clif_displaymessage (fd, "No item found in the storage of this player.");
+    else
+    {
+        char output[200];
+        sprintf (output, "%d item(s) found in %d kind(s) of items.",
+                 counter, count);
+        clif_displaymessage (fd, output);
     }
 
     return 0;
 }
 
-/*==========================================
- * @killer by MouseJstr
- * enable killing players even when not in pvp
- *------------------------------------------
- */
-int
-atcommand_killer (int fd, struct map_session_data *sd,
-                  const char *, const char *)
+/// Toggle whether you can kill players out of PvP
+// (there is no @charkiller command)
+int atcommand_killer (int fd, struct map_session_data *sd,
+                      const char *, const char *)
 {
     sd->special_state.killer = !sd->special_state.killer;
 
@@ -4578,40 +4505,29 @@ atcommand_killer (int fd, struct map_session_data *sd,
     return 0;
 }
 
-/*==========================================
- * @killable by MouseJstr
- * enable other people killing you
- *------------------------------------------
- */
-int
-atcommand_killable (int fd, struct map_session_data *sd,
-                    const char *, const char *)
+/// Allow players to attack you out of PvP
+int atcommand_killable (int fd, struct map_session_data *sd,
+                        const char *, const char *)
 {
     sd->special_state.killable = !sd->special_state.killable;
 
     if (sd->special_state.killable)
-        clif_displaymessage (fd, "You gonna be own3d");
+        clif_displaymessage (fd, "You are killable");
     else
-        clif_displaymessage (fd, "You be a killa...");
+        clif_displaymessage (fd, "You are no longer killable");
 
     return 0;
 }
 
-/*==========================================
- * @charkillable by MouseJstr
- * enable another player to be killed
- *------------------------------------------
- */
-int
-atcommand_charkillable (int fd, struct map_session_data *,
-                        const char *, const char *message)
+/// Allow a player to be attacked outside of PvP
+int atcommand_charkillable (int fd, struct map_session_data *,
+                            const char *, const char *message)
 {
-    struct map_session_data *pl_sd = NULL;
-
     if (!message || !*message)
         return -1;
 
-    if ((pl_sd = map_nick2sd ((char *) message)) == NULL)
+    struct map_session_data *pl_sd = map_nick2sd ((char *) message);
+    if (!pl_sd)
         return -1;
 
     pl_sd->special_state.killable = !pl_sd->special_state.killable;
@@ -4621,34 +4537,6 @@ atcommand_charkillable (int fd, struct map_session_data *,
     else
         clif_displaymessage (fd, "The player is no longer killable");
 
-    return 0;
-}
-
-/*==========================================
- * @skillon by MouseJstr
- * turn skills on for the map
- *------------------------------------------
- */
-int
-atcommand_skillon (int fd, struct map_session_data *sd,
-                   const char *, const char *)
-{
-    maps[sd->bl.m].flag.noskill = 0;
-    clif_displaymessage (fd, "Map skills are on.");
-    return 0;
-}
-
-/*==========================================
- * @skilloff by MouseJstr
- * Turn skills off on the map
- *------------------------------------------
- */
-int
-atcommand_skilloff (int fd, struct map_session_data *sd,
-                    const char *, const char *)
-{
-    maps[sd->bl.m].flag.noskill = 1;
-    clif_displaymessage (fd, "Map skills are off");
     return 0;
 }
 

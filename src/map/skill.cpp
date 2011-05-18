@@ -156,16 +156,6 @@ static int skill_check_condition (struct map_session_data *sd, int type);
 static void skill_trap_splash (struct block_list *bl, va_list ap);
 static void skill_count_target (struct block_list *bl, va_list ap);
 
-// [MouseJstr] - skill ok to cast? and when?
-static int skillnotok (int, struct map_session_data *sd)
-{
-    if (sd == 0)
-        return 0;
-    if (pc_isGM (sd) >= 20)
-        return 0;               // gm's can do anything damn thing they want
-    return (maps[sd->bl.m].flag.noskill);
-}
-
 static int distance (int x_0, int y_0, int x_1, int y_1)
 {
     int  dx, dy;
@@ -401,8 +391,6 @@ int skill_attack (int attack_type, struct block_list *src,
         return 0;
     if (bl->type == BL_PC && pc_isdead ((struct map_session_data *) bl))    //対象がPCですでに死んでいたら何もしない
         return 0;
-    if (skillnotok (skillid, (struct map_session_data *) bl))
-        return 0;               // [MouseJstr]
 
 //何もしない判定ここまで
 
@@ -1770,9 +1758,6 @@ int skill_use_id (struct map_session_data *sd, int target_id,
     if (sd->bl.m != bl->m || pc_isdead (sd))
         return 0;
 
-    if (skillnotok (skill_num, sd)) // [MouseJstr]
-        return 0;
-
     /* 沈黙や異常（ただし、グリムなどの判定をする） */
     if (sd->opt1 > 0)
         return 0;
@@ -1861,9 +1846,6 @@ int skill_use_pos (struct map_session_data *sd,
     nullpo_retr (0, sd);
 
     if (pc_isdead (sd))
-        return 0;
-
-    if (skillnotok (skill_num, sd)) // [MoueJstr]
         return 0;
 
     if (sd->opt1 > 0)

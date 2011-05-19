@@ -5,16 +5,16 @@ char rdata[500];
 char param_n[500];
 char param_d[500];
 
-char *get_query (char *inquery)
+char *get_query(char *inquery)
 {
-    memset (filtered_query, 0x0, 2000);
-    sscanf (inquery, "GET %s %[$]", filtered_query);
+    memset(filtered_query, 0x0, 2000);
+    sscanf(inquery, "GET %s %[$]", filtered_query);
     return (filtered_query);
 }
 
-void web_send (int sockin, char *in_data)
+void web_send(int sockin, char *in_data)
 {
-    send (sockin, in_data, strlen (in_data), 0);
+    send(sockin, in_data, strlen(in_data), 0);
 }
 
 //THIS IS BAD CODE BE CAREFULL WITH IT!
@@ -23,12 +23,12 @@ void web_send (int sockin, char *in_data)
 
 //Also note:
 //I take no pride in this code, it is a really bad way of doing this...
-char *get_param (char in_string[500], char swhat[500])
+char *get_param(char in_string[500], char swhat[500])
 {
-    int  i = 0;
-    int  marker, iswitch, pint, dint;
+    int i = 0;
+    int marker, iswitch, pint, dint;
     char flux[500];
-    memset (flux, 0x0, 500);
+    memset(flux, 0x0, 500);
 
     //Get the path of out "page"
     if (swhat == 0)
@@ -80,8 +80,8 @@ char *get_param (char in_string[500], char swhat[500])
                 //we have a param, now we must dig through it
 
                 //clear temp vars
-                memset (param_n, 0x0, 500);
-                memset (param_d, 0x0, 500);
+                memset(param_n, 0x0, 500);
+                memset(param_d, 0x0, 500);
                 iswitch = 0;
                 pint = 0;
                 dint = 0;
@@ -113,7 +113,7 @@ char *get_param (char in_string[500], char swhat[500])
                     i++;
                 }
 
-                if (strcmp (param_n, swhat) == 0)
+                if (strcmp(param_n, swhat) == 0)
                 {
                     return param_d;
                 }

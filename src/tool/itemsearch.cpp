@@ -110,14 +110,14 @@ void parseInput()
 
 int main(int argc,char *argv[])
 {
-	if(argc < 2) 
+        if (argc < 2)
         {
-		printf("Usage: %s <item ID>\n", argv[0]);
+                printf("Usage: %s <item ID>\n", argv[0]);
                 printf("Usage2: %s -s <item ID>\n", argv[0]);
                 printf("e.g., %s 701\n", argv[0]);
                 printf("Will return all users who own that item\n");
                 printf("Option \"-s\" will expect storage files\n");
-		exit(0);
+                exit(0);
         }
         if (strcmp(argv[1],"-s") == 0)
         {
@@ -131,6 +131,6 @@ int main(int argc,char *argv[])
         }
         parseInput();
 
-	return 0;
+        return 0;
 }
 

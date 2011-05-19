@@ -15,7 +15,7 @@ char storage_txt[1024] = "save/storage.txt";
 static struct dbt *storage_db;
 
 /// Store items for one account, IF it is not empty
-static void storage_tofile (FILE *fp, struct storage *p)
+static void storage_tofile(FILE *fp, struct storage *p)
 {
     for (int i = 0; i < MAX_STORAGE; i++)
         if (p->storage_[i].nameid && p->storage_[i].amount)
@@ -23,12 +23,12 @@ static void storage_tofile (FILE *fp, struct storage *p)
     return;
 
 actually_store:
-    fprintf (fp, "%u,%hu\t", p->account_id, p->storage_amount);
+    fprintf(fp, "%u,%hu\t", p->account_id, p->storage_amount);
 
     for (int i = 0; i < MAX_STORAGE; i++)
         if (p->storage_[i].nameid && p->storage_[i].amount)
         {
-            fprintf (fp, "%d,%d,%d,"
+            fprintf(fp, "%d,%d,%d,"
                          "%d,%d,%d,%d,"
                          "%d,%d,%d,%d ",
                      p->storage_[i].id, p->storage_[i].nameid, p->storage_[i].amount,
@@ -37,14 +37,14 @@ actually_store:
                      p->storage_[i].card[0], p->storage_[i].card[1],
                      p->storage_[i].card[2], p->storage_[i].card[3]);
         }
-    fprintf (fp, "\n");
+    fprintf(fp, "\n");
 }
 
 /// Load somebody's storage
-static bool storage_fromstr (const char *str, struct storage *p)
+static bool storage_fromstr(const char *str, struct storage *p)
 {
     int next;
-    if (sscanf (str, "%u,%hd%n", &p->account_id, &p->storage_amount, &next) != 2)
+    if (sscanf(str, "%u,%hd%n", &p->account_id, &p->storage_amount, &next) != 2)
         return 1;
     str += next;
     if (str[0] == '\n' || str[0] == '\r')
@@ -54,14 +54,14 @@ static bool storage_fromstr (const char *str, struct storage *p)
 
     if (p->storage_amount > MAX_STORAGE)
     {
-        char_log ("%s: more than %d items on line, %d items dropped", __func__,
+        char_log("%s: more than %d items on line, %d items dropped", __func__,
                   MAX_STORAGE, p->storage_amount - MAX_STORAGE);
         p->storage_amount = MAX_STORAGE;
     }
 
     for (int i = 0; i < p->storage_amount; i++)
     {
-        if (sscanf (str, "%d,%hd,%hd,"
+        if (sscanf(str, "%d,%hd,%hd,"
                          "%hu,%hhd,%hhd,%hhd,"
                          "%hd,%hd,%hd,%hd%n",
                     &p->storage_[i].id, &p->storage_[i].nameid, &p->storage_[i].amount,
@@ -80,144 +80,144 @@ static bool storage_fromstr (const char *str, struct storage *p)
 }
 
 /// Get the storage of an account, creating if it does not exist
-struct storage *account2storage (account_t account_id)
+struct storage *account2storage(account_t account_id)
 {
-    struct storage *s = (struct storage *) numdb_search (storage_db, (numdb_key_t)account_id).p;
+    struct storage *s = (struct storage *) numdb_search(storage_db, (numdb_key_t)account_id).p;
     if (!s)
     {
-        CREATE (s, struct storage, 1);
+        CREATE(s, struct storage, 1);
         s->account_id = account_id;
-        numdb_insert (storage_db, (numdb_key_t)s->account_id, (void *)s);
+        numdb_insert(storage_db, (numdb_key_t)s->account_id, (void *)s);
     }
     return s;
 }
 
 
 /// Read all storage data
-bool inter_storage_init (void)
+bool inter_storage_init(void)
 {
-    storage_db = numdb_init ();
+    storage_db = numdb_init();
 
-    FILE *fp = fopen_ (storage_txt, "r");
+    FILE *fp = fopen_(storage_txt, "r");
     if (!fp)
     {
-        printf ("cant't read : %s\n", storage_txt);
+        printf("cant't read : %s\n", storage_txt);
         return 1;
     }
     char line[65536];
     int c = 0;
-    while (fgets (line, sizeof (line), fp))
+    while (fgets(line, sizeof(line), fp))
     {
         c++;
         struct storage *s;
-        CREATE (s, struct storage, 1);
-        if (storage_fromstr (line, s) == 0)
+        CREATE(s, struct storage, 1);
+        if (storage_fromstr(line, s) == 0)
         {
-            numdb_insert (storage_db, (numdb_key_t)s->account_id, (void *)s);
+            numdb_insert(storage_db, (numdb_key_t)s->account_id, (void *)s);
         }
         else
         {
-            printf ("int_storage: broken data [%s] line %d\n", storage_txt, c);
-            free (s);
+            printf("int_storage: broken data [%s] line %d\n", storage_txt, c);
+            free(s);
         }
     }
-    fclose_ (fp);
+    fclose_(fp);
     return 0;
 }
 
-static void storage_db_final (db_key_t, db_val_t data, va_list)
+static void storage_db_final(db_key_t, db_val_t data, va_list)
 {
-    free (data.p);
+    free(data.p);
 }
 
-void inter_storage_final (void)
+void inter_storage_final(void)
 {
-    numdb_final (storage_db, storage_db_final);
+    numdb_final(storage_db, storage_db_final);
 }
 
 /// Save somebody's storage
-static void inter_storage_save_sub (db_key_t, db_val_t data, va_list ap)
+static void inter_storage_save_sub(db_key_t, db_val_t data, va_list ap)
 {
-    FILE *fp = va_arg (ap, FILE *);
-    storage_tofile (fp, (struct storage *) data.p);
+    FILE *fp = va_arg(ap, FILE *);
+    storage_tofile(fp, (struct storage *) data.p);
 }
 
 /// Save everybody's storage
-bool inter_storage_save (void)
+bool inter_storage_save(void)
 {
     if (!storage_db)
         return 1;
 
     int lock;
-    FILE *fp = lock_fopen (storage_txt, &lock);
+    FILE *fp = lock_fopen(storage_txt, &lock);
     if (!fp)
     {
-        char_log ("int_storage: %s: %m\n", storage_txt);
+        char_log("int_storage: %s: %m\n", storage_txt);
         return 1;
     }
-    numdb_foreach (storage_db, inter_storage_save_sub, fp);
-    lock_fclose (fp, storage_txt, &lock);
+    numdb_foreach(storage_db, inter_storage_save_sub, fp);
+    lock_fclose(fp, storage_txt, &lock);
     return 0;
 }
 
 /// Delete somebody's storage
-void inter_storage_delete (account_t account_id)
+void inter_storage_delete(account_t account_id)
 {
-    struct storage *s = (struct storage *) numdb_search (storage_db, (numdb_key_t)account_id).p;
+    struct storage *s = (struct storage *) numdb_search(storage_db, (numdb_key_t)account_id).p;
     if (s)
     {
-        numdb_erase (storage_db, (numdb_key_t)account_id);
-        free (s);
+        numdb_erase(storage_db, (numdb_key_t)account_id);
+        free(s);
     }
 }
 
 
 
 /// Give map server the storage info
-static void mapif_load_storage (int fd)
+static void mapif_load_storage(int fd)
 {
-    account_t account_id = WFIFOL (fd, 2);
-    struct storage *s = account2storage (account_id);
-    WFIFOW (fd, 0) = 0x3810;
-    WFIFOW (fd, 2) = sizeof (struct storage) + 8;
-    WFIFOL (fd, 4) = account_id;
-    *(struct storage *)WFIFOP (fd, 8) = *s;
-    WFIFOSET (fd, WFIFOW (fd, 2));
+    account_t account_id = WFIFOL(fd, 2);
+    struct storage *s = account2storage(account_id);
+    WFIFOW(fd, 0) = 0x3810;
+    WFIFOW(fd, 2) = sizeof(struct storage) + 8;
+    WFIFOL(fd, 4) = account_id;
+    *(struct storage *)WFIFOP(fd, 8) = *s;
+    WFIFOSET(fd, WFIFOW(fd, 2));
 }
 
 
 
 /// The map server updates storage
-static void mapif_parse_save_storage (int fd)
+static void mapif_parse_save_storage(int fd)
 {
-    uint16_t len = RFIFOW (fd, 2);
-    if (sizeof (struct storage) != len - 8)
+    uint16_t len = RFIFOW(fd, 2);
+    if (sizeof(struct storage) != len - 8)
     {
-        char_log ("inter storage: data size error %d %d\n",
-                  sizeof (struct storage), len - 8);
+        char_log("inter storage: data size error %d %d\n",
+                  sizeof(struct storage), len - 8);
         return;
     }
-    account_t account_id = RFIFOL (fd, 4);
-    struct storage *s = account2storage (account_id);
-    *s = *(struct storage*) RFIFOP (fd, 8);
+    account_t account_id = RFIFOL(fd, 4);
+    struct storage *s = account2storage(account_id);
+    *s = *(struct storage*) RFIFOP(fd, 8);
 
-    WFIFOW (fd, 0) = 0x3811;
-    WFIFOL (fd, 2) = account_id;
-    WFIFOB (fd, 6) = 0;
-    WFIFOSET (fd, 7);
+    WFIFOW(fd, 0) = 0x3811;
+    WFIFOL(fd, 2) = account_id;
+    WFIFOB(fd, 6) = 0;
+    WFIFOSET(fd, 7);
 }
 
 /// Parse one packet from the map server
 // return 1 if we handled it
-bool inter_storage_parse_frommap (int fd)
+bool inter_storage_parse_frommap(int fd)
 {
-    switch (RFIFOW (fd, 0))
+    switch (RFIFOW(fd, 0))
     {
     case 0x3010:
-        mapif_load_storage (fd);
+        mapif_load_storage(fd);
         return 1;
     case 0x3011:
-        mapif_parse_save_storage (fd);
+        mapif_parse_save_storage(fd);
         return 1;
     default:
         return 0;

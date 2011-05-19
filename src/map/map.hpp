@@ -51,20 +51,20 @@
 
 // [Fate] status.option properties.  These are persistent status changes.
 // IDs that are not listed are not used in the code (to the best of my knowledge)
-#define OPTION_HIDE2		0x0002  // apparently some weaker non-GM hide
-#define OPTION_CLOAK		0x0004
-#define OPTION_10		0x0010
-#define OPTION_20		0x0020
-#define OPTION_HIDE		0x0040  // [Fate] This is the GM `@hide' flag
-#define OPTION_800		0x0800
-#define OPTION_INVISIBILITY	0x1000  // [Fate] Complete invisibility to other clients
-#define OPTION_SCRIBE		0x2000  // [Fate] Auto-logging of nearby comments
-#define OPTION_CHASEWALK	0x4000
+#define OPTION_HIDE2        0x0002  // apparently some weaker non-GM hide
+#define OPTION_CLOAK        0x0004
+#define OPTION_10           0x0010
+#define OPTION_20           0x0020
+#define OPTION_HIDE         0x0040  // [Fate] This is the GM `@hide' flag
+#define OPTION_800          0x0800
+#define OPTION_INVISIBILITY 0x1000  // [Fate] Complete invisibility to other clients
+#define OPTION_SCRIBE       0x2000  // [Fate] Auto-logging of nearby comments
+#define OPTION_CHASEWALK    0x4000
 
 //  Below are special clif_changestatus() IDs reserved for option updates
-#define CLIF_OPTION_SC_BASE		0x1000
-#define CLIF_OPTION_SC_INVISIBILITY	(CLIF_OPTION_SC_BASE)
-#define CLIF_OPTION_SC_SCRIBE		(CLIF_OPTION_SC_BASE + 1)
+#define CLIF_OPTION_SC_BASE         0x1000
+#define CLIF_OPTION_SC_INVISIBILITY (CLIF_OPTION_SC_BASE)
+#define CLIF_OPTION_SC_SCRIBE       (CLIF_OPTION_SC_BASE + 1)
 
 enum Direction
 {
@@ -99,19 +99,19 @@ struct walkpath_data
 };
 struct script_reg
 {
-    int  index;
-    int  data;
+    int index;
+    int data;
 };
 struct script_regstr
 {
-    int  index;
+    int index;
     char data[256];
 };
 struct status_change
 {
-    int  timer;
-    int  val1, val2, val3, val4;
-    int  spell_invocation;      /* [Fate] If triggered by a spell, record here */
+    int timer;
+    int val1, val2, val3, val4;
+    int spell_invocation;      /* [Fate] If triggered by a spell, record here */
 };
 
 struct invocation;
@@ -123,42 +123,42 @@ struct skill_unit
 
     struct skill_unit_group *group;
 
-    int  limit;
-    int  val1, val2;
+    int limit;
+    int val1, val2;
     short alive, range;
 };
 struct skill_unit_group
 {
-    int  src_id;
-    int  party_id;
-    int  map, range;
-    int  target_flag;
+    int src_id;
+    int party_id;
+    int map, range;
+    int target_flag;
     unsigned int tick;
-    int  limit, interval;
+    int limit, interval;
 
-    int  skill_id, skill_lv;
-    int  val1, val2;
+    int skill_id, skill_lv;
+    int val1, val2;
     char *valstr;
-    int  unit_id;
-    int  group_id;
-    int  unit_count, alive_count;
+    int unit_id;
+    int group_id;
+    int unit_count, alive_count;
     struct skill_unit *unit;
 };
 struct skill_unit_group_tickset
 {
     unsigned int tick;
-    int  group_id;
+    int group_id;
 };
 struct skill_timerskill
 {
-    int  timer;
-    int  src_id;
-    int  target_id;
-    int  map;
+    int timer;
+    int src_id;
+    int target_id;
+    int map;
     short x, y;
     short skill_id, skill_lv;
-    int  type;
-    int  flag;
+    int type;
+    int flag;
 };
 
 struct npc_data;
@@ -167,7 +167,7 @@ struct square;
 
 struct quick_regeneration
 {                               // [Fate]
-    int  amount;                // Amount of HP/SP left to regenerate
+    int amount;                // Amount of HP/SP left to regenerate
     unsigned char speed;        // less is faster (number of half-second ticks to wait between updates)
     unsigned char tickdelay;    // number of ticks to next update
 };
@@ -216,26 +216,26 @@ struct map_session_data
         unsigned infinite_autospell:1;
         unsigned deaf:1;
     } special_state;
-    int  char_id, login_id1, login_id2, sex;
+    int char_id, login_id1, login_id2, sex;
     unsigned char tmw_version;  // tmw client version
     struct mmo_charstatus status;
     struct item_data *inventory_data[MAX_INVENTORY];
     short equip_index[11];
-    int  weight, max_weight;
+    int weight, max_weight;
     char mapname[24];
-    int  fd, new_fd;
+    int fd, new_fd;
     short to_x, to_y;
     short speed, prev_speed;
     short opt1, opt2, opt3;
     Direction dir, head_dir;
     unsigned int client_tick, server_tick;
     struct walkpath_data walkpath;
-    int  walktimer;
-    int  npc_id, areanpc_id, npc_shopid;
-    int  npc_pos;
-    int  npc_menu;
-    int  npc_amount;
-    int  npc_stack, npc_stackmax;
+    int walktimer;
+    int npc_id, areanpc_id, npc_shopid;
+    int npc_pos;
+    int npc_menu;
+    int npc_amount;
+    int npc_stack, npc_stackmax;
     script_ptr npc_script, npc_scriptroot;
     char *npc_stackbuf;
     char npc_str[256];
@@ -245,17 +245,17 @@ struct map_session_data
         unsigned divorce:1;
     } npc_flags;
 
-    int  attacktimer;
-    int  attacktarget;
+    int attacktimer;
+    int attacktarget;
     short attacktarget_lv;
     unsigned int attackabletime;
 
     /// Used with the GM commands to iterate over players
-    int  followtarget;
+    int followtarget;
 
     unsigned int cast_tick;     // [Fate] Next tick at which spellcasting is allowed
     struct invocation *active_spells;   // [Fate] Singly-linked list of active spells linked to this PC
-    int  attack_spell_override; // [Fate] When an attack spell is active for this player, they trigger it
+    int attack_spell_override; // [Fate] When an attack spell is active for this player, they trigger it
     // like a weapon.  Check pc_attack_timer() for details.
     short attack_spell_icon_override;   // Weapon equipment slot (slot 4) item override
     short attack_spell_look_override;   // Weapon `look' (attack animation) override
@@ -266,8 +266,8 @@ struct map_session_data
     //_current slowly approximates _target, and _target is determined by equipment.
 
     short attackrange, attackrange_;
-    int  skilltimer;
-    int  skilltarget;
+    int skilltimer;
+    int skilltarget;
     short skillx, skilly;
     short skillid, skilllv;
     short skillitem, skillitemlv;
@@ -276,118 +276,118 @@ struct map_session_data
     struct skill_unit_group skillunit[MAX_SKILLUNITGROUP];
     struct skill_unit_group_tickset skillunittick[MAX_SKILLUNITGROUPTICKSET];
     struct skill_timerskill skilltimerskill[MAX_SKILLTIMERSKILL];
-    int  cloneskill_id, cloneskill_lv;
-    int  potion_hp, potion_sp, potion_per_hp, potion_per_sp;
+    int cloneskill_id, cloneskill_lv;
+    int potion_hp, potion_sp, potion_per_hp, potion_per_sp;
 
     // [Fate] Used for gradual healing; amount of enqueued regeneration
     struct quick_regeneration quick_regeneration_hp, quick_regeneration_sp;
     // [Fate] XP that can be extracted from this player by healing
-    int  heal_xp;               // i.e., OTHER players (healers) can partake in this player's XP
+    int heal_xp;               // i.e., OTHER players (healers) can partake in this player's XP
 
-    int  invincible_timer;
+    int invincible_timer;
     unsigned int canact_tick;
     unsigned int canmove_tick;
     unsigned int canlog_tick;
-    int  hp_sub, sp_sub;
-    int  inchealhptick, inchealsptick, inchealspirithptick,
+    int hp_sub, sp_sub;
+    int inchealhptick, inchealsptick, inchealspirithptick,
         inchealspiritsptick;
 // -- moonsoul (new tick for berserk self-damage)
-    int  berserkdamagetick;
-    int  fame;
+    int berserkdamagetick;
+    int fame;
 
     short weapontype1, weapontype2;
     short disguiseflag, disguise;   // [Valaris]
-    int  paramb[6], paramc[6], parame[6], paramcard[6];
-    int  hit, flee, flee2, aspd, amotion, dmotion;
-    int  watk, watk2, atkmods[3];
-    int  def, def2, mdef, mdef2, critical, matk1, matk2;
-    int  atk_ele, def_ele, star, overrefine;
-    int  castrate, hprate, sprate, dsprate;
-    int  addele[10], addrace[12], addsize[3], subele[10], subrace[12];
-    int  addeff[10], addeff2[10], reseff[10];
-    int  watk_, watk_2, atkmods_[3], addele_[10], addrace_[12], addsize_[3];    //二刀流のために追加
-    int  atk_ele_, star_, overrefine_;  //二刀流のために追加
-    int  base_atk, atk_rate;
-    int  arrow_atk, arrow_ele, arrow_cri, arrow_hit, arrow_range;
-    int  arrow_addele[10], arrow_addrace[12], arrow_addsize[3],
+    int paramb[6], paramc[6], parame[6], paramcard[6];
+    int hit, flee, flee2, aspd, amotion, dmotion;
+    int watk, watk2, atkmods[3];
+    int def, def2, mdef, mdef2, critical, matk1, matk2;
+    int atk_ele, def_ele, star, overrefine;
+    int castrate, hprate, sprate, dsprate;
+    int addele[10], addrace[12], addsize[3], subele[10], subrace[12];
+    int addeff[10], addeff2[10], reseff[10];
+    int watk_, watk_2, atkmods_[3], addele_[10], addrace_[12], addsize_[3];    //二刀流のために追加
+    int atk_ele_, star_, overrefine_;  //二刀流のために追加
+    int base_atk, atk_rate;
+    int arrow_atk, arrow_ele, arrow_cri, arrow_hit, arrow_range;
+    int arrow_addele[10], arrow_addrace[12], arrow_addsize[3],
         arrow_addeff[10], arrow_addeff2[10];
-    int  nhealhp, nhealsp, nshealhp, nshealsp, nsshealhp, nsshealsp;
-    int  aspd_rate, speed_rate, hprecov_rate, sprecov_rate, critical_def,
+    int nhealhp, nhealsp, nshealhp, nshealsp, nsshealhp, nsshealsp;
+    int aspd_rate, speed_rate, hprecov_rate, sprecov_rate, critical_def,
         double_rate;
-    int  near_attack_def_rate, long_attack_def_rate, magic_def_rate,
+    int near_attack_def_rate, long_attack_def_rate, magic_def_rate,
         misc_def_rate;
-    int  matk_rate, ignore_def_ele, ignore_def_race, ignore_def_ele_,
+    int matk_rate, ignore_def_ele, ignore_def_race, ignore_def_ele_,
         ignore_def_race_;
-    int  ignore_mdef_ele, ignore_mdef_race;
-    int  magic_addele[10], magic_addrace[12], magic_subrace[12];
-    int  perfect_hit, get_zeny_num;
-    int  critical_rate, hit_rate, flee_rate, flee2_rate, def_rate, def2_rate,
+    int ignore_mdef_ele, ignore_mdef_race;
+    int magic_addele[10], magic_addrace[12], magic_subrace[12];
+    int perfect_hit, get_zeny_num;
+    int critical_rate, hit_rate, flee_rate, flee2_rate, def_rate, def2_rate,
         mdef_rate, mdef2_rate;
-    int  def_ratio_atk_ele, def_ratio_atk_ele_, def_ratio_atk_race,
+    int def_ratio_atk_ele, def_ratio_atk_ele_, def_ratio_atk_race,
         def_ratio_atk_race_;
-    int  add_damage_class_count, add_damage_class_count_,
+    int add_damage_class_count, add_damage_class_count_,
         add_magic_damage_class_count;
     short add_damage_classid[10], add_damage_classid_[10],
         add_magic_damage_classid[10];
-    int  add_damage_classrate[10], add_damage_classrate_[10],
+    int add_damage_classrate[10], add_damage_classrate_[10],
         add_magic_damage_classrate[10];
 
     // TODO see if I can remove these - they are no longer used for players
     // but what about mob classes?
     short add_def_class_count, add_mdef_class_count;
     short add_def_classid[10], add_mdef_classid[10];
-    int  add_def_classrate[10], add_mdef_classrate[10];
+    int add_def_classrate[10], add_mdef_classrate[10];
     short monster_drop_item_count;
     short monster_drop_itemid[10];
-    int  monster_drop_race[10], monster_drop_itemrate[10];
-    int  double_add_rate, speed_add_rate, aspd_add_rate, perfect_hit_add,
+    int monster_drop_race[10], monster_drop_itemrate[10];
+    int double_add_rate, speed_add_rate, aspd_add_rate, perfect_hit_add,
         get_zeny_add_num;
     short splash_range, splash_add_range;
     short autospell_id, autospell_lv, autospell_rate;
     short hp_drain_rate, hp_drain_per, sp_drain_rate, sp_drain_per;
     short hp_drain_rate_, hp_drain_per_, sp_drain_rate_, sp_drain_per_;
-    int  short_weapon_damage_return, long_weapon_damage_return;
-    int  weapon_coma_ele[10], weapon_coma_race[12];
+    int short_weapon_damage_return, long_weapon_damage_return;
+    int weapon_coma_ele[10], weapon_coma_race[12];
     short break_weapon_rate, break_armor_rate;
     short add_steal_rate;
 
-    int  magic_damage_return;   // AppleGirl Was Here
-    int  random_attack_increase_add, random_attack_increase_per;    // [Valaris]
-    int  perfect_hiding;        // [Valaris]
-    int  unbreakable;
+    int magic_damage_return;   // AppleGirl Was Here
+    int random_attack_increase_add, random_attack_increase_per;    // [Valaris]
+    int perfect_hiding;        // [Valaris]
+    int unbreakable;
 
-    int  die_counter;
+    int die_counter;
     short doridori_counter;
 
-    int  reg_num;
+    int reg_num;
     struct script_reg *reg;
-    int  regstr_num;
+    int regstr_num;
     struct script_regstr *regstr;
 
     struct status_change sc_data[MAX_STATUSCHANGE];
     short sc_count;
 
-    int  trade_partner;
-    int  deal_item_index[10];
-    int  deal_item_amount[10];
-    int  deal_zeny;
+    int trade_partner;
+    int deal_item_index[10];
+    int deal_item_amount[10];
+    int deal_zeny;
     short deal_locked;
 
-    int  party_sended, party_invite, party_invite_account;
-    int  party_hp, party_x, party_y;
+    int party_sended, party_invite, party_invite_account;
+    int party_hp, party_x, party_y;
 
-    int  partyspy;              // [Syrus22]
+    int partyspy;              // [Syrus22]
 
     char message[80];
 
-    int  catch_target_class;
+    int catch_target_class;
 
-    int  pvp_point, pvp_rank, pvp_timer, pvp_lastusers;
+    int pvp_point, pvp_rank, pvp_timer, pvp_lastusers;
 
     char eventqueue[MAX_EVENTQUEUE][50];
-    int  eventtimer[MAX_EVENTTIMER];
+    int eventtimer[MAX_EVENTTIMER];
 
-    int  last_skillid, last_skilllv;    // Added by RoVeRT
+    int last_skillid, last_skilllv;    // Added by RoVeRT
     short sg_count;
 
     struct
@@ -397,8 +397,8 @@ struct map_session_data
 
     time_t chat_reset_due;
     time_t chat_repeat_reset_due;
-    int  chat_lines_in;
-    int  chat_total_repeats;
+    int chat_lines_in;
+    int chat_total_repeats;
     char chat_lastmsg[513];
 
     unsigned int flood_rates[0x220];
@@ -410,16 +410,16 @@ struct map_session_data
 
 struct npc_timerevent_list
 {
-    int  timer, pos;
+    int timer, pos;
 };
 struct npc_label_list
 {
     char name[24];
-    int  pos;
+    int pos;
 };
 struct npc_item_list
 {
-    int  nameid, value;
+    int nameid, value;
 };
 struct npc_data
 {
@@ -438,12 +438,12 @@ struct npc_data
         {
             script_ptr script;
             short xs, ys;
-            int  timer, timerid, timeramount, nexttimer;
+            int timer, timerid, timeramount, nexttimer;
             unsigned int timertick;
             struct npc_timerevent_list *timer_event;
-            int  label_list_num;
+            int label_list_num;
             struct npc_label_list *label_list;
-            int  src_id;
+            int src_id;
         } scr;
         struct npc_item_list shop_item[1];
         struct
@@ -457,12 +457,12 @@ struct npc_data
     // ここにメンバを追加してはならない(shop_itemが可変長の為)
 
     char eventqueue[MAX_EVENTQUEUE][50];
-    int  eventtimer[MAX_EVENTTIMER];
+    int eventtimer[MAX_EVENTTIMER];
     short arenaflag;
 };
 
-#define MOB_MODE_SUMMONED			0x1000
-#define MOB_MODE_TURNS_AGAINST_BAD_MASTER	0x2000
+#define MOB_MODE_SUMMONED                 0x1000
+#define MOB_MODE_TURNS_AGAINST_BAD_MASTER 0x2000
 
 #define MOB_SENSIBLE_MASK 0xf000    // fate: mob mode flags that I actually understand
 
@@ -491,7 +491,7 @@ struct mob_data
     Direction dir;
     short m, x_0, y_0, xs, ys;
     char name[24];
-    int  spawndelay_1, spawndelay2;
+    int spawndelay_1, spawndelay2;
     struct
     {
         unsigned state:8;
@@ -505,10 +505,10 @@ struct mob_data
         unsigned walk_easy:1;
         unsigned special_mob_ai:3;
     } state;
-    int  timer;
+    int timer;
     short to_x, to_y;
-    int  hp;
-    int  target_id, attacked_id;
+    int hp;
+    int target_id, attacked_id;
     short target_lv;
     struct walkpath_data walkpath;
     unsigned int next_walktime;
@@ -518,8 +518,8 @@ struct mob_data
     short move_fail_count;
     struct
     {
-        int  id;
-        int  dmg;
+        int id;
+        int dmg;
     } dmglog[DAMAGELOG_SIZE];
     struct item *lootitem;
     short lootitem_count;
@@ -529,16 +529,16 @@ struct mob_data
     short opt1, opt2, opt3, option;
     short min_chase;
     short sg_count;
-    int  deletetimer;
+    int deletetimer;
 
-    int  skilltimer;
-    int  skilltarget;
+    int skilltimer;
+    int skilltarget;
     short skillx, skilly;
     short skillid, skilllv, skillidx;
     unsigned int skilldelay[MAX_MOBSKILL];
-    int  def_ele;
-    int  master_id, master_dist;
-    int  exclusion_src, exclusion_party;
+    int def_ele;
+    int master_id, master_dist;
+    int exclusion_src, exclusion_party;
     struct skill_timerskill skilltimerskill[MAX_MOBSKILLTIMERSKILL];
     struct skill_unit_group skillunit[MAX_MOBSKILLUNITGROUP];
     struct skill_unit_group_tickset skillunittick[MAX_SKILLUNITGROUPTICKSET];
@@ -579,11 +579,11 @@ struct map_data
         };
     };
     int *block_count, *block_mob_count;
-    int  m;
+    int m;
     short xs, ys;
     short bxs, bys;
-    int  npc_num;
-    int  users;
+    int npc_num;
+    int users;
     struct
     {
         unsigned alias:1;
@@ -610,9 +610,9 @@ struct map_data
     struct npc_data *npc[MAX_NPC_PER_MAP];
     struct
     {
-        int  drop_id;
-        int  drop_type;
-        int  drop_per;
+        int drop_id;
+        int drop_type;
+        int drop_per;
     } drop_list[MAX_DROP_PER_MAP];
 };
 #define read_gat(m,x,y) (maps[m].gat[(x)+(y)*maps[m].xs])
@@ -622,8 +622,8 @@ struct flooritem_data
 {
     struct block_list bl;
     short subx, suby;
-    int  cleartimer;
-    int  first_get_id, second_get_id, third_get_id;
+    int cleartimer;
+    int first_get_id, second_get_id, third_get_id;
     unsigned int first_get_tick, second_get_tick, third_get_tick;
     struct item item_data;
 };
@@ -705,82 +705,80 @@ extern char talkie_mes[];
 extern char wisp_server_name[];
 
 // global information
-void map_setusers (int);
-int  map_getusers (void);
+void map_setusers(int);
+int map_getusers(void);
 // block freeing
-int  map_freeblock (void *bl);
-int  map_freeblock_lock (void);
-int  map_freeblock_unlock (void);
+int map_freeblock(void *bl);
+int map_freeblock_lock(void);
+int map_freeblock_unlock(void);
 // block related
-bool map_addblock (struct block_list *);
-int  map_delblock (struct block_list *);
-void map_foreachinarea (void (*)(struct block_list *, va_list), int, int, int,
-                        int, int, BlockType, ...);
-void map_foreachinmovearea (void (*)(struct block_list *, va_list), int, int,
-                            int, int, int, int, int, BlockType, ...);
+bool map_addblock(struct block_list *);
+int map_delblock(struct block_list *);
+void map_foreachinarea(void(*)(struct block_list *, va_list), int, int, int,
+                       int, int, BlockType, ...);
+void map_foreachinmovearea(void(*)(struct block_list *, va_list), int, int,
+                           int, int, int, int, int, BlockType, ...);
 
 /// Temporary objects (loot, etc)
 typedef uint32_t obj_id_t;
-obj_id_t map_addobject (struct block_list *);
-void map_delobject (obj_id_t, BlockType type);
-void map_delobjectnofree (obj_id_t id, BlockType type);
-void map_foreachobject (void (*)(struct block_list *, va_list), BlockType, ...);
+obj_id_t map_addobject(struct block_list *);
+void map_delobject(obj_id_t, BlockType type);
+void map_delobjectnofree(obj_id_t id, BlockType type);
+void map_foreachobject(void(*)(struct block_list *, va_list), BlockType, ...);
 
-void map_quit (struct map_session_data *);
+void map_quit(struct map_session_data *);
 // npc
-int  map_addnpc (int, struct npc_data *);
+int map_addnpc(int, struct npc_data *);
 
 extern FILE *map_logfile;
-void map_log (const char *format, ...) __attribute__((format(printf, 1, 2)));
+void map_log(const char *format, ...) __attribute__((format(printf, 1, 2)));
 
 #define MAP_LOG_PC(sd, fmt, args...) map_log("PC%d %d:%d,%d " fmt, sd->status.char_id, sd->bl.m, sd->bl.x, sd->bl.y, ## args)
 
 // floor item methods
-void map_clearflooritem_timer (timer_id, tick_t, custom_id_t, custom_data_t);
+void map_clearflooritem_timer(timer_id, tick_t, custom_id_t, custom_data_t);
 #define map_clearflooritem(id) map_clearflooritem_timer(0,0,id,1)
-int  map_addflooritem_any (struct item *, int amount, uint16_t m, uint16_t x, uint16_t y,
+int map_addflooritem_any(struct item *, int amount, uint16_t m, uint16_t x, uint16_t y,
                            struct map_session_data **owners,
                            int *owner_protection,
-                           int lifetime, int dispersal);
-int  map_addflooritem (struct item *, int amount, uint16_t m, uint16_t x, uint16_t y,
+                          int lifetime, int dispersal);
+int map_addflooritem(struct item *, int amount, uint16_t m, uint16_t x, uint16_t y,
                        struct map_session_data *, struct map_session_data *,
-                       struct map_session_data *);
+                      struct map_session_data *);
 
 // mappings between character id and names
-void map_addchariddb (charid_t charid, const char *name);
-const char *map_charid2nick (charid_t);
+void map_addchariddb(charid_t charid, const char *name);
+const char *map_charid2nick(charid_t);
 
-struct map_session_data *map_id2sd (unsigned int);
-struct block_list *map_id2bl (unsigned int);
-int  map_mapname2mapid (const char *);
-bool map_mapname2ipport (const char *, in_addr_t *, in_port_t *);
-bool map_setipport (const char *name, in_addr_t ip, in_port_t port);
+struct map_session_data *map_id2sd(unsigned int);
+struct block_list *map_id2bl(unsigned int);
+int map_mapname2mapid(const char *);
+bool map_mapname2ipport(const char *, in_addr_t *, in_port_t *);
+bool map_setipport(const char *name, in_addr_t ip, in_port_t port);
 
-void map_addiddb (struct block_list *);
-void map_deliddb (struct block_list *bl);
-void map_foreachiddb (db_func_t, ...);
-void map_addnickdb (struct map_session_data *);
-int  map_scriptcont (struct map_session_data *sd, int id);  /* Continues a script either on a spell or on an NPC */
-struct map_session_data *map_nick2sd (const char *);
-int  compare_item (struct item *a, struct item *b);
+void map_addiddb(struct block_list *);
+void map_deliddb(struct block_list *bl);
+void map_foreachiddb(db_func_t, ...);
+void map_addnickdb(struct map_session_data *);
+int map_scriptcont(struct map_session_data *sd, int id);  /* Continues a script either on a spell or on an NPC */
+struct map_session_data *map_nick2sd(const char *);
+int compare_item(struct item *a, struct item *b);
 
 // iterate over players
-struct map_session_data *map_get_first_session (void);
-struct map_session_data *map_get_last_session (void);
-struct map_session_data *map_get_next_session (struct map_session_data
-                                               *current);
-struct map_session_data *map_get_prev_session (struct map_session_data
-                                               *current);
+struct map_session_data *map_get_first_session(void);
+struct map_session_data *map_get_last_session(void);
+struct map_session_data *map_get_next_session(struct map_session_data *current);
+struct map_session_data *map_get_prev_session(struct map_session_data *current);
 
 // edit the gat data
-uint8_t map_getcell (int, int, int);
-void map_setcell (int, int, int, uint8_t);
+uint8_t map_getcell(int, int, int);
+void map_setcell(int, int, int, uint8_t);
 
 // get the general direction from block's location to the coordinates
-Direction map_calc_dir (struct block_list *src, int x, int y);
+Direction map_calc_dir(struct block_list *src, int x, int y);
 
 // in path.cpp
-int  path_search (struct walkpath_data *, int, int, int, int, int, int);
-int  path_blownpos (int m, int x_0, int y_0, int dx, int dy, int count);
+int path_search(struct walkpath_data *, int, int, int, int, int, int);
+int path_blownpos(int m, int x_0, int y_0, int dx, int dy, int count);
 
 #endif

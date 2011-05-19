@@ -1,8 +1,8 @@
 char output[10000];
 
-char *html_header (char *title)
+char *html_header(char *title)
 {
-    memset (output, 0x0, 10000);
+    memset(output, 0x0, 10000);
     char *text =
         "<body text=\"#000000\" bgcolor=\"#939393\" link=\"#0033FF\">\n"
         "<br><table width=\"92%\" cellspacing=\"1\" cellpadding=\"0\" border=\"0\"\n"
@@ -26,20 +26,20 @@ char *html_header (char *title)
         "<b>Athena</b> &laquo; Portal &raquo;</font></td></tr></tbody></table></td></tr></tbody>"
         "</table></td></tr></tbody></table>\n";
 
-    sprintf (output, "<title>%s</title>\n%s\n", title, text);
+    sprintf(output, "<title>%s</title>\n%s\n", title, text);
 
     return output;
 }
 
-char *html_start_form (char *location, char *action)
+char *html_start_form(char *location, char *action)
 {
-    memset (output, 0x0, 10000);
-    sprintf (output, "<form action=\"%s\" method=\"%s\">", location, action);
+    memset(output, 0x0, 10000);
+    sprintf(output, "<form action=\"%s\" method=\"%s\">", location, action);
     return output;
 
 }
 
-char *html_end_forum (void)
+char *html_end_forum(void)
 {
     return "</form>";
 }

@@ -20,16 +20,16 @@
 #include "skill.hpp"
 #include "../common/socket.hpp"
 
-int  skill_pool_skills[MAX_POOL_SKILLS];
-int  skill_pool_skills_size = 0;
+int skill_pool_skills[MAX_POOL_SKILLS];
+int skill_pool_skills_size = 0;
 
-static int  skill_pool_size (struct map_session_data *sd);
+static int skill_pool_size(struct map_session_data *sd);
 
-void skill_pool_register (int id)
+void skill_pool_register(int id)
 {
     if (skill_pool_skills_size + 1 >= MAX_POOL_SKILLS)
     {
-        fprintf (stderr,
+        fprintf(stderr,
                  "Too many pool skills! Increase MAX_POOL_SKILLS and recompile.");
         return;
     }
@@ -37,7 +37,7 @@ void skill_pool_register (int id)
     skill_pool_skills[skill_pool_skills_size++] = id;
 }
 
-const char *skill_name (int skill)
+const char *skill_name(int skill)
 {
     if (skill > 0 && skill < MAX_SKILL_DB)
         return skill_names[skill].desc;
@@ -45,13 +45,13 @@ const char *skill_name (int skill)
         return NULL;
 }
 
-int skill_pool (struct map_session_data *sd, int *skills)
+int skill_pool(struct map_session_data *sd, int *skills)
 {
-    int  i, count = 0;
+    int i, count = 0;
 
     for (i = 0; count < MAX_SKILL_POOL && i < skill_pool_skills_size; i++)
     {
-        int  skill_id = skill_pool_skills[i];
+        int skill_id = skill_pool_skills[i];
         if (sd->status.skill[skill_id].flags & SKILL_POOL_ACTIVATED)
         {
             if (skills)
@@ -63,27 +63,27 @@ int skill_pool (struct map_session_data *sd, int *skills)
     return count;
 }
 
-int skill_pool_size (struct map_session_data *sd)
+int skill_pool_size(struct map_session_data *sd)
 {
-    return skill_pool (sd, NULL);
+    return skill_pool(sd, NULL);
 }
 
-int skill_pool_max (struct map_session_data *sd)
+int skill_pool_max(struct map_session_data *sd)
 {
     return sd->status.skill[TMW_SKILLPOOL].lv;
 }
 
-int skill_pool_activate (struct map_session_data *sd, int skill_id)
+int skill_pool_activate(struct map_session_data *sd, int skill_id)
 {
     if (sd->status.skill[skill_id].flags & SKILL_POOL_ACTIVATED)
         return 0;               // Already there
     else if (sd->status.skill[skill_id].id == skill_id  // knows the skill
-             && (skill_pool_size (sd) < skill_pool_max (sd)))
+             && (skill_pool_size(sd) < skill_pool_max(sd)))
     {
         sd->status.skill[skill_id].flags |= SKILL_POOL_ACTIVATED;
-        pc_calcstatus (sd, 0);
-        MAP_LOG_PC (sd, "SKILL-ACTIVATE %d %d %d", skill_id,
-                    sd->status.skill[skill_id].lv, skill_power (sd,
+        pc_calcstatus(sd, 0);
+        MAP_LOG_PC(sd, "SKILL-ACTIVATE %d %d %d", skill_id,
+                    sd->status.skill[skill_id].lv, skill_power(sd,
                                                                 skill_id));
         return 0;
     }
@@ -91,39 +91,39 @@ int skill_pool_activate (struct map_session_data *sd, int skill_id)
     return 1;                   // failed
 }
 
-int skill_pool_is_activated (struct map_session_data *sd, int skill_id)
+int skill_pool_is_activated(struct map_session_data *sd, int skill_id)
 {
     return sd->status.skill[skill_id].flags & SKILL_POOL_ACTIVATED;
 }
 
-int skill_pool_deactivate (struct map_session_data *sd, int skill_id)
+int skill_pool_deactivate(struct map_session_data *sd, int skill_id)
 {
     if (sd->status.skill[skill_id].flags & SKILL_POOL_ACTIVATED)
     {
         sd->status.skill[skill_id].flags &= ~SKILL_POOL_ACTIVATED;
-        MAP_LOG_PC (sd, "SKILL-DEACTIVATE %d", skill_id);
-        pc_calcstatus (sd, 0);
+        MAP_LOG_PC(sd, "SKILL-DEACTIVATE %d", skill_id);
+        pc_calcstatus(sd, 0);
         return 0;
     }
 
     return 1;
 }
 
-int skill_stat (int skill_id)
+int skill_stat(int skill_id)
 {
     return skill_db[skill_id].stat;
 }
 
-int skill_power (struct map_session_data *sd, int skill_id)
+int skill_power(struct map_session_data *sd, int skill_id)
 {
-    int  stat = skill_stat (skill_id);
-    int  stat_value, skill_value;
-    int  result;
+    int stat = skill_stat(skill_id);
+    int stat_value, skill_value;
+    int result;
 
-    if (stat == 0 || !skill_pool_is_activated (sd, skill_id))
+    if (stat == 0 || !skill_pool_is_activated(sd, skill_id))
         return 0;
 
-    stat_value = battle_get_stat (stat, &(sd->bl));
+    stat_value = battle_get_stat(stat, &(sd->bl));
     skill_value = sd->status.skill[skill_id].lv;
 
     if ((skill_value * 10) - 1 > stat_value)
@@ -136,10 +136,10 @@ int skill_power (struct map_session_data *sd, int skill_id)
     return result;
 }
 
-int skill_power_bl (struct block_list *bl, int skill)
+int skill_power_bl(struct block_list *bl, int skill)
 {
     if (bl->type == BL_PC)
-        return skill_power ((struct map_session_data *) bl, skill);
+        return skill_power((struct map_session_data *) bl, skill);
     else
         return 0;
 }

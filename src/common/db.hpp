@@ -24,8 +24,8 @@ struct db_key_t
         const char* s;
         numdb_key_t i;
     };
-    db_key_t (const char *name) : s(name) {}
-    db_key_t (numdb_key_t idx) : i(idx) {}
+    db_key_t(const char *name) : s(name) {}
+    db_key_t(numdb_key_t idx) : i(idx) {}
 };
 struct db_val_t
 {
@@ -34,11 +34,11 @@ struct db_val_t
         void* p;
         intptr_t i;
     };
-    db_val_t (void *ptr) : p(ptr) {}
-    db_val_t (intptr_t iv) : i(iv) {}
+    db_val_t(void *ptr) : p(ptr) {}
+    db_val_t(intptr_t iv) : i(iv) {}
 };
 typedef uint32_t hash_t;
-typedef void (*db_func_t)(db_key_t, db_val_t, va_list);
+typedef void(*db_func_t)(db_key_t, db_val_t, va_list);
 
 /// DataBase Node
 struct dbn
@@ -61,38 +61,38 @@ struct dbt
     dbt_type type;
     /// Note, before replacement, key/values to be replaced
     // TODO refactor to decrease/eliminate the uses of this?
-    void (*release) (db_key_t, db_val_t) __attribute__((deprecated));
+    void(*release)(db_key_t, db_val_t) __attribute__((deprecated));
     /// The root trees
     struct dbn *ht[HASH_SIZE];
 };
 
-# define strdb_search(t,k)   db_search((t),(db_key_t)(k))
-# define strdb_insert(t,k,d) db_insert((t),(db_key_t)(k),(db_val_t)(d))
-# define strdb_erase(t,k)    db_erase ((t),(db_key_t)(k))
+# define strdb_search(t,k)   db_search((t), (db_key_t)(k))
+# define strdb_insert(t,k,d) db_insert((t), (db_key_t)(k), (db_val_t)(d))
+# define strdb_erase(t,k)    db_erase((t), (db_key_t)(k))
 # define strdb_foreach       db_foreach
 # define strdb_final         db_final
-# define numdb_search(t,k)   db_search((t),(db_key_t)(k))
-# define numdb_insert(t,k,d) db_insert((t),(db_key_t)(k),(db_val_t)(d))
-# define numdb_erase(t,k)    db_erase ((t),(db_key_t)(k))
+# define numdb_search(t,k)   db_search((t), (db_key_t)(k))
+# define numdb_insert(t,k,d) db_insert((t), (db_key_t)(k), (db_val_t)(d))
+# define numdb_erase(t,k)    db_erase((t), (db_key_t)(k))
 # define numdb_foreach       db_foreach
 # define numdb_final         db_final
 
 /// Create a map from char* to void*, with strings always nul-terminated
-struct dbt *strdb_init ();
+struct dbt *strdb_init();
 /// Create a map from int to void*
-struct dbt *numdb_init (void);
+struct dbt *numdb_init(void);
 /// Return the value corresponding to the key, or NULL if not found
-db_val_t db_search (struct dbt *table, db_key_t key);
+db_val_t db_search(struct dbt *table, db_key_t key);
 /// Add or replace table[key] = data
 // if it was already there, call release
-struct dbn *db_insert (struct dbt *table, db_key_t key, db_val_t data);
+struct dbn *db_insert(struct dbt *table, db_key_t key, db_val_t data);
 /// Remove a key from the table, returning the data
-db_val_t db_erase (struct dbt *table, db_key_t key);
+db_val_t db_erase(struct dbt *table, db_key_t key);
 
 /// Execute a function for every element, in unspecified order
-void db_foreach (struct dbt *, db_func_t, ...);
+void db_foreach(struct dbt *, db_func_t, ...);
 // opposite of init? Calls release for every element and frees memory
 // This probably isn't really needed: we don't have to free memory while exiting
-void db_final (struct dbt *, db_func_t, ...) __attribute__((deprecated));
+void db_final(struct dbt *, db_func_t, ...) __attribute__((deprecated));
 
 #endif

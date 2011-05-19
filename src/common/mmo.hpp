@@ -61,7 +61,7 @@ typedef uint8_t level_t;
 
 struct item
 {
-    int  id;
+    int id;
     short nameid;
     short amount;
     unsigned short equip;
@@ -86,7 +86,7 @@ struct skill
 struct global_reg
 {
     char str[32];
-    int  value;
+    int value;
 };
 
 struct mmo_charstatus
@@ -95,10 +95,10 @@ struct mmo_charstatus
     account_t account_id;
     charid_t partner_id;
 
-    int  base_exp, job_exp, zeny;
+    int base_exp, job_exp, zeny;
 
     short status_point, skill_point;
-    int  hp, max_hp, sp, max_sp;
+    int hp, max_hp, sp, max_sp;
     short option, karma, manner;
     short hair, hair_color, clothes_color;
     party_t party_id;
@@ -117,17 +117,17 @@ struct mmo_charstatus
     struct point last_point, save_point, memo_point[10];
     struct item inventory[MAX_INVENTORY];
     struct skill skill[MAX_SKILL];
-    int  global_reg_num;
+    int global_reg_num;
     struct global_reg global_reg[GLOBAL_REG_NUM];
-    int  account_reg_num;
+    int account_reg_num;
     struct global_reg account_reg[ACCOUNT_REG_NUM];
-    int  account_reg2_num;
+    int account_reg2_num;
     struct global_reg account_reg2[ACCOUNT_REG2_NUM];
 };
 
 struct storage
 {
-    int  dirty;
+    int dirty;
     account_t account_id;
     short storage_status;
     short storage_amount;
@@ -146,7 +146,7 @@ struct party_member
 {
     account_t account_id;
     char name[24], map[16];
-    int  leader;
+    int leader;
     bool online;
     level_t lv;
     struct map_session_data *sd;
@@ -163,8 +163,8 @@ struct party
 
 struct square
 {
-    int  val1[5];
-    int  val2[5];
+    int val1[5];
+    int val2[5];
 };
 
 #endif // MMO_H

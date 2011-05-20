@@ -5,6 +5,8 @@
 #include <string.h>
 #include <math.h>
 
+#include <algorithm>
+
 #include "../common/timer.hpp"
 #include "../common/nullpo.hpp"
 
@@ -37,519 +39,335 @@ int attr_fix_table[4][10][10];
 
 struct Battle_Config battle_config;
 
-/*==========================================
- * 自分をロックしている対象の数を返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
-int battle_counttargeted(struct block_list *bl, struct block_list *src,
-                          int target_lv)
+// There are lots of battle_get_foo(struct block_list *) entries
+// to hide the differences between PCs and MOBs.
+// In addition, there are some effects
+
+/// Count the number of beings attacking this being, that are at least the given level
+int battle_counttargeted(struct block_list *bl, struct block_list *src, int target_lv)
 {
     nullpo_retr(0, bl);
+
     if (bl->type == BL_PC)
-        return pc_counttargeted((struct map_session_data *) bl, src,
-                                 target_lv);
-    else if (bl->type == BL_MOB)
+        return pc_counttargeted((struct map_session_data *) bl, src, target_lv);
+    if (bl->type == BL_MOB)
         return mob_counttargeted((struct mob_data *) bl, src, target_lv);
     return 0;
 }
 
-/*==========================================
- * 対象のClassを返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
+/// Get the class of a being
+// this used to check the classes of PCs, but we only used class 0
+// on the other hand, mob classes are very important
 int battle_get_class(struct block_list *bl)
 {
     nullpo_retr(0, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
+
+    if (bl->type == BL_MOB)
         return ((struct mob_data *) bl)->mob_class;
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
-        return 0;
-    else
-        return 0;
+    return 0;
 }
 
 /// which way the object is facing
 Direction battle_get_dir(struct block_list *bl)
 {
     nullpo_retr(DIR_S, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
+
+    if (bl->type == BL_MOB)
         return ((struct mob_data *) bl)->dir;
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
+    if (bl->type == BL_PC)
         return ((struct map_session_data *) bl)->dir;
-    else
-        return DIR_S;
+    return DIR_S;
 }
 
-/*==========================================
- * 対象のレベルを返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
+/// Get the (base) level of this being
 int battle_get_lv(struct block_list *bl)
 {
     nullpo_retr(0, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
+
+    if (bl->type == BL_MOB)
         return ((struct mob_data *) bl)->stats[MOB_LV];
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
+    if (bl->type == BL_PC)
         return ((struct map_session_data *) bl)->status.base_level;
-    else
-        return 0;
+    return 0;
 }
 
-/*==========================================
- * 対象の射程を返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
+/// Get the maximum attack distance of this being
 int battle_get_range(struct block_list *bl)
 {
     nullpo_retr(0, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
+
+    if (bl->type == BL_MOB)
         return mob_db[((struct mob_data *) bl)->mob_class].range;
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
+    if (bl->type == BL_PC)
         return ((struct map_session_data *) bl)->attackrange;
-    else
-        return 0;
+    return 0;
 }
 
-/*==========================================
- * 対象のHPを返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
+/// Get current HP of this being
 int battle_get_hp(struct block_list *bl)
 {
     nullpo_retr(1, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
-        return ((struct mob_data *) bl)->hp;
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
-        return ((struct map_session_data *) bl)->status.hp;
-    else
-        return 1;
-}
 
-/*==========================================
- * 対象のMHPを返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
-int battle_get_max_hp(struct block_list *bl)
-{
-    nullpo_retr(1, bl);
-    if (bl->type == BL_PC && ((struct map_session_data *) bl))
-        return ((struct map_session_data *) bl)->status.max_hp;
-    else
-    {
-        int max_hp = 1;
-        if (bl->type == BL_MOB && ((struct mob_data *) bl))
-        {
-            max_hp = ((struct mob_data *) bl)->stats[MOB_MAX_HP];
-            if (mob_db[((struct mob_data *) bl)->mob_class].mexp > 0)
-            {
-                if (battle_config.mvp_hp_rate != 100)
-                    max_hp = (max_hp * battle_config.mvp_hp_rate) / 100;
-            }
-            else
-            {
-                if (battle_config.monster_hp_rate != 100)
-                    max_hp = (max_hp * battle_config.monster_hp_rate) / 100;
-            }
-        }
-        if (max_hp < 1)
-            max_hp = 1;
-        return max_hp;
-    }
+    if (bl->type == BL_MOB)
+        return ((struct mob_data *) bl)->hp;
+    if (bl->type == BL_PC)
+        return ((struct map_session_data *) bl)->status.hp;
     return 1;
 }
 
-/*==========================================
- * 対象のStrを返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
+/// Get maximum HP of this being
+int battle_get_max_hp(struct block_list *bl)
+{
+    nullpo_retr(1, bl);
+
+    if (bl->type == BL_PC)
+        return ((struct map_session_data *) bl)->status.max_hp;
+    if (bl->type != BL_MOB)
+        return 1;
+
+    int max_hp = ((struct mob_data *) bl)->stats[MOB_MAX_HP];
+    if (mob_db[((struct mob_data *) bl)->mob_class].mexp > 0)
+    {
+        if (battle_config.mvp_hp_rate != 100)
+            max_hp = (max_hp * battle_config.mvp_hp_rate) / 100;
+    }
+    else
+    {
+        if (battle_config.monster_hp_rate != 100)
+            max_hp = (max_hp * battle_config.monster_hp_rate) / 100;
+    }
+    return std::max(1, max_hp);
+}
+
+/// Get strength of a being
 int battle_get_str(struct block_list *bl)
 {
-    int str = 0;
-
     nullpo_retr(0, bl);
-    if (bl->type == BL_MOB && ((struct mob_data *) bl))
-        str = ((struct mob_data *) bl)->stats[MOB_STR];
-    else if (bl->type == BL_PC && ((struct map_session_data *) bl))
-        return ((struct map_session_data *) bl)->paramc[0];
 
-    if (str < 0)
-        str = 0;
-    return str;
+    if (bl->type == BL_MOB)
+        return std::max(0, (int) ((struct mob_data *) bl)->stats[MOB_STR]);
+    if (bl->type == BL_PC)
+        return std::max(0, (int) ((struct map_session_data *) bl)->paramc[0]);
+    return 0;
 }
 
-/*==========================================
- * 対象のAgiを返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
-
+/// Get agility of a being
 int battle_get_agi(struct block_list *bl)
 {
-    int agi = 0;
-
     nullpo_retr(0, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
-        agi = ((struct mob_data *) bl)->stats[MOB_AGI];
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
-        agi = ((struct map_session_data *) bl)->paramc[1];
-
-    if (agi < 0)
-        agi = 0;
-    return agi;
+    if (bl->type == BL_MOB)
+        std::max(0, (int) ((struct mob_data *) bl)->stats[MOB_AGI]);
+    if (bl->type == BL_PC)
+        std::max(0, (int) ((struct map_session_data *) bl)->paramc[1]);
+    return 0;
 }
 
-/*==========================================
- * 対象のVitを返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
+/// Get vitality of a being
 int battle_get_vit(struct block_list *bl)
 {
-    int vit = 0;
-
     nullpo_retr(0, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
-        vit = ((struct mob_data *) bl)->stats[MOB_VIT];
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
-        vit = ((struct map_session_data *) bl)->paramc[2];
-
-    if (vit < 0)
-        vit = 0;
-    return vit;
+    if (bl->type == BL_MOB)
+        std::max(0, (int) ((struct mob_data *) bl)->stats[MOB_VIT]);
+    if (bl->type == BL_PC)
+        std::max(0, (int) ((struct map_session_data *) bl)->paramc[2]);
+    return 0;
 }
 
-/*==========================================
- * 対象のIntを返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
+/// Get intelligence of a being
 int battle_get_int(struct block_list *bl)
 {
-    int int_ = 0;
     nullpo_retr(0, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
-        int_ = ((struct mob_data *) bl)->stats[MOB_INT];
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
-        int_ = ((struct map_session_data *) bl)->paramc[3];
-
-    if (int_ < 0)
-        int_ = 0;
-    return int_;
+    if (bl->type == BL_MOB)
+        std::max(0, (int) ((struct mob_data *) bl)->stats[MOB_INT]);
+    if (bl->type == BL_PC)
+        std::max(0, (int) ((struct map_session_data *) bl)->paramc[3]);
+    return 0;
 }
 
-/*==========================================
- * 対象のDexを返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
+/// Get dexterity of a being
 int battle_get_dex(struct block_list *bl)
 {
-    int dex = 0;
-
     nullpo_retr(0, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
-        dex = ((struct mob_data *) bl)->stats[MOB_DEX];
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
-        dex = ((struct map_session_data *) bl)->paramc[4];
-
-    if (dex < 0)
-        dex = 0;
-    return dex;
+    if (bl->type == BL_MOB)
+        std::max(0, (int) ((struct mob_data *) bl)->stats[MOB_DEX]);
+    if (bl->type == BL_PC)
+        std::max(0, (int) ((struct map_session_data *) bl)->paramc[4]);
+    return 0;
 }
 
-/*==========================================
- * 対象のLukを返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
+/// Get luck of a being
 int battle_get_luk(struct block_list *bl)
 {
-    int luk = 0;
-
     nullpo_retr(0, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
-        luk = ((struct mob_data *) bl)->stats[MOB_LUK];
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
-        luk = ((struct map_session_data *) bl)->paramc[5];
-
-    if (luk < 0)
-        luk = 0;
-    return luk;
+    if (bl->type == BL_MOB)
+        std::max(0, (int) ((struct mob_data *) bl)->stats[MOB_LUK]);
+    if (bl->type == BL_PC)
+        std::max(0, (int) ((struct map_session_data *) bl)->paramc[5]);
+    return 0;
 }
 
-/*==========================================
- * 対象のFleeを返す(汎用)
- * 戻りは整数で1以上
- *------------------------------------------
- */
+/// Calculate a being's ability to not be hit
 int battle_get_flee(struct block_list *bl)
 {
-    int flee = 1;
-    struct status_change *sc_data;
-
     nullpo_retr(1, bl);
-    sc_data = battle_get_sc_data(bl);
-    if (bl->type == BL_PC && (struct map_session_data *) bl)
+
+    int flee;
+    if (bl->type == BL_PC)
         flee = ((struct map_session_data *) bl)->flee;
     else
         flee = battle_get_agi(bl) + battle_get_lv(bl);
 
-    if (sc_data)
-    {
-        if (battle_is_unarmed(bl))
-            flee += (skill_power_bl(bl, TMW_BRAWLING) >> 3);   // +25 for 200
-        flee += skill_power_bl(bl, TMW_SPEED) >> 3;
-    }
-    if (flee < 1)
-        flee = 1;
-    return flee;
+    if (battle_is_unarmed(bl))
+        flee += (skill_power_bl(bl, TMW_BRAWLING) >> 3);
+    // +25 for 200
+    flee += skill_power_bl(bl, TMW_SPEED) >> 3;
+
+    return std::max(1, flee);
 }
 
-/*==========================================
- * 対象のHitを返す(汎用)
- * 戻りは整数で1以上
- *------------------------------------------
- */
+/// Calculate a being's ability to hit something
 int battle_get_hit(struct block_list *bl)
 {
-    int hit = 1;
-    struct status_change *sc_data;
-
     nullpo_retr(1, bl);
-    sc_data = battle_get_sc_data(bl);
-    if (bl->type == BL_PC && (struct map_session_data *) bl)
+
+    int hit;
+    if (bl->type == BL_PC)
         hit = ((struct map_session_data *) bl)->hit;
     else
         hit = battle_get_dex(bl) + battle_get_lv(bl);
 
-    if (sc_data)
-    {
-        if (battle_is_unarmed(bl))
-            hit += (skill_power_bl(bl, TMW_BRAWLING) >> 4);    // +12 for 200
-    }
-    if (hit < 1)
-        hit = 1;
-    return hit;
+    if (battle_is_unarmed(bl))
+        // +12 for 200
+        hit += (skill_power_bl(bl, TMW_BRAWLING) >> 4);
+
+    return std::max(1, hit);
 }
 
-/*==========================================
- * 対象の完全回避を返す(汎用)
- * 戻りは整数で1以上
- *------------------------------------------
- */
+/// Calculate a being's luck at not getting hit
 int battle_get_flee2(struct block_list *bl)
 {
-    int flee2 = 1;
-    struct status_change *sc_data;
-
     nullpo_retr(1, bl);
-    sc_data = battle_get_sc_data(bl);
-    if (bl->type == BL_PC && (struct map_session_data *) bl)
-    {
-        flee2 = battle_get_luk(bl) + 10;
-        flee2 +=
-            ((struct map_session_data *) bl)->flee2 -
-            (((struct map_session_data *) bl)->paramc[5] + 10);
-    }
+
+    int flee2;
+    if (bl->type == BL_PC)
+        flee2 = ((struct map_session_data *) bl)->flee2;
     else
         flee2 = battle_get_luk(bl) + 1;
 
-    if (sc_data)
-    {
-        if (battle_is_unarmed(bl))
-            flee2 += (skill_power_bl(bl, TMW_BRAWLING) >> 3);  // +25 for 200
-        flee2 += skill_power_bl(bl, TMW_SPEED) >> 3;
-    }
-    if (flee2 < 1)
-        flee2 = 1;
-    return flee2;
+    if (battle_is_unarmed(bl))
+        flee2 += (skill_power_bl(bl, TMW_BRAWLING) >> 3);
+    // +25 for 200
+    flee2 += skill_power_bl(bl, TMW_SPEED) >> 3;
+
+    return std::max(1, flee2);
 }
 
-/*==========================================
- * 対象のクリティカルを返す(汎用)
- * 戻りは整数で1以上
- *------------------------------------------
- */
+/// Calculate being's ability to make a critical hit
 static int battle_get_critical(struct block_list *bl)
 {
-    int critical = 1;
-
     nullpo_retr(1, bl);
-    if (bl->type == BL_PC && (struct map_session_data *) bl)
-    {
-        critical = battle_get_luk(bl) * 2 + 10;
-        critical +=
-            ((struct map_session_data *) bl)->critical -
-            ((((struct map_session_data *) bl)->paramc[5] * 3) + 10);
-    }
-    else
-        critical = battle_get_luk(bl) * 3 + 1;
 
-    if (critical < 1)
-        critical = 1;
-    return critical;
+    if (bl->type == BL_PC)
+        // FIXME was this intended?
+        return std::max(1, ((struct map_session_data *) bl)->critical - battle_get_luk(bl));
+    return battle_get_luk(bl) * 3 + 1;
 }
 
-/*==========================================
- * base_atkの取得
- * 戻りは整数で1以上
- *------------------------------------------
- */
+/// Get a being's base attack strength
 int battle_get_baseatk(struct block_list *bl)
 {
-    int batk = 1;
-
     nullpo_retr(1, bl);
-    if (bl->type == BL_PC && (struct map_session_data *) bl)
-        batk = ((struct map_session_data *) bl)->base_atk;  //設定されているbase_atk
-    else
-    {                           //それ以外なら
-        int str, dstr;
-        str = battle_get_str(bl);  //STR
-        dstr = str / 10;
-        batk = dstr * dstr + str;   //base_atkを計算する
-    }
-    if (batk < 1)
-        batk = 1;               //base_atkは最低でも1
-    return batk;
+
+    if (bl->type == BL_PC)
+        return std::max(1, (int) ((struct map_session_data *) bl)->base_atk);
+
+    int str = battle_get_str(bl);
+    int dstr = str / 10;
+    return dstr * dstr + str;
 }
 
-/*==========================================
- * 対象のAtkを返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
+/// Get a being's main attack strength
 int battle_get_atk(struct block_list *bl)
 {
-    int atk = 0;
-
     nullpo_retr(0, bl);
-    if (bl->type == BL_PC && (struct map_session_data *) bl)
-        atk = ((struct map_session_data *) bl)->watk;
-    else if (bl->type == BL_MOB && (struct mob_data *) bl)
-        atk = ((struct mob_data *) bl)->stats[MOB_ATK1];
 
-    if (atk < 0)
-        atk = 0;
-    return atk;
-}
-
-/*==========================================
- * 対象の左手Atkを返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
-static int battle_get_atk_(struct block_list *bl)
-{
-    nullpo_retr(0, bl);
-    if (bl->type == BL_PC && (struct map_session_data *) bl)
-    {
-        int atk = ((struct map_session_data *) bl)->watk_;
-
-        return atk;
-    }
-    else
-        return 0;
-}
-
-/*==========================================
- * 対象のAtk2を返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
-int battle_get_atk2(struct block_list *bl)
-{
-    nullpo_retr(0, bl);
-    if (bl->type == BL_PC && (struct map_session_data *) bl)
-        return ((struct map_session_data *) bl)->watk2;
-    else
-    {
-        int atk2 = 0;
-        if (bl->type == BL_MOB && (struct mob_data *) bl)
-            atk2 = ((struct mob_data *) bl)->stats[MOB_ATK2];
-
-        if (atk2 < 0)
-            atk2 = 0;
-        return atk2;
-    }
+    if (bl->type == BL_PC)
+        return std::max(0, (int) ((struct map_session_data *) bl)->watk);
+    if (bl->type == BL_MOB)
+        return std::max(0, (int) ((struct mob_data *) bl)->stats[MOB_ATK1]);
     return 0;
 }
 
-/*==========================================
- * 対象の左手Atk2を返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
+/// Get _ main attack strength, of a PC (what?)
+static int battle_get_atk_(struct block_list *bl)
+{
+    nullpo_retr(0, bl);
+
+    if (bl->type == BL_PC)
+        return ((struct map_session_data *) bl)->watk_;
+    return 0;
+}
+
+/// Get secondary attack strength
+int battle_get_atk2(struct block_list *bl)
+{
+    nullpo_retr(0, bl);
+
+    if (bl->type == BL_PC)
+        return ((struct map_session_data *) bl)->watk2;
+    if (bl->type != BL_MOB)
+        return 0;
+    return std::max(0, (int) ((struct mob_data *) bl)->stats[MOB_ATK2]);
+}
+
+/// Get _ secondary attack strength, of a PC (what?)
 static int battle_get_atk_2(struct block_list *bl)
 {
     nullpo_retr(0, bl);
+
     if (bl->type == BL_PC)
         return ((struct map_session_data *) bl)->watk_2;
-    else
-        return 0;
+    return 0;
 }
 
-/*==========================================
- * 対象のMAtk1を返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
+/// Get primary magical attack strength
 static int battle_get_matk1(struct block_list *bl)
 {
     nullpo_retr(0, bl);
+
     if (bl->type == BL_MOB)
     {
-        int matk, int_ = battle_get_int(bl);
-        matk = int_ + (int_ / 5) * (int_ / 5);
-
-        return matk;
+        int int_ = battle_get_int(bl);
+        return int_ + (int_ / 5) * (int_ / 5);
     }
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
+    if (bl->type == BL_PC)
         return ((struct map_session_data *) bl)->matk1;
-    else
-        return 0;
+    return 0;
 }
 
-/*==========================================
- * 対象のMAtk2を返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
+/// Get secondary magical attack strength
 static int battle_get_matk2(struct block_list *bl)
 {
     nullpo_retr(0, bl);
+
     if (bl->type == BL_MOB)
     {
-        int matk, int_ = battle_get_int(bl);
-        matk = int_ + (int_ / 7) * (int_ / 7);
-
-        return matk;
+        int int_ = battle_get_int(bl);
+        return int_ + (int_ / 7) * (int_ / 7);
     }
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
+    if (bl->type == BL_PC)
         return ((struct map_session_data *) bl)->matk2;
-    else
-        return 0;
+    return 0;
 }
 
-/*==========================================
- * 対象のDefを返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
+/// Get defense
 int battle_get_def(struct block_list *bl)
 {
-    struct status_change *sc_data;
     int def = 0, skilltimer = -1, skillid = 0;
 
     nullpo_retr(0, bl);
-    sc_data = battle_get_sc_data(bl);
+
+    struct status_change *sc_data = battle_get_sc_data(bl);
     if (bl->type == BL_PC && (struct map_session_data *) bl)
     {
         def = ((struct map_session_data *) bl)->def;
@@ -574,13 +392,11 @@ int battle_get_def(struct block_list *bl)
         if (skilltimer != -1)
         {
             int def_rate = skill_get_castdef(skillid);
-            if (def_rate != 0)
+            if (def_rate)
                 def = (def * (100 - def_rate)) / 100;
         }
     }
-    if (def < 0)
-        def = 0;
-    return def;
+    return std::max(0, def);
 }
 
 /*==========================================

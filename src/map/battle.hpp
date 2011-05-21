@@ -39,12 +39,11 @@ struct Damage battle_calc_misc_attack(struct block_list *bl,
                                        struct block_list *target,
                                       int skill_num, int skill_lv, int flag);
 
-// ダメージ最終計算
-int battle_calc_damage(struct block_list *src, struct block_list *bl,
-                         int damage, int div_, int skill_num, int skill_lv,
-                        int flag);
-enum
-{                               // 最終計算のフラグ
+
+int battle_calc_damage(struct block_list *target, int damage, int div_, int flag);
+
+/// flags for battle_calc_damage
+const int
     BF_WEAPON = 0x0001,
     BF_MAGIC = 0x0002,
     BF_MISC = 0x0004,
@@ -54,8 +53,7 @@ enum
     BF_NORMAL = 0x0200,
     BF_WEAPONMASK = 0x000f,
     BF_RANGEMASK = 0x00f0,
-    BF_SKILLMASK = 0x0f00,
-};
+    BF_SKILLMASK = 0x0f00;
 
 // 実際にHPを増減
 int battle_delay_damage(tick_t tick, struct block_list *src,

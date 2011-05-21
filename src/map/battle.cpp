@@ -869,8 +869,7 @@ int battle_attr_fix(int damage, int atk_elem, int def_elem)
 }
 
 /// Calculate the damage of attacking
-int battle_calc_damage(struct block_list *, struct block_list *target,
-                       int damage, int div_, int, int, int flag)
+int battle_calc_damage(struct block_list *target, int damage, int div_, int flag)
 {
     nullpo_retr(0, target);
 
@@ -1175,7 +1174,7 @@ static struct Damage battle_calc_mob_weapon_attack(struct block_list *src,
     if (tsd && tsd->special_state.no_weapon_damage)
         damage = 0;
 
-    damage = battle_calc_damage(src, target, damage, div_, skill_num, skill_lv, flag);
+    damage = battle_calc_damage(target, damage, div_, flag);
 
     wd.damage = damage;
     wd.damage2 = 0;
@@ -1871,19 +1870,13 @@ static struct Damage battle_calc_pc_weapon_attack(struct block_list *src,
     if (damage > 0 || damage2 > 0)
     {
         if (damage2 < 1)        // ダメージ最終修正
-            damage =
-                battle_calc_damage(src, target, damage, div_, skill_num,
-                                    skill_lv, flag);
+            damage = battle_calc_damage(target, damage, div_, flag);
         else if (damage < 1)    // 右手がミス？
-            damage2 =
-                battle_calc_damage(src, target, damage2, div_, skill_num,
-                                    skill_lv, flag);
+            damage2 = battle_calc_damage(target, damage2, div_, flag);
         else
         {                       // 両 手/カタールの場合はちょっと計算ややこしい
             int d1 = damage + damage2, d2 = damage2;
-            damage =
-                battle_calc_damage(src, target, damage + damage2, div_,
-                                    skill_num, skill_lv, flag);
+            damage = battle_calc_damage(target, d1, div_, flag);
             damage2 = (d2 * 100 / d1) * damage / 100;
             if (damage > 1 && damage2 < 1)
                 damage2 = 1;
@@ -2140,7 +2133,7 @@ struct Damage battle_calc_magic_attack(struct block_list *bl,
             damage = 0;         // 黄 金蟲カード（魔法ダメージ０）
     }
 
-    damage = battle_calc_damage(bl, target, damage, div_, skill_num, skill_lv, aflag); // 最終修正
+    damage = battle_calc_damage(target, damage, div_, aflag);
 
     /* magic_damage_return by [AppleGirl] and [Valaris]     */
     if (target->type == BL_PC && tsd && tsd->magic_damage_return > 0)
@@ -2232,7 +2225,7 @@ struct Damage battle_calc_misc_attack(struct block_list *bl,
         damage = div_;
     }
 
-    damage = battle_calc_damage(bl, target, damage, div_, skill_num, skill_lv, aflag); // 最終修正
+    damage = battle_calc_damage(target, damage, div_, aflag);
 
     md.damage = damage;
     md.div_ = div_;

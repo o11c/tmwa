@@ -2154,7 +2154,7 @@ static void mob_ai_sub_lazy(db_key_t, db_val_t data, va_list app)
 
             // MOB which is not not the summons MOB but BOSS, either sometimes reboils.
             else if (MRAND(1000) < MOB_LAZYWARPPERC && md->x_0 <= 0
-                     && md->master_id != 0 && mob_db[md->mob_class].mexp <= 0
+                     && md->master_id != 0
                      && !(mob_db[md->mob_class].mode & 0x20))
                 mob_spawn(md->bl.id);
 
@@ -2165,7 +2165,7 @@ static void mob_ai_sub_lazy(db_key_t, db_val_t data, va_list app)
 
             // MOB which is not BOSS which is not Summons MOB, either -- a case -- sometimes -- leaping
             if (MRAND(1000) < MOB_LAZYWARPPERC && md->x_0 <= 0
-                && md->master_id != 0 && mob_db[md->mob_class].mexp <= 0
+                && md->master_id != 0
                 && !(mob_db[md->mob_class].mode & 0x20))
                 mob_warp(md, -1, -1, -1, -1);
         }
@@ -2374,9 +2374,7 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
     unsigned int tick = gettick();
     struct map_session_data *mvp_sd = NULL, *second_sd = NULL, *third_sd =
         NULL;
-    double tdmg, temp;
-    struct item item;
-    int ret;
+    double tdmg;
 
     nullpo_retr(0, md);        //srcはNULLで呼ばれる場合もあるので、他でチェック
 
@@ -2739,55 +2737,6 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
                 }
             }
         }
-
-        // TODO remove support for this (after making sure it doesn't break anything)
-        // mvp処理
-        if (mvp_sd && mob_db[md->mob_class].mexp > 0)
-        {
-            int j;
-            int mexp = battle_get_mexp(&md->bl);
-            temp =
-                ((double) mexp * (double) battle_config.mvp_exp_rate *
-                 (9. + (double) count) / 1000.);
-            mexp = (temp > 2147483647.) ? 0x7fffffff : (int) temp;
-            if (mexp < 1)
-                mexp = 1;
-            clif_mvp_effect(mvp_sd);   // エフェクト
-            clif_mvp_exp(mvp_sd, mexp);
-            pc_gainexp(mvp_sd, mexp, 0);
-            for (j = 0; j < 3; j++)
-            {
-                int i = MRAND(3);
-                if (mob_db[md->mob_class].mvpitem[i].nameid <= 0)
-                    continue;
-                int drop_rate = mob_db[md->mob_class].mvpitem[i].p;
-                if (drop_rate <= 0 && battle_config.drop_rate0item == 1)
-                    drop_rate = 1;
-                if (drop_rate < battle_config.item_drop_mvp_min)
-                    drop_rate = battle_config.item_drop_mvp_min;
-                if (drop_rate > battle_config.item_drop_mvp_max)
-                    drop_rate = battle_config.item_drop_mvp_max;
-                if (drop_rate <= MRAND(10000))
-                    continue;
-                memset(&item, 0, sizeof(item));
-                item.nameid = mob_db[md->mob_class].mvpitem[i].nameid;
-                item.identify = !itemdb_isequip3(item.nameid);
-                clif_mvp_item(mvp_sd, item.nameid);
-                if (mvp_sd->weight * 2 > mvp_sd->max_weight)
-                    map_addflooritem(&item, 1, mvp_sd->bl.m, mvp_sd->bl.x,
-                                      mvp_sd->bl.y, mvp_sd, second_sd,
-                                      third_sd);
-                else if ((ret = pc_additem(mvp_sd, &item, 1)))
-                {
-                    clif_additem(sd, 0, 0, ret);
-                    map_addflooritem(&item, 1, mvp_sd->bl.m, mvp_sd->bl.x,
-                                      mvp_sd->bl.y, mvp_sd, second_sd,
-                                      third_sd);
-                }
-                break;
-            }
-        }
-
     }                           // [MouseJstr]
 
     // SCRIPT実行
@@ -3664,14 +3613,6 @@ static int mob_makedummymobdb(int mob_class)
         mob_db[mob_class].dropitem[i].nameid = 0;
         mob_db[mob_class].dropitem[i].p = 0;
     }
-    // Item1,Item2
-    mob_db[mob_class].mexp = 0;
-    mob_db[mob_class].mexpper = 0;
-    for (i = 0; i < 3; i++)
-    {
-        mob_db[mob_class].mvpitem[i].nameid = 0;
-        mob_db[mob_class].mvpitem[i].p = 0;
-    }
     for (i = 0; i < MAX_RANDOMMONSTER; i++)
         mob_db[mob_class].summonper[i] = 0;
     return 0;
@@ -3681,7 +3622,6 @@ static int mob_makedummymobdb(int mob_class)
  * db/mob_db.txt reading
  *------------------------------------------
  */
-// TODO remove support for MVP items
 static int mob_readdb(void)
 {
     FILE *fp;
@@ -3821,17 +3761,7 @@ static int mob_readdb(void)
                                                   ratemax) ? ratemax : rate;
                 mob_db[mob_class].dropitem[ii].p = rate;
             }
-            // Item1,Item2
-            mob_db[mob_class].mexp =
-                atoi(str[45]) * battle_config.mvp_exp_rate / 100;
-            mob_db[mob_class].mexpper = atoi(str[46]);
-            for (ii = 0; ii < 3; ii++)
-            {
-                mob_db[mob_class].mvpitem[ii].nameid = atoi(str[47 + ii * 2]);
-                mob_db[mob_class].mvpitem[ii].p =
-                    atoi(str[48 + ii * 2]) * battle_config.mvp_item_rate /
-                    100;
-            }
+            // str[45 .. 52] removed (mvp items/experience)
             mob_db[mob_class].mutations_nr = atoi(str[55]);
             mob_db[mob_class].mutation_power = atoi(str[56]);
 

@@ -3511,58 +3511,6 @@ int clif_changemapcell(int m, int x, int y, int cell_type, int type)
 }
 
 /*==========================================
- * MVPエフェクト
- *------------------------------------------
- */
-int clif_mvp_effect(struct map_session_data *sd)
-{
-    unsigned char buf[16];
-
-    nullpo_retr(0, sd);
-
-    WBUFW(buf, 0) = 0x10c;
-    WBUFL(buf, 2) = sd->bl.id;
-    clif_send(buf, packet_len_table[0x10c], &sd->bl, AREA);
-    return 0;
-}
-
-/*==========================================
- * MVPアイテム所得
- *------------------------------------------
- */
-// ignored by client
-int clif_mvp_item(struct map_session_data *sd, int nameid)
-{
-    int fd;
-
-    nullpo_retr(0, sd);
-
-    fd = sd->fd;
-    WFIFOW(fd, 0) = 0x10a;
-    WFIFOW(fd, 2) = nameid;
-    WFIFOSET(fd, packet_len_table[0x10a]);
-    return 0;
-}
-
-/*==========================================
- * MVP経験値所得
- *------------------------------------------
- */
-// ignored by client
-int clif_mvp_exp(struct map_session_data *sd, int exp)
-{
-    int fd;
-
-    nullpo_retr(0, sd);
-
-    fd = sd->fd;
-    WFIFOW(fd, 0) = 0x10b;
-    WFIFOL(fd, 2) = exp;
-    WFIFOSET(fd, packet_len_table[0x10b]);
-    return 0;
-}
-
-/*==========================================
  * エモーション
  *------------------------------------------
  */

@@ -122,10 +122,6 @@ int clif_equiplist(struct map_session_data *sd);
 int clif_item_skill(struct map_session_data *sd, int skillid, int skilllv,
                      const char *name);
 
-int clif_mvp_effect(struct map_session_data *sd);
-int clif_mvp_item(struct map_session_data *sd, int nameid);
-int clif_mvp_exp(struct map_session_data *sd, int exp);
-
 int clif_movetoattack(struct map_session_data *sd, struct block_list *bl);
 
 // party

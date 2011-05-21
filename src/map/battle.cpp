@@ -126,16 +126,8 @@ int battle_get_max_hp(struct block_list *bl)
         return 1;
 
     int max_hp = ((struct mob_data *) bl)->stats[MOB_MAX_HP];
-    if (mob_db[((struct mob_data *) bl)->mob_class].mexp > 0)
-    {
-        if (battle_config.mvp_hp_rate != 100)
-            max_hp = (max_hp * battle_config.mvp_hp_rate) / 100;
-    }
-    else
-    {
-        if (battle_config.monster_hp_rate != 100)
-            max_hp = (max_hp * battle_config.monster_hp_rate) / 100;
-    }
+    if (battle_config.monster_hp_rate != 100)
+        max_hp = (max_hp * battle_config.monster_hp_rate) / 100;
     return std::max(1, max_hp);
 }
 
@@ -641,24 +633,6 @@ int battle_get_mode(struct block_list *bl)
     if (bl->type == BL_MOB)
         return mob_db[((struct mob_data *) bl)->mob_class].mode;
     return 0x01;
-}
-
-int battle_get_mexp(struct block_list *bl)
-{
-    nullpo_retr(0, bl);
-
-    if (bl->type == BL_MOB)
-    {
-        const struct mob_data *mob = (struct mob_data *) bl;
-        const int retval =
-            (mob_db[mob->mob_class].mexp *
-             (int) (mob->stats[MOB_XP_BONUS])) >> MOB_XP_BONUS_SHIFT;
-        fprintf(stderr, "Modifier of %x: -> %d\n", mob->stats[MOB_XP_BONUS],
-                 retval);
-        return retval;
-    }
-    else
-        return 0;
 }
 
 int battle_get_stat(int stat_id /* SP_VIT or similar */ ,
@@ -2882,9 +2856,6 @@ int battle_config_read(const char *cfgName)
         battle_config.zeny_penalty = 0;
         battle_config.restart_hp_rate = 0;
         battle_config.restart_sp_rate = 0;
-        battle_config.mvp_item_rate = 100;
-        battle_config.mvp_exp_rate = 100;
-        battle_config.mvp_hp_rate = 100;
         battle_config.monster_hp_rate = 100;
         battle_config.monster_max_aspd = 199;
         battle_config.gm_allskill = 0;
@@ -2992,8 +2963,6 @@ int battle_config_read(const char *cfgName)
         battle_config.item_drop_equip_max = 10000;
         battle_config.item_drop_card_min = 1;
         battle_config.item_drop_card_max = 10000;
-        battle_config.item_drop_mvp_min = 1;
-        battle_config.item_drop_mvp_max = 10000;    // End Addition
         battle_config.item_drop_heal_min = 1;   // Added by Valaris
         battle_config.item_drop_heal_max = 10000;
         battle_config.item_drop_use_min = 1;
@@ -3085,9 +3054,6 @@ int battle_config_read(const char *cfgName)
             {"zeny_penalty", &battle_config.zeny_penalty},
             {"restart_hp_rate", &battle_config.restart_hp_rate},
             {"restart_sp_rate", &battle_config.restart_sp_rate},
-            {"mvp_hp_rate", &battle_config.mvp_hp_rate},
-            {"mvp_item_rate", &battle_config.mvp_item_rate},
-            {"mvp_exp_rate", &battle_config.mvp_exp_rate},
             {"monster_hp_rate", &battle_config.monster_hp_rate},
             {"monster_max_aspd", &battle_config.monster_max_aspd},
             {"atcommand_spawn_quantity_limit", &battle_config.atc_spawn_quantity_limit},
@@ -3196,8 +3162,6 @@ int battle_config_read(const char *cfgName)
             {"item_drop_equip_max", &battle_config.item_drop_equip_max},
             {"item_drop_card_min", &battle_config.item_drop_card_min},
             {"item_drop_card_max", &battle_config.item_drop_card_max},
-            {"item_drop_mvp_min", &battle_config.item_drop_mvp_min},
-            {"item_drop_mvp_max", &battle_config.item_drop_mvp_max}, // End Addition
             {"prevent_logout", &battle_config.prevent_logout},   // Added by RoVeRT
             {"alchemist_summon_reward", &battle_config.alchemist_summon_reward}, // [Valaris]
             {"maximum_level", &battle_config.maximum_level}, // [Valaris]
@@ -3308,10 +3272,6 @@ int battle_config_read(const char *cfgName)
             battle_config.item_drop_card_min = 1;
         if (battle_config.item_drop_card_max > 10000)
             battle_config.item_drop_card_max = 10000;
-        if (battle_config.item_drop_mvp_min < 1)
-            battle_config.item_drop_mvp_min = 1;
-        if (battle_config.item_drop_mvp_max > 10000)
-            battle_config.item_drop_mvp_max = 10000;    // End Addition
 
         if (battle_config.hack_info_GM_level < 0)   // added by [Yor]
             battle_config.hack_info_GM_level = 0;

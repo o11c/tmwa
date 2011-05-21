@@ -32,16 +32,11 @@ struct mob_db
     int range, range2, range3;
     int size, race, element, mode;
     int speed, adelay, amotion, dmotion;
-    int mexp, mexpper;
     int mutations_nr, mutation_power;
     struct
     {
         int nameid, p;
     } dropitem[8];
-    struct
-    {
-        int nameid, p;
-    } mvpitem[3];
     int view_class, sex;
     short hair, hair_color, weapon, shield, head_top, head_mid, head_buttom, option, clothes_color; // [Valaris]
     int equip;                 // [Valaris]

@@ -97,7 +97,6 @@ int battle_get_element(struct block_list *bl);
 int battle_get_party_id(struct block_list *bl);
 int battle_get_race(struct block_list *bl);
 int battle_get_mode(struct block_list *bl);
-int battle_get_mexp(struct block_list *bl);
 int battle_get_stat(int stat_id /* SP_VIT or similar */ ,
                      struct block_list *bl);
 
@@ -156,8 +155,6 @@ extern struct Battle_Config
     int zeny_penalty;
     int restart_hp_rate;
     int restart_sp_rate;
-    int mvp_item_rate, mvp_exp_rate;
-    int mvp_hp_rate;
     int monster_hp_rate;
     int monster_max_aspd;
     int atc_spawn_quantity_limit;
@@ -247,7 +244,6 @@ extern struct Battle_Config
     int item_drop_common_min, item_drop_common_max;    // Added by TyrNemesis^
     int item_drop_card_min, item_drop_card_max;
     int item_drop_equip_min, item_drop_equip_max;
-    int item_drop_mvp_min, item_drop_mvp_max;  // End Addition
     int item_drop_heal_min, item_drop_heal_max;    // Added by Valatris
     int item_drop_use_min, item_drop_use_max;  //End
 

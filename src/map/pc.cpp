@@ -635,7 +635,6 @@ int pc_authok(int id, int login_id2, time_t connect_until_time,
     sd->state.auth = 1;
     sd->walktimer = -1;
     sd->attacktimer = -1;
-    sd->skilltimer = -1;
     sd->skillitem = -1;
     sd->skillitemlv = -1;
     sd->invincible_timer = -1;
@@ -3274,9 +3273,6 @@ static void pc_attack_timer(timer_id tid, tick_t tick, custom_id_t id, custom_da
     if ((opt = battle_get_option(bl)) != NULL && *opt & 0x46)
         return;
 
-    if (sd->skilltimer != -1)
-        return;
-
     if (!battle_config.sdelay_attack_enable)
     {
         if (DIFF_TICK(tick, sd->canact_tick) < 0)
@@ -4654,13 +4650,6 @@ static int pc_itemheal_effect(struct map_session_data *sd, int hp, int sp)
 
     nullpo_retr(0, sd);
 
-    if (sd->state.potionpitcher_flag)
-    {
-        sd->potion_hp = hp;
-        sd->potion_sp = sp;
-        return 0;
-    }
-
     if (pc_checkoverhp(sd))
     {
         if (hp > 0)
@@ -4714,13 +4703,6 @@ static int pc_itemheal_effect(struct map_session_data *sd, int hp, int sp)
 int pc_percentheal(struct map_session_data *sd, int hp, int sp)
 {
     nullpo_retr(0, sd);
-
-    if (sd->state.potionpitcher_flag)
-    {
-        sd->potion_per_hp = hp;
-        sd->potion_per_sp = sp;
-        return 0;
-    }
 
     if (pc_checkoverhp(sd))
     {

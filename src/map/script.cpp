@@ -3590,10 +3590,6 @@ int buildin_itemskill(struct script_state *st)
     lv = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     str = conv_str(st, &(st->stack->stack_data[st->start + 4]));
 
-    // 詠唱中にスキルアイテムは使用できない
-    if (sd->skilltimer != -1)
-        return 0;
-
     sd->skillitem = id;
     sd->skillitemlv = lv;
     clif_item_skill(sd, id, lv, str);
@@ -4176,9 +4172,6 @@ int buildin_sc_start(struct script_state *st)
                         (st, &(st->stack->stack_data[st->start + 5])));
     else
         bl = map_id2bl(st->rid);
-    if (bl->type == BL_PC
-        && ((struct map_session_data *) bl)->state.potionpitcher_flag)
-        bl = map_id2bl(((struct map_session_data *) bl)->skilltarget);
     skill_status_change_start(bl, type, val1, 0, 0, 0, tick, 0);
     return 0;
 }
@@ -4200,9 +4193,6 @@ int buildin_sc_start2(struct script_state *st)
                         (st, &(st->stack->stack_data[st->start + 6])));
     else
         bl = map_id2bl(st->rid);
-    if (bl->type == BL_PC
-        && ((struct map_session_data *) bl)->state.potionpitcher_flag)
-        bl = map_id2bl(((struct map_session_data *) bl)->skilltarget);
     if (MRAND(10000) < per)
         skill_status_change_start(bl, type, val1, 0, 0, 0, tick, 0);
     return 0;
@@ -4218,9 +4208,6 @@ int buildin_sc_end(struct script_state *st)
     int type;
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     bl = map_id2bl(st->rid);
-    if (bl->type == BL_PC
-        && ((struct map_session_data *) bl)->state.potionpitcher_flag)
-        bl = map_id2bl(((struct map_session_data *) bl)->skilltarget);
     skill_status_change_end(bl, type, -1);
 //  if (battle_config.etc_log)
 //      printf("sc_end : %d %d\n",st->rid,type);
@@ -4233,9 +4220,6 @@ int buildin_sc_check(struct script_state *st)
     int type;
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     bl = map_id2bl(st->rid);
-    if (bl->type == BL_PC
-        && ((struct map_session_data *) bl)->state.potionpitcher_flag)
-        bl = map_id2bl(((struct map_session_data *) bl)->skilltarget);
 
     push_val(st->stack, C_INT, skill_status_change_active(bl, type));
 

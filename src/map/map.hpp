@@ -193,7 +193,6 @@ struct map_session_data
         unsigned gangsterparadise:1;
         unsigned produce_flag:1;
         unsigned make_arrow_flag:1;
-        unsigned potionpitcher_flag:1;
         unsigned storage_flag:1;    //0: closed, 1: Normal Storage open
         unsigned shroud_active:1;
         unsigned shroud_hides_name_talking:1;
@@ -266,18 +265,10 @@ struct map_session_data
     //_current slowly approximates _target, and _target is determined by equipment.
 
     short attackrange, attackrange_;
-    int skilltimer;
-    int skilltarget;
-    short skillx, skilly;
-    short skillid, skilllv;
     short skillitem, skillitemlv;
-    short skillid_old, skilllv_old;
-    short skillid_dance, skilllv_dance;
     struct skill_unit_group skillunit[MAX_SKILLUNITGROUP];
     struct skill_unit_group_tickset skillunittick[MAX_SKILLUNITGROUPTICKSET];
     struct skill_timerskill skilltimerskill[MAX_SKILLTIMERSKILL];
-    int cloneskill_id, cloneskill_lv;
-    int potion_hp, potion_sp, potion_per_hp, potion_per_sp;
 
     // [Fate] Used for gradual healing; amount of enqueued regeneration
     struct quick_regeneration quick_regeneration_hp, quick_regeneration_sp;

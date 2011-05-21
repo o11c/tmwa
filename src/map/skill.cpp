@@ -25,9 +25,6 @@
 
 #define STATE_BLIND 0x10
 
-static int skill_get_hp(int id, int lv);
-static int skill_get_mhp(int id, int lv);
-static int skill_get_zeny(int id, int lv);
 static int skill_get_time2(int id, int lv);
 static int skill_delunitgroup(struct skill_unit_group *group);
 static int skill_unitgrouptickset_delete(struct block_list *bl, int group_id);
@@ -98,19 +95,9 @@ int skill_get_range(int id, int lv)
     return (lv <= 0) ? 0 : skill_db[id].range[lv - 1];
 }
 
-int skill_get_hp(int id, int lv)
-{
-    return (lv <= 0) ? 0 : skill_db[id].hp[lv - 1];
-}
-
 int skill_get_sp(int id, int lv)
 {
     return (lv <= 0) ? 0 : skill_db[id].sp[lv - 1];
-}
-
-int skill_get_zeny(int id, int lv)
-{
-    return (lv <= 0) ? 0 : skill_db[id].zeny[lv - 1];
 }
 
 int skill_get_num(int id, int lv)
@@ -148,11 +135,6 @@ int skill_get_blewcount(int id, int lv)
     return (lv <= 0) ? 0 : skill_db[id].blewcount[lv - 1];
 }
 
-int skill_get_mhp(int id, int lv)
-{
-    return (lv <= 0) ? 0 : skill_db[id].mhp[lv - 1];
-}
-
 static int skill_get_castnodex(int id, int lv)
 {
     return (lv <= 0) ? 0 : skill_db[id].castnodex[lv - 1];
@@ -162,18 +144,8 @@ static int skill_get_castnodex(int id, int lv)
 struct skill_unit_group *skill_unitsetting(struct block_list *src,
                                             int skillid, int skilllv, int x,
                                             int y, int flag);
-static int skill_check_condition(struct map_session_data *sd, int type);
 static void skill_trap_splash(struct block_list *bl, va_list ap);
 static void skill_count_target(struct block_list *bl, va_list ap);
-
-static int distance(int x_0, int y_0, int x_1, int y_1)
-{
-    int dx, dy;
-
-    dx = abs(x_0 - x_1);
-    dy = abs(y_0 - y_1);
-    return dx > dy ? dx : dy;
-}
 
 /*==========================================
  * スキル追加効果
@@ -750,101 +722,6 @@ int skill_cleartimerskill(struct block_list *src)
  */
 
 /*==========================================
- * スキル使用（詠唱完了、ID指定）
- *------------------------------------------
- */
-static void skill_castend_id(timer_id tid, tick_t tick, custom_id_t id, custom_data_t)
-{
-    struct map_session_data *sd = map_id2sd(id) /*,*target_sd=NULL */ ;
-    struct block_list *bl;
-    int range, inf2;
-
-    nullpo_retv( sd);
-
-    if (sd->bl.prev == NULL)    //prevが無いのはありなの？
-        return;
-
-    if (sd->skilltimer != tid)
-        return;
-    sd->skilltimer = -1;
-
-    if ((bl = map_id2bl(sd->skilltarget)) == NULL || bl->prev == NULL)
-    {
-        sd->canact_tick = tick;
-        sd->canmove_tick = tick;
-        sd->skillitem = sd->skillitemlv = -1;
-        return;
-    }
-    if (sd->bl.m != bl->m || pc_isdead(sd))
-    {                           //マップが違うか自分が死んでいる
-        sd->canact_tick = tick;
-        sd->canmove_tick = tick;
-        sd->skillitem = sd->skillitemlv = -1;
-        return;
-    }
-
-
-    inf2 = skill_get_inf2(sd->skillid);
-    if (((skill_get_inf(sd->skillid) & 1) || inf2 & 4) &&  // 彼我敵対関係チェック
-        battle_check_target(&sd->bl, bl, BCT_ENEMY) <= 0)
-    {
-        sd->canact_tick = tick;
-        sd->canmove_tick = tick;
-        sd->skillitem = sd->skillitemlv = -1;
-        return;
-    }
-    if (inf2 & 0xC00 && sd->bl.id != bl->id)
-    {
-        int fail_flag = 1;
-        if (inf2 & 0x400 && battle_check_target(&sd->bl, bl, BCT_PARTY) > 0)
-            fail_flag = 0;
-        if (fail_flag)
-        {
-            sd->canact_tick = tick;
-            sd->canmove_tick = tick;
-            sd->skillitem = sd->skillitemlv = -1;
-            return;
-        }
-    }
-
-    range = skill_get_range(sd->skillid, sd->skilllv);
-    if (range < 0)
-        range = battle_get_range(&sd->bl) - (range + 1);
-    range += battle_config.pc_skill_add_range;
-    if (battle_config.skill_out_range_consume)
-    {                           // changed to allow casting when target walks out of range [Valaris]
-        if (range < distance(sd->bl.x, sd->bl.y, bl->x, bl->y))
-        {
-            sd->canact_tick = tick;
-            sd->canmove_tick = tick;
-            sd->skillitem = sd->skillitemlv = -1;
-            return;
-        }
-    }
-    if (!skill_check_condition(sd, 1))
-    {                           /* 使用条件チェック */
-        sd->canact_tick = tick;
-        sd->canmove_tick = tick;
-        sd->skillitem = sd->skillitemlv = -1;
-        return;
-    }
-    sd->skillitem = sd->skillitemlv = -1;
-    if (battle_config.skill_out_range_consume)
-    {
-        if (range < distance(sd->bl.x, sd->bl.y, bl->x, bl->y))
-        {
-            sd->canact_tick = tick;
-            sd->canmove_tick = tick;
-            return;
-        }
-    }
-
-    if (battle_config.pc_skill_log)
-        printf("PC %d skill castend skill=%d\n", sd->bl.id, sd->skillid);
-    pc_stop_walking(sd, 0);
-}
-
-/*==========================================
  * スキルユニット設定処理
  *------------------------------------------
  */
@@ -1370,290 +1247,17 @@ int skill_unit_ondamaged(struct skill_unit *src, struct block_list *bl,
 /*---------------------------------------------------------------------------- */
 
 /*==========================================
- * スキル使用（詠唱完了、場所指定）
- *------------------------------------------
- */
-static void skill_castend_pos(timer_id tid, tick_t tick, custom_id_t id, custom_data_t)
-{
-    struct map_session_data *sd = map_id2sd(id) /*,*target_sd=NULL */ ;
-    int range, maxcount;
-
-    nullpo_retv(sd);
-
-    if (sd->bl.prev == NULL)
-        return;
-    if (sd->skilltimer != tid)  /* タイマIDの確認 */
-        return;
-    sd->skilltimer = -1;
-    if (pc_isdead(sd))
-    {
-        sd->canact_tick = tick;
-        sd->canmove_tick = tick;
-        sd->skillitem = sd->skillitemlv = -1;
-        return;
-    }
-
-    if (battle_config.pc_land_skill_limit)
-    {
-        maxcount = skill_get_maxcount(sd->skillid);
-        if (maxcount > 0)
-        {
-            int i, c;
-            for (i = c = 0; i < MAX_SKILLUNITGROUP; i++)
-            {
-                if (sd->skillunit[i].alive_count > 0
-                    && sd->skillunit[i].skill_id == sd->skillid)
-                    c++;
-            }
-            if (c >= maxcount)
-            {
-                sd->canact_tick = tick;
-                sd->canmove_tick = tick;
-                sd->skillitem = sd->skillitemlv = -1;
-                return;
-            }
-        }
-    }
-
-    range = skill_get_range(sd->skillid, sd->skilllv);
-    if (range < 0)
-        range = battle_get_range(&sd->bl) - (range + 1);
-    range += battle_config.pc_skill_add_range;
-    if (battle_config.skill_out_range_consume)
-    {                           // changed to allow casting when target walks out of range [Valaris]
-        if (range < distance(sd->bl.x, sd->bl.y, sd->skillx, sd->skilly))
-        {
-            sd->canact_tick = tick;
-            sd->canmove_tick = tick;
-            sd->skillitem = sd->skillitemlv = -1;
-            return;
-        }
-    }
-    if (!skill_check_condition(sd, 1))
-    {                           /* 使用条件チェック */
-        sd->canact_tick = tick;
-        sd->canmove_tick = tick;
-        sd->skillitem = sd->skillitemlv = -1;
-        return;
-    }
-    sd->skillitem = sd->skillitemlv = -1;
-    if (battle_config.skill_out_range_consume)
-    {
-        if (range < distance(sd->bl.x, sd->bl.y, sd->skillx, sd->skilly))
-        {
-            sd->canact_tick = tick;
-            sd->canmove_tick = tick;
-            return;
-        }
-    }
-
-    if (battle_config.pc_skill_log)
-        printf("PC %d skill castend skill=%d\n", sd->bl.id, sd->skillid);
-    pc_stop_walking(sd, 0);
-}
-
-/*==========================================
- * スキル使用条件（偽で使用失敗）
- *------------------------------------------
- */
-int skill_check_condition(struct map_session_data *sd, int type)
-{
-    int hp, sp, hp_rate, sp_rate, zeny, weapon, state, skill,
-        lv, mhp;
-    int idx[10], itemid[10], amount[10];
-
-    nullpo_retr(0, sd);
-
-    if (battle_config.gm_skilluncond > 0
-        && pc_isGM(sd) >= battle_config.gm_skilluncond)
-    {
-        sd->skillitem = sd->skillitemlv = -1;
-        return 1;
-    }
-
-    if (sd->opt1 > 0)
-    {
-        sd->skillitem = sd->skillitemlv = -1;
-        return 0;
-    }
-    if (pc_is90overweight(sd))
-    {
-        sd->skillitem = sd->skillitemlv = -1;
-        return 0;
-    }
-
-    if (sd->skillitem == sd->skillid)
-    {                           /* アイテムの場合無条件成功 */
-        if (type & 1)
-            sd->skillitem = sd->skillitemlv = -1;
-        return 1;
-    }
-    if (sd->opt1 > 0)
-    {
-        return 0;
-    }
-
-    skill = sd->skillid;
-    lv = sd->skilllv;
-    hp = skill_get_hp(skill, lv);  /* 消費HP */
-    sp = skill_get_sp(skill, lv);  /* 消費SP */
-    hp_rate = (lv <= 0) ? 0 : skill_db[skill].hp_rate[lv - 1];
-    sp_rate = (lv <= 0) ? 0 : skill_db[skill].sp_rate[lv - 1];
-    zeny = skill_get_zeny(skill, lv);
-    weapon = skill_db[skill].weapon;
-    state = skill_db[skill].state;
-    mhp = skill_get_mhp(skill, lv);    /* 消費HP */
-    for (int i = 0; i < 10; i++)
-    {
-        itemid[i] = skill_db[skill].itemid[i];
-        amount[i] = skill_db[skill].amount[i];
-    }
-    if (mhp > 0)
-        hp += (sd->status.max_hp * mhp) / 100;
-    if (hp_rate > 0)
-        hp += (sd->status.hp * hp_rate) / 100;
-    else
-        hp += (sd->status.max_hp * abs(hp_rate)) / 100;
-    if (sp_rate > 0)
-        sp += (sd->status.sp * sp_rate) / 100;
-    else
-        sp += (sd->status.max_sp * abs(sp_rate)) / 100;
-    if (sd->dsprate != 100)
-        sp = sp * sd->dsprate / 100;    /* 消費SP修正 */
-
-    if (!(type & 2))
-    {
-        if (hp > 0 && sd->status.hp < hp)
-        {                       /* HPチェック */
-            return 0;
-        }
-        if (sp > 0 && sd->status.sp < sp)
-        {                       /* SPチェック */
-            return 0;
-        }
-        if (zeny > 0 && sd->status.zeny < zeny)
-        {
-            return 0;
-        }
-        if (!(weapon & (1 << sd->status.weapon)))
-        {
-            return 0;
-        }
-    }
-
-    switch (state)
-    {
-        case ST_HIDING:
-            if (!(sd->status.option & 2))
-            {
-                return 0;
-            }
-            break;
-        case ST_CLOAKING:
-            if (!(sd->status.option & 4))
-            {
-                return 0;
-            }
-            break;
-        case ST_HIDDEN:
-            if (!pc_ishiding(sd))
-            {
-                return 0;
-            }
-            break;
-        case ST_SHIELD:
-            if (sd->status.shield <= 0)
-            {
-                return 0;
-            }
-            break;
-        case ST_SIGHT:
-            if (type & 1)
-            {
-                return 0;
-            }
-            break;
-        case ST_EXPLOSIONSPIRITS:
-            return 0;
-        case ST_RECOV_WEIGHT_RATE:
-            if (battle_config.natural_heal_weight_rate <= 100
-                && sd->weight * 100 / sd->max_weight >=
-                battle_config.natural_heal_weight_rate)
-            {
-                return 0;
-            }
-            break;
-        case ST_MOVE_ENABLE:
-        {
-            struct walkpath_data wpd;
-            if (path_search(&wpd, sd->bl.m, sd->bl.x, sd->bl.y, sd->skillx, sd->skilly, 1) == -1)
-            {
-                return 0;
-            }
-        }
-            break;
-        case ST_WATER:
-            if (map_getcell(sd->bl.m, sd->bl.x, sd->bl.y) != 3)
-            {                   //水場判定
-                return 0;
-            }
-            break;
-    }
-
-    for (int i = 0; i < 10; i++)
-    {
-        idx[i] = -1;
-        if (itemid[i] <= 0)
-            continue;
-        if (itemid[i] >= 715 && itemid[i] <= 717
-            && sd->special_state.no_gemstone)
-            continue;
-
-        idx[i] = pc_search_inventory(sd, itemid[i]);
-        if (idx[i] < 0 || sd->status.inventory[idx[i]].amount < amount[i])
-        {
-            return 0;
-        }
-    }
-
-    if (!(type & 1))
-        return 1;
-
-    for (int i = 0; i < 10; i++)
-    {
-        if (idx[i] >= 0)
-            pc_delitem(sd, idx[i], amount[i], 0);    // アイテム消費
-    }
-
-    if (type & 2)
-        return 1;
-
-    pc_heal(sd, -sp, -hp);     // [Fate] This might suppress some dupe messages
-
-/*      if (sp > 0) {                                   // SP消費 */
-/*              sd->status.sp-=sp; */
-/*              clif_updatestatus(sd,SP_SP); */
-/*      } */
-/*      if (hp > 0) {                                   // HP消費 */
-/*              sd->status.hp-=hp; */
-/*              clif_updatestatus(sd,SP_HP); */
-/*      } */
-    if (zeny > 0)               // Zeny消費
-        pc_payzeny(sd, zeny);
-    return 1;
-}
-
-/*==========================================
  * 詠唱時間計算
  *------------------------------------------
  */
 int skill_castfix(struct block_list *bl, int time_)
 {
-    struct map_session_data *sd;
     struct mob_data *md;        // [Valaris]
     int dex;
     int castrate = 100;
-    int skill, lv, castnodex;
+    int skill = 0;
+    int lv = 0;
+    int castnodex;
 
     nullpo_retr(0, bl);
 
@@ -1662,13 +1266,6 @@ int skill_castfix(struct block_list *bl, int time_)
         md = (struct mob_data *) bl;
         skill = md->skillid;
         lv = md->skilllv;
-    }
-
-    else
-    {
-        sd = (struct map_session_data *) bl;
-        skill = sd->skillid;
-        lv = sd->skilllv;
     }
 
     dex = battle_get_dex(bl);
@@ -1721,7 +1318,7 @@ int skill_delayfix(struct block_list *bl, int time_)
  * スキル詠唱キャンセル
  *------------------------------------------
  */
-int skill_castcancel(struct block_list *bl, int type)
+int skill_castcancel(struct block_list *bl, int)
 {
     int inf;
 
@@ -1734,24 +1331,6 @@ int skill_castcancel(struct block_list *bl, int type)
         nullpo_retr(0, sd);
         sd->canact_tick = tick;
         sd->canmove_tick = tick;
-        if (sd->skilltimer != -1)
-        {
-            if (!type)
-            {
-                if ((inf = skill_get_inf(sd->skillid)) == 2 || inf == 32)
-                    delete_timer(sd->skilltimer, skill_castend_pos);
-                else
-                    delete_timer(sd->skilltimer, skill_castend_id);
-            }
-            else
-            {
-                if ((inf = skill_get_inf(sd->skillid_old)) == 2 || inf == 32)
-                    delete_timer(sd->skilltimer, skill_castend_pos);
-                else
-                    delete_timer(sd->skilltimer, skill_castend_id);
-            }
-            sd->skilltimer = -1;
-        }
 
         return 0;
     }

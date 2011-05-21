@@ -371,8 +371,6 @@ int battle_get_def(struct block_list *bl)
     if (bl->type == BL_PC && (struct map_session_data *) bl)
     {
         def = ((struct map_session_data *) bl)->def;
-        skilltimer = ((struct map_session_data *) bl)->skilltimer;
-        skillid = ((struct map_session_data *) bl)->skillid;
     }
     else if (bl->type == BL_MOB && (struct mob_data *) bl)
     {
@@ -859,15 +857,6 @@ int battle_damage(struct block_list *bl, struct block_list *target,
     {                           // PC
 
         struct map_session_data *tsd = (struct map_session_data *) target;
-
-        if (tsd && tsd->skilltimer != -1)
-        {                       // 詠唱妨害
-            // フェンカードや妨害されないスキルかの検査
-            if (!tsd->special_state.no_castcancel
-                && tsd->state.skillcastcancel
-                && !tsd->special_state.no_castcancel2)
-                skill_castcancel(target, 0);
-        }
 
         return pc_damage(bl, tsd, damage);
 

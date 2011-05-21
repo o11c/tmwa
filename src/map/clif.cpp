@@ -3958,9 +3958,6 @@ static void clif_parse_WalkToXY(int fd, struct map_session_data *sd)
     if (sd->npc_id != 0 || sd->state.storage_flag)
         return;
 
-    if (sd->skilltimer != -1)
-        return;
-
     if (sd->canmove_tick > gettick())
         return;
 
@@ -3990,9 +3987,8 @@ void clif_parse_QuitGame(int fd, struct map_session_data *sd)
     nullpo_retv(sd);
 
     WFIFOW(fd, 0) = 0x18b;
-    if ((!pc_isdead(sd)
-         && (sd->opt1 || sd->opt2))
-        || sd->skilltimer != -1 || (DIFF_TICK(tick, sd->canact_tick) < 0))
+    if ((!pc_isdead(sd) && (sd->opt1 || sd->opt2))
+        || (DIFF_TICK(tick, sd->canact_tick) < 0))
     {
         WFIFOW(fd, 2) = 1;
         WFIFOSET(fd, packet_len_table[0x18b]);

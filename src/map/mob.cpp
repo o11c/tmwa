@@ -912,10 +912,10 @@ static void mob_timer(timer_id tid, tick_t tick, custom_id_t id, custom_data_t d
     {
         case MS_WALK:
             mob_check_attack(md);
-            mob_walk(md, tick, data);
+            mob_walk(md, tick, data.i);
             break;
         case MS_ATTACK:
-            mob_attack(md, tick, data);
+            mob_attack(md, tick, data.i);
             break;
         case MS_DELAY:
             mob_changestate(md, MS_IDLE, 0);

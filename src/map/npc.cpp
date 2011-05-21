@@ -178,8 +178,8 @@ void npc_event_timer(timer_id, tick_t, custom_id_t id, custom_data_t data)
     if (sd == NULL)
         return;
 
-    npc_event(sd, (const char *) data, 0);
-    free((void *) data);
+    npc_event(sd, (const char *) data.p, 0);
+    free((void *) data.p);
 }
 
 /*==========================================
@@ -341,7 +341,7 @@ static int npc_deleventtimer(struct npc_data *nd, const char *name)
     for (i = 0; i < MAX_EVENTTIMER; i++)
         if (nd->eventtimer[i] != -1 && strcmp((char
                                                 *) (get_timer(nd->eventtimer
-                                                               [i])->data),
+                                                               [i])->data.p),
                                                name) == 0)
         {
             delete_timer(nd->eventtimer[i], npc_event_timer);
@@ -407,7 +407,7 @@ static void npc_timerevent(timer_id, tick_t tick, custom_id_t id, custom_data_t 
     te = nd->u.scr.timer_event + nd->u.scr.nexttimer;
     nd->u.scr.timerid = -1;
 
-    t = nd->u.scr.timer += data;
+    t = nd->u.scr.timer += data.i;
     nd->u.scr.nexttimer++;
     if (nd->u.scr.timeramount > nd->u.scr.nexttimer)
     {

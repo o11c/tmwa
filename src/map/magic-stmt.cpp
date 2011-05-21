@@ -223,7 +223,7 @@ static void timer_callback_effect(timer_id, tick_t, custom_id_t id, custom_data_
 {
     entity_t *target = map_id2bl(id);
     if (target)
-        clif_misceffect(target, data);
+        clif_misceffect(target, data.i);
 }
 
 static void entity_effect(entity_t * entity, int effect_nr, int delay)
@@ -300,7 +300,7 @@ static int op_instaheal(env_t *env, int, val_t *args)
                     subject_pc->status.char_id, ARGINT(1));
     }
 
-    battle_heal(caster, subject, ARGINT(1), ARGINT(2), 0);
+    battle_heal(caster, subject, ARGINT(1), ARGINT(2));
     return 0;
 }
 
@@ -732,7 +732,7 @@ static int op_injure(env_t *env, int, val_t *args)
                         get_invocation_name(env));
         }
     }
-    battle_damage(caster, target, damage_caused, mp_damage);
+    battle_damage(caster, target, damage_caused);
 
     return 0;
 }

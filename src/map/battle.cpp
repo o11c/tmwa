@@ -614,7 +614,8 @@ int battle_get_size(struct block_list *bl)
     return 1;
 }
 
-/// Return a bitmask of a being's mode
+/// Return a bitmask of a being's mode.
+/// Not all of these are known to be meaningful
 // 0x01: can move
 // 0x02: looter
 // 0x04: aggresive
@@ -625,7 +626,6 @@ int battle_get_size(struct block_list *bl)
 // 0x80: can attack
 // 0x100: detector
 // 0x200: changetarget
-
 int battle_get_mode(struct block_list *bl)
 {
     nullpo_retr(0x01, bl);
@@ -635,93 +635,103 @@ int battle_get_mode(struct block_list *bl)
     return 0x01;
 }
 
-int battle_get_stat(int stat_id /* SP_VIT or similar */ ,
-                     struct block_list *bl)
+/// stat_id: like SP_VIT
+// this is only used by the skill pool system
+int battle_get_stat(int stat_id, struct block_list *bl)
 {
     switch (stat_id)
     {
-        case SP_STR:
-            return battle_get_str(bl);
-        case SP_AGI:
-            return battle_get_agi(bl);
-        case SP_DEX:
-            return battle_get_dex(bl);
-        case SP_VIT:
-            return battle_get_vit(bl);
-        case SP_INT:
-            return battle_get_int(bl);
-        case SP_LUK:
-            return battle_get_luk(bl);
-        default:
-            return 0;
+    case SP_STR:
+        return battle_get_str(bl);
+    case SP_AGI:
+        return battle_get_agi(bl);
+    case SP_DEX:
+        return battle_get_dex(bl);
+    case SP_VIT:
+        return battle_get_vit(bl);
+    case SP_INT:
+        return battle_get_int(bl);
+    case SP_LUK:
+        return battle_get_luk(bl);
+    default:
+        return 0;
     }
 }
 
-// StatusChange系の所得
+/// Get the list of status effects on a being
 struct status_change *battle_get_sc_data(struct block_list *bl)
 {
     nullpo_retr(NULL, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
+    if (bl->type == BL_MOB)
         return ((struct mob_data *) bl)->sc_data;
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
+    if (bl->type == BL_PC)
         return ((struct map_session_data *) bl)->sc_data;
     return NULL;
 }
 
+/// Get pointer to the number of status effects on a being?
 short *battle_get_sc_count(struct block_list *bl)
 {
     nullpo_retr(NULL, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
+
+    if (bl->type == BL_MOB)
         return &((struct mob_data *) bl)->sc_count;
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
+    if (bl->type == BL_PC)
         return &((struct map_session_data *) bl)->sc_count;
     return NULL;
 }
 
+/// Get a pointer to a being's "opt1" field
 short *battle_get_opt1(struct block_list *bl)
 {
     nullpo_retr(0, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
+
+    if (bl->type == BL_MOB)
         return &((struct mob_data *) bl)->opt1;
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
+    if (bl->type == BL_PC && (struct map_session_data *) bl)
         return &((struct map_session_data *) bl)->opt1;
-    else if (bl->type == BL_NPC && (struct npc_data *) bl)
+    if (bl->type == BL_NPC && (struct npc_data *) bl)
         return &((struct npc_data *) bl)->opt1;
     return 0;
 }
 
+/// Get a pointer to a being's "opt2" field
 short *battle_get_opt2(struct block_list *bl)
 {
     nullpo_retr(0, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
+
+    if (bl->type == BL_MOB)
         return &((struct mob_data *) bl)->opt2;
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
+    if (bl->type == BL_PC)
         return &((struct map_session_data *) bl)->opt2;
-    else if (bl->type == BL_NPC && (struct npc_data *) bl)
+    if (bl->type == BL_NPC)
         return &((struct npc_data *) bl)->opt2;
     return 0;
 }
 
+/// Get a pointer to a being's "opt3" field
 short *battle_get_opt3(struct block_list *bl)
 {
     nullpo_retr(0, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
+    if (bl->type == BL_MOB)
         return &((struct mob_data *) bl)->opt3;
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
+    if (bl->type == BL_PC)
         return &((struct map_session_data *) bl)->opt3;
-    else if (bl->type == BL_NPC && (struct npc_data *) bl)
+    if (bl->type == BL_NPC)
         return &((struct npc_data *) bl)->opt3;
     return 0;
 }
 
+/// Get a pointer to a being's "option" field
 short *battle_get_option(struct block_list *bl)
 {
     nullpo_retr(0, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
+
+    if (bl->type == BL_MOB)
         return &((struct mob_data *) bl)->option;
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
+    if (bl->type == BL_PC)
         return &((struct map_session_data *) bl)->status.option;
-    else if (bl->type == BL_NPC && (struct npc_data *) bl)
+    if (bl->type == BL_NPC)
         return &((struct npc_data *) bl)->option;
     return 0;
 }
@@ -733,18 +743,18 @@ struct battle_delay_damage_
 {
     struct block_list *src, *target;
     int damage;
-    int flag;
 };
+
 static void battle_delay_damage_sub(timer_id, tick_t, custom_id_t id, custom_data_t data)
 {
-    struct battle_delay_damage_ *dat = (struct battle_delay_damage_ *) data;
+    struct battle_delay_damage_ *dat = (struct battle_delay_damage_ *) data.p;
     if (dat && map_id2bl(id) == dat->src && dat->target->prev != NULL)
-        battle_damage(dat->src, dat->target, dat->damage, dat->flag);
+        battle_damage(dat->src, dat->target, dat->damage);
     free(dat);
 }
 
 int battle_delay_damage(unsigned int tick, struct block_list *src,
-                         struct block_list *target, int damage, int flag)
+                         struct block_list *target, int damage)
 {
     struct battle_delay_damage_ *dat;
     CREATE(dat, struct battle_delay_damage_, 1);
@@ -755,14 +765,12 @@ int battle_delay_damage(unsigned int tick, struct block_list *src,
     dat->src = src;
     dat->target = target;
     dat->damage = damage;
-    dat->flag = flag;
-    add_timer(tick, battle_delay_damage_sub, src->id, (int) dat);
+    add_timer(tick, battle_delay_damage_sub, src->id, (void *)dat);
     return 0;
 }
 
 // 実際にHPを操作
-int battle_damage(struct block_list *bl, struct block_list *target,
-                   int damage, int flag)
+int battle_damage(struct block_list *bl, struct block_list *target, int damage)
 {
     nullpo_retr(0, target);    //blはNULLで呼ばれることがあるので他でチェック
 
@@ -782,7 +790,7 @@ int battle_damage(struct block_list *bl, struct block_list *target,
     }
 
     if (damage < 0)
-        return battle_heal(bl, target, -damage, 0, flag);
+        return battle_heal(bl, target, -damage, 0);
 
     if (target->type == BL_MOB)
     {                           // MOB
@@ -805,8 +813,7 @@ int battle_damage(struct block_list *bl, struct block_list *target,
     return 0;
 }
 
-int battle_heal(struct block_list *bl, struct block_list *target, int hp,
-                 int sp, int flag)
+int battle_heal(struct block_list *bl, struct block_list *target, int hp, int sp)
 {
     nullpo_retr(0, target);    //blはNULLで呼ばれることがあるので他でチェック
 
@@ -817,7 +824,7 @@ int battle_heal(struct block_list *bl, struct block_list *target, int hp,
         return 0;
 
     if (hp < 0)
-        return battle_damage(bl, target, -hp, flag);
+        return battle_damage(bl, target, -hp);
 
     if (target->type == BL_MOB)
         return mob_heal((struct mob_data *) target, hp);
@@ -2172,7 +2179,7 @@ struct Damage battle_calc_magic_attack(struct block_list *bl,
         if (rdamage < 1)
             rdamage = 1;
         clif_damage(target, bl, gettick(), 0, 0, rdamage, 0, 0, 0);
-        battle_damage(target, bl, rdamage, 0);
+        battle_damage(target, bl, rdamage);
     }
     /*          end magic_damage_return         */
 
@@ -2473,7 +2480,7 @@ int battle_weapon_attack(struct block_list *src, struct block_list *target,
                      wd.damage + wd.damage2);
         }
 
-        battle_damage(src, target, (wd.damage + wd.damage2), 0);
+        battle_damage(src, target, (wd.damage + wd.damage2));
         if (target->prev != NULL &&
             (target->type != BL_PC
              || (target->type == BL_PC
@@ -2487,24 +2494,24 @@ int battle_weapon_attack(struct block_list *src, struct block_list *target,
                     if (sd->weapon_coma_ele[ele] > 0
                         && MRAND(10000) < sd->weapon_coma_ele[ele])
                         battle_damage(src, target,
-                                       battle_get_max_hp(target), 1);
+                                       battle_get_max_hp(target));
                     if (sd->weapon_coma_race[race] > 0
                         && MRAND(10000) < sd->weapon_coma_race[race])
                         battle_damage(src, target,
-                                       battle_get_max_hp(target), 1);
+                                       battle_get_max_hp(target));
                     if (battle_get_mode(target) & 0x20)
                     {
                         if (sd->weapon_coma_race[10] > 0
                             && MRAND(10000) < sd->weapon_coma_race[10])
                             battle_damage(src, target,
-                                           battle_get_max_hp(target), 1);
+                                           battle_get_max_hp(target));
                     }
                     else
                     {
                         if (sd->weapon_coma_race[11] > 0
                             && MRAND(10000) < sd->weapon_coma_race[11])
                             battle_damage(src, target,
-                                           battle_get_max_hp(target), 1);
+                                           battle_get_max_hp(target));
                     }
                 }
             }
@@ -2575,7 +2582,7 @@ int battle_weapon_attack(struct block_list *src, struct block_list *target,
         }
 
         if (rdamage > 0)
-            battle_damage(target, src, rdamage, 0);
+            battle_damage(target, src, rdamage);
 
         map_freeblock_unlock();
     }

@@ -619,7 +619,7 @@ static void clif_clearchar_delay_sub(timer_id, tick_t, custom_id_t id,
 {
     struct block_list *bl = (struct block_list *) id;
 
-    clif_clearchar(bl, data);
+    clif_clearchar(bl, data.i);
     map_freeblock(bl);
 }
 

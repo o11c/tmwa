@@ -2996,7 +2996,7 @@ static void pc_walk(timer_id tid, tick_t tick, custom_id_t id, custom_data_t dat
     }
     sd->walktimer = -1;
     if (sd->walkpath.path_pos >= sd->walkpath.path_len
-        || sd->walkpath.path_pos != data)
+        || sd->walkpath.path_pos != data.i)
         return;
 
     //歩いたので息吹のタイマーを初期化
@@ -5160,11 +5160,11 @@ static void pc_eventtimer(timer_id tid, tick_t, custom_id_t id, custom_data_t da
         if (sd->eventtimer[i] == tid)
         {
             sd->eventtimer[i] = -1;
-            npc_event(sd, (const char *) data, 0);
+            npc_event(sd, (const char *) data.p, 0);
             break;
         }
     }
-    free((void *) data);
+    free((void *) data.p);
     if (i == MAX_EVENTTIMER)
     {
         if (battle_config.error_log)
@@ -5213,7 +5213,7 @@ int pc_deleventtimer(struct map_session_data *sd, const char *name)
     for (i = 0; i < MAX_EVENTTIMER; i++)
         if (sd->eventtimer[i] != -1 && strcmp((char
                                                 *) (get_timer(sd->eventtimer
-                                                               [i])->data),
+                                                               [i])->data.p),
                                                name) == 0)
         {
             delete_timer(sd->eventtimer[i], pc_eventtimer);
@@ -5238,7 +5238,7 @@ int pc_addeventtimercount(struct map_session_data *sd, const char *name,
     for (i = 0; i < MAX_EVENTTIMER; i++)
         if (sd->eventtimer[i] != -1 && strcmp((char
                                                 *) (get_timer(sd->eventtimer
-                                                               [i])->data),
+                                                               [i])->data.p),
                                                name) == 0)
         {
             addtick_timer(sd->eventtimer[i], tick);

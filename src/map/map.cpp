@@ -582,12 +582,12 @@ void map_clearflooritem_timer(timer_id tid, tick_t, custom_id_t id, custom_data_
         map_log("%s: error: no such item", __func__);
         return;
     }
-    if (!data && fitem->cleartimer != tid)
+    if (!data.i && fitem->cleartimer != tid)
     {
         map_log("%s: error: bad data", __func__);
         return;
     }
-    if (data)
+    if (data.i)
         delete_timer(fitem->cleartimer, map_clearflooritem_timer);
     clif_clearflooritem(fitem, 0);
     map_delobject(fitem->bl.id, BL_ITEM);

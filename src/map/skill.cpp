@@ -462,7 +462,7 @@ int skill_attack(int attack_type, struct block_list *src,
     }
 
     map_freeblock_lock();
-    battle_damage(src, bl, damage, 0);
+    battle_damage(src, bl, damage);
     /* ダメージがあるなら追加効果判定 */
     if (bl->prev != NULL)
     {
@@ -539,7 +539,7 @@ int skill_attack(int attack_type, struct block_list *src,
     }
 
     if (rdamage > 0)
-        battle_damage(bl, src, rdamage, 0);
+        battle_damage(bl, src, rdamage);
 
     map_freeblock_unlock();
 
@@ -577,12 +577,12 @@ static void skill_timerskill_(timer_id, tick_t tick, custom_id_t id, custom_data
     if (src->type == BL_PC)
     {
         nullpo_retv(sd = (struct map_session_data *) src);
-        skl = &sd->skilltimerskill[data];
+        skl = &sd->skilltimerskill[data.i];
     }
     else if (src->type == BL_MOB)
     {
         nullpo_retv(md = (struct mob_data *) src);
-        skl = &md->skilltimerskill[data];
+        skl = &md->skilltimerskill[data.i];
     }
 
     else
@@ -822,7 +822,7 @@ static int skill_unit_onplace(struct skill_unit *src, struct block_list *bl,
                     && ((struct map_session_data *) bl)->
                     special_state.no_magic_damage)
                     heal = 0;   /* 黄金蟲カード（ヒール量０） */
-                battle_heal(NULL, bl, heal, 0, 0);
+                battle_heal(NULL, bl, heal, 0);
             }
             else
                 skill_attack(BF_MAGIC, ss, &src->bl, bl, sg->skill_id,
@@ -1374,7 +1374,7 @@ static void skill_idun_heal(struct block_list *bl, va_list ap)
 
     if (bl->type == BL_PC || bl->type == BL_MOB)
     {
-        battle_heal(NULL, bl, heal, 0, 0);
+        battle_heal(NULL, bl, heal, 0);
     }
 }
 
@@ -1584,7 +1584,7 @@ int skill_update_heal_animation(struct map_session_data *sd)
  */
 void skill_status_change_timer(timer_id tid, tick_t tick, custom_id_t id, custom_data_t data)
 {
-    int type = data;
+    int type = data.i;
     struct block_list *bl;
     struct map_session_data *sd = NULL;
     struct status_change *sc_data;

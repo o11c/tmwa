@@ -16,10 +16,19 @@ enum TIMER_TYPE
 typedef uint32_t tick_t;
 typedef uint32_t interval_t;
 typedef uint32_t timer_id;
-// BUG: pointers are stored in here
 typedef int32_t custom_id_t;
-typedef int32_t custom_data_t;
-typedef void(*timer_func)(timer_id, tick_t, custom_id_t, custom_data_t);
+struct custom_data_t
+{
+    union
+    {
+        void* p;
+        intptr_t i;
+    };
+    custom_data_t(void *ptr) : p(ptr) {}
+    custom_data_t(intptr_t iv) : i(iv) {}
+};
+
+typedef void (*timer_func)(timer_id, tick_t, custom_id_t, custom_data_t);
 
 struct TimerData
 {

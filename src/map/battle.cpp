@@ -909,18 +909,6 @@ int battle_calc_damage(struct block_list *, struct block_list *bl,
     return damage;
 }
 
-/*==========================================
- * 修練ダメージ
- *------------------------------------------
- */
-static int battle_addmastery(struct map_session_data *, struct block_list *,
-                              int dmg, int) __attribute__((deprecated));
-static int battle_addmastery(struct map_session_data *, struct block_list *,
-                              int dmg, int)
-{
-    return dmg;
-}
-
 static struct Damage battle_calc_mob_weapon_attack(struct block_list *src,
                                                     struct block_list *target,
                                                     int skill_num,
@@ -1673,9 +1661,6 @@ static struct Damage battle_calc_pc_weapon_attack(struct block_list *src,
         damage = 1;
     if (damage2 < 1)
         damage2 = 1;
-
-    damage = battle_addmastery(sd, target, damage, 0);
-    damage2 = battle_addmastery(sd, target, damage2, 1);
 
     if (sd->perfect_hit > 0)
     {

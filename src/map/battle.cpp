@@ -34,7 +34,7 @@ static int battle_get_attack_element(struct block_list *bl);
 static int battle_get_attack_element2(struct block_list *bl);
 static int battle_get_size(struct block_list *bl);
 
-
+/// Table of elemental damage modifiers
 int attr_fix_table[4][10][10];
 
 struct Battle_Config battle_config;
@@ -738,30 +738,33 @@ short *battle_get_option(struct block_list *bl)
 
 //-------------------------------------------------------------------
 
-// ダメージの遅延
+/// Information for delayed damage
 struct battle_delay_damage_
 {
     struct block_list *src, *target;
     int damage;
 };
 
+/// Actually apply delayed damage
 static void battle_delay_damage_sub(timer_id, tick_t, custom_id_t id, custom_data_t data)
 {
     struct battle_delay_damage_ *dat = (struct battle_delay_damage_ *) data.p;
-    if (dat && map_id2bl(id) == dat->src && dat->target->prev != NULL)
+    if (!dat)
+        return;
+    if (dat->target->prev && map_id2bl(id) == dat->src)
         battle_damage(dat->src, dat->target, dat->damage);
     free(dat);
 }
 
-int battle_delay_damage(unsigned int tick, struct block_list *src,
-                         struct block_list *target, int damage)
+/// Setup delayed damage
+int battle_delay_damage(tick_t tick, struct block_list *src,
+                        struct block_list *target, int damage)
 {
-    struct battle_delay_damage_ *dat;
-    CREATE(dat, struct battle_delay_damage_, 1);
-
     nullpo_retr(0, src);
     nullpo_retr(0, target);
 
+    struct battle_delay_damage_ *dat;
+    CREATE(dat, struct battle_delay_damage_, 1);
     dat->src = src;
     dat->target = target;
     dat->damage = damage;
@@ -769,128 +772,107 @@ int battle_delay_damage(unsigned int tick, struct block_list *src,
     return 0;
 }
 
-// 実際にHPを操作
-int battle_damage(struct block_list *bl, struct block_list *target, int damage)
+/// Decrease the HP of target
+// if trying to damage by a negative amount, heal instead
+int battle_damage(struct block_list *src, struct block_list *target, int damage)
 {
-    nullpo_retr(0, target);    //blはNULLで呼ばれることがあるので他でチェック
+    nullpo_retr(0, target);
+    // src may be NULL for programmatic damage
 
-    if (damage == 0)
+    if (!damage)
         return 0;
-
-    if (target->prev == NULL)
+    if (!target->prev)
         return 0;
-
-    if (bl)
-    {
-        if (bl->prev == NULL)
-            return 0;
-
-//        if (bl->type == BL_PC)
-//            sd = (struct map_session_data *) bl;
-    }
+    if (src && !src->prev)
+        return 0;
 
     if (damage < 0)
-        return battle_heal(bl, target, -damage, 0);
+        return battle_heal(src, target, -damage, 0);
 
     if (target->type == BL_MOB)
-    {                           // MOB
+    {
         struct mob_data *md = (struct mob_data *) target;
-        if (md && md->skilltimer != -1 && md->state.skillcastcancel)    // 詠唱妨害
+        if (md->skilltimer != -1 && md->state.skillcastcancel)
             skill_castcancel(target, 0);
-        return mob_damage(bl, md, damage, 0);
+        return mob_damage(src, md, damage, 0);
     }
-    else if (target->type == BL_PC)
-    {                           // PC
-
+    if (target->type == BL_PC)
+    {
         struct map_session_data *tsd = (struct map_session_data *) target;
-
-        return pc_damage(bl, tsd, damage);
-
+        return pc_damage(src, tsd, damage);
     }
-    else if (target->type == BL_SKILL)
-        return skill_unit_ondamaged((struct skill_unit *) target, bl, damage,
-                                     gettick());
+    if (target->type == BL_SKILL)
+        return skill_unit_ondamaged((struct skill_unit *) target, src, damage, gettick());
     return 0;
 }
 
-int battle_heal(struct block_list *bl, struct block_list *target, int hp, int sp)
+/// Increase HP of a being (and SP of a PC)
+// if hp is negative, do damage and ignore sp
+int battle_heal(struct block_list *src, struct block_list *target, int hp, int sp)
 {
-    nullpo_retr(0, target);    //blはNULLで呼ばれることがあるので他でチェック
+    nullpo_retr(0, target);
+    // src may be NULL for programmatic healing
 
-    if (target->type == BL_PC
-        && pc_isdead((struct map_session_data *) target))
+    if (target->type == BL_PC && pc_isdead((struct map_session_data *) target))
         return 0;
-    if (hp == 0 && sp == 0)
+    if (!hp && !sp)
         return 0;
 
     if (hp < 0)
-        return battle_damage(bl, target, -hp);
+        return battle_damage(src, target, -hp);
 
     if (target->type == BL_MOB)
         return mob_heal((struct mob_data *) target, hp);
-    else if (target->type == BL_PC)
+    if (target->type == BL_PC)
         return pc_heal((struct map_session_data *) target, hp, sp);
     return 0;
 }
 
-// 攻撃停止
+/// A being should stop attacking its target
 int battle_stopattack(struct block_list *bl)
 {
     nullpo_retr(0, bl);
+
     if (bl->type == BL_MOB)
         return mob_stopattack((struct mob_data *) bl);
-    else if (bl->type == BL_PC)
+    if (bl->type == BL_PC)
         return pc_stopattack((struct map_session_data *) bl);
     return 0;
 }
 
-// 移動停止
+/// A being should stop walking
 int battle_stopwalking(struct block_list *bl, int type)
 {
     nullpo_retr(0, bl);
+
     if (bl->type == BL_MOB)
         return mob_stop_walking((struct mob_data *) bl, type);
-    else if (bl->type == BL_PC)
+    if (bl->type == BL_PC)
         return pc_stop_walking((struct map_session_data *) bl, type);
     return 0;
 }
 
-/*==========================================
- * ダメージの属性修正
- *------------------------------------------
- */
+/// Change the amount of elemental damage by the lookup table
 int battle_attr_fix(int damage, int atk_elem, int def_elem)
 {
     int def_type = def_elem % 10, def_lv = def_elem / 10 / 2;
 
     if (atk_elem < 0 || atk_elem > 9 || def_type < 0 || def_type > 9 ||
         def_lv < 1 || def_lv > 4)
-    {                           // 属 性値がおかしいのでとりあえずそのまま返す
-        if (battle_config.error_log)
-            printf
-                ("battle_attr_fix: unknown attr type: atk=%d def_type=%d def_lv=%d\n",
-                 atk_elem, def_type, def_lv);
+    {
+        map_log("battle_attr_fix: unknown attr type: atk=%d def_type=%d def_lv=%d\n",
+               atk_elem, def_type, def_lv);
         return damage;
     }
 
     return damage * attr_fix_table[def_lv - 1][atk_elem][def_type] / 100;
 }
 
-/*==========================================
- * ダメージ最終計算
- *------------------------------------------
- */
-int battle_calc_damage(struct block_list *, struct block_list *bl,
-                        int damage, int div_, int, int,
-                        int flag)
+/// Calculate the damage of attacking
+int battle_calc_damage(struct block_list *, struct block_list *target,
+                       int damage, int div_, int, int, int flag)
 {
-    struct mob_data *md = NULL;
-
-    nullpo_retr(0, bl);
-
-    // int class_ = battle_get_class(bl);
-    if (bl->type == BL_MOB)
-        md = (struct mob_data *) bl;
+    nullpo_retr(0, target);
 
     if (battle_config.skill_min_damage || flag & BF_MISC)
     {
@@ -903,9 +885,12 @@ int battle_calc_damage(struct block_list *, struct block_list *bl,
             damage = 3;
     }
 
-    if (md != NULL && md->hp > 0 && damage > 0) // 反撃などのMOBスキル判定
-        mobskill_event(md, flag);
-
+    if (target->type == BL_MOB)
+    {
+        struct mob_data *md = (struct mob_data *) target;
+        if (md->hp > 0 && damage > 0)
+            mobskill_event(md, flag);
+    }
     return damage;
 }
 

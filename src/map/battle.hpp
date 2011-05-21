@@ -58,7 +58,7 @@ enum
 };
 
 // 実際にHPを増減
-int battle_delay_damage(unsigned int tick, struct block_list *src,
+int battle_delay_damage(tick_t tick, struct block_list *src,
                         struct block_list *target, int damage);
 int battle_damage(struct block_list *bl, struct block_list *target, int damage);
 int battle_heal(struct block_list *bl, struct block_list *target, int hp, int sp);

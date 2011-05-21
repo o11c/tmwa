@@ -308,7 +308,7 @@ static int battle_get_atk_(struct block_list *bl)
     return 0;
 }
 
-/// Get secondary attack strength
+/// Get a being's secondary attack strength
 int battle_get_atk2(struct block_list *bl)
 {
     nullpo_retr(0, bl);
@@ -330,7 +330,7 @@ static int battle_get_atk_2(struct block_list *bl)
     return 0;
 }
 
-/// Get primary magical attack strength
+/// Get a being's primary magical attack strength
 static int battle_get_matk1(struct block_list *bl)
 {
     nullpo_retr(0, bl);
@@ -345,7 +345,7 @@ static int battle_get_matk1(struct block_list *bl)
     return 0;
 }
 
-/// Get secondary magical attack strength
+/// Get a being's secondary magical attack strength
 static int battle_get_matk2(struct block_list *bl)
 {
     nullpo_retr(0, bl);
@@ -360,330 +360,294 @@ static int battle_get_matk2(struct block_list *bl)
     return 0;
 }
 
-/// Get defense
+/// Get a being's defense
 int battle_get_def(struct block_list *bl)
 {
-    int def = 0, skilltimer = -1, skillid = 0;
-
     nullpo_retr(0, bl);
 
-    struct status_change *sc_data = battle_get_sc_data(bl);
-    if (bl->type == BL_PC && (struct map_session_data *) bl)
+    int def = 0;
+    int skilltimer = -1;
+    int skillid = 0;
+    if (bl->type == BL_PC)
     {
         def = ((struct map_session_data *) bl)->def;
     }
-    else if (bl->type == BL_MOB && (struct mob_data *) bl)
+    if (bl->type == BL_MOB)
     {
         def = ((struct mob_data *) bl)->stats[MOB_DEF];
         skilltimer = ((struct mob_data *) bl)->skilltimer;
         skillid = ((struct mob_data *) bl)->skillid;
     }
 
-    if (def < 1000000)
+    struct status_change *sc_data = battle_get_sc_data(bl);
+    if (sc_data)
     {
-        if (sc_data)
-        {
-            if (sc_data[SC_POISON].timer != -1 && bl->type != BL_PC)
-                def = def * 75 / 100;
-        }
-        //詠唱中は詠唱時減算率に基づいて減算
-        if (skilltimer != -1)
-        {
-            int def_rate = skill_get_castdef(skillid);
-            if (def_rate)
-                def = (def * (100 - def_rate)) / 100;
-        }
+        if (sc_data[SC_POISON].timer != -1 && bl->type != BL_PC)
+            def = def * 75 / 100;
+    }
+    if (skilltimer != -1)
+    {
+        int def_rate = skill_get_castdef(skillid);
+        if (def_rate)
+            def = (def * (100 - def_rate)) / 100;
     }
     return std::max(0, def);
 }
 
-/*==========================================
- * 対象のMDefを返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
+/// Get a being's magical defense
 int battle_get_mdef(struct block_list *bl)
 {
-    struct status_change *sc_data;
-    int mdef = 0;
-
     nullpo_retr(0, bl);
-    sc_data = battle_get_sc_data(bl);
-    if (bl->type == BL_PC && (struct map_session_data *) bl)
+
+    int mdef = 0;
+    if (bl->type == BL_PC)
         mdef = ((struct map_session_data *) bl)->mdef;
-    else if (bl->type == BL_MOB && (struct mob_data *) bl)
+    if (bl->type == BL_MOB)
         mdef = ((struct mob_data *) bl)->stats[MOB_MDEF];
 
-    if (mdef < 1000000)
+    struct status_change *sc_data = battle_get_sc_data(bl);
+    if (sc_data)
     {
-        if (sc_data)
+        if (mdef < 90 && sc_data[SC_MBARRIER].timer != -1)
         {
-            //バリアー状態時はMDEF100
-            if (mdef < 90 && sc_data[SC_MBARRIER].timer != -1)
-            {
-                mdef += sc_data[SC_MBARRIER].val1;
-                if (mdef > 90)
-                    mdef = 90;
-            }
+            mdef += sc_data[SC_MBARRIER].val1;
+            if (mdef > 90)
+                mdef = 90;
         }
     }
-    if (mdef < 0)
-        mdef = 0;
-    return mdef;
+    return std::max(0, mdef);
 }
 
-/*==========================================
- * 対象のDef2を返す(汎用)
- * 戻りは整数で1以上
- *------------------------------------------
- */
+/// Get a being's secondary defense
 int battle_get_def2(struct block_list *bl)
 {
-    struct status_change *sc_data;
-    int def2 = 1;
-
     nullpo_retr(1, bl);
-    sc_data = battle_get_sc_data(bl);
+
+    int def2 = 1;
     if (bl->type == BL_PC)
         def2 = ((struct map_session_data *) bl)->def2;
-    else if (bl->type == BL_MOB)
+    if (bl->type == BL_MOB)
         def2 = ((struct mob_data *) bl)->stats[MOB_VIT];
 
+    struct status_change *sc_data = battle_get_sc_data(bl);
     if (sc_data)
     {
         if (sc_data[SC_POISON].timer != -1 && bl->type != BL_PC)
             def2 = def2 * 75 / 100;
     }
-    if (def2 < 1)
-        def2 = 1;
-    return def2;
+    return std::max(1, def2);
 }
 
-/*==========================================
- * 対象のMDef2を返す(汎用)
- * 戻りは整数で0以上
- *------------------------------------------
- */
+/// Get a being's secondary magical defense (?)
 int battle_get_mdef2(struct block_list *bl)
 {
-    int mdef2 = 0;
-
     nullpo_retr(0, bl);
+
+    int mdef2 = 0;
     if (bl->type == BL_MOB)
-        mdef2 =
-            ((struct mob_data *) bl)->stats[MOB_INT] +
-            (((struct mob_data *) bl)->stats[MOB_VIT] >> 1);
-    else if (bl->type == BL_PC)
-        mdef2 =
-            ((struct map_session_data *) bl)->mdef2 +
-            (((struct map_session_data *) bl)->paramc[2] >> 1);
-    if (mdef2 < 0)
-        mdef2 = 0;
-    return mdef2;
+        mdef2 = ((struct mob_data *) bl)->stats[MOB_INT] +
+                (((struct mob_data *) bl)->stats[MOB_VIT] >> 1);
+    if (bl->type == BL_PC)
+        mdef2 = ((struct map_session_data *) bl)->mdef2 +
+                (((struct map_session_data *) bl)->paramc[2] >> 1);
+    return std::max(0, mdef2);
 }
 
-/*==========================================
- * 対象のSpeed(移動速度)を返す(汎用)
- * 戻りは整数で1以上
- * Speedは小さいほうが移動速度が速い
- *------------------------------------------
- */
+/// Get a being's walk delay
 int battle_get_speed(struct block_list *bl)
 {
     nullpo_retr(1000, bl);
-    if (bl->type == BL_PC && (struct map_session_data *) bl)
+
+    if (bl->type == BL_PC)
         return ((struct map_session_data *) bl)->speed;
-    else
-    {
-        int speed = 1000;
-        if (bl->type == BL_MOB && (struct mob_data *) bl)
-            speed = ((struct mob_data *) bl)->stats[MOB_SPEED];
 
-        if (speed < 1)
-            speed = 1;
-        return speed;
-    }
-
-    return 1000;
+    int speed = 1000;
+    if (bl->type == BL_MOB)
+        speed = ((struct mob_data *) bl)->stats[MOB_SPEED];
+    return std::max(1, speed);
 }
 
-/*==========================================
- * 対象のaDelay(攻撃時ディレイ)を返す(汎用)
- * aDelayは小さいほうが攻撃速度が速い
- *------------------------------------------
- */
+/// Get a being's attack delay
 int battle_get_adelay(struct block_list *bl)
 {
     nullpo_retr(4000, bl);
-    if (bl->type == BL_PC && (struct map_session_data *) bl)
-        return (((struct map_session_data *) bl)->aspd << 1);
-    else
+
+    if (bl->type == BL_PC)
+        return ((struct map_session_data *) bl)->aspd << 1;
+
+    struct status_change *sc_data = battle_get_sc_data(bl);
+    int adelay = 4000;
+    int aspd_rate = 100;
+    if (bl->type == BL_MOB)
+        adelay = ((struct mob_data *) bl)->stats[MOB_ADELAY];
+
+    if (sc_data)
     {
-        struct status_change *sc_data = battle_get_sc_data(bl);
-        int adelay = 4000, aspd_rate = 100;
-        if (bl->type == BL_MOB && (struct mob_data *) bl)
-            adelay = ((struct mob_data *) bl)->stats[MOB_ADELAY];
-
-        if (sc_data)
-        {
-            if (sc_data[SC_SPEEDPOTION0].timer != -1)
-                aspd_rate -= sc_data[SC_SPEEDPOTION0].val1;
-            // Fate's `haste' spell works the same as the above
-            if (sc_data[SC_HASTE].timer != -1)
-                aspd_rate -= sc_data[SC_HASTE].val1;
-        }
-
-        if (aspd_rate != 100)
-            adelay = adelay * aspd_rate / 100;
-        if (adelay < battle_config.monster_max_aspd << 1)
-            adelay = battle_config.monster_max_aspd << 1;
-        return adelay;
+        if (sc_data[SC_SPEEDPOTION0].timer != -1)
+            aspd_rate -= sc_data[SC_SPEEDPOTION0].val1;
+        // Fate's `haste' spell works the same as the above
+        if (sc_data[SC_HASTE].timer != -1)
+            aspd_rate -= sc_data[SC_HASTE].val1;
     }
-    return 4000;
+
+    if (aspd_rate != 100)
+        adelay = adelay * aspd_rate / 100;
+    if (adelay < battle_config.monster_max_aspd << 1)
+        adelay = battle_config.monster_max_aspd << 1;
+    return adelay;
 }
 
+/// Being's attack motion rate?
 int battle_get_amotion(struct block_list *bl)
 {
     nullpo_retr(2000, bl);
-    if (bl->type == BL_PC && (struct map_session_data *) bl)
+
+    if (bl->type == BL_PC)
         return ((struct map_session_data *) bl)->amotion;
-    else
+    struct status_change *sc_data = battle_get_sc_data(bl);
+    int amotion = 2000, aspd_rate = 100;
+    if (bl->type == BL_MOB && (struct mob_data *) bl)
+        amotion = mob_db[((struct mob_data *) bl)->mob_class].amotion;
+
+    if (sc_data)
     {
-        struct status_change *sc_data = battle_get_sc_data(bl);
-        int amotion = 2000, aspd_rate = 100;
-        if (bl->type == BL_MOB && (struct mob_data *) bl)
-            amotion = mob_db[((struct mob_data *) bl)->mob_class].amotion;
+        if (sc_data[SC_SPEEDPOTION0].timer != -1)
+            aspd_rate -= sc_data[SC_SPEEDPOTION0].val1;
+        if (sc_data[SC_HASTE].timer != -1)
+            aspd_rate -= sc_data[SC_HASTE].val1;
+    }
 
-        if (sc_data)
-        {
-            if (sc_data[SC_SPEEDPOTION0].timer != -1)
-                aspd_rate -= sc_data[SC_SPEEDPOTION0].val1;
-            if (sc_data[SC_HASTE].timer != -1)
-                aspd_rate -= sc_data[SC_HASTE].val1;
-        }
+    if (aspd_rate != 100)
+        amotion = amotion * aspd_rate / 100;
+    if (amotion < battle_config.monster_max_aspd)
+        amotion = battle_config.monster_max_aspd;
+    return amotion;
+}
 
-        if (aspd_rate != 100)
-            amotion = amotion * aspd_rate / 100;
-        if (amotion < battle_config.monster_max_aspd)
-            amotion = battle_config.monster_max_aspd;
-        return amotion;
+/// Being's defense motion rate?
+int battle_get_dmotion(struct block_list *bl)
+{
+    nullpo_retr(0, bl);
+
+    if (bl->type == BL_MOB)
+    {
+        int ret = mob_db[((struct mob_data *) bl)->mob_class].dmotion;
+        if (battle_config.monster_damage_delay_rate != 100)
+            ret = ret * battle_config.monster_damage_delay_rate / 400;
+        return ret;
+    }
+    if (bl->type == BL_PC)
+    {
+        int ret = ((struct map_session_data *) bl)->dmotion;
+        if (battle_config.pc_damage_delay_rate != 100)
+            ret = ret * battle_config.pc_damage_delay_rate / 400;
+        return ret;
     }
     return 2000;
 }
 
-int battle_get_dmotion(struct block_list *bl)
-{
-    int ret;
-
-    nullpo_retr(0, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
-    {
-        ret = mob_db[((struct mob_data *) bl)->mob_class].dmotion;
-        if (battle_config.monster_damage_delay_rate != 100)
-            ret = ret * battle_config.monster_damage_delay_rate / 400;
-    }
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
-    {
-        ret = ((struct map_session_data *) bl)->dmotion;
-        if (battle_config.pc_damage_delay_rate != 100)
-            ret = ret * battle_config.pc_damage_delay_rate / 400;
-    }
-    else
-        return 2000;
-
-    return ret;
-}
-
+/// Get a being's (encoded) defense element
 int battle_get_element(struct block_list *bl)
 {
-    int ret = 20;
+    nullpo_retr(20, bl);
 
-    nullpo_retr(ret, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)   // 10の位＝Lv*2、１の位＝属性
-        ret = ((struct mob_data *) bl)->def_ele;
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
-        ret = 20 + ((struct map_session_data *) bl)->def_ele;   // 防御属性Lv1
-
-    return ret;
+    if (bl->type == BL_MOB)
+        return ((struct mob_data *) bl)->def_ele;
+    if (bl->type == BL_PC)
+        // This adds 1 level ...
+        return 20 + ((struct map_session_data *) bl)->def_ele;
+    // 20 = level 1 neutral
+    return 20;
 }
 
+/// Get a PC's (secondary?) attack element (TODO rewrite element system)
 int battle_get_attack_element(struct block_list *bl)
 {
-    int ret = 0;
-
     nullpo_retr(0, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
-        ret = 0;
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
-        ret = ((struct map_session_data *) bl)->atk_ele;
 
-    return ret;
-}
-
-int battle_get_attack_element2(struct block_list *bl)
-{
-    nullpo_retr(0, bl);
-    if (bl->type == BL_PC && (struct map_session_data *) bl)
-    {
-        int ret = ((struct map_session_data *) bl)->atk_ele_;
-        return ret;
-    }
+    if (bl->type == BL_PC)
+        return ((struct map_session_data *) bl)->atk_ele;
     return 0;
 }
 
+/// Get a PC's (secondary?) attack element
+int battle_get_attack_element2(struct block_list *bl)
+{
+    nullpo_retr(0, bl);
+
+    if (bl->type == BL_PC)
+        return ((struct map_session_data *) bl)->atk_ele_;
+    return 0;
+}
+
+/// Return a party ID (or fake one) for a being
 int battle_get_party_id(struct block_list *bl)
 {
     nullpo_retr(0, bl);
-    if (bl->type == BL_PC && (struct map_session_data *) bl)
+    if (bl->type == BL_PC)
         return ((struct map_session_data *) bl)->status.party_id;
-    else if (bl->type == BL_MOB && (struct mob_data *) bl)
+    if (bl->type == BL_MOB)
     {
         struct mob_data *md = (struct mob_data *) bl;
         if (md->master_id > 0)
+            // slave mobs
             return -md->master_id;
+        // else, it is its own party
         return -md->bl.id;
     }
-    else if (bl->type == BL_SKILL && (struct skill_unit *) bl)
+    if (bl->type == BL_SKILL)
         return ((struct skill_unit *) bl)->group->party_id;
-    else
-        return 0;
+    return 0;
 }
 
+/// Get a being's race
 int battle_get_race(struct block_list *bl)
 {
     nullpo_retr(0, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
+
+    if (bl->type == BL_MOB)
         return mob_db[((struct mob_data *) bl)->mob_class].race;
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
+    if (bl->type == BL_PC)
         return 7;
-    else
-        return 0;
+    return 0;
 }
 
+/// Get a being's size (0 small, 2 large)
 int battle_get_size(struct block_list *bl)
 {
     nullpo_retr(1, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
+
+    if (bl->type == BL_MOB)
         return mob_db[((struct mob_data *) bl)->mob_class].size;
-    else if (bl->type == BL_PC && (struct map_session_data *) bl)
-        return 1;
-    else
-        return 1;
+    return 1;
 }
+
+/// Return a bitmask of a being's mode
+// 0x01: can move
+// 0x02: looter
+// 0x04: aggresive
+// 0x08: assist
+// 0x10: castsensor
+// 0x20: Boss
+// 0x40: plant
+// 0x80: can attack
+// 0x100: detector
+// 0x200: changetarget
 
 int battle_get_mode(struct block_list *bl)
 {
     nullpo_retr(0x01, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
+
+    if (bl->type == BL_MOB)
         return mob_db[((struct mob_data *) bl)->mob_class].mode;
-    else
-        return 0x01;            // とりあえず動くということで1
+    return 0x01;
 }
 
 int battle_get_mexp(struct block_list *bl)
 {
     nullpo_retr(0, bl);
-    if (bl->type == BL_MOB && (struct mob_data *) bl)
+
+    if (bl->type == BL_MOB)
     {
         const struct mob_data *mob = (struct mob_data *) bl;
         const int retval =

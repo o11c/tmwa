@@ -68,12 +68,13 @@ ${BUILD_DIR}/map/map: ${BUILD_DIR}/map/map.o ${BUILD_DIR}/map/tmw.o ${BUILD_DIR}
 ${BUILD_DIR}/tool/eathena-monitor: ${BUILD_DIR}/tool/eathena-monitor.o
 ${BUILD_DIR}/webserver/main: ${BUILD_DIR}/webserver/main.o ${BUILD_DIR}/webserver/parse.o ${BUILD_DIR}/webserver/generate.o ${BUILD_DIR}/webserver/htmlstyle.o ${BUILD_DIR}/webserver/logs.o ${BUILD_DIR}/webserver/pages/about.o ${BUILD_DIR}/webserver/pages/sample.o ${BUILD_DIR}/webserver/pages/notdone.o
 
-deps.make: src/*/ src/map/magic-interpreter-parser.cpp src/map/magic-interpreter-lexer.cpp
-	for F in `find src/ -name '*.cpp' | sort`; do \
+map.deps: src/map/magic-interpreter-parser.cpp src/map/magic-interpreter-lexer.cpp
+%.deps: src/%/
+	for F in `find $< -name '*.cpp' | sort`; do \
 	    ${CXX} -MM "$$F" -MT "$$(sed 's/src/$${BUILD_DIR}/;s/\.cpp/.o/' <<< "$$F")"; \
-	done > deps.make
+	done > $@
 
-include deps.make
+include common.deps login.deps char.deps map.deps ladmin.deps
 
 # It isn't feaible to fix this single use of strftime with nonconstant format string
 ${BUILD_DIR}/map/script.o: override WARNINGS+=-Wno-error=format-nonliteral

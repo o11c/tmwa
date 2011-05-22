@@ -2670,35 +2670,6 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
             }
             if (sd && sd->state.attack_type == BF_WEAPON)
             {
-                for (int i = 0; i < sd->monster_drop_item_count; i++)
-                {
-                    struct delay_item_drop *ditem;
-                    int race = battle_get_race(&md->bl);
-                    if (sd->monster_drop_itemid[i] <= 0)
-                        continue;
-                    if (sd->monster_drop_race[i] & (1 << race) ||
-                        (mob_db[md->mob_class].mode & 0x20
-                         && sd->monster_drop_race[i] & 1 << 10)
-                        || (!(mob_db[md->mob_class].mode & 0x20)
-                            && sd->monster_drop_race[i] & 1 << 11))
-                    {
-                        if (sd->monster_drop_itemrate[i] <= MRAND(10000))
-                            continue;
-
-                        ditem = (struct delay_item_drop *)
-                            calloc(1, sizeof(struct delay_item_drop));
-                        ditem->nameid = sd->monster_drop_itemid[i];
-                        ditem->amount = 1;
-                        ditem->m = md->bl.m;
-                        ditem->x = md->bl.x;
-                        ditem->y = md->bl.y;
-                        ditem->first_sd = mvp_sd;
-                        ditem->second_sd = second_sd;
-                        ditem->third_sd = third_sd;
-                        add_timer(tick + 520 + i, mob_delay_item_drop,
-                                   (int) ditem, 0);
-                    }
-                }
                 if (sd->get_zeny_num > 0)
                     pc_getzeny(sd,
                                 mob_db[md->mob_class].lv * 10 +

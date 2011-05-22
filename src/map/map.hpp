@@ -155,7 +155,6 @@ struct map_session_data
         unsigned restart_full_recover:1;
         unsigned no_castcancel:1;
         unsigned no_castcancel2:1;
-        unsigned no_sizefix:1;
         unsigned no_magic_damage:1;
         unsigned no_weapon_damage:1;
         unsigned no_gemstone:1;
@@ -236,18 +235,14 @@ struct map_session_data
     short disguiseflag, disguise;   // [Valaris]
     int paramb[6], paramc[6], parame[6], paramcard[6];
     int hit, flee, flee2, aspd, amotion, dmotion;
-    int watk, watk2, atkmods[3];
+    int watk, watk2;
     int def, def2, mdef, mdef2, critical, matk1, matk2;
     int atk_ele, def_ele, star, overrefine;
     int castrate, hprate, sprate, dsprate;
-    int addele[10], addrace[12], addsize[3], subele[10], subrace[12];
-    int addeff[10], addeff2[10], reseff[10];
-    int watk_, watk_2, atkmods_[3], addele_[10], addrace_[12], addsize_[3];    //二刀流のために追加
+    int watk_, watk_2;    //二刀流のために追加
     int atk_ele_, star_, overrefine_;  //二刀流のために追加
     int base_atk, atk_rate;
     int arrow_atk, arrow_ele, arrow_cri, arrow_hit, arrow_range;
-    int arrow_addele[10], arrow_addrace[12], arrow_addsize[3],
-        arrow_addeff[10], arrow_addeff2[10];
     int nhealhp, nhealsp, nshealhp, nshealsp, nsshealhp, nsshealsp;
     int aspd_rate, speed_rate, hprecov_rate, sprecov_rate, critical_def,
         double_rate;
@@ -256,27 +251,12 @@ struct map_session_data
     int matk_rate, ignore_def_ele, ignore_def_race, ignore_def_ele_,
         ignore_def_race_;
     int ignore_mdef_ele, ignore_mdef_race;
-    int magic_addele[10], magic_addrace[12], magic_subrace[12];
     int perfect_hit, get_zeny_num;
     int critical_rate, hit_rate, flee_rate, flee2_rate, def_rate, def2_rate,
         mdef_rate, mdef2_rate;
     int def_ratio_atk_ele, def_ratio_atk_ele_, def_ratio_atk_race,
         def_ratio_atk_race_;
-    int add_damage_class_count, add_damage_class_count_,
-        add_magic_damage_class_count;
-    short add_damage_classid[10], add_damage_classid_[10],
-        add_magic_damage_classid[10];
-    int add_damage_classrate[10], add_damage_classrate_[10],
-        add_magic_damage_classrate[10];
 
-    // TODO see if I can remove these - they are no longer used for players
-    // but what about mob classes?
-    short add_def_class_count, add_mdef_class_count;
-    short add_def_classid[10], add_mdef_classid[10];
-    int add_def_classrate[10], add_mdef_classrate[10];
-    short monster_drop_item_count;
-    short monster_drop_itemid[10];
-    int monster_drop_race[10], monster_drop_itemrate[10];
     int double_add_rate, speed_add_rate, aspd_add_rate, perfect_hit_add,
         get_zeny_add_num;
     short splash_range, splash_add_range;
@@ -284,7 +264,6 @@ struct map_session_data
     short hp_drain_rate, hp_drain_per, sp_drain_rate, sp_drain_per;
     short hp_drain_rate_, hp_drain_per_, sp_drain_rate_, sp_drain_per_;
     int short_weapon_damage_return, long_weapon_damage_return;
-    int weapon_coma_ele[10], weapon_coma_race[12];
     short break_weapon_rate, break_armor_rate;
     short add_steal_rate;
 
@@ -598,7 +577,7 @@ enum
     SP_MAGIC_DAMAGE_RETURN, SP_RANDOM_ATTACK_INCREASE, SP_ALL_STATS, SP_AGI_VIT, SP_AGI_DEX_STR, SP_PERFECT_HIDE,   // 1071-1077
     SP_DISGUISE,                // 1077
 
-    SP_RESTART_FULL_RECORVER = 2000, SP_NO_CASTCANCEL, SP_NO_SIZEFIX, SP_NO_MAGIC_DAMAGE, SP_NO_WEAPON_DAMAGE, SP_NO_GEMSTONE,  // 2000-2005
+    SP_RESTART_FULL_RECORVER = 2000, SP_NO_CASTCANCEL, SP_2002, SP_NO_MAGIC_DAMAGE, SP_NO_WEAPON_DAMAGE, SP_NO_GEMSTONE,  // 2000-2005
     SP_NO_CASTCANCEL2, SP_INFINITE_ENDURE_, SP_UNBREAKABLE_WEAPON, SP_UNBREAKABLE_ARMOR  // 2006-2009
 };
 

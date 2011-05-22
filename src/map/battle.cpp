@@ -21,7 +21,6 @@
 
 static int battle_attr_fix(int damage, int atk_elem, int def_elem);
 static int battle_stopattack(struct block_list *bl);
-static int battle_get_class(struct block_list *bl);
 static int battle_get_hit(struct block_list *bl);
 static int battle_get_flee(struct block_list *bl);
 static int battle_get_flee2(struct block_list *bl);
@@ -32,7 +31,6 @@ static int battle_get_atk(struct block_list *bl);
 static int battle_get_atk2(struct block_list *bl);
 static int battle_get_attack_element(struct block_list *bl);
 static int battle_get_attack_element2(struct block_list *bl);
-static int battle_get_size(struct block_list *bl);
 
 /// Table of elemental damage modifiers
 int attr_fix_table[4][10][10];
@@ -52,18 +50,6 @@ int battle_counttargeted(struct block_list *bl, struct block_list *src, int targ
         return pc_counttargeted((struct map_session_data *) bl, src, target_lv);
     if (bl->type == BL_MOB)
         return mob_counttargeted((struct mob_data *) bl, src, target_lv);
-    return 0;
-}
-
-/// Get the class of a being
-// this used to check the classes of PCs, but we only used class 0
-// on the other hand, mob classes are very important
-int battle_get_class(struct block_list *bl)
-{
-    nullpo_retr(0, bl);
-
-    if (bl->type == BL_MOB)
-        return ((struct mob_data *) bl)->mob_class;
     return 0;
 }
 
@@ -596,16 +582,6 @@ int battle_get_race(struct block_list *bl)
     return 0;
 }
 
-/// Get a being's size (0 small, 2 large)
-int battle_get_size(struct block_list *bl)
-{
-    nullpo_retr(1, bl);
-
-    if (bl->type == BL_MOB)
-        return mob_db[((struct mob_data *) bl)->mob_class].size;
-    return 1;
-}
-
 /// Return a bitmask of a being's mode.
 /// Not all of these are known to be meaningful
 // 0x01: can move
@@ -947,7 +923,6 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
     if (tsd && tsd->critical_def)
         percent_subtract(cri, tsd->critical_def);
 
-    int s_race = battle_get_race(&md->bl);
     int s_ele = battle_get_attack_element(&md->bl);
 
     if (skill_num == 0 && skill_lv >= 0 && battle_config.enemy_critical && MRAND(1000) < cri)
@@ -1032,21 +1007,6 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
     if (tsd)
     {
         int cardfix = 100;
-        percent_subtract(cardfix, tsd->subele[s_ele]);
-        percent_subtract(cardfix, tsd->subrace[s_race]);
-        if (mob_db[md->mob_class].mode & 0x20)
-            percent_subtract(cardfix, tsd->subrace[10]);
-        else
-            percent_subtract(cardfix, tsd->subrace[11]);
-
-        for (int i = 0; i < tsd->add_def_class_count; i++)
-        {
-            if (tsd->add_def_classid[i] == md->mob_class)
-            {
-                percent_subtract(cardfix, tsd->add_def_classrate[i]);
-                break;
-            }
-        }
 
         if (wd.flag & BF_LONG)
             percent_subtract(cardfix, tsd->long_attack_def_rate);
@@ -1116,12 +1076,10 @@ static struct Damage battle_calc_pc_weapon_attack(struct map_session_data *sd,
     int def2 = battle_get_def2(target);
     int t_vit = battle_get_vit(target);
 
-    int s_race = battle_get_race(&sd->bl);
     int s_ele = battle_get_attack_element(&sd->bl);
     int s_ele_ = battle_get_attack_element2(&sd->bl);
     int t_race = battle_get_race(target);
     int t_ele = battle_get_elem_type(target);
-    int t_size = battle_get_size(target);
     int t_mode = battle_get_mode(target);
 
 
@@ -1190,19 +1148,8 @@ static struct Damage battle_calc_pc_weapon_attack(struct map_session_data *sd,
         sd->state.arrow_atk = 1;
     }
 
-    int atkmax, atkmax_;
-    if (sd->special_state.no_sizefix)
-    {
-        atkmax = watk;
-        atkmax_ = watk_;
-    }
-    else
-    {
-        atkmax = (watk * sd->atkmods[t_size]) / 100;
-        percent_adjust(atkmin, sd->atkmods[t_size]);
-        atkmax_ = (watk_ * sd->atkmods_[t_size]) / 100;
-        percent_adjust(atkmin_, sd->atkmods[t_size]);
-    }
+    int atkmax = watk;
+    int atkmax_ = watk_;
 
     if (atkmin > atkmax && !(sd->state.arrow_atk))
         atkmin = atkmax;
@@ -1405,111 +1352,6 @@ static struct Damage battle_calc_pc_weapon_attack(struct map_session_data *sd,
         wd.dmg_lv = ATK_DEF;
     }
 
-    int cardfix = 100;
-    if (!sd->state.arrow_atk)
-    {
-        if (!battle_config.left_cardfix_to_right)
-        {
-            percent_add(cardfix, sd->addrace[t_race]);
-            percent_add(cardfix, sd->addele[t_ele]);
-            percent_add(cardfix, sd->addsize[t_size]);
-        }
-        else
-        {
-            percent_add(cardfix, sd->addrace[t_race] + sd->addrace_[t_race]);
-            percent_add(cardfix, sd->addele[t_ele] + sd->addele_[t_ele]);
-            percent_add(cardfix, sd->addsize[t_size] + sd->addsize_[t_size]);
-        }
-    }
-    else
-    {
-        percent_add(cardfix, sd->addrace[t_race] + sd->arrow_addrace[t_race]);
-        percent_add(cardfix, sd->addele[t_ele] + sd->arrow_addele[t_ele]);
-        percent_add(cardfix, sd->addsize[t_size] + sd->arrow_addsize[t_size]);
-    }
-    if (t_mode & 0x20)
-    {
-        if (!sd->state.arrow_atk)
-        {
-            if (!battle_config.left_cardfix_to_right)
-                percent_add(cardfix, sd->addrace[10]);
-            else
-                percent_add(cardfix, sd->addrace[10] + sd->addrace_[10]);
-        }
-        else
-            percent_add(cardfix, sd->addrace[10] + sd->arrow_addrace[10]);
-    }
-    else
-    {
-        if (!sd->state.arrow_atk)
-        {
-            if (!battle_config.left_cardfix_to_right)
-                percent_add(cardfix, sd->addrace[11]);
-            else
-                percent_add(cardfix, sd->addrace[11] + sd->addrace_[11]);
-        }
-        else
-            percent_add(cardfix, sd->addrace[11] + sd->arrow_addrace[11]);
-    }
-
-    int t_class = battle_get_class(target);
-    for (int i = 0; i < sd->add_damage_class_count; i++)
-    {
-        if (sd->add_damage_classid[i] == t_class)
-        {
-            percent_add(cardfix, sd->add_damage_classrate[i]);
-            break;
-        }
-    }
-    percent_adjust(wd.damage, cardfix);
-
-    cardfix = 100;
-    if (!battle_config.left_cardfix_to_right)
-    {
-        percent_add(cardfix, sd->addrace_[t_race]);
-        percent_add(cardfix, sd->addele_[t_ele]);
-        percent_add(cardfix, sd->addsize_[t_size]);
-        if (t_mode & 0x20)
-            percent_add(cardfix, sd->addrace_[10]);
-        else
-            percent_add(cardfix, sd->addrace_[11]);
-    }
-    for (int i = 0; i < sd->add_damage_class_count_; i++)
-    {
-        if (sd->add_damage_classid_[i] == t_class)
-        {
-            percent_add(cardfix, sd->add_damage_classrate_[i]);
-            break;
-        }
-    }
-    percent_adjust(wd.damage2, cardfix);
-
-    if (tsd)
-    {
-        cardfix = 100;
-        percent_subtract(cardfix, tsd->subrace[s_race]);
-        percent_subtract(cardfix, tsd->subele[s_ele]);
-        if (battle_get_mode(&sd->bl) & 0x20)
-            percent_subtract(cardfix, tsd->subrace[10]);
-        else
-            percent_subtract(cardfix, tsd->subrace[11]);
-
-        for (int i = 0; i < tsd->add_def_class_count; i++)
-        {
-            if (tsd->add_def_classid[i] == 0)
-            {
-                percent_subtract(cardfix, tsd->add_def_classrate[i]);
-                break;
-            }
-        }
-        if (wd.flag & BF_LONG)
-            percent_subtract(cardfix, tsd->long_attack_def_rate);
-        if (wd.flag & BF_SHORT)
-            percent_subtract(cardfix, tsd->near_attack_def_rate);
-        percent_adjust(wd.damage, cardfix);
-        percent_adjust(wd.damage2, cardfix);
-    }
-
     if (wd.damage < 0)
         wd.damage = 0;
     if (wd.damage2 < 0)
@@ -1686,8 +1528,8 @@ struct Damage battle_calc_magic_attack(struct block_list *bl,
     struct Damage md;
     int aflag;
     int normalmagic_flag = 1;
-    int ele = 0, race = 7, t_ele = 0, t_race = 7, t_mode =
-        0, cardfix, t_class, i;
+    int ele = 0, t_ele = 0, t_race = 7, t_mode =
+        0, cardfix;
     struct map_session_data *sd = NULL, *tsd = NULL;
 
     //return前の処理があるので情報出力部のみ変更
@@ -1701,7 +1543,6 @@ struct Damage battle_calc_magic_attack(struct block_list *bl,
     matk1 = battle_get_matk1(bl);
     matk2 = battle_get_matk2(bl);
     ele = skill_get_pl(skill_num);
-    race = battle_get_race(bl);
     t_ele = battle_get_elem_type(target);
     t_race = battle_get_race(target);
     t_mode = battle_get_mode(target);
@@ -1761,47 +1602,9 @@ struct Damage battle_calc_magic_attack(struct block_list *bl,
             damage = 1;
     }
 
-    if (sd)
-    {
-        cardfix = 100;
-        cardfix = cardfix * (100 + sd->magic_addrace[t_race]) / 100;
-        cardfix = cardfix * (100 + sd->magic_addele[t_ele]) / 100;
-        if (t_mode & 0x20)
-            cardfix = cardfix * (100 + sd->magic_addrace[10]) / 100;
-        else
-            cardfix = cardfix * (100 + sd->magic_addrace[11]) / 100;
-        t_class = battle_get_class(target);
-        for (i = 0; i < sd->add_magic_damage_class_count; i++)
-        {
-            if (sd->add_magic_damage_classid[i] == t_class)
-            {
-                cardfix =
-                    cardfix * (100 + sd->add_magic_damage_classrate[i]) / 100;
-                break;
-            }
-        }
-        damage = damage * cardfix / 100;
-    }
-
     if (tsd)
     {
-        int s_class = battle_get_class(bl);
         cardfix = 100;
-        cardfix = cardfix * (100 - tsd->subele[ele]) / 100; // 属 性によるダメージ耐性
-        cardfix = cardfix * (100 - tsd->subrace[race]) / 100;   // 種族によるダメージ耐性
-        cardfix = cardfix * (100 - tsd->magic_subrace[race]) / 100;
-        if (battle_get_mode(bl) & 0x20)
-            cardfix = cardfix * (100 - tsd->magic_subrace[10]) / 100;
-        else
-            cardfix = cardfix * (100 - tsd->magic_subrace[11]) / 100;
-        for (i = 0; i < tsd->add_mdef_class_count; i++)
-        {
-            if (tsd->add_mdef_classid[i] == s_class)
-            {
-                cardfix = cardfix * (100 - tsd->add_mdef_classrate[i]) / 100;
-                break;
-            }
-        }
         cardfix = cardfix * (100 - tsd->magic_def_rate) / 100;
         damage = damage * cardfix / 100;
     }
@@ -1863,8 +1666,8 @@ struct Damage battle_calc_misc_attack(struct block_list *bl,
                                        struct block_list *target,
                                        int skill_num, int skill_lv, int)
 {
-    int ele, race, cardfix;
-    struct map_session_data *sd = NULL, *tsd = NULL;
+    int ele;
+    struct map_session_data *sd = NULL;
     int damage = 0, div_ = 1, blewcount =
         skill_get_blewcount(skill_num, skill_lv);
     struct Damage md;
@@ -1886,25 +1689,10 @@ struct Damage battle_calc_misc_attack(struct block_list *bl,
         sd->state.arrow_atk = 0;
     }
 
-    if (target->type == BL_PC)
-        tsd = (struct map_session_data *) target;
-
     ele = skill_get_pl(skill_num);
-    race = battle_get_race(bl);
 
     if (damagefix)
     {
-        if (damage < 1)
-            damage = 1;
-
-        if (tsd)
-        {
-            cardfix = 100;
-            cardfix = cardfix * (100 - tsd->subele[ele]) / 100; // 属性によるダメージ耐性
-            cardfix = cardfix * (100 - tsd->subrace[race]) / 100;   // 種族によるダメージ耐性
-            cardfix = cardfix * (100 - tsd->misc_def_rate) / 100;
-            damage = damage * cardfix / 100;
-        }
         if (damage < 0)
             damage = 0;
         damage = battle_attr_fix(damage, ele, battle_get_element(target));    // 属性修正
@@ -1977,7 +1765,6 @@ int battle_weapon_attack(struct block_list *src, struct block_list *target,
     struct map_session_data *sd = NULL;
     struct status_change *t_sc_data = battle_get_sc_data(target);
     short *opt1;
-    int race = 7, ele = 0;
     int damage, rdamage = 0;
     struct Damage wd;
 
@@ -2002,8 +1789,6 @@ int battle_weapon_attack(struct block_list *src, struct block_list *target,
         return 0;
     }
 
-    race = battle_get_race(target);
-    ele = battle_get_elem_type(target);
     if (battle_check_target(src, target, BCT_ENEMY) > 0 &&
         battle_check_range(src, target, 0))
     {
@@ -2148,31 +1933,6 @@ int battle_weapon_attack(struct block_list *src, struct block_list *target,
             if (wd.damage > 0 || wd.damage2 > 0)
             {
                 skill_additional_effect(src, target, 0, 0, BF_WEAPON, tick);
-                if (sd)
-                {
-                    if (sd->weapon_coma_ele[ele] > 0
-                        && MRAND(10000) < sd->weapon_coma_ele[ele])
-                        battle_damage(src, target,
-                                       battle_get_max_hp(target));
-                    if (sd->weapon_coma_race[race] > 0
-                        && MRAND(10000) < sd->weapon_coma_race[race])
-                        battle_damage(src, target,
-                                       battle_get_max_hp(target));
-                    if (battle_get_mode(target) & 0x20)
-                    {
-                        if (sd->weapon_coma_race[10] > 0
-                            && MRAND(10000) < sd->weapon_coma_race[10])
-                            battle_damage(src, target,
-                                           battle_get_max_hp(target));
-                    }
-                    else
-                    {
-                        if (sd->weapon_coma_race[11] > 0
-                            && MRAND(10000) < sd->weapon_coma_race[11])
-                            battle_damage(src, target,
-                                           battle_get_max_hp(target));
-                    }
-                }
             }
         }
         if (sd)

@@ -148,8 +148,6 @@ static int buildin_failedrefitem(struct script_state *st);
 static int buildin_statusup(struct script_state *st);
 static int buildin_statusup2(struct script_state *st);
 static int buildin_bonus(struct script_state *st);
-static int buildin_bonus2(struct script_state *st);
-static int buildin_bonus3(struct script_state *st);
 static int buildin_skill(struct script_state *st);
 static int buildin_setskill(struct script_state *st);
 static int buildin_getskilllv(struct script_state *st);
@@ -325,8 +323,6 @@ struct builtin_function
     {buildin_statusup, "statusup", "i"},
     {buildin_statusup2, "statusup2", "ii"},
     {buildin_bonus, "bonus", "ii"},
-    {buildin_bonus2, "bonus2", "iii"},
-    {buildin_bonus3, "bonus3", "iiii"},
     {buildin_skill, "skill", "ii*"},
     {buildin_setskill, "setskill", "ii"},    // [Fate]
     {buildin_getskilllv, "getskilllv", "i"},
@@ -3231,43 +3227,6 @@ int buildin_bonus(struct script_state *st)
     val = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     sd = script_rid2sd(st);
     pc_bonus(sd, type, val);
-
-    return 0;
-}
-
-/*==========================================
- * 装備品による能力値ボーナス
- *------------------------------------------
- */
-int buildin_bonus2(struct script_state *st)
-{
-    int type, type2, val;
-    struct map_session_data *sd;
-
-    type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    type2 = conv_num(st, &(st->stack->stack_data[st->start + 3]));
-    val = conv_num(st, &(st->stack->stack_data[st->start + 4]));
-    sd = script_rid2sd(st);
-    pc_bonus2(sd, type, type2, val);
-
-    return 0;
-}
-
-/*==========================================
- * 装備品による能力値ボーナス
- *------------------------------------------
- */
-int buildin_bonus3(struct script_state *st)
-{
-    int type, type2, type3, val;
-    struct map_session_data *sd;
-
-    type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    type2 = conv_num(st, &(st->stack->stack_data[st->start + 3]));
-    type3 = conv_num(st, &(st->stack->stack_data[st->start + 4]));
-    val = conv_num(st, &(st->stack->stack_data[st->start + 5]));
-    sd = script_rid2sd(st);
-    pc_bonus3(sd, type, type2, type3, val);
 
     return 0;
 }

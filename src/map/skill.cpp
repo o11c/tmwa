@@ -562,17 +562,6 @@ int skill_status_effect(struct block_list *bl, int type, int val1, int val2,
     if (bl->type == BL_PC)
     {
         sd = (struct map_session_data *) bl;
-
-        if (type == SC_POISON)
-        {                       /* カードによる耐性 */
-            if (sd && MRAND(10000) < sd->reseff[4])
-            {
-                if (battle_config.battle_log)
-                    printf("PC %d skill_sc_start: cardによる異常耐性発動\n",
-                            sd->bl.id);
-                return 0;
-            }
-        }
     }
     else if (bl->type == BL_MOB)
     {

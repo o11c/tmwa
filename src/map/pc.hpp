@@ -63,8 +63,6 @@ int pc_dropitem(struct map_session_data *, int, int);
 
 int pc_calcstatus(struct map_session_data *, int);
 int pc_bonus(struct map_session_data *, int, int);
-int pc_bonus2(struct map_session_data *sd, int, int, int);
-int pc_bonus3(struct map_session_data *sd, int, int, int, int);
 int pc_skill(struct map_session_data *, int, int, int);
 
 int pc_modifybuyvalue(struct map_session_data *, int);

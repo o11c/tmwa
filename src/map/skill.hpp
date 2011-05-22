@@ -44,10 +44,8 @@ extern struct skill_name_db skill_names[];
 
 struct block_list;
 struct map_session_data;
-struct skill_unit;
-struct skill_unit_group;
 
-int do_init_skill(void);
+void do_init_skill(void);
 
 // スキルデータベースへのアクセサ
 int skill_get_hit(int id);
@@ -69,25 +67,8 @@ int skill_additional_effect(struct block_list *src, struct block_list *bl,
                               int skillid, int skilllv, int attack_type,
                              unsigned int tick);
 
-// ユニットスキル
-struct skill_unit *skill_initunit(struct skill_unit_group *group, int idx,
-                                  int x, int y);
-int skill_delunit(struct skill_unit *unit);
-struct skill_unit_group *skill_initunitgroup(struct block_list *src, int count,
-                                             int skillid, int skilllv);
-struct skill_unit_group_tickset *skill_unitgrouptickset_search(struct
-                                                                block_list
-                                                                *bl,
-                                                               int group_id);
-int skill_clear_unitgroup(struct block_list *src);
-
-int skill_unit_ondamaged(struct skill_unit *src, struct block_list *bl,
-                          int damage, unsigned int tick) __attribute__((deprecated));
-
 int skill_castfix(struct block_list *bl, int time);
 int skill_delayfix(struct block_list *bl, int time);
-int skill_unit_out_all(struct block_list *bl, unsigned int tick, int range);
-int skill_unit_move(struct block_list *bl, unsigned int tick, int range);
 
 // 詠唱キャンセル
 int skill_castcancel(struct block_list *bl, int type);

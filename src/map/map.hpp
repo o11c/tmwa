@@ -33,11 +33,6 @@
 #define LOOTITEM_SIZE 10
 #define MAX_SKILL_LEVEL 100
 #define MAX_STATUSCHANGE 200
-#define MAX_SKILLUNITGROUP 32
-#define MAX_MOBSKILLUNITGROUP 8
-#define MAX_SKILLUNITGROUPTICKSET 128
-#define MAX_SKILLTIMERSKILL 32
-#define MAX_MOBSKILLTIMERSKILL 10
 #define MAX_MOBSKILL 32
 #define MAX_EVENTQUEUE 2
 #define MAX_EVENTTIMER 32
@@ -79,7 +74,7 @@ enum Direction
 };
 
 enum BlockType
-{ BL_NUL, BL_PC, BL_NPC, BL_MOB, BL_ITEM, BL_SKILL, BL_SPELL };
+{ BL_NUL, BL_PC, BL_NPC, BL_MOB, BL_ITEM, BL_SPELL };
 enum
 { WARP, SHOP, SCRIPT, MONS, MESSAGE };
 struct block_list
@@ -115,40 +110,6 @@ struct status_change
 };
 
 struct invocation;
-
-struct skill_unit_group;
-struct skill_unit
-{
-    struct block_list bl;
-
-    struct skill_unit_group *group;
-
-    int limit;
-    int val1, val2;
-    short alive, range;
-};
-struct skill_unit_group
-{
-    int src_id;
-    int party_id;
-    int map, range;
-    int target_flag;
-    unsigned int tick;
-    int limit, interval;
-
-    int skill_id, skill_lv;
-    int val1, val2;
-    char *valstr;
-    int group_id;
-    int unit_count, alive_count;
-    struct skill_unit *unit;
-};
-struct skill_unit_group_tickset
-{
-    unsigned int tick;
-    int group_id;
-};
-
 struct npc_data;
 struct item_data;
 struct square;
@@ -254,8 +215,6 @@ struct map_session_data
 
     short attackrange, attackrange_;
     short skillitem, skillitemlv;
-    struct skill_unit_group skillunit[MAX_SKILLUNITGROUP];
-    struct skill_unit_group_tickset skillunittick[MAX_SKILLUNITGROUPTICKSET];
 
     // [Fate] Used for gradual healing; amount of enqueued regeneration
     struct quick_regeneration quick_regeneration_hp, quick_regeneration_sp;
@@ -517,8 +476,6 @@ struct mob_data
     int def_ele;
     int master_id, master_dist;
     int exclusion_src, exclusion_party;
-    struct skill_unit_group skillunit[MAX_MOBSKILLUNITGROUP];
-    struct skill_unit_group_tickset skillunittick[MAX_SKILLUNITGROUPTICKSET];
     char npc_event[50];
     unsigned short stats[MOB_LAST]; // [Fate] mob-specific stats
     short size;

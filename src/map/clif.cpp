@@ -2751,8 +2751,6 @@ static void clif_getareachar(struct block_list *bl, va_list ap)
         case BL_ITEM:
             clif_getareachar_item(sd, (struct flooritem_data *) bl);
             break;
-        case BL_SKILL:
-            break;
         default:
             if (battle_config.error_log)
                 printf("get area char ??? %d\n", bl->type);
@@ -2962,70 +2960,6 @@ int clif_skill_damage(struct block_list *src, struct block_list *dst,
     WBUFB(buf, 32) = (type > 0) ? type : skill_get_hit(skill_id);
     clif_send(buf, packet_len_table[0x1de], src, AREA);
 
-    return 0;
-}
-/*==========================================
- * 場所スキルエフェクト表示
- *------------------------------------------
- */
-int clif_skill_setunit(struct skill_unit *unit)
-{
-    unsigned char buf[128];
-    struct block_list *bl;
-
-    nullpo_retr(0, unit);
-
-    bl = map_id2bl(unit->group->src_id);
-
-    memset(WBUFP(buf, 0), 0, packet_len_table[0x1c9]);
-    WBUFW(buf, 0) = 0x1c9;
-    WBUFL(buf, 2) = unit->bl.id;
-    WBUFL(buf, 6) = unit->group->src_id;
-    WBUFW(buf, 10) = unit->bl.x;
-    WBUFW(buf, 12) = unit->bl.y;
-    WBUFB(buf, 14) = 0; //unit->group->unit_id;
-    WBUFB(buf, 15) = 1;
-    WBUFL(buf, 15 + 1) = 0;    //1-4調べた限り固定
-    WBUFL(buf, 15 + 5) = 0;    //5-8調べた限り固定
-    //9-12マップごとで一定の77-80とはまた違う4バイトのかなり大きな数字
-    WBUFL(buf, 15 + 13) = unit->bl.y - 0x12;   //13-16ユニットのY座標-18っぽい(Y:17でFF FF FF FF)
-    WBUFL(buf, 15 + 17) = 0x004f37dd;  //17-20調べた限り固定(0x1b2で0x004fdbddだった)
-    WBUFL(buf, 15 + 21) = 0x0012f674;  //21-24調べた限り固定
-    WBUFL(buf, 15 + 25) = 0x0012f664;  //25-28調べた限り固定
-    WBUFL(buf, 15 + 29) = 0x0012f654;  //29-32調べた限り固定
-    WBUFL(buf, 15 + 33) = 0x77527bbc;  //33-36調べた限り固定
-    //37-39
-    WBUFB(buf, 15 + 40) = 0x2d;    //40調べた限り固定
-    WBUFL(buf, 15 + 41) = 0;   //41-44調べた限り0固定
-    WBUFL(buf, 15 + 45) = 0;   //45-48調べた限り0固定
-    WBUFL(buf, 15 + 49) = 0;   //49-52調べた限り0固定
-    WBUFL(buf, 15 + 53) = 0x0048d919;  //53-56調べた限り固定(0x01b2で0x00495119だった)
-    WBUFL(buf, 15 + 57) = 0x0000003e;  //57-60調べた限り固定
-    WBUFL(buf, 15 + 61) = 0x0012f66c;  //61-64調べた限り固定
-    //65-68
-    //69-72
-    if (bl)
-        WBUFL(buf, 15 + 73) = bl->y;   //73-76術者のY座標
-    WBUFL(buf, 15 + 77) = unit->bl.m;  //77-80マップIDかなぁ？かなり2バイトで足りそうな数字
-    WBUFB(buf, 15 + 81) = 0xaa;    //81終端文字0xaa
-
-    clif_send(buf, packet_len_table[0x1c9], &unit->bl, AREA);
-    return 0;
-}
-
-/*==========================================
- * 場所スキルエフェクト削除
- *------------------------------------------
- */
-int clif_skill_delunit(struct skill_unit *unit)
-{
-    unsigned char buf[16];
-
-    nullpo_retr(0, unit);
-
-    WBUFW(buf, 0) = 0x120;
-    WBUFL(buf, 2) = unit->bl.id;
-    clif_send(buf, packet_len_table[0x120], &unit->bl, AREA);
     return 0;
 }
 

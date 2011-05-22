@@ -678,10 +678,6 @@ int pc_authok(int id, int login_id2, time_t connect_until_time,
 
     sd->status.option &= OPTION_MASK;
 
-    // スキルユニット関係の初期化
-    memset(sd->skillunit, 0, sizeof(sd->skillunit));
-    memset(sd->skillunittick, 0, sizeof(sd->skillunittick));
-
     // パーティー関係の初期化
     sd->party_sended = 0;
     sd->party_invite = 0;
@@ -2832,7 +2828,6 @@ int pc_setpos(struct map_session_data *sd, const char *mapname_org, int x, int y
             in_port_t port;
             if (map_mapname2ipport(mapname, &ip, &port))
             {
-                skill_unit_out_all(&sd->bl, gettick(), 1);
                 clif_clearchar_area(&sd->bl, clrtype & 0xffff);
                 map_delblock(&sd->bl);
                 memcpy(sd->mapname, mapname, 24);
@@ -2876,7 +2871,6 @@ int pc_setpos(struct map_session_data *sd, const char *mapname_org, int x, int y
 
     if (sd->mapname[0] && sd->bl.prev != NULL)
     {
-        skill_unit_out_all(&sd->bl, gettick(), 1);
         clif_clearchar_area(&sd->bl, clrtype & 0xffff);
         map_delblock(&sd->bl);
         clif_changemap(sd, maps[m].name, x, y); // [MouseJstr]
@@ -3072,8 +3066,6 @@ static void pc_walk(timer_id tid, tick_t tick, custom_id_t id, custom_data_t dat
         }
         if (sd->status.option & 4)  // クローキングの消滅検査
             skill_check_cloaking(&sd->bl);
-
-        skill_unit_move(&sd->bl, tick, 1); // スキルユニットの検査
 
         if (map_getcell(sd->bl.m, x, y) & 0x80)
             npc_touch_areanpc(sd, sd->bl.m, x, y);
@@ -4119,7 +4111,6 @@ int pc_damage(struct block_list *src, struct map_session_data *sd,
     pc_stop_walking(sd, 0);
     skill_castcancel(&sd->bl, 0);  // 詠唱の中止
     clif_clearchar_area(&sd->bl, 1);
-    skill_unit_out_all(&sd->bl, gettick(), 1);
     pc_setglobalreg(sd, "PC_DIE_COUNTER", ++sd->die_counter);  //死にカウンター書き込み
     skill_status_change_clear(&sd->bl, 0); // ステータス異常を解除する
     clif_updatestatus(sd, SP_HP);

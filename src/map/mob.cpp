@@ -642,8 +642,6 @@ static int mob_walk(struct mob_data *md, unsigned int tick, int data)
 
         if (md->option & 4)
             skill_check_cloaking(&md->bl);
-
-        skill_unit_move(&md->bl, tick, 1); // Inspection of a skill unit
     }
     if ((i = calc_next_walk_step(md)) > 0)
     {
@@ -859,9 +857,7 @@ int mob_changestate(struct mob_data *md, int state, int type)
             md->last_deadtime = gettick();
             // Since it died, all aggressors' attack to this mob is stopped.
             clif_foreachclient(mob_stopattacked, md->bl.id);
-            skill_unit_out_all(&md->bl, gettick(), 1);
             skill_status_change_clear(&md->bl, 2); // The abnormalities in status are canceled.
-            skill_clear_unitgroup(&md->bl);    // All skill unit groups are deleted.
             if (md->deletetimer != -1)
                 delete_timer(md->deletetimer, mob_timer_delete);
             md->deletetimer = -1;
@@ -1069,7 +1065,6 @@ int mob_spawn(int id)
     if (md->bl.prev != NULL)
     {
 //      clif_clearchar_area(&md->bl,3);
-        skill_unit_out_all(&md->bl, gettick(), 1);
         map_delblock(&md->bl);
     }
     else
@@ -1148,9 +1143,6 @@ int mob_spawn(int id)
     }
     md->sc_count = 0;
     md->opt1 = md->opt2 = md->opt3 = md->option = 0;
-
-    memset(md->skillunit, 0, sizeof(md->skillunit));
-    memset(md->skillunittick, 0, sizeof(md->skillunittick));
 
     md->hp = battle_get_max_hp(&md->bl);
     if (md->hp <= 0)
@@ -2844,7 +2836,6 @@ int mob_warp(struct mob_data *md, int m, int x, int y, int type)
             return 0;
         clif_clearchar_area(&md->bl, type);
     }
-    skill_unit_out_all(&md->bl, gettick(), 1);
     map_delblock(&md->bl);
 
     if (bx > 0 && by > 0)
@@ -3052,7 +3043,7 @@ void mobskill_castend_pos(timer_id tid, tick_t tick, custom_id_t id, custom_data
 {
     struct mob_data *md = NULL;
     struct block_list *bl;
-    int range, maxcount;
+    int range;
 
     //mobskill_castend_id同様詠唱したMobが詠唱完了時にもういないというのはありそうなのでnullpoから除外
     if ((bl = map_id2bl(id)) == NULL)
@@ -3071,23 +3062,6 @@ void mobskill_castend_pos(timer_id tid, tick_t tick, custom_id_t id, custom_data
     {
         if (md->opt1 > 0)
             return;
-    }
-
-    if (battle_config.monster_land_skill_limit == 1)
-    {
-        maxcount = skill_get_maxcount(md->skillid);
-        if (maxcount > 0)
-        {
-            int i, c;
-            for (i = c = 0; i < MAX_MOBSKILLUNITGROUP; i++)
-            {
-                if (md->skillunit[i].alive_count > 0
-                    && md->skillunit[i].skill_id == md->skillid)
-                    c++;
-            }
-            if (c >= maxcount)
-                return;
-        }
     }
 
     range = skill_get_range(md->skillid, md->skilllv);

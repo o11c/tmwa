@@ -107,9 +107,6 @@ int clif_skill_damage(struct block_list *src, struct block_list *dst,
                         unsigned int tick, int sdelay, int ddelay, int damage,
                        int div, int skill_id, int skill_lv, int type);
 
-int clif_skill_setunit(struct skill_unit *unit);
-int clif_skill_delunit(struct skill_unit *unit);
-
 int clif_changemapcell(int m, int x, int y, int cell_type, int type);
 
 int clif_status_change(struct block_list *bl, int type, int flag);

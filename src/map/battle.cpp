@@ -581,8 +581,6 @@ int battle_get_party_id(struct block_list *bl)
         // else, it is its own party
         return -md->bl.id;
     }
-    if (bl->type == BL_SKILL)
-        return ((struct skill_unit *) bl)->group->party_id;
     return 0;
 }
 
@@ -795,8 +793,6 @@ int battle_damage(struct block_list *src, struct block_list *target, int damage)
         struct map_session_data *tsd = (struct map_session_data *) target;
         return pc_damage(src, tsd, damage);
     }
-    if (target->type == BL_SKILL)
-        return skill_unit_ondamaged((struct skill_unit *) target, src, damage, gettick());
     return 0;
 }
 
@@ -2306,35 +2302,10 @@ int battle_check_target(struct block_list *src, struct block_list *target,
             return -1;
     }
 
-    if (src->type == BL_SKILL && target->type == BL_SKILL)  // 対象がスキルユニットなら無条件肯定
-        return -1;
-
     if (target->type == BL_PC
         && ((struct map_session_data *) target)->invincible_timer != -1)
         return -1;
 
-    // スキルユニットの場合、親を求める
-    if (src->type == BL_SKILL)
-    {
-        int inf2 =
-            skill_get_inf2(((struct skill_unit *) src)->group->skill_id);
-        if ((ss =
-             map_id2bl(((struct skill_unit *) src)->group->src_id)) == NULL)
-            return -1;
-        if (ss->prev == NULL)
-            return -1;
-        if (inf2 & 0x80 && (maps[src->m].flag.pvp || pc_iskiller((struct map_session_data *) src, (struct map_session_data *) target)) &&   // [MouseJstr]
-            !(target->type == BL_PC
-              && pc_isinvisible((struct map_session_data *) target)))
-            return 0;
-        if (ss == target)
-        {
-            if (inf2 & 0x100)
-                return 0;
-            if (inf2 & 0x200)
-                return -1;
-        }
-    }
     // Mobでmaster_idがあってspecial_mob_aiなら、召喚主を求める
     if (src->type == BL_MOB)
     {
@@ -2399,16 +2370,11 @@ int battle_check_target(struct block_list *src, struct block_list *target,
 
     if (ss->type == BL_PC && target->type == BL_PC)
     {                           // 両方PVPモードなら否定（敵）
-        struct skill_unit *su = NULL;
-        if (src->type == BL_SKILL)
-            su = (struct skill_unit *) src;
         if (maps[ss->m].flag.pvp
             || pc_iskiller((struct map_session_data *) ss,
                             (struct map_session_data *) target))
         {                       // [MouseJstr]
-            if (su && su->group->target_flag == BCT_NOENEMY)
-                return 1;
-            else if (battle_config.pk_mode)
+            if (battle_config.pk_mode)
                 return 1;       // prevent novice engagement in pk_mode [Valaris]
             else if (maps[ss->m].flag.pvp_noparty && s_p > 0 && t_p > 0
                      && s_p == t_p)
@@ -2583,8 +2549,6 @@ int battle_config_read(const char *cfgName)
         battle_config.pc_attack_direction_change = 1;
         battle_config.monster_attack_direction_change = 1;
         battle_config.pc_undead_nofreeze = 0;
-        battle_config.pc_land_skill_limit = 1;
-        battle_config.monster_land_skill_limit = 1;
         battle_config.party_skill_penaly = 1;
         battle_config.monster_class_change_full_recover = 0;
         battle_config.produce_item_name_input = 1;
@@ -2782,8 +2746,6 @@ int battle_config_read(const char *cfgName)
             {"mob_changetarget_byskill", &battle_config.mob_changetarget_byskill},
             {"player_attack_direction_change", &battle_config.pc_attack_direction_change},
             {"monster_attack_direction_change", &battle_config.monster_attack_direction_change},
-            {"player_land_skill_limit", &battle_config.pc_land_skill_limit},
-            {"monster_land_skill_limit", &battle_config.monster_land_skill_limit},
             {"party_skill_penaly", &battle_config.party_skill_penaly},
             {"monster_class_change_full_recover", &battle_config.monster_class_change_full_recover},
             {"produce_item_name_input", &battle_config.produce_item_name_input},

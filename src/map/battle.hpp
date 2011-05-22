@@ -218,8 +218,6 @@ extern struct Battle_Config
     int pc_attack_direction_change;
     int monster_attack_direction_change;
     int pc_undead_nofreeze;
-    int pc_land_skill_limit;
-    int monster_land_skill_limit;
     int party_skill_penaly;
     int monster_class_change_full_recover;
     int produce_item_name_input;

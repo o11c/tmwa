@@ -102,8 +102,6 @@ static const char *show_entity(entity_t * entity)
             return ((struct item_data
                      *) (&((struct flooritem_data *) entity)->
                          item_data))->name;
-        case BL_SKILL:
-            return "%skill";
         case BL_SPELL:
             return "%invocation(ERROR:this-should-not-be-an-entity)";
         default:

@@ -785,7 +785,6 @@ void map_quit(struct map_session_data *sd)
     skill_castcancel(&sd->bl, 0);
 
     skill_status_change_clear(&sd->bl, 1);
-    skill_clear_unitgroup(&sd->bl);
     pc_stop_walking(sd, 0);
     pc_stopattack(sd);
     pc_delinvincibletimer(sd);
@@ -1376,9 +1375,6 @@ static void cleanup_sub(struct block_list *bl, va_list)
             break;
         case BL_ITEM:
             map_clearflooritem(bl->id);
-            break;
-        case BL_SKILL:
-            skill_delunit((struct skill_unit *) bl);
             break;
         case BL_SPELL:
             spell_free_invocation((struct invocation *) bl);

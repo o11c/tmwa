@@ -15,7 +15,12 @@ uint32_t mt_random(void);
  * MRAND(10)    returns 0..9
  * MPRAND(5,10) returns 5..14
  */
-# define MRAND(mod) (mt_random() % (mod))
-# define MPRAND(add, mod) ((add) + MRAND(mod))
-
+inline uint32_t MRAND(uint32_t mod)
+{
+    return mt_random() % mod;
+}
+inline uint32_t MPRAND(uint32_t add, uint32_t mod)
+{
+    return add + MRAND(mod);
+}
 #endif // MT_RAND_H

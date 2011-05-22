@@ -95,4 +95,42 @@ FILE *create_or_fake_or_die(const char *filename);
 
 /// Die, and hopefully generate a backtrace
 #define SEGFAULT() *((char *) 0) = 0
+
+template<int unit>
+inline void per_unit_adjust(int& val, int proportion)
+{
+    if (proportion == unit)
+        return;
+    val = val * proportion / unit;
+}
+
+template<int unit>
+inline void per_unit_subtract(int& val, int proportion)
+{
+    per_unit_adjust<unit>(val, unit - proportion);
+}
+
+template<int unit>
+inline void per_unit_add(int& val, int proportion)
+{
+    per_unit_adjust<unit>(val, unit + proportion);
+}
+
+#define PER_UNIT_SPECIALIZE(prefix, number) \
+static inline void prefix##_adjust(int& val, int proportion) \
+{ \
+    per_unit_adjust<number>(val, proportion); \
+} \
+static inline void prefix##_subtract(int& val, int proportion) \
+{ \
+    per_unit_subtract<number>(val, proportion); \
+} \
+static inline void prefix##_add(int& val, int proportion) \
+{ \
+    per_unit_add<number>(val, proportion); \
+}
+
+PER_UNIT_SPECIALIZE(percent, 100)
+PER_UNIT_SPECIALIZE(per256, 256)
+
 #endif //UTILS_H

@@ -2313,18 +2313,6 @@ int battle_check_target(struct block_list *src, struct block_list *target,
         && ((struct map_session_data *) target)->invincible_timer != -1)
         return -1;
 
-    if (target->type == BL_SKILL)
-    {
-        switch (((struct skill_unit *) target)->group->unit_id)
-        {
-            case 0x8d:
-            case 0x8f:
-            case 0x98:
-                return 0;
-                break;
-        }
-    }
-
     // スキルユニットの場合、親を求める
     if (src->type == BL_SKILL)
     {

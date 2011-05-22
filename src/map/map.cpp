@@ -786,7 +786,6 @@ void map_quit(struct map_session_data *sd)
 
     skill_status_change_clear(&sd->bl, 1);
     skill_clear_unitgroup(&sd->bl);
-    skill_cleartimerskill(&sd->bl);
     pc_stop_walking(sd, 0);
     pc_stopattack(sd);
     pc_delinvincibletimer(sd);

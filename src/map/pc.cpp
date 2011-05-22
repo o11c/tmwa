@@ -660,9 +660,6 @@ int pc_authok(int id, int login_id2, time_t connect_until_time,
 
     sd->doridori_counter = 0;
 
-    for (int i = 0; i < MAX_SKILLTIMERSKILL; i++)
-        sd->skilltimerskill[i].timer = -1;
-
     // アカウント変数の送信要求
     intif_request_accountreg(sd);
 

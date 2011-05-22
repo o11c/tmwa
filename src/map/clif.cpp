@@ -2983,7 +2983,7 @@ int clif_skill_setunit(struct skill_unit *unit)
     WBUFL(buf, 6) = unit->group->src_id;
     WBUFW(buf, 10) = unit->bl.x;
     WBUFW(buf, 12) = unit->bl.y;
-    WBUFB(buf, 14) = unit->group->unit_id;
+    WBUFB(buf, 14) = 0; //unit->group->unit_id;
     WBUFB(buf, 15) = 1;
     WBUFL(buf, 15 + 1) = 0;    //1-4調べた限り固定
     WBUFL(buf, 15 + 5) = 0;    //5-8調べた限り固定
@@ -3008,14 +3008,6 @@ int clif_skill_setunit(struct skill_unit *unit)
         WBUFL(buf, 15 + 73) = bl->y;   //73-76術者のY座標
     WBUFL(buf, 15 + 77) = unit->bl.m;  //77-80マップIDかなぁ？かなり2バイトで足りそうな数字
     WBUFB(buf, 15 + 81) = 0xaa;    //81終端文字0xaa
-
-    /*      Graffiti [Valaris]      */
-    if (unit->group->unit_id == 0xb0)
-    {
-        WBUFL(buf, 15) = 1;
-        WBUFL(buf, 16) = 1;
-        memcpy(WBUFP(buf, 17), unit->group->valstr, 80);
-    }
 
     clif_send(buf, packet_len_table[0x1c9], &unit->bl, AREA);
     return 0;

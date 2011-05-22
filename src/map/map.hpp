@@ -139,7 +139,6 @@ struct skill_unit_group
     int skill_id, skill_lv;
     int val1, val2;
     char *valstr;
-    int unit_id;
     int group_id;
     int unit_count, alive_count;
     struct skill_unit *unit;
@@ -148,17 +147,6 @@ struct skill_unit_group_tickset
 {
     unsigned int tick;
     int group_id;
-};
-struct skill_timerskill
-{
-    int timer;
-    int src_id;
-    int target_id;
-    int map;
-    short x, y;
-    short skill_id, skill_lv;
-    int type;
-    int flag;
 };
 
 struct npc_data;
@@ -268,7 +256,6 @@ struct map_session_data
     short skillitem, skillitemlv;
     struct skill_unit_group skillunit[MAX_SKILLUNITGROUP];
     struct skill_unit_group_tickset skillunittick[MAX_SKILLUNITGROUPTICKSET];
-    struct skill_timerskill skilltimerskill[MAX_SKILLTIMERSKILL];
 
     // [Fate] Used for gradual healing; amount of enqueued regeneration
     struct quick_regeneration quick_regeneration_hp, quick_regeneration_sp;
@@ -530,7 +517,6 @@ struct mob_data
     int def_ele;
     int master_id, master_dist;
     int exclusion_src, exclusion_party;
-    struct skill_timerskill skilltimerskill[MAX_MOBSKILLTIMERSKILL];
     struct skill_unit_group skillunit[MAX_MOBSKILLUNITGROUP];
     struct skill_unit_group_tickset skillunittick[MAX_SKILLUNITGROUPTICKSET];
     char npc_event[50];

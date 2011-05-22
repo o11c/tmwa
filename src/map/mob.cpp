@@ -862,7 +862,6 @@ int mob_changestate(struct mob_data *md, int state, int type)
             skill_unit_out_all(&md->bl, gettick(), 1);
             skill_status_change_clear(&md->bl, 2); // The abnormalities in status are canceled.
             skill_clear_unitgroup(&md->bl);    // All skill unit groups are deleted.
-            skill_cleartimerskill(&md->bl);
             if (md->deletetimer != -1)
                 delete_timer(md->deletetimer, mob_timer_delete);
             md->deletetimer = -1;
@@ -1140,9 +1139,6 @@ int mob_spawn(int id)
     if (md->lootitem)
         memset(md->lootitem, 0, sizeof(md->lootitem));
     md->lootitem_count = 0;
-
-    for (i = 0; i < MAX_MOBSKILLTIMERSKILL; i++)
-        md->skilltimerskill[i].timer = -1;
 
     for (i = 0; i < MAX_STATUSCHANGE; i++)
     {

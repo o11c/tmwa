@@ -72,9 +72,6 @@ int itemdb_isequip(int);
 int itemdb_isequip2(struct item_data *);
 int itemdb_isequip3(int);
 
-void itemdb_reload(void);
-
-void do_final_itemdb(void);
 int do_init_itemdb(void);
 
 #endif // ITEMDB_H

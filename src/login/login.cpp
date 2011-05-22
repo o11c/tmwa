@@ -875,17 +875,6 @@ static void char_anti_freeze_system(timer_id, tick_t,
 
 
 
-/// Reload GM accounts
-/// Forwarded from map-server
-// uint16_t packet
-static void x2709(int fd, int id)
-{
-    login_log("Char-server '%s': Request to re-load GM configuration file (ip: %s).\n",
-               server[id].name, ip_of(fd));
-    read_gm_account();
-    // send GM accounts to all char-servers
-    send_GM_accounts();
-}
 
 /// authenticate an account to the char-server
 // uint16_t packet, uint32_t acc, uint32_t login_id[2], char sex, uint32_t ip
@@ -1361,14 +1350,6 @@ static void parse_fromchar(int fd)
 
         switch (RFIFOW(fd, 0))
         {
-            /// Reload GM accounts
-            /// Forwarded from map-server
-            // uint16_t packet
-            case 0x2709:
-                x2709(fd, id);
-                RFIFOSKIP(fd, 2);
-                break;
-
             /// authenticate an account to the char-server
             // uint16_t packet, uint32_t acc, uint32_t login_id[2], char sex, uint32_t ip
             case 0x2712:

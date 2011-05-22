@@ -40,12 +40,6 @@ int storage_comp_item(const void *_i1, const void *_i2)
     return i1->nameid - i2->nameid;
 }
 
-static void storage_db_final(db_key_t, db_val_t data, va_list)
-{
-    struct storage *stor = (struct storage *) data.p;
-    free(stor);
-}
-
 void sortage_sortitem(struct storage *stor)
 {
     nullpo_retv(stor);
@@ -61,12 +55,6 @@ int do_init_storage(void)      // map.c::do_init()から呼ばれる
 {
     storage_db = numdb_init();
     return 1;
-}
-
-void do_final_storage(void)    // by [MC Cameri]
-{
-    if (storage_db)
-        numdb_final(storage_db, storage_db_final);
 }
 
 struct storage *account2storage(int account_id)

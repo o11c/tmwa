@@ -911,19 +911,6 @@ static int chrif_recvgmaccounts(int fd)
     return 0;
 }
 
-/*==========================================
- * Request to reload GM accounts and their levels: send to char-server by [Yor]
- *------------------------------------------
- */
-int chrif_reloadGMdb(void)
-{
-
-    WFIFOW(char_fd, 0) = 0x2af7;
-    WFIFOSET(char_fd, 2);
-
-    return 0;
-}
-
 /*========================================
  * Map item IDs
  *----------------------------------------

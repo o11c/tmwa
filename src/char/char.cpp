@@ -1750,18 +1750,6 @@ static void parse_frommap(int fd)
     {
         switch (RFIFOW(fd, 0))
         {
-            /// request from map-server to reload GM accounts. Transmission to login-server (by Yor)
-            // deprecated - the GM accounts file should not be edited by hand
-            // uint16_t packet
-            case 0x2af7:
-                if (login_fd < 0)
-                    goto end_x2af7;
-                WFIFOW(login_fd, 0) = 0x2709;
-                WFIFOSET(login_fd, 2);
-            end_x2af7:
-                RFIFOSKIP(fd, 2);
-                break;
-
             /// Receiving map names list from the map-server
             case 0x2afa:
                 if (RFIFOREST(fd) < 4 || RFIFOREST(fd) < RFIFOW(fd, 2))

@@ -89,8 +89,6 @@ int skill_status_change_clear(struct block_list *bl, int type);
 
 int skill_update_heal_animation(struct map_session_data *sd); // [Fate]  Check whether the healing flag must be updated, do so if needed
 
-void skill_reload(void);
-
 enum
 {
     ST_NONE, ST_HIDING, ST_CLOAKING, ST_HIDDEN,

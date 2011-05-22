@@ -1358,52 +1358,12 @@ static void map_config_read(const char *cfgName)
     fclose_(fp);
 }
 
-static void cleanup_sub(struct block_list *bl, va_list)
-{
-    nullpo_retv(bl);
-
-    switch (bl->type)
-    {
-        case BL_PC:
-            map_delblock(bl);  // There is something better...
-            break;
-        case BL_NPC:
-            npc_delete((struct npc_data *) bl);
-            break;
-        case BL_MOB:
-            mob_delete((struct mob_data *) bl);
-            break;
-        case BL_ITEM:
-            map_clearflooritem(bl->id);
-            break;
-        case BL_SPELL:
-            spell_free_invocation((struct invocation *) bl);
-            break;
-    }
-}
-
 /// server is shutting down
-// TODO: don't bother freeing anything as process is about to end
+// don't bother freeing anything as process is about to end
 static void do_final(void)
 {
-    for (int map_id = 0; map_id < map_num; map_id++)
-    {
-        if (maps[map_id].m)
-            map_foreachinarea(cleanup_sub, map_id, 0, 0, maps[map_id].xs,
-                               maps[map_id].ys, BL_NUL, 0);
-    }
-
-    for (int i = 0; i < fd_max; i++)
-        delete_session(i);
-
-    numdb_final(id_db, NULL);
-    strdb_final(map_db, NULL);
-    strdb_final(nick_db, NULL);
-    numdb_final(charid_db, NULL);
-
+    // Saves variables
     do_final_script();
-    do_final_itemdb();
-    do_final_storage();
 }
 
 /// --help was passed

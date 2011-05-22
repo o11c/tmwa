@@ -34,7 +34,6 @@ int chrif_char_ask_name(int id, char *character_name, CharOperation operation_ty
                           int year = 0, int month = 0, int day = 0,
                          int hour = 0, int minute = 0, int second = 0);
 int chrif_saveaccountreg2(struct map_session_data *sd);
-int chrif_reloadGMdb(void);
 int chrif_send_divorce(int char_id);
 
 int do_init_chrif (void);

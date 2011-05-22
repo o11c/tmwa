@@ -132,6 +132,4 @@ int mobskill_event(struct mob_data *md, int flag);
 void mobskill_castend_id(timer_id tid, tick_t tick, custom_id_t id, custom_data_t data);
 void mobskill_castend_pos(timer_id tid, tick_t tick, custom_id_t id, custom_data_t data);
 
-void mob_reload(void);
-
 #endif // MOB_H

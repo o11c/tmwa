@@ -613,48 +613,6 @@ static int itemdb_read_noequip(void)
     return 0;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-static void itemdb_final(db_key_t, db_val_t data, va_list)
-{
-    struct item_data *id;
-
-    nullpo_retv(id = (struct item_data *)data.p);
-
-    if (id->use_script)
-        free(id->use_script);
-    if (id->equip_script)
-        free(id->equip_script);
-    free(id);
-}
-
-void itemdb_reload(void)
-{
-    /*
-     *
-     * <empty item databases>
-     * itemdb_read();
-     *
-     */
-
-    do_init_itemdb();
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-void do_final_itemdb(void)
-{
-    if (item_db)
-    {
-        numdb_final(item_db, itemdb_final);
-        item_db = NULL;
-    }
-}
-
 /*
 static FILE *dfp;
 static int itemdebug(void *key,void *data,va_list ap){

@@ -107,11 +107,6 @@ ATCOMMAND_FUNC(charstpoint);
 ATCOMMAND_FUNC(charmodel);
 ATCOMMAND_FUNC(charskpoint);
 ATCOMMAND_FUNC(charzeny);
-ATCOMMAND_FUNC(reloaditemdb);
-ATCOMMAND_FUNC(reloadmobdb);
-ATCOMMAND_FUNC(reloadskilldb);
-ATCOMMAND_FUNC(reloadscript);
-ATCOMMAND_FUNC(reloadgmdb);
 ATCOMMAND_FUNC(mapexit);
 ATCOMMAND_FUNC(idsearch);
 ATCOMMAND_FUNC(mapinfo);
@@ -143,10 +138,7 @@ ATCOMMAND_FUNC(npcmove);
 ATCOMMAND_FUNC(killable);
 ATCOMMAND_FUNC(charkillable);
 ATCOMMAND_FUNC(chareffect);
-ATCOMMAND_FUNC(dropall);
-ATCOMMAND_FUNC(chardropall);
 ATCOMMAND_FUNC(storeall);
-ATCOMMAND_FUNC(charstoreall);
 ATCOMMAND_FUNC(skillid);
 ATCOMMAND_FUNC(summon);
 ATCOMMAND_FUNC(adjgmlvl);
@@ -210,8 +202,6 @@ static AtCommandInfo atcommand_info[] = {
     "",                 "Warp yourself to your respawn point"},
     {"@killable", 40,   atcommand_killable,     ATCC_SELF,
     "",                 "Make yourself killable by other players."},
-    {"@dropall", 40,    atcommand_dropall,      ATCC_SELF,
-    "",                 "Drop the contents of your inventory to the ground."},
     {"@storeall", 40,   atcommand_storeall,     ATCC_SELF,
     "",                 "Put the contents of your inventory into storage."},
     {"@speed", 40,      atcommand_speed,        ATCC_SELF,
@@ -298,10 +288,6 @@ static AtCommandInfo atcommand_info[] = {
     "charname",         "Make a player killable by others."},
     {"@chareffect", 40, atcommand_chareffect,   ATCC_CHAR,
     "",                 "??"},
-    {"@chardropall", 40, atcommand_chardropall, ATCC_CHAR,
-    "charname",         "Make the contents of a player's inventory drop to the ground."},
-    {"@charstoreall", 40, atcommand_charstoreall, ATCC_CHAR,
-    "charname",         "Put the contents of a player's inventory into storage."},
     {"@charstats", 40,  atcommand_character_stats, ATCC_CHAR,
     "charname",         "display stats of a character"},
     {"@charstatsall", 40, atcommand_character_stats_all, ATCC_CHAR,
@@ -419,16 +405,6 @@ static AtCommandInfo atcommand_info[] = {
     "",                 "Temporarily adjust the GM level of a player."},
     {"@adjcmdlvl", 99,  atcommand_adjcmdlvl,    ATCC_ADMIN,
     "",                 "Temporarily adjust the required @level of a @command."},
-    {"@reloaditemdb", 99, atcommand_reloaditemdb, ATCC_ADMIN,
-    "",                 "Reload items (might cause problems)."},
-    {"@reloadmobdb", 99, atcommand_reloadmobdb, ATCC_ADMIN,
-    "",                 "Reload mobs (might cause problems)."},
-    {"@reloadskilldb", 99, atcommand_reloadskilldb, ATCC_ADMIN,
-    "",                 "Reload skills (might cause problems)."},
-    {"@reloadscript", 99, atcommand_reloadscript, ATCC_ADMIN,
-    "",                 "Reload scripts (likely to cause problems)."},
-    {"@reloadgmdb", 99, atcommand_reloadgmdb,   ATCC_ADMIN,
-    "",                 "Reload GMs (probably unneeded)."},
     {"@gm", 100,        atcommand_gm,           ATCC_ADMIN,
     "password",         "Make yourself a GM."},
     {"@party", 1,       atcommand_party,        ATCC_GROUP,
@@ -3708,61 +3684,6 @@ int atcommand_partyrecall(int fd, struct map_session_data *sd,
     return 0;
 }
 
-/// Reload the item DB. Might cause problems.
-int atcommand_reloaditemdb(int fd, struct map_session_data *,
-                            const char *, const char *)
-{
-    itemdb_reload();
-    clif_displaymessage(fd, "Item database reloaded.");
-
-    return 0;
-}
-
-/// Reload the mob DB. Might cause problems
-int atcommand_reloadmobdb(int fd, struct map_session_data *,
-                           const char *, const char *)
-{
-    mob_reload();
-    clif_displaymessage(fd, "Monster database reloaded.");
-
-    return 0;
-}
-
-/// Reload skills DB. Might cause problems
-int atcommand_reloadskilldb(int fd, struct map_session_data *,
-                             const char *, const char *)
-{
-    skill_reload();
-    clif_displaymessage(fd, "Skill database reloaded.");
-
-    return 0;
-}
-
-/// Reload scripts. Likely to cause problems
-int atcommand_reloadscript(int fd, struct map_session_data *,
-                            const char *, const char *)
-{
-    do_init_npc();
-    do_init_script();
-
-    npc_event_do_oninit();
-
-    clif_displaymessage(fd, "Scripts reloaded.");
-
-    return 0;
-}
-
-/// Reload GMs. Shouldn't be needed
-int atcommand_reloadgmdb(int fd, struct map_session_data *,
-                          const char *, const char *)
-{
-    chrif_reloadGMdb();
-
-    clif_displaymessage(fd, "Login-server asked to reload GM accounts and their level.");
-
-    return 0;
-}
-
 /**
  * @mapinfo <map name> [0-2] by MC_Cameri
  * => Shows information about the map [map name]
@@ -4569,48 +4490,6 @@ int atcommand_chareffect(int fd, struct map_session_data *,
     return 0;
 }
 
-/// Drop everything on the ground
-int atcommand_dropall(int, struct map_session_data *sd,
-                       const char *, const char *)
-{
-    for (int i = 0; i < MAX_INVENTORY; i++)
-    {
-        if (sd->status.inventory[i].amount)
-        {
-            if (sd->status.inventory[i].equip)
-                pc_unequipitem(sd, i, 0);
-            pc_dropitem(sd, i, sd->status.inventory[i].amount);
-        }
-    }
-    return 0;
-}
-
-/// Force a player to drop everything on the ground
-int atcommand_chardropall(int fd, struct map_session_data *,
-                           const char *, const char *message)
-{
-    if (!message || !*message)
-        return -1;
-    struct map_session_data *pl_sd = map_nick2sd((char *) message);
-    if (!pl_sd)
-        return -1;
-    for (int i = 0; i < MAX_INVENTORY; i++)
-    {
-        if (pl_sd->status.inventory[i].amount)
-        {
-            if (pl_sd->status.inventory[i].equip)
-                pc_unequipitem(pl_sd, i, 0);
-            pc_dropitem(pl_sd, i, pl_sd->status.inventory[i].amount);
-        }
-    }
-
-    clif_displaymessage(pl_sd->fd, "Ever play 52 card pickup?");
-    clif_displaymessage(fd, "It is done");
-    clif_displaymessage(fd, "It is offical.. you're a jerk");
-
-    return 0;
-}
-
 /// Put everything into storage to simplify your inventory. Intended as a debugging aid
 int atcommand_storeall(int fd, struct map_session_data *sd,
                         const char *, const char *)
@@ -4637,41 +4516,6 @@ int atcommand_storeall(int fd, struct map_session_data *sd,
     storage_storageclose(sd);
 
     clif_displaymessage(fd, "It is done");
-    return 0;
-}
-
-/// Force a player's inventory to be moved into storage
-int atcommand_charstoreall(int fd, struct map_session_data *sd,
-                            const char *, const char *message)
-{
-    if (!message || !*message)
-        return -1;
-    struct map_session_data *pl_sd = map_nick2sd((char *) message);
-    if (!pl_sd)
-        return -1;
-
-    if (storage_storageopen(pl_sd) == 1)
-    {
-        clif_displaymessage(fd, "Had to open the characters storage window...");
-        clif_displaymessage(fd, "run this command again.");
-        return 0;
-    }
-    for (int i = 0; i < MAX_INVENTORY; i++)
-    {
-        if (pl_sd->status.inventory[i].amount)
-        {
-            if (pl_sd->status.inventory[i].equip)
-                pc_unequipitem(pl_sd, i, 0);
-            storage_storageadd(pl_sd, i, sd->status.inventory[i].amount);
-        }
-    }
-    storage_storageclose(pl_sd);
-
-    clif_displaymessage(pl_sd->fd, "Everything you own has been put in storage for safekeeping.");
-    clif_displaymessage(pl_sd->fd, "   -- the management");
-
-    clif_displaymessage(fd, "It is done");
-
     return 0;
 }
 

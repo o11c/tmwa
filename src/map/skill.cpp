@@ -1218,18 +1218,6 @@ static int skill_readdb(void)
     return 0;
 }
 
-void skill_reload(void)
-{
-    /*
-     *
-     * <empty skill database>
-     * <?>
-     *
-     */
-
-    do_init_skill();
-}
-
 /*==========================================
  * スキル関係初期化処理
  *------------------------------------------

@@ -30,10 +30,8 @@ struct Damage battle_calc_attack(int attack_type,
 struct Damage battle_calc_weapon_attack(struct block_list *bl,
                                         struct block_list *target,
                                         int skill_num, int skill_lv);
-struct Damage battle_calc_magic_attack(struct block_list *bl,
-                                        struct block_list *target,
-                                        int skill_num, int skill_lv,
-                                       int flag);
+struct Damage battle_calc_magic_attack(struct block_list *bl, struct block_list *target,
+                                       int skill_num, int skill_lv);
 struct Damage battle_calc_misc_attack(struct block_list *bl,
                                        struct block_list *target,
                                       int skill_num, int skill_lv, int flag);
@@ -146,7 +144,6 @@ extern struct Battle_Config
     int death_penalty_type;
     int death_penalty_base, death_penalty_job;
     int pvp_exp;               // [MouseJstr]
-    int gtb_pvp_only;          // [MouseJstr]
     int zeny_penalty;
     int restart_hp_rate;
     int restart_sp_rate;

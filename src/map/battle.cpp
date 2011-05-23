@@ -307,7 +307,7 @@ static int battle_get_atk_2(struct block_list *bl)
     return 0;
 }
 
-/// Get a being's primary magical attack strength
+/// Get a being's maximum magical attack strength
 static int battle_get_matk1(struct block_list *bl)
 {
     nullpo_retr(0, bl);
@@ -322,7 +322,7 @@ static int battle_get_matk1(struct block_list *bl)
     return 0;
 }
 
-/// Get a being's secondary magical attack strength
+/// Get a being's minimum magical attack strength
 static int battle_get_matk2(struct block_list *bl)
 {
     nullpo_retr(0, bl);
@@ -1513,147 +1513,107 @@ struct Damage battle_calc_weapon_attack(struct block_list *src,
     return wd;
 }
 
-/*==========================================
- * 魔法ダメージ計算
- *------------------------------------------
- */
-struct Damage battle_calc_magic_attack(struct block_list *bl,
-                                        struct block_list *target,
-                                        int skill_num, int skill_lv, int)
+/// Calculate damage of one being attacking another magically
+struct Damage battle_calc_magic_attack(struct block_list *src, struct block_list *target,
+                                       int skill_num, int skill_lv)
 {
-    int mdef1 = battle_get_mdef(target);
-    int mdef2 = battle_get_mdef2(target);
-    int matk1, matk2, damage = 0, div_ = 1, blewcount =
-        skill_get_blewcount(skill_num, skill_lv), rdamage = 0;
-    struct Damage md;
-    int aflag;
-    int normalmagic_flag = 1;
-    int ele = 0, t_ele = 0, t_race = 7, t_mode =
-        0, cardfix;
-    struct map_session_data *sd = NULL, *tsd = NULL;
+    struct Damage md = {};
+    nullpo_retr(md, src);
+    nullpo_retr(md, target);
 
-    //return前の処理があるので情報出力部のみ変更
-    if (bl == NULL || target == NULL)
-    {
-        nullpo_info(NLP_MARK);
-        memset(&md, 0, sizeof(md));
-        return md;
-    }
-
-    matk1 = battle_get_matk1(bl);
-    matk2 = battle_get_matk2(bl);
-    ele = skill_get_pl(skill_num);
-    t_ele = battle_get_elem_type(target);
-    t_race = battle_get_race(target);
-    t_mode = battle_get_mode(target);
-
-#define MATK_FIX( a,b ) { matk1=matk1*(a)/(b); matk2=matk2*(a)/(b); }
-
-    if (bl->type == BL_PC && (sd = (struct map_session_data *) bl))
-    {
-        sd->state.attack_type = BF_MAGIC;
-        if (sd->matk_rate != 100)
-            MATK_FIX(sd->matk_rate, 100);
-        sd->state.arrow_atk = 0;
-    }
-    if (target->type == BL_PC)
-        tsd = (struct map_session_data *) target;
-
-    aflag = BF_MAGIC | BF_LONG | BF_SKILL;
-
-    if (normalmagic_flag)
-    {                           // 一般魔法ダメージ計算
-        int imdef_flag = 0;
-        if (matk1 > matk2)
-            damage = matk2 + MRAND((matk1 - matk2 + 1));
-        else
-            damage = matk2;
-        if (sd)
-        {
-            if (sd->ignore_mdef_ele & (1 << t_ele)
-                || sd->ignore_mdef_race & (1 << t_race))
-                imdef_flag = 1;
-            if (t_mode & 0x20)
-            {
-                if (sd->ignore_mdef_race & (1 << 10))
-                    imdef_flag = 1;
-            }
-            else
-            {
-                if (sd->ignore_mdef_race & (1 << 11))
-                    imdef_flag = 1;
-            }
-        }
-        if (!imdef_flag)
-        {
-            if (battle_config.magic_defense_type)
-            {
-                damage =
-                    damage - (mdef1 * battle_config.magic_defense_type) -
-                    mdef2;
-            }
-            else
-            {
-                damage = (damage * (100 - mdef1)) / 100 - mdef2;
-            }
-        }
-
-        if (damage < 1)
-            damage = 1;
-    }
-
-    if (tsd)
-    {
-        cardfix = 100;
-        cardfix = cardfix * (100 - tsd->magic_def_rate) / 100;
-        damage = damage * cardfix / 100;
-    }
-    if (damage < 0)
-        damage = 0;
-
-    damage = battle_attr_fix(damage, ele, battle_get_element(target));    // 属 性修正
-
-    div_ = skill_get_num(skill_num, skill_lv);
-
-    if (div_ > 1)
-        damage *= div_;
-
-//  if (mdef1 >= 1000000 && damage > 0)
-    if (t_mode & 0x40 && damage > 0)
-        damage = 1;
-
-    if (tsd && tsd->special_state.no_magic_damage)
-    {
-        if (battle_config.gtb_pvp_only != 0)
-        {                       // [MouseJstr]
-            if (maps[target->m].flag.pvp && target->type == BL_PC)
-                damage = (damage * (100 - battle_config.gtb_pvp_only)) / 100;
-        }
-        else
-            damage = 0;         // 黄 金蟲カード（魔法ダメージ０）
-    }
-
-    damage = battle_calc_damage(target, damage, div_, aflag);
-
-    /* magic_damage_return by [AppleGirl] and [Valaris]     */
-    if (target->type == BL_PC && tsd && tsd->magic_damage_return > 0)
-    {
-        rdamage += damage * tsd->magic_damage_return / 100;
-        if (rdamage < 1)
-            rdamage = 1;
-        clif_damage(target, bl, gettick(), 0, 0, rdamage, 0, 0, 0);
-        battle_damage(target, bl, rdamage);
-    }
-    /*          end magic_damage_return         */
-
-    md.damage = damage;
-    md.div_ = div_;
-    md.amotion = battle_get_amotion(bl);
+    md.amotion = battle_get_amotion(src);
     md.dmotion = battle_get_dmotion(target);
     md.damage2 = 0;
     md.type = 0;
-    md.blewcount = blewcount;
-    md.flag = aflag;
+    md.flag = BF_MAGIC | BF_LONG | BF_SKILL;
+
+    int matk1 = battle_get_matk1(src);
+    int matk2 = battle_get_matk2(src);
+
+    struct map_session_data *sd = NULL;
+    if (src->type == BL_PC)
+    {
+        sd = (struct map_session_data *) src;
+        sd->state.attack_type = BF_MAGIC;
+        percent_adjust(matk1, sd->matk_rate);
+        percent_adjust(matk2, sd->matk_rate);
+        sd->state.arrow_atk = 0;
+    }
+    struct map_session_data *tsd = NULL;
+    if (target->type == BL_PC)
+        tsd = (struct map_session_data *) target;
+
+    int imdef_flag = 0;
+    if (matk1 > matk2)
+        md.damage = matk2 + MRAND(matk1 - matk2 + 1);
+    else
+        md.damage = matk2;
+
+
+    int ele = skill_get_pl(skill_num);
+    int t_mode = battle_get_mode(target);
+    if (sd)
+    {
+        int t_ele = battle_get_elem_type(target);
+        int t_race = battle_get_race(target);
+
+        if (sd->ignore_mdef_ele & (1 << t_ele) || sd->ignore_mdef_race & (1 << t_race))
+            imdef_flag = 1;
+        if (t_mode & 0x20)
+        {
+            if (sd->ignore_mdef_race & (1 << 10))
+                imdef_flag = 1;
+        }
+        else
+        {
+            if (sd->ignore_mdef_race & (1 << 11))
+                imdef_flag = 1;
+        }
+    }
+
+    int mdef1 = battle_get_mdef(target);
+    int mdef2 = battle_get_mdef2(target);
+
+    if (!imdef_flag)
+    {
+        if (battle_config.magic_defense_type)
+            md.damage -= mdef1 * battle_config.magic_defense_type;
+        else
+            percent_subtract(md.damage, mdef1);
+        md.damage -= mdef2;
+    }
+
+    if (md.damage < 1)
+        md.damage = 1;
+
+    if (tsd)
+        percent_subtract(md.damage, tsd->magic_def_rate);
+    if (md.damage < 0)
+        md.damage = 0;
+
+    md.damage = battle_attr_fix(md.damage, ele, battle_get_element(target));
+
+    md.div_ = skill_get_num(skill_num, skill_lv);
+
+    if (md.div_ > 1)
+        md.damage *= md.div_;
+
+    if (t_mode & 0x40 && md.damage > 0)
+        md.damage = 1;
+
+    if (tsd && tsd->special_state.no_magic_damage)
+        md.damage = 0;
+
+    md.damage = battle_calc_damage(target, md.damage, md.div_, md.flag);
+
+    if (target->type == BL_PC && tsd && tsd->magic_damage_return > 0)
+    {
+        int rdamage = md.damage * tsd->magic_damage_return / 100;
+        if (rdamage < 1)
+            rdamage = 1;
+        clif_damage(target, src, gettick(), 0, 0, rdamage, 0, 0, 0);
+        battle_damage(target, src, rdamage);
+    }
 
     return md;
 }
@@ -1741,8 +1701,7 @@ struct Damage battle_calc_attack(int attack_type,
         case BF_WEAPON:
             return battle_calc_weapon_attack(bl, target, skill_num, skill_lv);
         case BF_MAGIC:
-            return battle_calc_magic_attack(bl, target, skill_num, skill_lv,
-                                             flag);
+            return battle_calc_magic_attack(bl, target, skill_num, skill_lv);
         case BF_MISC:
             return battle_calc_misc_attack(bl, target, skill_num, skill_lv,
                                             flag);
@@ -2233,7 +2192,6 @@ int battle_config_read(const char *cfgName)
         battle_config.base_exp_rate = 100;
         battle_config.job_exp_rate = 100;
         battle_config.pvp_exp = 1;
-        battle_config.gtb_pvp_only = 0;
         battle_config.death_penalty_type = 0;
         battle_config.death_penalty_base = 0;
         battle_config.death_penalty_job = 0;
@@ -2429,7 +2387,6 @@ int battle_config_read(const char *cfgName)
             {"base_exp_rate", &battle_config.base_exp_rate},
             {"job_exp_rate", &battle_config.job_exp_rate},
             {"pvp_exp", &battle_config.pvp_exp},
-            {"gtb_pvp_only", &battle_config.gtb_pvp_only},
             {"death_penalty_type", &battle_config.death_penalty_type},
             {"death_penalty_base", &battle_config.death_penalty_base},
             {"death_penalty_job", &battle_config.death_penalty_job},

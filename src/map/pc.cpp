@@ -78,16 +78,6 @@ static int aspd_base[MAX_PC_CLASS][20];
 static char job_bonus[3][MAX_PC_CLASS][MAX_LEVEL];
 static int exp_table[14][MAX_LEVEL];
 static char statp[255][7];
-// TODO eliminate the first 2 indices, they are always 0
-static struct
-{
-    int id;
-    int max;
-    struct
-    {
-        short id, lv;
-    } need[6];
-} skill_tree[3][MAX_PC_CLASS][100];
 
 static int refinebonus[5][3];   // 精錬ボーナステーブル(refine_db.txt)
 static int percentrefinery[5][10];  // 精錬成功率(refine_db.txt)
@@ -808,66 +798,6 @@ static int pc_calc_skillpoint(struct map_session_data *sd)
     return skill_points;
 }
 
-/*==========================================
- * 覚えられるスキルの計算
- *------------------------------------------
- */
-static int pc_calc_skilltree(struct map_session_data *sd)
-{
-    int i, id = 0, flag;
-    nullpo_retr(0, sd);
-
-    if (battle_config.gm_allskill > 0
-        && pc_isGM(sd) >= battle_config.gm_allskill)
-    {
-        // 全てのスキル
-        for (i = 1; i < 158; i++)
-            sd->status.skill[i].id = i;
-        for (i = 210; i < 291; i++)
-            sd->status.skill[i].id = i;
-        for (i = 304; i < 337; i++)
-            sd->status.skill[i].id = i;
-        if (battle_config.enable_upper_class)
-        {                       //confで無効でなければ読み込む
-            for (i = 355; i < MAX_SKILL; i++)
-                sd->status.skill[i].id = i;
-        }
-
-    }
-    else
-    {
-        // 通常の計算
-        do
-        {
-            flag = 0;
-            for (i = 0; (id = skill_tree[0][0][i].id) > 0; i++)
-            {
-                int j, f = 1;
-                if (!battle_config.skillfree)
-                {
-                    for (j = 0; j < 5; j++)
-                    {
-                        if (skill_tree[0][0][i].need[j].id &&
-                            pc_checkskill(sd,
-                                           skill_tree[0][0][i].need[j].id) <
-                            skill_tree[0][0][i].need[j].lv)
-                            f = 0;
-                    }
-                }
-                if (f && sd->status.skill[id].id == 0)
-                {
-                    sd->status.skill[id].id = id;
-                    flag = 1;
-                }
-            }
-        }
-        while (flag);
-    }
-//  if (battle_config.etc_log)
-//      printf("calc skill_tree\n");
-    return 0;
-}
-
 static void pc_set_weapon_look(struct map_session_data *sd)
 {
     if (sd->attack_spell_override)
@@ -923,8 +853,6 @@ int pc_calcstatus(struct map_session_data *sd, int first)
     b_mdef = sd->mdef;
     b_mdef2 = sd->mdef2;
     b_base_atk = sd->base_atk;
-
-    pc_calc_skilltree(sd);     // スキルツリーの計算
 
     sd->max_weight = max_weight_base[0] + sd->status.str * 300;
 
@@ -2480,7 +2408,7 @@ int pc_setpos(struct map_session_data *sd, const char *mapname_org, int x, int y
     if (sd->party_invite > 0)   // パーティ勧誘を拒否する
         party_reply_invite(sd, sd->party_invite_account, 0);
 
-    skill_castcancel(&sd->bl, 0);  // 詠唱中断
+    skill_castcancel(&sd->bl);  // 詠唱中断
     pc_stop_walking(sd, 0);    // 歩行中断
     pc_stopattack(sd);         // 攻撃中断
 
@@ -3514,43 +3442,6 @@ int pc_skillup(struct map_session_data *sd, int skill_num)
 }
 
 /*==========================================
- * /allskill
- *------------------------------------------
- */
-int pc_allskillup(struct map_session_data *sd)
-{
-    int i, id;
-
-    nullpo_retr(0, sd);
-
-    for (i = 0; i < MAX_SKILL; i++)
-        sd->status.skill[i].id = 0;
-
-    if (battle_config.gm_allskill > 0
-        && pc_isGM(sd) >= battle_config.gm_allskill)
-    {
-        // 全てのスキル
-        for (i = 1; i < 158; i++)
-            sd->status.skill[i].lv = skill_get_max(i);
-        for (i = 210; i < 291; i++)
-            sd->status.skill[i].lv = skill_get_max(i);
-        for (i = 304; i < MAX_SKILL; i++)
-            sd->status.skill[i].lv = skill_get_max(i);
-    }
-    else
-    {
-        for (i = 0; (id = skill_tree[0][0][i].id) > 0; i++)
-        {
-            if (sd->status.skill[id].id == 0 && skill_get_inf2(id) & 0x01)
-                sd->status.skill[id].lv = skill_get_max(id);
-        }
-    }
-    pc_calcstatus(sd, 0);
-
-    return 0;
-}
-
-/*==========================================
  * /resetlvl
  *------------------------------------------
  */
@@ -3788,7 +3679,7 @@ int pc_damage(struct block_list *src, struct map_session_data *sd,
     pc_setdead(sd);
 
     pc_stop_walking(sd, 0);
-    skill_castcancel(&sd->bl, 0);  // 詠唱の中止
+    skill_castcancel(&sd->bl);  // 詠唱の中止
     clif_clearchar_area(&sd->bl, 1);
     pc_setglobalreg(sd, "PC_DIE_COUNTER", ++sd->die_counter);  //死にカウンター書き込み
     skill_status_change_clear(&sd->bl, 0); // ステータス異常を解除する
@@ -5792,7 +5683,6 @@ void pc_setstand(struct map_session_data *sd)
  * exp.txt 必要経験値
  * job_db1.txt 重量,hp,sp,攻撃速度
  * job_db2.txt job能力値ボーナス
- * skill_tree.txt 各職毎のスキルツリー
  * attr_fix.txt 属性修正テーブル
  * size_fix.txt サイズ補正テーブル
  * refine_db.txt 精錬データテーブル
@@ -5940,45 +5830,6 @@ static int pc_readdb(void)
     }
     fclose_(fp);
     printf("read db/job_db2-2.txt done\n");
-
-    // スキルツリー
-    memset(skill_tree, 0, sizeof(skill_tree));
-    fp = fopen_("db/skill_tree.txt", "r");
-    if (fp == NULL)
-    {
-        printf("can't read db/skill_tree.txt\n");
-        return 1;
-    }
-    while (fgets(line, sizeof(line) - 1, fp))
-    {
-        char *split[50];
-        if (line[0] == '/' && line[1] == '/')
-            continue;
-        for (j = 0, p = line; j < 13 && p; j++)
-        {
-            split[j] = p;
-            p = strchr(p, ',');
-            if (p)
-                *p++ = 0;
-        }
-        if (j < 13)
-            continue;
-        i = atoi(split[0]);
-        for (j = 0; skill_tree[0][i][j].id; j++);
-        skill_tree[0][i][j].id = atoi(split[1]);
-        skill_tree[0][i][j].max = atoi(split[2]);
-        skill_tree[2][i][j].id = atoi(split[1]);   //養子職は良く分からないので暫定
-        skill_tree[2][i][j].max = atoi(split[2]);  //養子職は良く分からないので暫定
-        for (k = 0; k < 5; k++)
-        {
-            skill_tree[0][i][j].need[k].id = atoi(split[k * 2 + 3]);
-            skill_tree[0][i][j].need[k].lv = atoi(split[k * 2 + 4]);
-            skill_tree[2][i][j].need[k].id = atoi(split[k * 2 + 3]);   //養子職は良く分からないので暫定
-            skill_tree[2][i][j].need[k].lv = atoi(split[k * 2 + 4]);   //養子職は良く分からないので暫定
-        }
-    }
-    fclose_(fp);
-    printf("read db/skill_tree.txt done\n");
 
     // 属性修正テーブル
     for (i = 0; i < 4; i++)

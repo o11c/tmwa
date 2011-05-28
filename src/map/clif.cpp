@@ -2872,7 +2872,7 @@ void clif_mobinsight(struct block_list *bl, va_list ap)
 int clif_skillinfoblock(struct map_session_data *sd)
 {
     int fd;
-    int i, c, len = 4, id, range;
+    int i, c, len = 4, id;
 
     nullpo_retr(0, sd);
 
@@ -2883,20 +2883,13 @@ int clif_skillinfoblock(struct map_session_data *sd)
         if ((id = sd->status.skill[i].id) != 0 && (sd->tmw_version >= 1))
         {                       // [Fate] Version 1 and later don't crash because of bad skill IDs anymore
             WFIFOW(fd, len) = id;
-            WFIFOW(fd, len + 2) = skill_get_inf(id);
-            WFIFOW(fd, len + 4) =
-                skill_db[i].poolflags | (sd->status.
-                                         skill[i].flags &
-                                         (SKILL_POOL_ACTIVATED));
+            WFIFOW(fd, len + 2) = 0; // skill_get_inf(id);
+            WFIFOW(fd, len + 4) = skill_db[i].poolflags | (sd->status.skill[i].flags & SKILL_POOL_ACTIVATED);
             WFIFOW(fd, len + 6) = sd->status.skill[i].lv;
-            WFIFOW(fd, len + 8) = skill_get_sp(id, sd->status.skill[i].lv);
-            range = skill_get_range(id, sd->status.skill[i].lv);
-            if (range < 0)
-                range = battle_get_range(&sd->bl) - (range + 1);
-            WFIFOW(fd, len + 10) = range;
+            WFIFOW(fd, len + 8) = 0; //skill_get_sp(id, sd->status.skill[i].lv);
+            WFIFOW(fd, len + 10) = 0; //skill_get_range(id, sd->status.skill[i].lv);
             memset(WFIFOP(fd, len + 12), 0, 24);
-            WFIFOB(fd, len + 36) =
-                (sd->status.skill[i].lv < skill_get_max_raise(id)) ? 1 : 0;
+            WFIFOB(fd, len + 36) = sd->status.skill[i].lv < skill_get_max_raise(id);
             len += 37;
             c++;
         }
@@ -2913,7 +2906,7 @@ int clif_skillinfoblock(struct map_session_data *sd)
  */
 int clif_skillup(struct map_session_data *sd, int skill_num)
 {
-    int range, fd;
+    int fd;
 
     nullpo_retr(0, sd);
 
@@ -2921,14 +2914,9 @@ int clif_skillup(struct map_session_data *sd, int skill_num)
     WFIFOW(fd, 0) = 0x10e;
     WFIFOW(fd, 2) = skill_num;
     WFIFOW(fd, 4) = sd->status.skill[skill_num].lv;
-    WFIFOW(fd, 6) = skill_get_sp(skill_num, sd->status.skill[skill_num].lv);
-    range = skill_get_range(skill_num, sd->status.skill[skill_num].lv);
-    if (range < 0)
-        range = battle_get_range(&sd->bl) - (range + 1);
-    WFIFOW(fd, 8) = range;
-    WFIFOB(fd, 10) =
-        (sd->status.skill[skill_num].lv <
-         skill_get_max_raise(sd->status.skill[skill_num].id)) ? 1 : 0;
+    WFIFOW(fd, 6) = 0; //skill_get_sp(skill_num, sd->status.skill[skill_num].lv);
+    WFIFOW(fd, 8) = 0; //skill_get_range(skill_num, sd->status.skill[skill_num].lv);
+    WFIFOB(fd, 10) = sd->status.skill[skill_num].lv < skill_get_max_raise(sd->status.skill[skill_num].id);
     WFIFOSET(fd, packet_len_table[0x10e]);
 
     return 0;
@@ -2957,7 +2945,7 @@ int clif_skill_damage(struct block_list *src, struct block_list *dst,
     WBUFL(buf, 24) = damage;
     WBUFW(buf, 28) = skill_lv;
     WBUFW(buf, 30) = div_;
-    WBUFB(buf, 32) = (type > 0) ? type : skill_get_hit(skill_id);
+    WBUFB(buf, 32) = (type > 0) ? type : 0; //skill_get_hit(skill_id);
     clif_send(buf, packet_len_table[0x1de], src, AREA);
 
     return 0;
@@ -3071,34 +3059,6 @@ int clif_wis_end(int fd, int flag) // R 0098 <type>.B: 0: success to send wisper
     WFIFOW(fd, 0) = 0x98;
     WFIFOW(fd, 2) = flag;
     WFIFOSET(fd, packet_len_table[0x98]);
-    return 0;
-}
-
-/*==========================================
- * アイテムによる一時的なスキル効果
- *------------------------------------------
- */
-int clif_item_skill(struct map_session_data *sd, int skillid, int skilllv,
-                     const char *name)
-{
-    int range, fd;
-
-    nullpo_retr(0, sd);
-
-    fd = sd->fd;
-    WFIFOW(fd, 0) = 0x147;
-    WFIFOW(fd, 2) = skillid;
-    WFIFOW(fd, 4) = skill_get_inf(skillid);
-    WFIFOW(fd, 6) = 0;
-    WFIFOW(fd, 8) = skilllv;
-    WFIFOW(fd, 10) = skill_get_sp(skillid, skilllv);
-    range = skill_get_range(skillid, skilllv);
-    if (range < 0)
-        range = battle_get_range(&sd->bl) - (range + 1);
-    WFIFOW(fd, 12) = range;
-    memcpy(WFIFOP(fd, 14), name, 24);
-    WFIFOB(fd, 38) = 0;
-    WFIFOSET(fd, packet_len_table[0x147]);
     return 0;
 }
 

@@ -7,19 +7,6 @@
 #include "../common/timer.hpp"
 #define MAX_RANDOMMONSTER 3
 
-struct mob_skill
-{
-    short state;
-    short skill_id, skill_lv;
-    short permillage;
-    int casttime, delay;
-    short cancel;
-    short cond1, cond2;
-    short target;
-    int val[5];
-    short emotion;
-};
-
 struct mob_db
 {
     char name[24], jname[24];
@@ -41,8 +28,6 @@ struct mob_db
     short hair, hair_color, weapon, shield, head_top, head_mid, head_buttom, option, clothes_color; // [Valaris]
     int equip;                 // [Valaris]
     int summonper[MAX_RANDOMMONSTER];
-    int maxskill;
-    struct mob_skill skill[MAX_MOBSKILL];
 };
 extern struct mob_db mob_db[];
 
@@ -81,16 +66,6 @@ enum
     MSC_CASTTARGETED = 0x1011,
 };
 
-enum
-{
-    MSS_IDLE,                   // 待機
-    MSS_WALK,                   // 移動
-    MSS_ATTACK,                 // 攻撃
-    MSS_DEAD,                   // 死亡
-    MSS_LOOT,                   // ルート
-    MSS_CHASE,                  // 突撃
-};
-
 int mobdb_searchname(const char *str);
 int mobdb_checkid(const int id);
 int mob_once_spawn(struct map_session_data *sd, const char *mapname,
@@ -119,17 +94,12 @@ short mob_get_clothes_color(int);  //player mob dye [Valaris]
 int do_init_mob(void);
 
 int mob_delete(struct mob_data *md);
-int mob_catch_delete(struct mob_data *md, int type);
+int mob_catch_delete(struct mob_data *md);
 void mob_timer_delete(timer_id, tick_t, custom_id_t, custom_data_t);
 
 int mob_counttargeted(struct mob_data *md, struct block_list *src,
                        int target_lv);
 
 int mob_warp(struct mob_data *md, int m, int x, int y, int type);
-
-int mobskill_use(struct mob_data *md, unsigned int tick, int event);
-int mobskill_event(struct mob_data *md, int flag);
-void mobskill_castend_id(timer_id tid, tick_t tick, custom_id_t id, custom_data_t data);
-void mobskill_castend_pos(timer_id tid, tick_t tick, custom_id_t id, custom_data_t data);
 
 #endif // MOB_H

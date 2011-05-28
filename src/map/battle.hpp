@@ -26,15 +26,12 @@ struct block_list;
 struct Damage battle_calc_attack(int attack_type,
                                   struct block_list *bl,
                                   struct block_list *target, int skill_num,
-                                 int skill_lv, int flag);
+                                 int skill_lv);
 struct Damage battle_calc_weapon_attack(struct block_list *bl,
                                         struct block_list *target,
                                         int skill_num, int skill_lv);
-struct Damage battle_calc_magic_attack(struct block_list *bl, struct block_list *target,
-                                       int skill_num, int skill_lv);
-struct Damage battle_calc_misc_attack(struct block_list *bl,
-                                       struct block_list *target,
-                                      int skill_num, int skill_lv, int flag);
+struct Damage battle_calc_magic_attack(struct block_list *bl, struct block_list *target);
+struct Damage battle_calc_misc_attack(struct block_list *bl, struct block_list *target);
 
 
 int battle_calc_damage(struct block_list *target, int damage, int div_, int flag);
@@ -150,21 +147,13 @@ extern struct Battle_Config
     int monster_hp_rate;
     int monster_max_aspd;
     int atc_spawn_quantity_limit;
-    int gm_allskill;
-    int gm_allskill_addabra;
     int gm_allequip;
-    int gm_skilluncond;
-    int skillfree;
-    int skillup_limit;
     int wp_rate;
     int pp_rate;
     int monster_active_enable;
     int monster_damage_delay_rate;
     int monster_loot_type;
-    int mob_skill_use;
     int mob_count_rate;
-    int quest_skill_learn;
-    int quest_skill_reset;
     int basic_skill_check;
     int pc_invincible_time;
     int skill_min_damage;
@@ -226,7 +215,6 @@ extern struct Battle_Config
     int mob_warpportal;
     int dead_branch_active;
     int show_steal_in_same_party;
-    int enable_upper_class;
     int mob_attack_attr_none;
     int mob_ghostring_fix;
     int pc_attack_attr_none;

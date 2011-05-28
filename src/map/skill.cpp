@@ -60,21 +60,6 @@ struct skill_db skill_db[MAX_SKILL_DB];
 #define UNARMED_PLAYER_DAMAGE_MIN(bl)   (skill_power_bl((bl), TMW_BRAWLING) >> 4)   // +50 for 200
 #define UNARMED_PLAYER_DAMAGE_MAX(bl)   (skill_power_bl((bl), TMW_BRAWLING))    // +200 for 200
 
-int skill_get_hit(int id)
-{
-    return skill_db[id].hit;
-}
-
-int skill_get_inf(int id)
-{
-    return skill_db[id].inf;
-}
-
-int skill_get_pl(int id)
-{
-    return skill_db[id].pl;
-}
-
 int skill_get_max(int id)
 {
     return skill_db[id].max;
@@ -83,51 +68,6 @@ int skill_get_max(int id)
 int skill_get_max_raise(int id)
 {
     return skill_db[id].max_raise;
-}
-
-int skill_get_range(int id, int lv)
-{
-    return (lv <= 0) ? 0 : skill_db[id].range[lv - 1];
-}
-
-int skill_get_sp(int id, int lv)
-{
-    return (lv <= 0) ? 0 : skill_db[id].sp[lv - 1];
-}
-
-int skill_get_num(int id, int lv)
-{
-    return (lv <= 0) ? 0 : skill_db[id].num[lv - 1];
-}
-
-int skill_get_delay(int id, int lv)
-{
-    return (lv <= 0) ? 0 : skill_db[id].delay[lv - 1];
-}
-
-int skill_get_castdef(int id)
-{
-    return skill_db[id].cast_def_rate;
-}
-
-int skill_get_inf2(int id)
-{
-    return skill_db[id].inf2;
-}
-
-int skill_get_maxcount(int id)
-{
-    return skill_db[id].maxcount;
-}
-
-int skill_get_blewcount(int id, int lv)
-{
-    return (lv <= 0) ? 0 : skill_db[id].blewcount[lv - 1];
-}
-
-static int skill_get_castnodex(int id, int lv)
-{
-    return (lv <= 0) ? 0 : skill_db[id].castnodex[lv - 1];
 }
 
 /*==========================================
@@ -200,8 +140,6 @@ int skill_castfix(struct block_list *bl, int time_)
     int dex;
     int castrate = 100;
     int skill = 0;
-    int lv = 0;
-    int castnodex;
 
     nullpo_retr(0, bl);
 
@@ -209,7 +147,6 @@ int skill_castfix(struct block_list *bl, int time_)
     {                           // Crash fix [Valaris]
         md = (struct mob_data *) bl;
         skill = md->skillid;
-        lv = md->skilllv;
     }
 
     dex = battle_get_dex(bl);
@@ -217,13 +154,9 @@ int skill_castfix(struct block_list *bl, int time_)
     if (skill > MAX_SKILL_DB || skill < 0)
         return 0;
 
-    castnodex = skill_get_castnodex(skill, lv);
-
     if (time_ == 0)
         return 0;
-    if (castnodex > 0 && bl->type == BL_PC)
-        castrate = ((struct map_session_data *) bl)->castrate;
-    else if (castnodex <= 0 && bl->type == BL_PC)
+    if (bl->type == BL_PC)
     {
         castrate = ((struct map_session_data *) bl)->castrate;
         time_ =
@@ -262,10 +195,8 @@ int skill_delayfix(struct block_list *bl, int time_)
  * スキル詠唱キャンセル
  *------------------------------------------
  */
-int skill_castcancel(struct block_list *bl, int)
+int skill_castcancel(struct block_list *bl)
 {
-    int inf;
-
     nullpo_retr(0, bl);
 
     if (bl->type == BL_PC)
@@ -280,16 +211,6 @@ int skill_castcancel(struct block_list *bl, int)
     }
     else if (bl->type == BL_MOB)
     {
-        struct mob_data *md = (struct mob_data *) bl;
-        nullpo_retr(0, md);
-        if (md->skilltimer != -1)
-        {
-            if ((inf = skill_get_inf(md->skillid)) == 2 || inf == 32)
-                delete_timer(md->skilltimer, mobskill_castend_pos);
-            else
-                delete_timer(md->skilltimer, mobskill_castend_id);
-            md->skilltimer = -1;
-        }
         return 0;
     }
     return 1;
@@ -788,7 +709,7 @@ static int scan_stat(char *statname)
  */
 static int skill_readdb(void)
 {
-    int i, j, k, l;
+    int i, j;
     FILE *fp;
     char line[1024], *p;
 
@@ -800,9 +721,9 @@ static int skill_readdb(void)
         printf("can't read db/skill_db.txt\n");
         return 1;
     }
-    while (fgets(line, 1020, fp))
+    while (fgets(line, sizeof(line), fp))
     {
-        char *split[50], *split2[MAX_SKILL_LEVEL];
+        char *split[18], *split2[MAX_SKILL_LEVEL];
         if (line[0] == '/' && line[1] == '/')
             continue;
         for (j = 0, p = line; j < 18 && p; j++)
@@ -816,8 +737,9 @@ static int skill_readdb(void)
         }
         if (split[17] == NULL || j < 18)
         {
-            fprintf(stderr, "Incomplete skill db data online (%d entries)\n",
-                     j);
+            fprintf(stderr,
+                    "Incomplete skill db data online: '%s' has only %d of 18 entries\n",
+                    split[0], j);
             continue;
         }
 
@@ -825,48 +747,24 @@ static int skill_readdb(void)
         if (i < 0 || i > MAX_SKILL_DB)
             continue;
 
-        memset(split2, 0, sizeof(split2));
-        for (j = 0, p = split[1]; j < MAX_SKILL_LEVEL && p; j++)
-        {
-            split2[j] = p;
-            p = strchr(p, ':');
-            if (p)
-                *p++ = 0;
-        }
-        for (k = 0; k < MAX_SKILL_LEVEL; k++)
-            skill_db[i].range[k] =
-                (split2[k]) ? atoi(split2[k]) : atoi(split2[0]);
-        skill_db[i].hit = atoi(split[2]);
-        skill_db[i].inf = atoi(split[3]);
-        skill_db[i].pl = atoi(split[4]);
-        skill_db[i].nk = atoi(split[5]);
+        // split[1]: ranges
+//         skill_db[i].hit = atoi(split[2]);
+//         skill_db[i].inf = atoi(split[3]);
+//         skill_db[i].pl = atoi(split[4]);
+//         skill_db[i].nk = atoi(split[5]);
         skill_db[i].max_raise = atoi(split[6]);
         skill_db[i].max = atoi(split[7]);
 
-        memset(split2, 0, sizeof(split2));
-        for (j = 0, p = split[8]; j < MAX_SKILL_LEVEL && p; j++)
-        {
-            split2[j] = p;
-            p = strchr(p, ':');
-            if (p)
-                *p++ = 0;
-        }
-        for (k = 0; k < MAX_SKILL_LEVEL; k++)
-            skill_db[i].num[k] =
-                (split2[k]) ? atoi(split2[k]) : atoi(split2[0]);
-
-        if (strcasecmp(split[9], "yes") == 0)
-            skill_db[i].castcancel = 1;
-        else
-            skill_db[i].castcancel = 0;
-        skill_db[i].cast_def_rate = atoi(split[9]);
-        skill_db[i].inf2 = atoi(split[10]);
-        skill_db[i].maxcount = atoi(split[11]);
+        // split[8]:
+//         skill_db[i].castcancel = strcasecmp(split[9], "yes") == 0;
+//         skill_db[i].cast_def_rate = atoi(split[10]);
+//         skill_db[i].inf2 = atoi(split[11]);
+//         skill_db[i].maxcount = atoi(split[12]);
         if (strcasecmp(split[13], "weapon") == 0)
             skill_db[i].skill_type = BF_WEAPON;
-        else if (strcasecmp(split[12], "magic") == 0)
+        else if (strcasecmp(split[13], "magic") == 0)
             skill_db[i].skill_type = BF_MAGIC;
-        else if (strcasecmp(split[12], "misc") == 0)
+        else if (strcasecmp(split[13], "misc") == 0)
             skill_db[i].skill_type = BF_MISC;
         else
             skill_db[i].skill_type = 0;
@@ -878,9 +776,6 @@ static int skill_readdb(void)
             if (p)
                 *p++ = 0;
         }
-        for (k = 0; k < MAX_SKILL_LEVEL; k++)
-            skill_db[i].blewcount[k] =
-                (split2[k]) ? atoi(split2[k]) : atoi(split2[0]);
 
         if (!strcasecmp(split[15], "passive"))
         {
@@ -910,299 +805,6 @@ static int skill_readdb(void)
     }
     fclose_(fp);
     printf("read db/skill_db.txt done\n");
-
-    fp = fopen_("db/skill_require_db.txt", "r");
-    if (fp == NULL)
-    {
-        printf("can't read db/skill_require_db.txt\n");
-        return 1;
-    }
-    while (fgets(line, 1020, fp))
-    {
-        char *split[51], *split2[MAX_SKILL_LEVEL];
-        if (line[0] == '/' && line[1] == '/')
-            continue;
-        for (j = 0, p = line; j < 30 && p; j++)
-        {
-            while (*p == '\t' || *p == ' ')
-                p++;
-            split[j] = p;
-            p = strchr(p, ',');
-            if (p)
-                *p++ = 0;
-        }
-        if (split[29] == NULL || j < 30)
-            continue;
-
-        i = atoi(split[0]);
-        if (i < 0 || i > MAX_SKILL_DB)
-            continue;
-
-        memset(split2, 0, sizeof(split2));
-        for (j = 0, p = split[1]; j < MAX_SKILL_LEVEL && p; j++)
-        {
-            split2[j] = p;
-            p = strchr(p, ':');
-            if (p)
-                *p++ = 0;
-        }
-        for (k = 0; k < MAX_SKILL_LEVEL; k++)
-            skill_db[i].hp[k] =
-                (split2[k]) ? atoi(split2[k]) : atoi(split2[0]);
-
-        memset(split2, 0, sizeof(split2));
-        for (j = 0, p = split[2]; j < MAX_SKILL_LEVEL && p; j++)
-        {
-            split2[j] = p;
-            p = strchr(p, ':');
-            if (p)
-                *p++ = 0;
-        }
-        for (k = 0; k < MAX_SKILL_LEVEL; k++)
-            skill_db[i].mhp[k] =
-                (split2[k]) ? atoi(split2[k]) : atoi(split2[0]);
-
-        memset(split2, 0, sizeof(split2));
-        for (j = 0, p = split[3]; j < MAX_SKILL_LEVEL && p; j++)
-        {
-            split2[j] = p;
-            p = strchr(p, ':');
-            if (p)
-                *p++ = 0;
-        }
-        for (k = 0; k < MAX_SKILL_LEVEL; k++)
-            skill_db[i].sp[k] =
-                (split2[k]) ? atoi(split2[k]) : atoi(split2[0]);
-
-        memset(split2, 0, sizeof(split2));
-        for (j = 0, p = split[4]; j < MAX_SKILL_LEVEL && p; j++)
-        {
-            split2[j] = p;
-            p = strchr(p, ':');
-            if (p)
-                *p++ = 0;
-        }
-        for (k = 0; k < MAX_SKILL_LEVEL; k++)
-            skill_db[i].hp_rate[k] =
-                (split2[k]) ? atoi(split2[k]) : atoi(split2[0]);
-
-        memset(split2, 0, sizeof(split2));
-        for (j = 0, p = split[5]; j < MAX_SKILL_LEVEL && p; j++)
-        {
-            split2[j] = p;
-            p = strchr(p, ':');
-            if (p)
-                *p++ = 0;
-        }
-        for (k = 0; k < MAX_SKILL_LEVEL; k++)
-            skill_db[i].sp_rate[k] =
-                (split2[k]) ? atoi(split2[k]) : atoi(split2[0]);
-
-        memset(split2, 0, sizeof(split2));
-        for (j = 0, p = split[6]; j < MAX_SKILL_LEVEL && p; j++)
-        {
-            split2[j] = p;
-            p = strchr(p, ':');
-            if (p)
-                *p++ = 0;
-        }
-        for (k = 0; k < MAX_SKILL_LEVEL; k++)
-            skill_db[i].zeny[k] =
-                (split2[k]) ? atoi(split2[k]) : atoi(split2[0]);
-
-        memset(split2, 0, sizeof(split2));
-        for (j = 0, p = split[7]; j < 32 && p; j++)
-        {
-            split2[j] = p;
-            p = strchr(p, ':');
-            if (p)
-                *p++ = 0;
-        }
-        for (k = 0; k < 32 && split2[k]; k++)
-        {
-            l = atoi(split2[k]);
-            if (l == 99)
-            {
-                skill_db[i].weapon = 0xffffffff;
-                break;
-            }
-            else
-                skill_db[i].weapon |= 1 << l;
-        }
-
-        if (strcasecmp(split[8], "hiding") == 0)
-            skill_db[i].state = ST_HIDING;
-        else if (strcasecmp(split[8], "cloaking") == 0)
-            skill_db[i].state = ST_CLOAKING;
-        else if (strcasecmp(split[8], "hidden") == 0)
-            skill_db[i].state = ST_HIDDEN;
-        else if (strcasecmp(split[8], "shield") == 0)
-            skill_db[i].state = ST_SHIELD;
-        else if (strcasecmp(split[8], "sight") == 0)
-            skill_db[i].state = ST_SIGHT;
-        else if (strcasecmp(split[8], "explosionspirits") == 0)
-            skill_db[i].state = ST_EXPLOSIONSPIRITS;
-        else if (strcasecmp(split[8], "recover_weight_rate") == 0)
-            skill_db[i].state = ST_RECOV_WEIGHT_RATE;
-        else if (strcasecmp(split[8], "move_enable") == 0)
-            skill_db[i].state = ST_MOVE_ENABLE;
-        else if (strcasecmp(split[8], "water") == 0)
-            skill_db[i].state = ST_WATER;
-        else
-            skill_db[i].state = ST_NONE;
-
-        memset(split2, 0, sizeof(split2));
-        for (j = 0, p = split[9]; j < MAX_SKILL_LEVEL && p; j++)
-        {
-            split2[j] = p;
-            p = strchr(p, ':');
-            if (p)
-                *p++ = 0;
-        }
-        skill_db[i].itemid[0] = atoi(split[10]);
-        skill_db[i].amount[0] = atoi(split[11]);
-        skill_db[i].itemid[1] = atoi(split[12]);
-        skill_db[i].amount[1] = atoi(split[13]);
-        skill_db[i].itemid[2] = atoi(split[14]);
-        skill_db[i].amount[2] = atoi(split[15]);
-        skill_db[i].itemid[3] = atoi(split[16]);
-        skill_db[i].amount[3] = atoi(split[17]);
-        skill_db[i].itemid[4] = atoi(split[18]);
-        skill_db[i].amount[4] = atoi(split[19]);
-        skill_db[i].itemid[5] = atoi(split[20]);
-        skill_db[i].amount[5] = atoi(split[21]);
-        skill_db[i].itemid[6] = atoi(split[22]);
-        skill_db[i].amount[6] = atoi(split[23]);
-        skill_db[i].itemid[7] = atoi(split[24]);
-        skill_db[i].amount[7] = atoi(split[25]);
-        skill_db[i].itemid[8] = atoi(split[26]);
-        skill_db[i].amount[8] = atoi(split[27]);
-        skill_db[i].itemid[9] = atoi(split[28]);
-        skill_db[i].amount[9] = atoi(split[29]);
-    }
-    fclose_(fp);
-    printf("read db/skill_require_db.txt done\n");
-
-    /* ? */
-    fp = fopen_("db/skill_cast_db.txt", "r");
-    if (fp == NULL)
-    {
-        printf("can't read db/skill_cast_db.txt\n");
-        return 1;
-    }
-    while (fgets(line, 1020, fp))
-    {
-        char *split[50], *split2[MAX_SKILL_LEVEL];
-        memset(split, 0, sizeof(split));  // [Valaris] thanks to fov
-        if (line[0] == '/' && line[1] == '/')
-            continue;
-        for (j = 0, p = line; j < 5 && p; j++)
-        {
-            while (*p == '\t' || *p == ' ')
-                p++;
-            split[j] = p;
-            p = strchr(p, ',');
-            if (p)
-                *p++ = 0;
-        }
-        if (split[4] == NULL || j < 5)
-            continue;
-
-        i = atoi(split[0]);
-        if (i < 0 || i > MAX_SKILL_DB)
-            continue;
-
-        memset(split2, 0, sizeof(split2));
-        for (j = 0, p = split[1]; j < MAX_SKILL_LEVEL && p; j++)
-        {
-            split2[j] = p;
-            p = strchr(p, ':');
-            if (p)
-                *p++ = 0;
-        }
-        for (k = 0; k < MAX_SKILL_LEVEL; k++)
-            skill_db[i].cast[k] =
-                (split2[k]) ? atoi(split2[k]) : atoi(split2[0]);
-
-        memset(split2, 0, sizeof(split2));
-        for (j = 0, p = split[2]; j < MAX_SKILL_LEVEL && p; j++)
-        {
-            split2[j] = p;
-            p = strchr(p, ':');
-            if (p)
-                *p++ = 0;
-        }
-        for (k = 0; k < MAX_SKILL_LEVEL; k++)
-            skill_db[i].delay[k] =
-                (split2[k]) ? atoi(split2[k]) : atoi(split2[0]);
-
-        memset(split2, 0, sizeof(split2));
-        for (j = 0, p = split[3]; j < MAX_SKILL_LEVEL && p; j++)
-        {
-            split2[j] = p;
-            p = strchr(p, ':');
-            if (p)
-                *p++ = 0;
-        }
-        for (k = 0; k < MAX_SKILL_LEVEL; k++)
-            skill_db[i].upkeep_time[k] =
-                (split2[k]) ? atoi(split2[k]) : atoi(split2[0]);
-
-        memset(split2, 0, sizeof(split2));
-        for (j = 0, p = split[4]; j < MAX_SKILL_LEVEL && p; j++)
-        {
-            split2[j] = p;
-            p = strchr(p, ':');
-            if (p)
-                *p++ = 0;
-        }
-        for (k = 0; k < MAX_SKILL_LEVEL; k++)
-            skill_db[i].upkeep_time2[k] =
-                (split2[k]) ? atoi(split2[k]) : atoi(split2[0]);
-    }
-    fclose_(fp);
-    printf("read db/skill_cast_db.txt done\n");
-
-    fp = fopen_("db/skill_castnodex_db.txt", "r");
-    if (fp == NULL)
-    {
-        printf("can't read db/skill_castnodex_db.txt\n");
-        return 1;
-    }
-    while (fgets(line, 1020, fp))
-    {
-        char *split[50], *split2[MAX_SKILL_LEVEL];
-        memset(split, 0, sizeof(split));
-        if (line[0] == '/' && line[1] == '/')
-            continue;
-        for (j = 0, p = line; j < 2 && p; j++)
-        {
-            while (*p == '\t' || *p == ' ')
-                p++;
-            split[j] = p;
-            p = strchr(p, ',');
-            if (p)
-                *p++ = 0;
-        }
-
-        i = atoi(split[0]);
-        if (i < 0 || i > MAX_SKILL_DB)
-            continue;
-
-        memset(split2, 0, sizeof(split2));
-        for (j = 0, p = split[1]; j < MAX_SKILL_LEVEL && p; j++)
-        {
-            split2[j] = p;
-            p = strchr(p, ':');
-            if (p)
-                *p++ = 0;
-        }
-        for (k = 0; k < MAX_SKILL_LEVEL; k++)
-            skill_db[i].castnodex[k] =
-                (split2[k]) ? atoi(split2[k]) : atoi(split2[0]);
-    }
-    fclose_(fp);
-    printf("read db/skill_castnodex_db.txt done\n");
 
     return 0;
 }

@@ -33,7 +33,6 @@
 #define LOOTITEM_SIZE 10
 #define MAX_SKILL_LEVEL 100
 #define MAX_STATUSCHANGE 200
-#define MAX_MOBSKILL 32
 #define MAX_EVENTQUEUE 2
 #define MAX_EVENTTIMER 32
 #define NATURAL_HEAL_INTERVAL 500
@@ -411,11 +410,9 @@ struct mob_data
     struct
     {
         unsigned state:8;
-        unsigned skillstate:8;
         unsigned targettype:1;
         unsigned steal_flag:1;
         unsigned steal_coin_flag:1;
-        unsigned skillcastcancel:1;
         unsigned master_check:1;
         unsigned change_walk_target:1;
         unsigned walk_easy:1;
@@ -447,11 +444,9 @@ struct mob_data
     short sg_count;
     int deletetimer;
 
-    int skilltimer;
     int skilltarget;
     short skillx, skilly;
     short skillid, skilllv, skillidx;
-    unsigned int skilldelay[MAX_MOBSKILL];
     int def_ele;
     int master_id, master_dist;
     int exclusion_src, exclusion_party;

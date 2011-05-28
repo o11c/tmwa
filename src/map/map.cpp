@@ -782,7 +782,7 @@ void map_quit(struct map_session_data *sd)
 
     pc_cleareventtimer(sd);
 
-    skill_castcancel(&sd->bl, 0);
+    skill_castcancel(&sd->bl);
 
     skill_status_change_clear(&sd->bl, 1);
     pc_stop_walking(sd, 0);

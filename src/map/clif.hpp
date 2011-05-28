@@ -116,9 +116,6 @@ int clif_wis_end(int fd, int flag);
 
 int clif_equiplist(struct map_session_data *sd);
 
-int clif_item_skill(struct map_session_data *sd, int skillid, int skilllv,
-                     const char *name);
-
 int clif_movetoattack(struct map_session_data *sd, struct block_list *bl);
 
 // party

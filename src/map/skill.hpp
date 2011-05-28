@@ -18,19 +18,8 @@
 // スキルデータベース
 struct skill_db
 {
-    int range[MAX_SKILL_LEVEL], hit, inf, pl, nk, max, stat, poolflags, max_raise; // `max' is the global max, `max_raise' is the maximum attainable via skill-ups
-    int num[MAX_SKILL_LEVEL];
-    int cast[MAX_SKILL_LEVEL], delay[MAX_SKILL_LEVEL];
-    int upkeep_time[MAX_SKILL_LEVEL], upkeep_time2[MAX_SKILL_LEVEL];
-    int castcancel, cast_def_rate;
-    int inf2, maxcount, skill_type;
-    int blewcount[MAX_SKILL_LEVEL];
-    int hp[MAX_SKILL_LEVEL], sp[MAX_SKILL_LEVEL], mhp[MAX_SKILL_LEVEL],
-        hp_rate[MAX_SKILL_LEVEL], sp_rate[MAX_SKILL_LEVEL],
-        zeny[MAX_SKILL_LEVEL];
-    int weapon, state;
-    int itemid[10], amount[10];
-    int castnodex[MAX_SKILL_LEVEL];
+    int max, stat, poolflags, max_raise; // `max' is the global max, `max_raise' is the maximum attainable via skill-ups
+    int skill_type;
 };
 extern struct skill_db skill_db[MAX_SKILL_DB];
 
@@ -47,20 +36,8 @@ struct map_session_data;
 
 void do_init_skill(void);
 
-// スキルデータベースへのアクセサ
-int skill_get_hit(int id);
-int skill_get_inf(int id);
-int skill_get_pl(int id);
 int skill_get_max(int id);
 int skill_get_max_raise(int id);
-int skill_get_range(int id, int lv);
-int skill_get_sp(int id, int lv);
-int skill_get_num(int id, int lv);
-int skill_get_delay(int id, int lv);
-int skill_get_castdef(int id);
-int skill_get_inf2(int id);
-int skill_get_maxcount(int id);
-int skill_get_blewcount(int id, int lv);
 
 // 追加効果
 int skill_additional_effect(struct block_list *src, struct block_list *bl,
@@ -71,7 +48,7 @@ int skill_castfix(struct block_list *bl, int time);
 int skill_delayfix(struct block_list *bl, int time);
 
 // 詠唱キャンセル
-int skill_castcancel(struct block_list *bl, int type);
+int skill_castcancel(struct block_list *bl);
 
 // その他
 int skill_check_cloaking(struct block_list *bl);

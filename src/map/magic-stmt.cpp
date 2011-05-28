@@ -457,7 +457,7 @@ static int op_banish(env_t *, int, val_t *args)
         struct mob_data *mob = (struct mob_data *) subject;
 
         if (mob->mode & MOB_MODE_SUMMONED)
-            mob_catch_delete(mob, 3);
+            mob_catch_delete(mob);
     }
 
     return 0;

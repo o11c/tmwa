@@ -343,8 +343,6 @@ int battle_get_def(struct block_list *bl)
     nullpo_retr(0, bl);
 
     int def = 0;
-    int skilltimer = -1;
-    int skillid = 0;
     if (bl->type == BL_PC)
     {
         def = ((struct map_session_data *) bl)->def;
@@ -352,8 +350,6 @@ int battle_get_def(struct block_list *bl)
     if (bl->type == BL_MOB)
     {
         def = ((struct mob_data *) bl)->stats[MOB_DEF];
-        skilltimer = ((struct mob_data *) bl)->skilltimer;
-        skillid = ((struct mob_data *) bl)->skillid;
     }
 
     struct status_change *sc_data = battle_get_sc_data(bl);
@@ -361,11 +357,6 @@ int battle_get_def(struct block_list *bl)
     {
         if (sc_data[SC_POISON].timer != -1 && bl->type != BL_PC)
             percent_adjust(def, 75);
-    }
-    if (skilltimer != -1)
-    {
-        int def_rate = skill_get_castdef(skillid);
-        percent_subtract(def, def_rate);
     }
     return std::max(0, def);
 }
@@ -760,8 +751,6 @@ int battle_damage(struct block_list *src, struct block_list *target, int damage)
     if (target->type == BL_MOB)
     {
         struct mob_data *md = (struct mob_data *) target;
-        if (md->skilltimer != -1 && md->state.skillcastcancel)
-            skill_castcancel(target, 0);
         return mob_damage(src, md, damage, 0);
     }
     if (target->type == BL_PC)
@@ -850,13 +839,6 @@ int battle_calc_damage(struct block_list *target, int damage, int div_, int flag
         else if (damage > 0 && damage < 3)
             damage = 3;
     }
-
-    if (target->type == BL_MOB)
-    {
-        struct mob_data *md = (struct mob_data *) target;
-        if (md->hp > 0 && damage > 0)
-            mobskill_event(md, flag);
-    }
     return damage;
 }
 
@@ -869,7 +851,7 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
     wd.damage2 = 0;
     wd.amotion = battle_get_amotion(&md->bl);
     wd.dmotion = battle_get_dmotion(target);
-    wd.blewcount = skill_get_blewcount(skill_num, skill_lv);
+    wd.blewcount = 0; //skill_get_blewcount(skill_num, skill_lv);
     wd.flag = BF_SHORT | BF_WEAPON | BF_NORMAL;
     wd.dmg_lv = 0;
 
@@ -938,10 +920,6 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
 
         if (skill_num > 0)
         {
-            int i = skill_get_pl(skill_num);
-            if (i > 0)
-                s_ele = i;
-
             wd.flag = (wd.flag & ~BF_SKILLMASK) | BF_SKILL;
         }
 
@@ -1064,7 +1042,7 @@ static struct Damage battle_calc_pc_weapon_attack(struct map_session_data *sd,
 
     wd.amotion = battle_get_amotion(&sd->bl);
     wd.dmotion = battle_get_dmotion(target);
-    wd.blewcount = skill_get_blewcount(skill_num, skill_lv);
+    wd.blewcount = 0; //skill_get_blewcount(skill_num, skill_lv);
     wd.dmg_lv = 0;
     wd.flag = BF_SHORT | BF_WEAPON | BF_NORMAL;
     wd.type = 0;                   // normal
@@ -1252,10 +1230,6 @@ static struct Damage battle_calc_pc_weapon_attack(struct map_session_data *sd,
 
         if (skill_num > 0)
         {
-            int i = skill_get_pl(skill_num);
-            if (i > 0)
-                s_ele = s_ele_ = i;
-
             wd.flag = (wd.flag & ~BF_SKILLMASK) | BF_SKILL;
         }
 
@@ -1514,8 +1488,7 @@ struct Damage battle_calc_weapon_attack(struct block_list *src,
 }
 
 /// Calculate damage of one being attacking another magically
-struct Damage battle_calc_magic_attack(struct block_list *src, struct block_list *target,
-                                       int skill_num, int skill_lv)
+struct Damage battle_calc_magic_attack(struct block_list *src, struct block_list *target)
 {
     struct Damage md = {};
     nullpo_retr(md, src);
@@ -1550,7 +1523,7 @@ struct Damage battle_calc_magic_attack(struct block_list *src, struct block_list
         md.damage = matk2;
 
 
-    int ele = skill_get_pl(skill_num);
+    int ele = 0; //skill_get_pl(skill_num);
     int t_mode = battle_get_mode(target);
     if (sd)
     {
@@ -1593,7 +1566,7 @@ struct Damage battle_calc_magic_attack(struct block_list *src, struct block_list
 
     md.damage = battle_attr_fix(md.damage, ele, battle_get_element(target));
 
-    md.div_ = skill_get_num(skill_num, skill_lv);
+    md.div_ = 0; //skill_get_num(skill_num, skill_lv);
 
     if (md.div_ > 1)
         md.damage *= md.div_;
@@ -1623,13 +1596,12 @@ struct Damage battle_calc_magic_attack(struct block_list *src, struct block_list
  *------------------------------------------
  */
 struct Damage battle_calc_misc_attack(struct block_list *bl,
-                                       struct block_list *target,
-                                       int skill_num, int skill_lv, int)
+                                       struct block_list *target)
 {
     int ele;
     struct map_session_data *sd = NULL;
-    int damage = 0, div_ = 1, blewcount =
-        skill_get_blewcount(skill_num, skill_lv);
+    int damage = 0, div_ = 1;
+    int blewcount = 0; //skill_get_blewcount(skill_num, skill_lv);
     struct Damage md;
     int damagefix = 1;
 
@@ -1649,7 +1621,7 @@ struct Damage battle_calc_misc_attack(struct block_list *bl,
         sd->state.arrow_atk = 0;
     }
 
-    ele = skill_get_pl(skill_num);
+    ele = 0; //skill_get_pl(skill_num);
 
     if (damagefix)
     {
@@ -1658,7 +1630,7 @@ struct Damage battle_calc_misc_attack(struct block_list *bl,
         damage = battle_attr_fix(damage, ele, battle_get_element(target));    // 属性修正
     }
 
-    div_ = skill_get_num(skill_num, skill_lv);
+    div_ = 0; //skill_get_num(skill_num, skill_lv);
     if (div_ > 1)
         damage *= div_;
 
@@ -1691,7 +1663,7 @@ struct Damage battle_calc_misc_attack(struct block_list *bl,
 struct Damage battle_calc_attack(int attack_type,
                                   struct block_list *bl,
                                   struct block_list *target, int skill_num,
-                                  int skill_lv, int flag)
+                                  int skill_lv)
 {
     struct Damage d;
     memset(&d, 0, sizeof(d));
@@ -1701,10 +1673,9 @@ struct Damage battle_calc_attack(int attack_type,
         case BF_WEAPON:
             return battle_calc_weapon_attack(bl, target, skill_num, skill_lv);
         case BF_MAGIC:
-            return battle_calc_magic_attack(bl, target, skill_num, skill_lv);
+            return battle_calc_magic_attack(bl, target);
         case BF_MISC:
-            return battle_calc_misc_attack(bl, target, skill_num, skill_lv,
-                                            flag);
+            return battle_calc_misc_attack(bl, target);
         default:
             if (battle_config.error_log)
                 printf("battle_calc_attack: unknwon attack type ! %d\n",
@@ -1907,7 +1878,7 @@ int battle_weapon_attack(struct block_list *src, struct block_list *target,
                     skilllv--;
                 if (skilllv < 1)
                     skilllv = 1;
-                sp = skill_get_sp(sd->autospell_id, skilllv) * 2 / 3;
+                sp = 0; //skill_get_sp(sd->autospell_id, skilllv) * 2 / 3;
                 if (sd->status.sp >= sp)
                 {
                     if (!f)
@@ -2200,20 +2171,13 @@ int battle_config_read(const char *cfgName)
         battle_config.restart_sp_rate = 0;
         battle_config.monster_hp_rate = 100;
         battle_config.monster_max_aspd = 199;
-        battle_config.gm_allskill = 0;
         battle_config.gm_allequip = 0;
-        battle_config.gm_skilluncond = 0;
-        battle_config.skillfree = 0;
-        battle_config.skillup_limit = 0;
         battle_config.wp_rate = 100;
         battle_config.pp_rate = 100;
         battle_config.monster_active_enable = 1;
         battle_config.monster_damage_delay_rate = 100;
         battle_config.monster_loot_type = 0;
-        battle_config.mob_skill_use = 1;
         battle_config.mob_count_rate = 100;
-        battle_config.quest_skill_learn = 0;
-        battle_config.quest_skill_reset = 1;
         battle_config.basic_skill_check = 1;
         battle_config.pc_invincible_time = 5000;
         battle_config.skill_min_damage = 0;
@@ -2278,7 +2242,6 @@ int battle_config_read(const char *cfgName)
         battle_config.mob_warpportal = 0;
         battle_config.dead_branch_active = 0;
         battle_config.show_steal_in_same_party = 0;
-        battle_config.enable_upper_class = 0;
         battle_config.pc_attack_attr_none = 0;
         battle_config.mob_attack_attr_none = 1;
         battle_config.mob_ghostring_fix = 0;
@@ -2396,21 +2359,13 @@ int battle_config_read(const char *cfgName)
             {"monster_hp_rate", &battle_config.monster_hp_rate},
             {"monster_max_aspd", &battle_config.monster_max_aspd},
             {"atcommand_spawn_quantity_limit", &battle_config.atc_spawn_quantity_limit},
-            {"gm_all_skill", &battle_config.gm_allskill},
-            {"gm_all_skill_add_abra", &battle_config.gm_allskill_addabra},
             {"gm_all_equipment", &battle_config.gm_allequip},
-            {"gm_skill_unconditional", &battle_config.gm_skilluncond},
-            {"player_skillfree", &battle_config.skillfree},
-            {"player_skillup_limit", &battle_config.skillup_limit},
             {"weapon_produce_rate", &battle_config.wp_rate},
             {"potion_produce_rate", &battle_config.pp_rate},
             {"monster_active_enable", &battle_config.monster_active_enable},
             {"monster_damage_delay_rate", &battle_config.monster_damage_delay_rate},
             {"monster_loot_type", &battle_config.monster_loot_type},
-            {"mob_skill_use", &battle_config.mob_skill_use},
             {"mob_count_rate", &battle_config.mob_count_rate},
-            {"quest_skill_learn", &battle_config.quest_skill_learn},
-            {"quest_skill_reset", &battle_config.quest_skill_reset},
             {"basic_skill_check", &battle_config.basic_skill_check},
             {"player_invincible_time", &battle_config.pc_invincible_time},
             {"skill_min_damage", &battle_config.skill_min_damage},
@@ -2474,7 +2429,6 @@ int battle_config_read(const char *cfgName)
             {"mob_warpportal", &battle_config.mob_warpportal},
             {"dead_branch_active", &battle_config.dead_branch_active},
             {"show_steal_in_same_party", &battle_config.show_steal_in_same_party},
-            {"enable_upper_class", &battle_config.enable_upper_class},
             {"mob_attack_attr_none", &battle_config.mob_attack_attr_none},
             {"mob_ghostring_fix", &battle_config.mob_ghostring_fix},
             {"pc_attack_attr_none", &battle_config.pc_attack_attr_none},

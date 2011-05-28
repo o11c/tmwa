@@ -163,7 +163,6 @@ static int buildin_gettimetick(struct script_state *st);
 static int buildin_gettime(struct script_state *st);
 static int buildin_gettimestr(struct script_state *st) __attribute__((deprecated));
 static int buildin_openstorage(struct script_state *st);
-static int buildin_itemskill(struct script_state *st);
 static int buildin_monster(struct script_state *st);
 static int buildin_areamonster(struct script_state *st);
 static int buildin_killmonster(struct script_state *st);
@@ -340,7 +339,6 @@ struct builtin_function
     {buildin_gettime, "gettime", "i"},
     {buildin_gettimestr, "gettimestr", "si"},
     {buildin_openstorage, "openstorage", "*"},
-    {buildin_itemskill, "itemskill", "iis"},
     {buildin_monster, "monster", "siisii*"},
     {buildin_areamonster, "areamonster", "siiiisii*"},
     {buildin_killmonster, "killmonster", "ss"},
@@ -3532,26 +3530,6 @@ int buildin_openstorage(struct script_state *st)
 //  } else st->state = END;
 
     storage_storageopen(sd);
-    return 0;
-}
-
-/*==========================================
- * アイテムによるスキル発動
- *------------------------------------------
- */
-int buildin_itemskill(struct script_state *st)
-{
-    int id, lv;
-    const char *str;
-    struct map_session_data *sd = script_rid2sd(st);
-
-    id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    lv = conv_num(st, &(st->stack->stack_data[st->start + 3]));
-    str = conv_str(st, &(st->stack->stack_data[st->start + 4]));
-
-    sd->skillitem = id;
-    sd->skillitemlv = lv;
-    clif_item_skill(sd, id, lv, str);
     return 0;
 }
 

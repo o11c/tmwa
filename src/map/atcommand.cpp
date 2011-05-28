@@ -94,11 +94,6 @@ ATCOMMAND_FUNC(character_baselevel);
 ATCOMMAND_FUNC(character_joblevel);
 ATCOMMAND_FUNC(kick);
 ATCOMMAND_FUNC(kickall);
-ATCOMMAND_FUNC(allskills);
-ATCOMMAND_FUNC(questskill);
-ATCOMMAND_FUNC(charquestskill);
-ATCOMMAND_FUNC(lostskill);
-ATCOMMAND_FUNC(charlostskill);
 ATCOMMAND_FUNC(party);
 ATCOMMAND_FUNC(charskreset);
 ATCOMMAND_FUNC(charstreset);
@@ -208,10 +203,6 @@ static AtCommandInfo atcommand_info[] = {
     "[1-1000]",         "Set your walk speed delay in milliseconds. Default is 150."},
     {"@memo", 40,       atcommand_memo,         ATCC_SELF,
     "[pos]",            "Set a memo point (list points if no location specified)."},
-    {"@questskill", 40, atcommand_questskill,   ATCC_SELF,
-    "num",              "Give yourself a specified skill."},
-    {"@lostskill", 40,  atcommand_lostskill,    ATCC_SELF,
-    "num",              "Remove a skill from yourself."},
     {"@dye", 40,        atcommand_dye,          ATCC_SELF,
     "",                 "Change your appearance. Unimplemented."},
     {"@ccolor", 40,     atcommand_dye,          ATCC_SELF,
@@ -239,8 +230,6 @@ static AtCommandInfo atcommand_info[] = {
     "count",            "Raise your base level."},
     {"@jlvl", 60,       atcommand_joblevelup,   ATCC_SELF,
     "count",            "Raise your job level (slightly broken)."},
-    {"@allskills", 60,  atcommand_allskills,    ATCC_SELF,
-    "",                 "Give yourself all skills (might not work)."},
     {"@allstats", 60,   atcommand_all_stats,    ATCC_SELF,
     "[num]",            "Increase all stats (to maximum if no amount specified)."},
     {"@stpoint", 60,    atcommand_statuspoint,  ATCC_SELF,
@@ -303,10 +292,6 @@ static AtCommandInfo atcommand_info[] = {
     "num charname",     "Raise a player's base level."},
     {"@charjlvl", 60,   atcommand_character_joblevel, ATCC_CHAR,
     "num charname",     "Raise a player's job level (slightly broken)."},
-    {"@charquestskill", 60, atcommand_charquestskill, ATCC_CHAR,
-    "num charname",     "Give a specified skill to a player."},
-    {"@charlostskill", 60, atcommand_charlostskill, ATCC_CHAR,
-    "num charname",     "Remove a specified skill from a player."},
     {"@charskreset", 60, atcommand_charskreset, ATCC_CHAR,
     "charname",         "Reset a player's skills."},
     {"@charstreset", 60, atcommand_charstreset, ATCC_CHAR,
@@ -3038,174 +3023,6 @@ int atcommand_kickall(int fd, struct map_session_data *sd,
     }
 
     clif_displaymessage(fd, "All players have been kicked!");
-
-    return 0;
-}
-
-/// Grant yourself all skills (does this work?)
-int atcommand_allskills(int fd, struct map_session_data *sd,
-                         const char *, const char *)
-{
-    pc_allskillup(sd);         // all skills
-    sd->status.skill_point = 0; // 0 skill points
-    clif_updatestatus(sd, SP_SKILLPOINT);  // update
-    clif_displaymessage(fd, "You have received all skills.");
-
-    return 0;
-}
-
-/// Grant yourself an eA skill
-int atcommand_questskill(int fd, struct map_session_data *sd,
-                          const char *, const char *message)
-{
-    if (!message || !*message)
-        return -1;
-    int skill_id = atoi(message);
-    if (skill_id < 0)
-        return -1;
-
-    if (skill_id >= MAX_SKILL_DB)
-    {
-        clif_displaymessage(fd, "This skill number doesn't exist.");
-        return -1;
-    }
-    if (!(skill_get_inf2(skill_id) & 0x01))
-    {
-        clif_displaymessage(fd, "This skill number doesn't exist or isn't a quest skill.");
-        return -1;
-    }
-    if (pc_checkskill(sd, skill_id) == 0)
-    {
-        pc_skill(sd, skill_id, 1, 0);
-        clif_displaymessage(fd, "You have learned the skill.");
-    }
-    else
-    {
-        clif_displaymessage(fd, "You already have this quest skill.");
-        return -1;
-    }
-
-    return 0;
-}
-
-/// Give somebody an eA skill
-int atcommand_charquestskill(int fd, struct map_session_data *,
-                              const char *, const char *message)
-{
-    if (!message || !*message)
-        return -1;
-    char character[100];
-    int skill_id = 0;
-    if (sscanf(message, "%d %99[^\n]", &skill_id, character) < 2
-        || skill_id < 0)
-        return -1;
-
-    if (skill_id >= MAX_SKILL_DB)
-    {
-        clif_displaymessage(fd, "This skill number doesn't exist.");
-        return -1;
-    }
-    if (!(skill_get_inf2(skill_id) & 0x01))
-    {
-        clif_displaymessage(fd, "This skill number doesn't exist or isn't a quest skill.");
-        return -1;
-    }
-
-    struct map_session_data *pl_sd = map_nick2sd(character);
-    if (!pl_sd)
-    {
-        clif_displaymessage(fd, "Character not found.");
-        return -1;
-    }
-    if (pc_checkskill(pl_sd, skill_id) == 0)
-    {
-        pc_skill(pl_sd, skill_id, 1, 0);
-        clif_displaymessage(fd, "This player has learned the skill.");
-    }
-    else
-    {
-        clif_displaymessage(fd, "This player already has this quest skill.");
-        return -1;
-    }
-
-    return 0;
-}
-
-/// Remove an eA skill
-int atcommand_lostskill(int fd, struct map_session_data *sd,
-                         const char *, const char *message)
-{
-    if (!message || !*message)
-        return -1;
-    int skill_id = atoi(message);
-    if (skill_id < 0)
-        return -1;
-
-    if (skill_id >= MAX_SKILL)
-    {
-        clif_displaymessage(fd, "This skill number doesn't exist.");
-        return -1;
-    }
-    if (!(skill_get_inf2(skill_id) & 0x01))
-    {
-        clif_displaymessage(fd, "This skill number doesn't exist or isn't a quest skill.");
-        return -1;
-    }
-    if (pc_checkskill(sd, skill_id) > 0)
-    {
-        sd->status.skill[skill_id].lv = 0;
-        sd->status.skill[skill_id].flags = 0;
-        clif_skillinfoblock(sd);
-        clif_displaymessage(fd, "You have forgotten the skill.");
-    }
-    else
-    {
-        clif_displaymessage(fd, "You don't have this quest skill.");
-        return -1;
-    }
-
-    return 0;
-}
-
-/// Remove a skill from a player
-int atcommand_charlostskill(int fd, struct map_session_data *,
-                             const char *, const char *message)
-{
-    if (!message || !*message)
-        return -1;
-    char character[100];
-    int skill_id = 0;
-    if (sscanf(message, "%d %99[^\n]", &skill_id, character) < 2 || skill_id < 0)
-        return -1;
-
-    if (skill_id >= MAX_SKILL)
-    {
-        clif_displaymessage(fd, "This skill number doesn't exist.");
-        return -1;
-    }
-    if (!(skill_get_inf2(skill_id) & 0x01))
-    {
-        clif_displaymessage(fd, "This skill number doesn't exist or isn't a quest skill.");
-        return -1;
-    }
-    struct map_session_data *pl_sd = map_nick2sd(character);
-    if (!pl_sd)
-    {
-        clif_displaymessage(fd, "Character not found.");
-        return -1;
-    }
-    if (pc_checkskill(pl_sd, skill_id) > 0)
-    {
-        pl_sd->status.skill[skill_id].lv = 0;
-        pl_sd->status.skill[skill_id].flags = 0;
-        clif_skillinfoblock(pl_sd);
-        clif_displaymessage(fd, "This player has forgotten the skill.");
-    }
-    else
-    {
-        clif_displaymessage(fd, "This player doesn't have this quest skill.");
-        return -1;
-    }
 
     return 0;
 }

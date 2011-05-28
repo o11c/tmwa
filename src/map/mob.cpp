@@ -674,10 +674,6 @@ static int mob_check_attack(struct mob_data *md)
 
     md->min_chase = 13;
     md->state.state = MS_IDLE;
-    md->state.skillstate = MSS_IDLE;
-
-    if (md->skilltimer != -1)
-        return 0;
 
     if (md->opt1 > 0 || md->option & 2)
         return 0;
@@ -769,10 +765,6 @@ static int mob_attack(struct mob_data *md, unsigned int tick, int)
 
     //clif_fixmobpos(md);
 
-    md->state.skillstate = MSS_ATTACK;
-    if (mobskill_use(md, tick, -2))    // スキル使用
-        return 0;
-
     md->target_lv = battle_weapon_attack(&md->bl, tbl, tick, 0);
 
     md->attackabletime = tick + battle_get_adelay(&md->bl);
@@ -851,9 +843,8 @@ int mob_changestate(struct mob_data *md, int state, int type)
                 add_timer(gettick() + type, mob_timer, md->bl.id, 0);
             break;
         case MS_DEAD:
-            skill_castcancel(&md->bl, 0);
+            skill_castcancel(&md->bl);
 //      mobskill_deltimer(md);
-            md->state.skillstate = MSS_DEAD;
             md->last_deadtime = gettick();
             // Since it died, all aggressors' attack to this mob is stopped.
             clif_foreachclient(mob_stopattacked, md->bl.id);
@@ -1114,7 +1105,6 @@ int mob_spawn(int id)
     md->master_dist = 0;
 
     md->state.state = MS_IDLE;
-    md->state.skillstate = MSS_IDLE;
     md->timer = -1;
     md->last_thinktime = tick;
     md->next_walktime = tick + MPRAND(5000, 50);
@@ -1124,9 +1114,6 @@ int mob_spawn(int id)
     md->sg_count = 0;
     md->deletetimer = -1;
 
-    md->skilltimer = -1;
-    for (i = 0, c = tick - 1000 * 3600 * 10; i < MAX_MOBSKILL; i++)
-        md->skilldelay[i] = c;
     md->skillid = 0;
     md->skilllv = 0;
 
@@ -1657,7 +1644,6 @@ static int mob_unlocktarget(struct mob_data *md, int tick)
 
     md->target_id = 0;
     md->state.targettype = NONE_ATTACKABLE;
-    md->state.skillstate = MSS_IDLE;
     md->next_walktime = tick + MPRAND(3000, 3000);
     return 0;
 }
@@ -1712,7 +1698,6 @@ static int mob_randomwalk(struct mob_data *md, int tick)
                 c += speed;
         }
         md->next_walktime = tick + MPRAND(3000, 3000) + c;
-        md->state.skillstate = MSS_WALK;
         return 1;
     }
     return 0;
@@ -1742,7 +1727,7 @@ static void mob_ai_sub_hard(struct block_list *bl, va_list ap)
         return;
     md->last_thinktime = tick;
 
-    if (md->skilltimer != -1 || md->bl.prev == NULL)
+    if (md->bl.prev == NULL)
     {                           // Under a skill aria and death
         if (DIFF_TICK(tick, md->next_walktime) > MIN_MOBTHINKTIME)
             md->next_walktime = tick;
@@ -1879,8 +1864,6 @@ static void mob_ai_sub_hard(struct block_list *bl, va_list ap)
                     }
                     if (!mob_can_move(md)) // 動けない状態にある
                         return;
-                    md->state.skillstate = MSS_CHASE;   // 突撃時スキル
-                    mobskill_use(md, tick, -1);
 //                  if (md->timer != -1 && (DIFF_TICK(md->next_walktime,tick)<0 || distance(md->to_x,md->to_y,tsd->bl.x,tsd->bl.y)<2) )
                     if (md->timer != -1 && md->state.state != MS_ATTACK
                         && (DIFF_TICK(md->next_walktime, tick) < 0
@@ -1947,7 +1930,6 @@ static void mob_ai_sub_hard(struct block_list *bl, va_list ap)
                 }
                 else
                 {               // 攻撃射程範囲内
-                    md->state.skillstate = MSS_ATTACK;
                     if (md->state.state == MS_WALK)
                         mob_stop_walking(md, 1);   // 歩行中なら停止
                     if (md->state.state == MS_ATTACK)
@@ -1984,8 +1966,7 @@ static void mob_ai_sub_hard(struct block_list *bl, va_list ap)
                     }
                     if (!mob_can_move(md)) // 動けない状態にある
                         return;
-                    md->state.skillstate = MSS_LOOT;    // ルート時スキル使用
-                    mobskill_use(md, tick, -1);
+
 //                  if (md->timer != -1 && (DIFF_TICK(md->next_walktime,tick)<0 || distance(md->to_x,md->to_y,tbl->x,tbl->y)<2) )
                     if (md->timer != -1 && md->state.state != MS_ATTACK
                         && (DIFF_TICK(md->next_walktime, tick) < 0
@@ -2042,10 +2023,6 @@ static void mob_ai_sub_hard(struct block_list *bl, va_list ap)
         }
     }
 
-    // It is skill use at the time of /standby at the time of a walk.
-    if (mobskill_use(md, tick, -1))
-        return;
-
     // 歩行処理
     if (mode & 1 && mob_can_move(md) &&    // 移動可能MOB&動ける状態にある
         (md->master_id == 0 || md->state.special_mob_ai
@@ -2063,11 +2040,6 @@ static void mob_ai_sub_hard(struct block_list *bl, va_list ap)
         if (mob_randomwalk(md, tick))
             return;
     }
-
-    // Since he has finished walking, it stands by.
-    if (md->walkpath.path_len == 0
-        || md->walkpath.path_pos >= md->walkpath.path_len)
-        md->state.skillstate = MSS_IDLE;
 }
 
 /*==========================================
@@ -2121,7 +2093,7 @@ static void mob_ai_sub_lazy(db_key_t, db_val_t data, va_list app)
         return;
     md->last_thinktime = tick;
 
-    if (md->bl.prev == NULL || md->skilltimer != -1)
+    if (md->bl.prev == NULL)
     {
         if (DIFF_TICK(tick, md->next_walktime) > MIN_MOBTHINKTIME * 10)
             md->next_walktime = tick;
@@ -2283,19 +2255,20 @@ int mob_delete(struct mob_data *md)
     return 0;
 }
 
-int mob_catch_delete(struct mob_data *md, int type)
+int mob_catch_delete(struct mob_data *md)
 {
     nullpo_retr(1, md);
 
     if (md->bl.prev == NULL)
         return 1;
     mob_changestate(md, MS_DEAD, 0);
-    clif_clearchar_area(&md->bl, type);
+    clif_clearchar_area(&md->bl, 3);
     map_delblock(&md->bl);
     mob_setdelayspawn(md->bl.id);
     return 0;
 }
 
+/// Timer for a summoned mob to expire
 void mob_timer_delete(timer_id, tick_t, custom_id_t id, custom_data_t)
 {
     struct block_list *bl = map_id2bl(id);
@@ -2304,7 +2277,7 @@ void mob_timer_delete(timer_id, tick_t, custom_id_t id, custom_data_t)
     nullpo_retv(bl);
 
     md = (struct mob_data *) bl;
-    mob_catch_delete(md, 3);
+    mob_catch_delete(md);
 }
 
 /*==========================================
@@ -2398,7 +2371,6 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
         if (md->bl.prev != NULL)
         {
             mob_changestate(md, MS_DEAD, 0);
-            mobskill_use(md, tick, -1);    // It is skill at the time of death.
             clif_clearchar_area(&md->bl, 1);
             map_delblock(&md->bl);
             mob_setdelayspawn(md->bl.id);
@@ -2505,7 +2477,6 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
 
     map_freeblock_lock();
     mob_changestate(md, MS_DEAD, 0);
-    mobskill_use(md, tick, -1);    // 死亡時スキル
 
     memset(tmpsd, 0, sizeof(tmpsd));
     memset(pt, 0, sizeof(pt));
@@ -2845,7 +2816,6 @@ int mob_warp(struct mob_data *md, int m, int x, int y, int type)
     md->target_id = 0;          // タゲを解除する
     md->state.targettype = NONE_ATTACKABLE;
     md->attacked_id = 0;
-    md->state.skillstate = MSS_IDLE;
     mob_changestate(md, MS_IDLE, 0);
 
     if (type > 0 && i == 1000)
@@ -2863,41 +2833,6 @@ int mob_warp(struct mob_data *md, int m, int x, int y, int type)
     }
 
     return 0;
-}
-
-/*==========================================
- * 画面内の取り巻きの数計算用(foreachinarea)
- *------------------------------------------
- */
-static void mob_countslave_sub(struct block_list *bl, va_list ap)
-{
-    int id, *c;
-    struct mob_data *md;
-
-    id = va_arg(ap, int);
-
-    nullpo_retv(bl);
-    nullpo_retv(c = va_arg(ap, int *));
-    nullpo_retv(md = (struct mob_data *) bl);
-
-    if (md->master_id == id)
-        (*c)++;
-}
-
-/*==========================================
- * 画面内の取り巻きの数計算
- *------------------------------------------
- */
-static int mob_countslave(struct mob_data *md)
-{
-    int c = 0;
-
-    nullpo_retr(0, md);
-
-    map_foreachinarea(mob_countslave_sub, md->bl.m,
-                       0, 0, maps[md->bl.m].xs - 1, maps[md->bl.m].ys - 1,
-                       BL_MOB, md->bl.id, &c);
-    return c;
 }
 
 /*==========================================
@@ -2949,563 +2884,6 @@ int mob_counttargeted(struct mob_data *md, struct block_list *src,
                        md->bl.x + AREA_SIZE, md->bl.y + AREA_SIZE, BL_NUL,
                        md->bl.id, &c, src, target_lv);
     return c;
-}
-
-
-void mobskill_castend_id(timer_id tid, tick_t tick, custom_id_t id, custom_data_t)
-{
-    struct mob_data *md = NULL;
-    struct block_list *bl;
-    struct block_list *mbl;
-    int range;
-
-    if ((mbl = map_id2bl(id)) == NULL)
-        return;
-    if ((md = (struct mob_data *) mbl) == NULL)
-    {
-        printf("mobskill_castend_id nullpo mbl->id:%d\n", mbl->id);
-        return;
-    }
-    if (md->bl.type != BL_MOB || md->bl.prev == NULL)
-        return;
-    if (md->skilltimer != tid)  // タイマIDの確認
-        return;
-
-    md->skilltimer = -1;
-    //沈黙や状態異常など
-    if (md->sc_data)
-    {
-        if (md->opt1 > 0)
-            return;
-    }
-
-    if ((bl = map_id2bl(md->skilltarget)) == NULL || bl->prev == NULL)
-    {                           //スキルターゲットが存在しない
-        //printf("mobskill_castend_id nullpo\n");//ターゲットがいないときはnullpoじゃなくて普通に終了
-        return;
-    }
-    if (md->bl.m != bl->m)
-        return;
-
-    if (((skill_get_inf(md->skillid) & 1) || (skill_get_inf2(md->skillid) & 4)) &&    // 彼我敵対関係チェック
-        battle_check_target(&md->bl, bl, BCT_ENEMY) <= 0)
-        return;
-    range = skill_get_range(md->skillid, md->skilllv);
-    if (range < 0)
-        range = battle_get_range(&md->bl) - (range + 1);
-    if (range + battle_config.mob_skill_add_range <
-        distance(md->bl.x, md->bl.y, bl->x, bl->y))
-        return;
-
-    md->skilldelay[md->skillidx] = tick;
-
-    if (battle_config.mob_skill_log == 1)
-        printf("MOB skill castend skill=%d, mob_class = %d\n", md->skillid,
-                md->mob_class);
-    mob_stop_walking(md, 0);
-
-}
-
-/*==========================================
- * スキル使用（詠唱完了、場所指定）
- *------------------------------------------
- */
-void mobskill_castend_pos(timer_id tid, tick_t tick, custom_id_t id, custom_data_t)
-{
-    struct mob_data *md = NULL;
-    struct block_list *bl;
-    int range;
-
-    //mobskill_castend_id同様詠唱したMobが詠唱完了時にもういないというのはありそうなのでnullpoから除外
-    if ((bl = map_id2bl(id)) == NULL)
-        return;
-
-    nullpo_retv(md = (struct mob_data *) bl);
-
-    if (md->bl.type != BL_MOB || md->bl.prev == NULL)
-        return;
-
-    if (md->skilltimer != tid)  // タイマIDの確認
-        return;
-
-    md->skilltimer = -1;
-    if (md->sc_data)
-    {
-        if (md->opt1 > 0)
-            return;
-    }
-
-    range = skill_get_range(md->skillid, md->skilllv);
-    if (range < 0)
-        range = battle_get_range(&md->bl) - (range + 1);
-    if (range + battle_config.mob_skill_add_range <
-        distance(md->bl.x, md->bl.y, md->skillx, md->skilly))
-        return;
-    md->skilldelay[md->skillidx] = tick;
-
-    if (battle_config.mob_skill_log == 1)
-        printf("MOB skill castend skill=%d, mob_class = %d\n", md->skillid,
-                md->mob_class);
-    mob_stop_walking(md, 0);
-
-    return;
-}
-
-/*==========================================
- * Skill use(an aria start, ID specification)
- *------------------------------------------
- */
-int mobskill_use_id(struct mob_data *md, struct block_list *target,
-                     int skill_idx)
-{
-    int casttime, range;
-    struct mob_skill *ms;
-    int skill_id, skill_lv;
-
-    nullpo_retr(0, md);
-    nullpo_retr(0, ms = &mob_db[md->mob_class].skill[skill_idx]);
-
-    if (target == NULL && (target = map_id2bl(md->target_id)) == NULL)
-        return 0;
-
-    if (target->prev == NULL || md->bl.prev == NULL)
-        return 0;
-
-    skill_id = ms->skill_id;
-    skill_lv = ms->skill_lv;
-
-    // 沈黙や異常
-    if (md->sc_data)
-    {
-        if (md->opt1 > 0)
-            return 0;
-    }
-
-    if (md->option & 2)
-        return 0;
-
-    if (skill_get_inf2(skill_id) & 0x200 && md->bl.id == target->id)
-        return 0;
-
-    // 射程と障害物チェック
-    range = skill_get_range(skill_id, skill_lv);
-    if (range < 0)
-        range = battle_get_range(&md->bl) - (range + 1);
-
-    if (!battle_check_range(&md->bl, target, range))
-        return 0;
-
-//  delay=skill_delayfix(&md->bl, skill_get_delay( skill_id,skill_lv) );
-
-    casttime = skill_castfix(&md->bl, ms->casttime);
-    md->state.skillcastcancel = ms->cancel;
-    md->skilldelay[skill_idx] = gettick();
-
-    if (battle_config.mob_skill_log == 1)
-        printf
-            ("MOB skill use target_id=%d skill=%d lv=%d cast=%d, mob_class = %d\n",
-             target->id, skill_id, skill_lv, casttime, md->mob_class);
-
-    if (casttime <= 0)          // 詠唱の無いものはキャンセルされない
-        md->state.skillcastcancel = 0;
-
-    md->skilltarget = target->id;
-    md->skillx = 0;
-    md->skilly = 0;
-    md->skillid = skill_id;
-    md->skilllv = skill_lv;
-    md->skillidx = skill_idx;
-
-    if (casttime > 0)
-    {
-        md->skilltimer =
-            add_timer(gettick() + casttime, mobskill_castend_id, md->bl.id,
-                       0);
-    }
-    else
-    {
-        md->skilltimer = -1;
-        mobskill_castend_id(md->skilltimer, gettick(), md->bl.id, 0);
-    }
-
-    return 1;
-}
-
-/*==========================================
- * スキル使用（場所指定）
- *------------------------------------------
- */
-static int mobskill_use_pos(struct mob_data *md,
-                      int skill_x, int skill_y, int skill_idx)
-{
-    int casttime = 0, range;
-    struct mob_skill *ms;
-    struct block_list bl;
-    int skill_id, skill_lv;
-
-    nullpo_retr(0, md);
-    nullpo_retr(0, ms = &mob_db[md->mob_class].skill[skill_idx]);
-
-    if (md->bl.prev == NULL)
-        return 0;
-
-    skill_id = ms->skill_id;
-    skill_lv = ms->skill_lv;
-
-    //沈黙や状態異常など
-    if (md->sc_data)
-    {
-        if (md->opt1 > 0)
-            return 0;
-    }
-
-    if (md->option & 2)
-        return 0;
-
-    // 射程と障害物チェック
-    bl.type = BL_NUL;
-    bl.m = md->bl.m;
-    bl.x = skill_x;
-    bl.y = skill_y;
-    range = skill_get_range(skill_id, skill_lv);
-    if (range < 0)
-        range = battle_get_range(&md->bl) - (range + 1);
-    if (!battle_check_range(&md->bl, &bl, range))
-        return 0;
-
-//  delay=skill_delayfix(&sd->bl, skill_get_delay( skill_id,skill_lv) );
-    casttime = skill_castfix(&md->bl, ms->casttime);
-    md->skilldelay[skill_idx] = gettick();
-    md->state.skillcastcancel = ms->cancel;
-
-    if (battle_config.mob_skill_log == 1)
-        printf
-            ("MOB skill use target_pos=(%d,%d) skill=%d lv=%d cast=%d, mob_class = %d\n",
-             skill_x, skill_y, skill_id, skill_lv, casttime, md->mob_class);
-
-    if (casttime <= 0)          // A skill without a cast time wont be cancelled.
-        md->state.skillcastcancel = 0;
-
-    md->skillx = skill_x;
-    md->skilly = skill_y;
-    md->skilltarget = 0;
-    md->skillid = skill_id;
-    md->skilllv = skill_lv;
-    md->skillidx = skill_idx;
-    if (casttime > 0)
-    {
-        md->skilltimer =
-            add_timer(gettick() + casttime, mobskill_castend_pos, md->bl.id,
-                       0);
-    }
-    else
-    {
-        md->skilltimer = -1;
-        mobskill_castend_pos(md->skilltimer, gettick(), md->bl.id, 0);
-    }
-
-    return 1;
-}
-
-/*==========================================
- * Friendly Mob whose HP is decreasing by a nearby MOB is looked for.
- *------------------------------------------
- */
-static void mob_getfriendhpltmaxrate_sub(struct block_list *bl, va_list ap)
-{
-    int rate;
-    struct mob_data **fr, *md, *mmd;
-
-    nullpo_retv(bl);
-    nullpo_retv(mmd = va_arg(ap, struct mob_data *));
-
-    md = (struct mob_data *) bl;
-
-    if (mmd->bl.id == bl->id)
-        return;
-    rate = va_arg(ap, int);
-    fr = va_arg(ap, struct mob_data **);
-    if (md->hp < mob_db[md->mob_class].max_hp * rate / 100)
-        (*fr) = md;
-}
-
-static struct mob_data *mob_getfriendhpltmaxrate(struct mob_data *md, int rate)
-{
-    struct mob_data *fr = NULL;
-    const int r = 8;
-
-    nullpo_retr(NULL, md);
-
-    map_foreachinarea(mob_getfriendhpltmaxrate_sub, md->bl.m,
-                       md->bl.x - r, md->bl.y - r, md->bl.x + r, md->bl.y + r,
-                       BL_MOB, md, rate, &fr);
-    return fr;
-}
-
-/*==========================================
- * What a status state suits by nearby MOB is looked for.
- *------------------------------------------
- */
-static void mob_getfriendstatus_sub(struct block_list *bl, va_list ap)
-{
-    int cond1, cond2;
-    struct mob_data **fr, *md, *mmd;
-    int flag = 0;
-
-    nullpo_retv(bl);
-    nullpo_retv(md = (struct mob_data *) bl);
-    nullpo_retv(mmd = va_arg(ap, struct mob_data *));
-
-    if (mmd->bl.id == bl->id)
-        return;
-    cond1 = va_arg(ap, int);
-    cond2 = va_arg(ap, int);
-    fr = va_arg(ap, struct mob_data **);
-    if (cond2 == -1)
-    {
-        flag = (md->sc_data[SC_POISON].timer != -1);
-    }
-    else
-        flag = (md->sc_data[cond2].timer != -1);
-    if (flag ^ (cond1 == MSC_FRIENDSTATUSOFF))
-        (*fr) = md;
-}
-
-static struct mob_data *mob_getfriendstatus(struct mob_data *md, int cond1,
-                                      int cond2)
-{
-    struct mob_data *fr = NULL;
-    const int r = 8;
-
-    nullpo_retr(0, md);
-
-    map_foreachinarea(mob_getfriendstatus_sub, md->bl.m,
-                       md->bl.x - r, md->bl.y - r, md->bl.x + r, md->bl.y + r,
-                       BL_MOB, md, cond1, cond2, &fr);
-    return fr;
-}
-
-/*==========================================
- * Skill use judging
- *------------------------------------------
- */
-int mobskill_use(struct mob_data *md, unsigned int tick, int event)
-{
-    struct mob_skill *ms;
-//  struct block_list *target=NULL;
-    int max_hp;
-
-    nullpo_retr(0, md);
-    nullpo_retr(0, ms = mob_db[md->mob_class].skill);
-
-    max_hp = battle_get_max_hp(&md->bl);
-
-    if (battle_config.mob_skill_use == 0 || md->skilltimer != -1)
-        return 0;
-
-    if (md->state.special_mob_ai)
-        return 0;
-
-    for (int i = 0; i < mob_db[md->mob_class].maxskill; i++)
-    {
-        int c2 = ms[i].cond2, flag = 0;
-        struct mob_data *fmd = NULL;
-
-        // ディレイ中
-        if (DIFF_TICK(tick, md->skilldelay[i]) < ms[i].delay)
-            continue;
-
-        // 状態判定
-        if (ms[i].state >= 0 && ms[i].state != md->state.skillstate)
-            continue;
-
-        // 条件判定
-        flag = (event == ms[i].cond1);
-        if (!flag)
-        {
-            switch (ms[i].cond1)
-            {
-                case MSC_ALWAYS:
-                    flag = 1;
-                    break;
-                case MSC_MYHPLTMAXRATE:    // HP< maxhp%
-                    flag = (md->hp < max_hp * c2 / 100);
-                    break;
-                case MSC_MYSTATUSON:   // status[num] on
-                case MSC_MYSTATUSOFF:  // status[num] off
-                    if (ms[i].cond2 == -1)
-                    {
-                        flag = (md->sc_data[SC_POISON].timer != -1);
-                    }
-                    else
-                        flag = (md->sc_data[ms[i].cond2].timer != -1);
-                    flag ^= (ms[i].cond1 == MSC_MYSTATUSOFF);
-                    break;
-                case MSC_FRIENDHPLTMAXRATE:    // friend HP < maxhp%
-                    flag =
-                        ((fmd =
-                          mob_getfriendhpltmaxrate(md,
-                                                    ms[i].cond2)) != NULL);
-                    break;
-                case MSC_FRIENDSTATUSON:   // friend status[num] on
-                case MSC_FRIENDSTATUSOFF:  // friend status[num] off
-                    flag =
-                        ((fmd =
-                          mob_getfriendstatus(md, ms[i].cond1,
-                                               ms[i].cond2)) != NULL);
-                    break;
-                case MSC_NOTINTOWN:     // Only outside of towns.
-                    flag = !maps[md->bl.m].flag.town;
-                    break;
-                case MSC_SLAVELT:  // slave < num
-                    flag = (mob_countslave(md) < c2);
-                    break;
-                case MSC_ATTACKPCGT:   // attack pc > num
-                    flag = (mob_counttargeted(md, NULL, 0) > c2);
-                    break;
-                case MSC_SLAVELE:  // slave <= num
-                    flag = (mob_countslave(md) <= c2);
-                    break;
-                case MSC_ATTACKPCGE:   // attack pc >= num
-                    flag = (mob_counttargeted(md, NULL, 0) >= c2);
-                    break;
-                case MSC_SKILLUSED:    // specificated skill used
-                    flag = ((event & 0xffff) == MSC_SKILLUSED
-                            && ((event >> 16) == c2 || c2 == 0));
-                    break;
-            }
-        }
-
-        // 確率判定
-        if (flag && MRAND(10000) < ms[i].permillage)
-        {
-
-            if (skill_get_inf(ms[i].skill_id) & 2)
-            {
-                // 場所指定
-                struct block_list *bl = NULL;
-                int x = 0, y = 0;
-                if (ms[i].target <= MST_AROUND)
-                {
-                    if (ms[i].target == MST_MASTER)
-                    {
-                        bl = &md->bl;
-                        if (md->master_id)
-                            bl = map_id2bl(md->master_id);
-                    }
-                    else
-                    {
-                        bl = ((ms[i].target == MST_TARGET
-                               || ms[i].target ==
-                               MST_AROUND5) ? map_id2bl(md->
-                                                         target_id)
-                              : (ms[i].target ==
-                                 MST_FRIEND) ? &fmd->bl : &md->bl);
-                    }
-
-                    if (bl)
-                    {
-                        x = bl->x;
-                        y = bl->y;
-                    }
-                }
-                if (x <= 0 || y <= 0)
-                    continue;
-                // 自分の周囲
-                if (ms[i].target >= MST_AROUND1)
-                {
-                    int bx = x, by = y, ii = 0, c, m = bl->m, r =
-                        ms[i].target - MST_AROUND1;
-                    do
-                    {
-                        bx = x + MRAND((r * 2 + 3)) - r;
-                        by = y + MRAND((r * 2 + 3)) - r;
-                    }
-                    while ((bx <= 0 || by <= 0 || bx >= maps[m].xs
-                            || by >= maps[m].ys
-                            || ((c = read_gat(m, bx, by)) == 1 || c == 5))
-                           && (ii++) < 1000);
-                    if (ii < 1000)
-                    {
-                        x = bx;
-                        y = by;
-                    }
-                }
-                // 相手の周囲
-                if (ms[i].target >= MST_AROUND5)
-                {
-                    int bx = x, by = y, ii = 0, c, m = bl->m, r =
-                        (ms[i].target - MST_AROUND5) + 1;
-                    do
-                    {
-                        bx = x + MRAND((r * 2 + 1)) - r;
-                        by = y + MRAND((r * 2 + 1)) - r;
-                    }
-                    while ((bx <= 0 || by <= 0 || bx >= maps[m].xs
-                            || by >= maps[m].ys
-                            || ((c = read_gat(m, bx, by)) == 1 || c == 5))
-                           && (ii++) < 1000);
-                    if (ii < 1000)
-                    {
-                        x = bx;
-                        y = by;
-                    }
-                }
-                if (!mobskill_use_pos(md, x, y, i))
-                    return 0;
-
-            }
-            else
-            {
-                if (ms[i].target == MST_MASTER)
-                {
-                    struct block_list *bl = &md->bl;
-                    if (md->master_id)
-                        bl = map_id2bl(md->master_id);
-
-                    if (bl && !mobskill_use_id(md, bl, i))
-                        return 0;
-                }
-                // ID指定
-                if (ms[i].target <= MST_FRIEND)
-                {
-                    struct block_list *bl = NULL;
-                    bl = ((ms[i].target ==
-                           MST_TARGET) ? map_id2bl(md->
-                                                    target_id) : (ms[i].target
-                                                                  ==
-                                                                  MST_FRIEND)
-                          ? &fmd->bl : &md->bl);
-                    if (bl && !mobskill_use_id(md, bl, i))
-                        return 0;
-                }
-            }
-            if (ms[i].emotion >= 0)
-                clif_emotion(&md->bl, ms[i].emotion);
-            return 1;
-        }
-    }
-
-    return 0;
-}
-
-/*==========================================
- * Skill use event processing
- *------------------------------------------
- */
-int mobskill_event(struct mob_data *md, int flag)
-{
-    nullpo_retr(0, md);
-
-    if (flag == -1 && mobskill_use(md, gettick(), MSC_CASTTARGETED))
-        return 1;
-    if ((flag & BF_SHORT)
-        && mobskill_use(md, gettick(), MSC_CLOSEDATTACKED))
-        return 1;
-    if ((flag & BF_LONG)
-        && mobskill_use(md, gettick(), MSC_LONGRANGEATTACKED))
-        return 1;
-    return 0;
 }
 
 //
@@ -3708,7 +3086,6 @@ static int mob_readdb(void)
 
             for (ii = 0; ii < MAX_RANDOMMONSTER; ii++)
                 mob_db[mob_class].summonper[ii] = 0;
-            mob_db[mob_class].maxskill = 0;
 
             mob_db[mob_class].sex = 0;
             mob_db[mob_class].hair = 0;
@@ -3856,173 +3233,6 @@ static int mob_read_randommonster(void)
 }
 
 /*==========================================
- * db/mob_skill_db.txt reading
- *------------------------------------------
- */
-static int mob_readskilldb(void)
-{
-    FILE *fp;
-    char line[1024];
-    int i;
-
-    const struct
-    {
-        char str[32];
-        int id;
-    }
-    cond1[] =
-    {
-        {"always", MSC_ALWAYS},
-        {"myhpltmaxrate", MSC_MYHPLTMAXRATE},
-        {"friendhpltmaxrate", MSC_FRIENDHPLTMAXRATE},
-        {"mystatuson", MSC_MYSTATUSON},
-        {"mystatusoff", MSC_MYSTATUSOFF},
-        {"friendstatuson", MSC_FRIENDSTATUSON},
-        {"friendstatusoff", MSC_FRIENDSTATUSOFF},
-        {"notintown", MSC_NOTINTOWN},
-        {"attackpcgt", MSC_ATTACKPCGT},
-        {"attackpcge", MSC_ATTACKPCGE},
-        {"slavelt", MSC_SLAVELT},
-        {"slavele", MSC_SLAVELE},
-        {"closedattacked", MSC_CLOSEDATTACKED},
-        {"longrangeattacked", MSC_LONGRANGEATTACKED},
-        {"skillused", MSC_SKILLUSED},
-        {"casttargeted", MSC_CASTTARGETED},
-    },
-    cond2[] =
-    {
-        {"anybad", -1},
-        {"poison", SC_POISON},
-    },
-    state[] =
-    {
-        {"any", -1},
-        {"idle", MSS_IDLE},
-        {"walk", MSS_WALK},
-        {"attack", MSS_ATTACK},
-        {"dead", MSS_DEAD},
-        {"loot", MSS_LOOT},
-        {"chase", MSS_CHASE},
-    }, target[] =
-    {
-        {"target", MST_TARGET},
-        {"self", MST_SELF},
-        {"friend", MST_FRIEND},
-        {"master", MST_MASTER},
-        {"around5", MST_AROUND5},
-        {"around6", MST_AROUND6},
-        {"around7", MST_AROUND7},
-        {"around8", MST_AROUND8},
-        {"around1", MST_AROUND1},
-        {"around2", MST_AROUND2},
-        {"around3", MST_AROUND3},
-        {"around4", MST_AROUND4},
-        {"around", MST_AROUND},
-    };
-
-    int x;
-    const char *filename[] = { "db/mob_skill_db.txt", "db/mob_skill_db2.txt" };
-
-    for (x = 0; x < 2; x++)
-    {
-
-        fp = fopen_(filename[x], "r");
-        if (fp == NULL)
-        {
-            if (x == 0)
-                printf("can't read %s\n", filename[x]);
-            continue;
-        }
-        while (fgets(line, 1020, fp))
-        {
-            char *sp[20], *p;
-            int mob_id;
-            struct mob_skill *ms;
-            int j = 0;
-
-            if (line[0] == '/' && line[1] == '/')
-                continue;
-
-            memset(sp, 0, sizeof(sp));
-            for (i = 0, p = line; i < 18 && p; i++)
-            {
-                sp[i] = p;
-                if ((p = strchr(p, ',')) != NULL)
-                    *p++ = 0;
-            }
-            if ((mob_id = atoi(sp[0])) <= 0)
-                continue;
-
-            if (strcmp(sp[1], "clear") == 0)
-            {
-                memset(mob_db[mob_id].skill, 0,
-                        sizeof(mob_db[mob_id].skill));
-                mob_db[mob_id].maxskill = 0;
-                continue;
-            }
-
-            for (i = 0; i < MAX_MOBSKILL; i++)
-                if ((ms = &mob_db[mob_id].skill[i])->skill_id == 0)
-                    break;
-            if (i == MAX_MOBSKILL)
-            {
-                printf
-                    ("mob_skill: readdb: too many skill ! [%s] in %d[%s]\n",
-                     sp[1], mob_id, mob_db[mob_id].jname);
-                continue;
-            }
-
-            ms->state = atoi(sp[2]);
-            for (j = 0; j < sizeof(state) / sizeof(state[0]); j++)
-            {
-                if (strcmp(sp[2], state[j].str) == 0)
-                    ms->state = state[j].id;
-            }
-            ms->skill_id = atoi(sp[3]);
-            ms->skill_lv = atoi(sp[4]);
-
-            ms->permillage = atoi(sp[5]);
-            ms->casttime = atoi(sp[6]);
-            ms->delay = atoi(sp[7]);
-            ms->cancel = atoi(sp[8]);
-            if (strcmp(sp[8], "yes") == 0)
-                ms->cancel = 1;
-            ms->target = atoi(sp[9]);
-            for (j = 0; j < sizeof(target) / sizeof(target[0]); j++)
-            {
-                if (strcmp(sp[9], target[j].str) == 0)
-                    ms->target = target[j].id;
-            }
-            ms->cond1 = -1;
-            for (j = 0; j < sizeof(cond1) / sizeof(cond1[0]); j++)
-            {
-                if (strcmp(sp[10], cond1[j].str) == 0)
-                    ms->cond1 = cond1[j].id;
-            }
-            ms->cond2 = atoi(sp[11]);
-            for (j = 0; j < sizeof(cond2) / sizeof(cond2[0]); j++)
-            {
-                if (strcmp(sp[11], cond2[j].str) == 0)
-                    ms->cond2 = cond2[j].id;
-            }
-            ms->val[0] = atoi(sp[12]);
-            ms->val[1] = atoi(sp[13]);
-            ms->val[2] = atoi(sp[14]);
-            ms->val[3] = atoi(sp[15]);
-            ms->val[4] = atoi(sp[16]);
-            if (sp[17] != NULL && strlen(sp[17]) > 2)
-                ms->emotion = atoi(sp[17]);
-            else
-                ms->emotion = -1;
-            mob_db[mob_id].maxskill = i + 1;
-        }
-        fclose_(fp);
-        printf("read %s done\n", filename[x]);
-    }
-    return 0;
-}
-
-/*==========================================
  * Circumference initialization of mob
  *------------------------------------------
  */
@@ -4032,7 +3242,6 @@ int do_init_mob(void)
 
     mob_readdb_mobavail();
     mob_read_randommonster();
-    mob_readskilldb();
 
     add_timer_interval(gettick() + MIN_MOBTHINKTIME, mob_ai_hard, 0, 0,
                         MIN_MOBTHINKTIME);

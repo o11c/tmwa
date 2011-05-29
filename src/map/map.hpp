@@ -12,6 +12,7 @@
 #include "../common/db.hpp"
 
 #include "script.hpp"
+#include "battle.hpp"
 
 #ifndef MAX
 #  define MAX(x,y) (((x)>(y)) ? (x) : (y))
@@ -59,18 +60,6 @@
 #define CLIF_OPTION_SC_BASE         0x1000
 #define CLIF_OPTION_SC_INVISIBILITY (CLIF_OPTION_SC_BASE)
 #define CLIF_OPTION_SC_SCRIBE       (CLIF_OPTION_SC_BASE + 1)
-
-enum Direction
-{
-    DIR_S,
-    DIR_SW,
-    DIR_W,
-    DIR_NW,
-    DIR_N,
-    DIR_NE,
-    DIR_E,
-    DIR_SE,
-};
 
 enum BlockType
 { BL_NUL, BL_PC, BL_NPC, BL_MOB, BL_ITEM, BL_SPELL };
@@ -189,7 +178,7 @@ struct map_session_data
 
     int attacktimer;
     int attacktarget;
-    short attacktarget_lv;
+    AttackResult attacktarget_lv;
     unsigned int attackabletime;
 
     /// Used with the GM commands to iterate over players
@@ -411,7 +400,7 @@ struct mob_data
     short to_x, to_y;
     int hp;
     int target_id, attacked_id;
-    short target_lv;
+    AttackResult target_lv;
     struct walkpath_data walkpath;
     unsigned int next_walktime;
     unsigned int attackabletime;
@@ -445,9 +434,6 @@ enum
 
 enum
 { NONE_ATTACKABLE, ATTACKABLE };
-
-enum
-{ ATK_LUCKY = 1, ATK_FLEE, ATK_DEF };   // 囲まれペナルティ計算用
 
 struct map_data
 {

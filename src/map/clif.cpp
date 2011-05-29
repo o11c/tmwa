@@ -682,7 +682,7 @@ static int clif_set0078(struct map_session_data *sd, unsigned char *buf)
         WBUFW(buf, 42) = 0;
         WBUFB(buf, 44) = 0;
         WBUFPOS(buf, 46, sd->bl.x, sd->bl.y);
-        WBUFB(buf, 48) |= sd->dir & 0x0f;
+        WBUFB(buf, 48) |= int(sd->dir) & 0x0f;
         WBUFB(buf, 49) = 5;
         WBUFB(buf, 50) = 5;
         WBUFB(buf, 51) = 0;
@@ -721,14 +721,14 @@ static int clif_set0078(struct map_session_data *sd, unsigned char *buf)
     WBUFW(buf, 26) = sd->status.head_mid;
     WBUFW(buf, 28) = sd->status.hair_color;
     WBUFW(buf, 30) = sd->status.clothes_color;
-    WBUFW(buf, 32) = sd->head_dir;
+    WBUFW(buf, 32) = (int)sd->head_dir;
 
     WBUFW(buf, 40) = sd->status.manner;
     WBUFW(buf, 42) = sd->opt3;
     WBUFB(buf, 44) = sd->status.karma;
     WBUFB(buf, 45) = sd->sex;
     WBUFPOS(buf, 46, sd->bl.x, sd->bl.y);
-    WBUFB(buf, 48) |= sd->dir & 0x0f;
+    WBUFB(buf, 48) |= int(sd->dir) & 0x0f;
     WBUFW(buf, 49) = (pc_isGM(sd) == 60 || pc_isGM(sd) == 99) ? 0x80 : 0;
     WBUFB(buf, 51) = sd->state.dead_sit;
     WBUFW(buf, 52) = 0;
@@ -792,7 +792,7 @@ static int clif_set007b(struct map_session_data *sd, unsigned char *buf)
     WBUFW(buf, 30) = sd->status.head_mid;
     WBUFW(buf, 32) = sd->status.hair_color;
     WBUFW(buf, 34) = sd->status.clothes_color;
-    WBUFW(buf, 36) = sd->head_dir;
+    WBUFW(buf, 36) = (int)sd->head_dir;
 
     WBUFW(buf, 44) = sd->status.manner;
     WBUFW(buf, 46) = sd->opt3;
@@ -844,7 +844,7 @@ static int clif_mob0078(struct mob_data *md, unsigned char *buf)
     }
 
     WBUFPOS(buf, 46, md->bl.x, md->bl.y);
-    WBUFB(buf, 48) |= md->dir & 0x0f;
+    WBUFB(buf, 48) |= int(md->dir) & 0x0f;
     WBUFB(buf, 49) = 5;
     WBUFB(buf, 50) = 5;
     WBUFW(buf, 52) =
@@ -918,7 +918,7 @@ static int clif_npc0078(struct npc_data *nd, unsigned char *buf)
     WBUFW(buf, 6) = nd->speed;
     WBUFW(buf, 14) = nd->npc_class;
     WBUFPOS(buf, 46, nd->bl.x, nd->bl.y);
-    WBUFB(buf, 48) |= nd->dir & 0x0f;
+    WBUFB(buf, 48) |= int(nd->dir) & 0x0f;
     WBUFB(buf, 49) = 5;
     WBUFB(buf, 50) = 5;
 
@@ -4008,7 +4008,7 @@ static void clif_parse_ChangeDir(int fd, struct map_session_data *sd)
     WBUFW(buf, 0) = 0x9c;
     WBUFL(buf, 2) = sd->bl.id;
     WBUFW(buf, 6) = 0;
-    WBUFB(buf, 8) = dir;
+    WBUFB(buf, 8) = (int)dir;
     if (sd->disguise > 23 && sd->disguise < 4001)   // mob disguises [Valaris]
         clif_send(buf, packet_len_table[0x9c], &sd->bl, AREA);
     else

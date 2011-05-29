@@ -250,7 +250,7 @@ int pc_setrestartvalue(struct map_session_data *sd, int type)
  */
 static void pc_counttargeted_sub(struct block_list *bl, va_list ap)
 {
-    int id, *c, target_lv;
+    int id, *c;
     struct block_list *src;
 
     nullpo_retv(bl);
@@ -260,7 +260,7 @@ static void pc_counttargeted_sub(struct block_list *bl, va_list ap)
     nullpo_retv(c = va_arg(ap, int *));
 
     src = va_arg(ap, struct block_list *);
-    target_lv = va_arg(ap, int);
+    AttackResult target_lv = (AttackResult)va_arg(ap, int);
     if (id == bl->id || (src && id == src->id))
         return;
     if (bl->type == BL_PC)
@@ -282,7 +282,7 @@ static void pc_counttargeted_sub(struct block_list *bl, va_list ap)
 }
 
 int pc_counttargeted(struct map_session_data *sd, struct block_list *src,
-                      int target_lv)
+                      AttackResult target_lv)
 {
     int c = 0;
     map_foreachinarea(pc_counttargeted_sub, sd->bl.m,
@@ -613,8 +613,8 @@ int pc_authok(int id, int login_id2, time_t connect_until_time,
     sd->weapontype1 = sd->weapontype2 = 0;
     sd->speed = DEFAULT_WALK_SPEED;
     sd->state.dead_sit = 0;
-    sd->dir = DIR_S;
-    sd->head_dir = DIR_S;
+    sd->dir = Direction::S;
+    sd->head_dir = Direction::S;
     sd->state.auth = 1;
     sd->walktimer = -1;
     sd->attacktimer = -1;
@@ -2548,7 +2548,7 @@ static int calc_next_walk_step(struct map_session_data *sd)
 
     if (sd->walkpath.path_pos >= sd->walkpath.path_len)
         return -1;
-    if (sd->walkpath.path[sd->walkpath.path_pos] & 1)
+    if (int(sd->walkpath.path[sd->walkpath.path_pos]) & 1)
         return sd->speed * 14 / 10;
 
     return sd->speed;
@@ -2595,7 +2595,7 @@ static void pc_walk(timer_id tid, tick_t tick, custom_id_t id, custom_data_t dat
     }
     else
     {                           // マス目境界へ到着
-        if (sd->walkpath.path[sd->walkpath.path_pos] >= 8)
+        if (int(sd->walkpath.path[sd->walkpath.path_pos]) >= 8)
             return;
 
         x = sd->bl.x;
@@ -2898,8 +2898,7 @@ static void pc_attack_timer(timer_id tid, tick_t tick, custom_id_t id, custom_da
 
             map_freeblock_lock();
             pc_stop_walking(sd, 0);
-            sd->attacktarget_lv =
-                battle_weapon_attack(&sd->bl, bl, tick, 0);
+            sd->attacktarget_lv = battle_weapon_attack(&sd->bl, bl, tick);
             map_freeblock_unlock();
             sd->attackabletime = tick + (sd->aspd << 1);
             if (sd->attackabletime <= tick)

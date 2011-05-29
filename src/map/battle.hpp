@@ -1,7 +1,32 @@
 #ifndef BATTLE_H
 #define BATTLE_H
 
-#include "map.hpp"
+#include "../common/timer.hpp"
+
+enum class Direction
+{
+    S,
+    SW,
+    W,
+    NW,
+    N,
+    NE,
+    E,
+    SE,
+};
+
+enum class AttackResult
+{
+    // what is this first?
+    ZERO,
+    LUCKY,
+    FLEE,
+    DEF
+};
+inline bool operator < (AttackResult lhs, AttackResult rhs) { return int(lhs) < int(rhs); }
+inline bool operator <= (AttackResult lhs, AttackResult rhs) { return int(lhs) <= int(rhs); }
+inline bool operator > (AttackResult lhs, AttackResult rhs) { return int(lhs) > int(rhs); }
+inline bool operator >= (AttackResult lhs, AttackResult rhs) { return int(lhs) >= int(rhs); }
 
 struct Damage
 {
@@ -9,8 +34,7 @@ struct Damage
     int type, div_;
     int amotion, dmotion;
     int flag;
-    /// 0, ATK_LUCKY, ATK_FLEE, ATK_DEF
-    int dmg_lv;
+    AttackResult dmg_lv;
 };
 
 /// Elemental damage modifiers (read in pc.cpp)
@@ -33,8 +57,7 @@ const int
 int battle_damage(struct block_list *bl, struct block_list *target, int damage);
 int battle_heal(struct block_list *bl, struct block_list *target, int hp, int sp);
 
-int battle_weapon_attack(struct block_list *bl, struct block_list *target,
-                         tick_t tick, int flag);
+AttackResult battle_weapon_attack(struct block_list *bl, struct block_list *target, tick_t tick);
 
 int battle_is_unarmed(struct block_list *bl);
 Direction battle_get_dir(struct block_list *bl);

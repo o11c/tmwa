@@ -1001,47 +1001,47 @@ bool map_mapname2ipport(const char *name, in_addr_t *ip, in_port_t *port)
 
 Direction map_calc_dir(struct block_list *src, int x, int y)
 {
-    nullpo_retr(DIR_S, src);
+    nullpo_retr(Direction::S, src);
 
     int dx = x - src->x;
     int dy = y - src->y;
     if (dx == 0 && dy == 0)
         // 0
-        return DIR_S;
+        return Direction::S;
     if (dx >= 0 && dy >= 0)
     {
         if (dx * 3 - 1 < dy)
-            return DIR_S;
+            return Direction::S;
         if (dx > dy * 3)
-            return DIR_E;
-        return DIR_SE;
+            return Direction::E;
+        return Direction::SE;
     }
     if (dx >= 0 && dy <= 0)
     {
         if (dx * 3 - 1 < -dy)
-            return DIR_N;
+            return Direction::N;
         if (dx > -dy * 3)
-            return DIR_E;
-        return DIR_NE;
+            return Direction::E;
+        return Direction::NE;
     }
     if (dx <= 0 && dy <= 0)
     {
         if (dx * 3 + 1 > dy)
-            return DIR_N;
+            return Direction::N;
         if (dx < dy * 3)
-            return DIR_W;
-        return DIR_NW;
+            return Direction::W;
+        return Direction::NW;
     }
     if (dx <= 0 && dy >= 0)
     {
         if (-dx * 3 - 1 < dy)
-            return DIR_S;
+            return Direction::S;
         if (-dx > dy * 3)
-            return DIR_W;
-        return DIR_SW;
+            return Direction::W;
+        return Direction::SW;
     }
     // unreachable
-    return DIR_S;
+    return Direction::S;
 }
 
 uint8_t map_getcell(int m, int x, int y)

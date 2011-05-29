@@ -3594,14 +3594,14 @@ int atcommand_mapinfo(int fd, struct map_session_data *sd,
             const char *direction = "Unknown";
             switch (nd->dir)
             {
-            case DIR_S: direction = "south"; break;
-            case DIR_SW: direction = "southwest"; break;
-            case DIR_W: direction = "west"; break;
-            case DIR_NW: direction = "northwest"; break;
-            case DIR_N: direction = "north"; break;
-            case DIR_NE: direction = "northeast"; break;
-            case DIR_E: direction = "east"; break;
-            case DIR_SE: direction = "southeast"; break;
+            case Direction::S: direction = "south"; break;
+            case Direction::SW: direction = "southwest"; break;
+            case Direction::W: direction = "west"; break;
+            case Direction::NW: direction = "northwest"; break;
+            case Direction::N: direction = "north"; break;
+            case Direction::NE: direction = "northeast"; break;
+            case Direction::E: direction = "east"; break;
+            case Direction::SE: direction = "southeast"; break;
             }
             sprintf(output,
                      "NPC %d: %s | Direction: %s | Sprite: %d | Location: %d %d",

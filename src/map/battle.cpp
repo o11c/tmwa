@@ -21,7 +21,6 @@
 
 static struct Damage battle_calc_weapon_attack(struct block_list *bl, struct block_list *target);
 static int battle_calc_damage(struct block_list *target, int damage, int div_, int flag);
-static int battle_counttargeted(struct block_list *bl, struct block_list *src, int target_lv);
 
 static int battle_get_party_id(struct block_list *bl);
 static int battle_get_race(struct block_list *bl);
@@ -49,7 +48,7 @@ struct Battle_Config battle_config;
 // In addition, there are some effects
 
 /// Count the number of beings attacking this being, that are at least the given level
-int battle_counttargeted(struct block_list *bl, struct block_list *src, int target_lv)
+static int battle_counttargeted(struct block_list *bl, struct block_list *src, AttackResult target_lv)
 {
     nullpo_retr(0, bl);
 
@@ -63,13 +62,13 @@ int battle_counttargeted(struct block_list *bl, struct block_list *src, int targ
 /// which way the object is facing
 Direction battle_get_dir(struct block_list *bl)
 {
-    nullpo_retr(DIR_S, bl);
+    nullpo_retr(Direction::S, bl);
 
     if (bl->type == BL_MOB)
         return ((struct mob_data *) bl)->dir;
     if (bl->type == BL_PC)
         return ((struct map_session_data *) bl)->dir;
-    return DIR_S;
+    return Direction::S;
 }
 
 /// Get the (base) level of this being
@@ -767,7 +766,7 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
     wd.amotion = battle_get_amotion(&md->bl);
     wd.dmotion = battle_get_dmotion(target);
     wd.flag = BF_SHORT | BF_WEAPON;
-    wd.dmg_lv = 0;
+    wd.dmg_lv = AttackResult::ZERO;
 
     wd.type = 0;                   // normal
     wd.div_ = 1;                   // single attack
@@ -784,14 +783,14 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
 
     if (battle_config.agi_penaly_type == 1)
     {
-        int target_count = battle_counttargeted(target, &md->bl, battle_config.agi_penaly_count_lv);
+        int target_count = battle_counttargeted(target, &md->bl, (AttackResult)battle_config.agi_penaly_count_lv);
         target_count -= battle_config.agi_penaly_count;
         if (target_count > 0)
             percent_subtract(flee, target_count * battle_config.agi_penaly_num);
     }
     if (battle_config.agi_penaly_type == 2)
     {
-        int target_count = battle_counttargeted(target, &md->bl, battle_config.agi_penaly_count_lv);
+        int target_count = battle_counttargeted(target, &md->bl, (AttackResult)battle_config.agi_penaly_count_lv);
         target_count -= battle_config.agi_penaly_count;
         if (target_count > 0)
             flee -= target_count * battle_config.agi_penaly_num;
@@ -838,7 +837,7 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
 
         if (battle_config.vit_penaly_type == 1)
         {
-            int target_count = battle_counttargeted(target, &md->bl, battle_config.vit_penaly_count_lv);
+            int target_count = battle_counttargeted(target, &md->bl, (AttackResult)battle_config.vit_penaly_count_lv);
             target_count -= battle_config.vit_penaly_count;
             if (target_count > 0)
             {
@@ -849,7 +848,7 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
         }
         if (battle_config.vit_penaly_type == 2)
         {
-            int target_count = battle_counttargeted(target, &md->bl, battle_config.vit_penaly_count_lv);
+            int target_count = battle_counttargeted(target, &md->bl, (AttackResult)battle_config.vit_penaly_count_lv);
             target_count -= battle_config.vit_penaly_count;
             if (target_count > 0)
             {
@@ -884,11 +883,11 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
     if (wd.type == 0 && MRAND(100) >= hitrate)
     {
         wd.damage = 0;
-        wd.dmg_lv = ATK_FLEE;
+        wd.dmg_lv = AttackResult::FLEE;
     }
     else
     {
-        wd.dmg_lv = ATK_DEF;
+        wd.dmg_lv = AttackResult::DEF;
     }
 
     if (tsd)
@@ -912,14 +911,14 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
     {
         wd.damage = 0;
         wd.type = 0x0b;
-        wd.dmg_lv = ATK_LUCKY;
+        wd.dmg_lv = AttackResult::LUCKY;
     }
 
     if (tmd && battle_config.enemy_perfect_flee && MRAND(1000) < battle_get_flee2(target))
     {
         wd.damage = 0;
         wd.type = 0x0b;
-        wd.dmg_lv = ATK_LUCKY;
+        wd.dmg_lv = AttackResult::LUCKY;
     }
 
     if (battle_get_mode(target) & 0x40 && wd.damage > 0)
@@ -948,7 +947,7 @@ static struct Damage battle_calc_pc_weapon_attack(struct map_session_data *sd,
 
     wd.amotion = battle_get_amotion(&sd->bl);
     wd.dmotion = battle_get_dmotion(target);
-    wd.dmg_lv = 0;
+    wd.dmg_lv = AttackResult::ZERO;
     wd.flag = BF_SHORT | BF_WEAPON;
     wd.type = 0;                   // normal
     wd.div_ = 1;                   // single attack
@@ -973,14 +972,14 @@ static struct Damage battle_calc_pc_weapon_attack(struct map_session_data *sd,
     int flee = battle_get_flee(target);
     if (battle_config.agi_penaly_type == 1)
     {
-        int target_count = battle_counttargeted(target, &sd->bl, battle_config.agi_penaly_count_lv);
+        int target_count = battle_counttargeted(target, &sd->bl, (AttackResult)battle_config.agi_penaly_count_lv);
         target_count -= battle_config.agi_penaly_count;
         if (target_count > 0)
             percent_subtract(flee, target_count * battle_config.agi_penaly_num);
     }
     if (battle_config.agi_penaly_type == 2)
     {
-        int target_count = battle_counttargeted(target, &sd->bl, battle_config.agi_penaly_count_lv);
+        int target_count = battle_counttargeted(target, &sd->bl, (AttackResult)battle_config.agi_penaly_count_lv);
         target_count -= battle_config.agi_penaly_count;
         if (target_count > 0)
             flee -= target_count * battle_config.agi_penaly_num;
@@ -1128,7 +1127,7 @@ static struct Damage battle_calc_pc_weapon_attack(struct map_session_data *sd,
 
         if (battle_config.vit_penaly_type == 1)
         {
-            int target_count = battle_counttargeted(target, &sd->bl, battle_config.vit_penaly_count_lv);
+            int target_count = battle_counttargeted(target, &sd->bl, (AttackResult)battle_config.vit_penaly_count_lv);
             target_count -= battle_config.vit_penaly_count;
             if (target_count > 0)
             {
@@ -1139,7 +1138,7 @@ static struct Damage battle_calc_pc_weapon_attack(struct map_session_data *sd,
         }
         if (battle_config.vit_penaly_type == 2)
         {
-            int target_count = battle_counttargeted(target, &sd->bl, battle_config.vit_penaly_count_lv);
+            int target_count = battle_counttargeted(target, &sd->bl, (AttackResult)battle_config.vit_penaly_count_lv);
             target_count -= battle_config.vit_penaly_count;
             if (target_count > 0)
             {
@@ -1212,11 +1211,11 @@ static struct Damage battle_calc_pc_weapon_attack(struct map_session_data *sd,
     if (wd.type == 0 && MRAND(100) >= hitrate)
     {
         wd.damage = wd.damage2 = 0;
-        wd.dmg_lv = ATK_FLEE;
+        wd.dmg_lv = AttackResult::FLEE;
     }
     else
     {
-        wd.dmg_lv = ATK_DEF;
+        wd.dmg_lv = AttackResult::DEF;
     }
 
     if (wd.damage < 0)
@@ -1268,7 +1267,7 @@ static struct Damage battle_calc_pc_weapon_attack(struct map_session_data *sd,
     {
         wd.damage = wd.damage2 = 0;
         wd.type = 0x0b;
-        wd.dmg_lv = ATK_LUCKY;
+        wd.dmg_lv = AttackResult::LUCKY;
     }
 
     if (battle_config.enemy_perfect_flee)
@@ -1277,7 +1276,7 @@ static struct Damage battle_calc_pc_weapon_attack(struct map_session_data *sd,
         {
             wd.damage = wd.damage2 = 0;
             wd.type = 0x0b;
-            wd.dmg_lv = ATK_LUCKY;
+            wd.dmg_lv = AttackResult::LUCKY;
         }
     }
 
@@ -1376,12 +1375,8 @@ struct Damage battle_calc_weapon_attack(struct block_list *src, struct block_lis
     return wd;
 }
 
-/*==========================================
- * 通常攻撃処理まとめ
- *------------------------------------------
- */
-int battle_weapon_attack(struct block_list *src, struct block_list *target,
-                          unsigned int tick, int flag)
+/// One being attacks another at some time
+AttackResult battle_weapon_attack(struct block_list *src, struct block_list *target, tick_t tick)
 {
     struct map_session_data *sd = NULL;
     struct status_change *t_sc_data = battle_get_sc_data(target);
@@ -1389,25 +1384,25 @@ int battle_weapon_attack(struct block_list *src, struct block_list *target,
     int damage, rdamage = 0;
     struct Damage wd;
 
-    nullpo_retr(0, src);
-    nullpo_retr(0, target);
+    nullpo_retr(AttackResult::ZERO, src);
+    nullpo_retr(AttackResult::ZERO, target);
 
     if (src->type == BL_PC)
         sd = (struct map_session_data *) src;
 
     if (src->prev == NULL || target->prev == NULL)
-        return 0;
+        return AttackResult::ZERO;
     if (src->type == BL_PC && pc_isdead(sd))
-        return 0;
+        return AttackResult::ZERO;
     if (target->type == BL_PC
         && pc_isdead((struct map_session_data *) target))
-        return 0;
+        return AttackResult::ZERO;
 
     opt1 = battle_get_opt1(src);
     if (opt1 && *opt1 > 0)
     {
         battle_stopattack(src);
-        return 0;
+        return AttackResult::ZERO;
     }
 
     if (battle_check_target(src, target) > 0 &&
@@ -1423,21 +1418,10 @@ int battle_weapon_attack(struct block_list *src, struct block_list *target,
             else
             {
                 clif_arrow_fail(sd, 0);
-                return 0;
+                return AttackResult::ZERO;
             }
         }
-        if (flag & 0x8000)
-        {
-            if (sd && battle_config.pc_attack_direction_change)
-                sd->dir = sd->head_dir =
-                    map_calc_dir(src, target->x, target->y);
-            else if (src->type == BL_MOB
-                     && battle_config.monster_attack_direction_change)
-                ((struct mob_data *) src)->dir =
-                    map_calc_dir(src, target->x, target->y);
-        }
-        else
-            wd = battle_calc_weapon_attack(src, target);
+        wd = battle_calc_weapon_attack(src, target);
 
         // significantly increase injuries for hasted characters
         if (wd.damage > 0 && (t_sc_data[SC_HASTE].timer != -1))
@@ -1728,11 +1712,11 @@ int battle_config_read(const char *cfgName)
         battle_config.agi_penaly_type = 0;
         battle_config.agi_penaly_count = 3;
         battle_config.agi_penaly_num = 0;
-        battle_config.agi_penaly_count_lv = ATK_FLEE;
+        battle_config.agi_penaly_count_lv = (int)AttackResult::FLEE;
         battle_config.vit_penaly_type = 0;
         battle_config.vit_penaly_count = 3;
         battle_config.vit_penaly_num = 0;
-        battle_config.vit_penaly_count_lv = ATK_DEF;
+        battle_config.vit_penaly_count_lv = (int)AttackResult::DEF;
         battle_config.player_defense_type = 0;
         battle_config.monster_defense_type = 0;
         battle_config.pc_attack_direction_change = 1;

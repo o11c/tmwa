@@ -553,7 +553,7 @@ static int calc_next_walk_step(struct mob_data *md)
 
     if (md->walkpath.path_pos >= md->walkpath.path_len)
         return -1;
-    if (md->walkpath.path[md->walkpath.path_pos] & 1)
+    if (int(md->walkpath.path[md->walkpath.path_pos]) & 1)
         return battle_get_speed(&md->bl) * 14 / 10;
     return battle_get_speed(&md->bl);
 }
@@ -591,7 +591,7 @@ static int mob_walk(struct mob_data *md, unsigned int tick, int data)
     }
     else
     {
-        if (md->walkpath.path[md->walkpath.path_pos] >= 8)
+        if (int(md->walkpath.path[md->walkpath.path_pos]) >= 8)
             return 1;
 
         x = md->bl.x;
@@ -603,8 +603,8 @@ static int mob_walk(struct mob_data *md, unsigned int tick, int data)
             return 0;
         }
         md->dir = md->walkpath.path[md->walkpath.path_pos];
-        dx = dirx[md->dir];
-        dy = diry[md->dir];
+        dx = dirx[(int)md->dir];
+        dy = diry[(int)md->dir];
 
         ctype = map_getcell(md->bl.m, x + dx, y + dy);
         if (ctype == 1 || ctype == 5)
@@ -760,7 +760,7 @@ static int mob_attack(struct mob_data *md, unsigned int tick, int)
 
     //clif_fixmobpos(md);
 
-    md->target_lv = battle_weapon_attack(&md->bl, tbl, tick, 0);
+    md->target_lv = battle_weapon_attack(&md->bl, tbl, tick);
 
     md->attackabletime = tick + battle_get_adelay(&md->bl);
 
@@ -1080,7 +1080,7 @@ int mob_spawn(int id)
 
     md->to_x = md->bl.x = x;
     md->to_y = md->bl.y = y;
-    md->dir = DIR_S;
+    md->dir = Direction::S;
 
     map_addblock(&md->bl);
 
@@ -1678,7 +1678,7 @@ static int mob_randomwalk(struct mob_data *md, int tick)
         }
         for (i = c = 0; i < md->walkpath.path_len; i++)
         {                       // The next walk start time is calculated.
-            if (md->walkpath.path[i] & 1)
+            if (int(md->walkpath.path[i]) & 1)
                 c += speed * 14 / 10;
             else
                 c += speed;
@@ -2784,7 +2784,7 @@ int mob_warp(struct mob_data *md, int m, int x, int y, int type)
             y = MPRAND(1, (maps[m].ys - 2));
         }
     }
-    md->dir = DIR_S;
+    md->dir = Direction::S;
     if (i < 1000)
     {
         md->bl.x = md->to_x = x;
@@ -2824,7 +2824,7 @@ int mob_warp(struct mob_data *md, int m, int x, int y, int type)
  */
 static void mob_counttargeted_sub(struct block_list *bl, va_list ap)
 {
-    int id, *c, target_lv;
+    int id, *c;
     struct block_list *src;
 
     id = va_arg(ap, int);
@@ -2832,7 +2832,7 @@ static void mob_counttargeted_sub(struct block_list *bl, va_list ap)
     nullpo_retv(c = va_arg(ap, int *));
 
     src = va_arg(ap, struct block_list *);
-    target_lv = va_arg(ap, int);
+    AttackResult target_lv = (AttackResult)va_arg(ap, int);
     if (id == bl->id || (src && id == src->id))
         return;
     if (bl->type == BL_PC)
@@ -2856,7 +2856,7 @@ static void mob_counttargeted_sub(struct block_list *bl, va_list ap)
  *------------------------------------------
  */
 int mob_counttargeted(struct mob_data *md, struct block_list *src,
-                       int target_lv)
+                      AttackResult target_lv)
 {
     int c = 0;
 

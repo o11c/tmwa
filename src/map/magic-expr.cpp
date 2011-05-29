@@ -478,28 +478,28 @@ magic_area_rect(int *m, int *x, int *y, int *width, int *height,
 
             switch (area->a.a_bar.dir)
             {
-                case DIR_S:
+                case Direction::S:
                     *x = tx - twidth;
                     *y = ty;
                     *width = twidth * 2 + 1;
                     *height = tdepth;
                     break;
 
-                case DIR_W:
+                case Direction::W:
                     *x = tx - tdepth;
                     *y = ty - twidth;
                     *width = tdepth;
                     *height = twidth * 2 + 1;
                     break;
 
-                case DIR_N:
+                case Direction::N:
                     *x = tx - twidth;
                     *y = ty - tdepth;
                     *width = twidth * 2 + 1;
                     *height = tdepth;
                     break;
 
-                case DIR_E:
+                case Direction::E:
                     *x = tx;
                     *y = ty - twidth;
                     *width = tdepth;
@@ -572,7 +572,7 @@ fun_has_shroud(env_t *, int, val_t *result, val_t *args)
 #define BATTLE_GETTER(name) \
 static int fun_get_##name(env_t *, int, val_t *result, val_t *args) \
 { \
-    RESULTINT = battle_get_##name(ARGENTITY(0)); \
+    RESULTINT = (int)battle_get_##name(ARGENTITY(0)); \
     return 0; \
 }
 

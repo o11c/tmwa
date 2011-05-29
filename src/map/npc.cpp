@@ -1059,7 +1059,7 @@ int npc_parse_warp(char *w1, const char *, char *w3, char *w4)
     nd->bl.m = m;
     nd->bl.x = x;
     nd->bl.y = y;
-    nd->dir = DIR_S;
+    nd->dir = Direction::S;
     nd->flag = 0;
     memcpy(nd->name, w3, 24);
     memcpy(nd->exname, w3, 24);

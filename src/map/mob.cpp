@@ -1344,7 +1344,7 @@ static void mob_ai_sub_hard_activesearch(struct block_list *bl, va_list ap)
         return;
 
     //敵味方判定
-    if (battle_check_target(&smd->bl, bl, BCT_ENEMY) == 0)
+    if (battle_check_target(&smd->bl, bl) == 0)
         return;
 
     if (!smd->mode)
@@ -1764,7 +1764,7 @@ static void mob_ai_sub_hard(struct block_list *bl, va_list ap)
                 || asd->invincible_timer != -1 || pc_isinvisible(asd)
                 || (dist =
                     distance(md->bl.x, md->bl.y, abl->x, abl->y)) >= 32
-                || battle_check_target(bl, abl, BCT_ENEMY) == 0)
+                || battle_check_target(bl, abl) == 0)
                 md->attacked_id = 0;
             else
             {

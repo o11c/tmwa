@@ -2936,7 +2936,7 @@ int pc_attack(struct map_session_data *sd, int target_id, int type)
         return 0;
     }
 
-    if (!battle_check_target(&sd->bl, bl, BCT_ENEMY))
+    if (!battle_check_target(&sd->bl, bl))
         return 1;
     if (sd->attacktimer != -1)
         pc_stopattack(sd);

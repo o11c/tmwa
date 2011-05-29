@@ -19,6 +19,14 @@
 #include "../common/socket.hpp"
 #include "../common/mt_rand.hpp"
 
+static struct Damage battle_calc_weapon_attack(struct block_list *bl, struct block_list *target);
+static int battle_calc_damage(struct block_list *target, int damage, int div_, int flag);
+static int battle_counttargeted(struct block_list *bl, struct block_list *src, int target_lv);
+
+static int battle_get_party_id(struct block_list *bl);
+static int battle_get_race(struct block_list *bl);
+static int battle_get_mode(struct block_list *bl);
+
 static int battle_attr_fix(int damage, int atk_elem, int def_elem);
 static int battle_stopattack(struct block_list *bl);
 static int battle_get_hit(struct block_list *bl);
@@ -651,40 +659,6 @@ short *battle_get_option(struct block_list *bl)
 
 //-------------------------------------------------------------------
 
-/// Information for delayed damage
-struct battle_delay_damage_
-{
-    struct block_list *src, *target;
-    int damage;
-};
-
-/// Actually apply delayed damage
-static void battle_delay_damage_sub(timer_id, tick_t, custom_id_t id, custom_data_t data)
-{
-    struct battle_delay_damage_ *dat = (struct battle_delay_damage_ *) data.p;
-    if (!dat)
-        return;
-    if (dat->target->prev && map_id2bl(id) == dat->src)
-        battle_damage(dat->src, dat->target, dat->damage);
-    free(dat);
-}
-
-/// Setup delayed damage
-int battle_delay_damage(tick_t tick, struct block_list *src,
-                        struct block_list *target, int damage)
-{
-    nullpo_retr(0, src);
-    nullpo_retr(0, target);
-
-    struct battle_delay_damage_ *dat;
-    CREATE(dat, struct battle_delay_damage_, 1);
-    dat->src = src;
-    dat->target = target;
-    dat->damage = damage;
-    add_timer(tick, battle_delay_damage_sub, src->id, (void *)dat);
-    return 0;
-}
-
 /// Decrease the HP of target
 // if trying to damage by a negative amount, heal instead
 int battle_damage(struct block_list *src, struct block_list *target, int damage)
@@ -746,18 +720,6 @@ int battle_stopattack(struct block_list *bl)
         return mob_stopattack((struct mob_data *) bl);
     if (bl->type == BL_PC)
         return pc_stopattack((struct map_session_data *) bl);
-    return 0;
-}
-
-/// A being should stop walking
-int battle_stopwalking(struct block_list *bl, int type)
-{
-    nullpo_retr(0, bl);
-
-    if (bl->type == BL_MOB)
-        return mob_stop_walking((struct mob_data *) bl, type);
-    if (bl->type == BL_PC)
-        return pc_stop_walking((struct map_session_data *) bl, type);
     return 0;
 }
 
@@ -998,7 +960,7 @@ static struct Damage battle_calc_pc_weapon_attack(struct map_session_data *sd,
     int s_ele = battle_get_attack_element(&sd->bl);
     int s_ele_ = battle_get_attack_element2(&sd->bl);
     int t_race = battle_get_race(target);
-    int t_ele = battle_get_elem_type(target);
+    int t_ele = battle_get_element(target) % 10;
     int t_mode = battle_get_mode(target);
 
     struct map_session_data *tsd = NULL;
@@ -1448,7 +1410,7 @@ int battle_weapon_attack(struct block_list *src, struct block_list *target,
         return 0;
     }
 
-    if (battle_check_target(src, target, BCT_ENEMY) > 0 &&
+    if (battle_check_target(src, target) > 0 &&
         battle_check_range(src, target, 0))
     {
         // 攻撃対象となりうるので攻撃
@@ -1592,142 +1554,75 @@ int battle_weapon_attack(struct block_list *src, struct block_list *target,
     return wd.dmg_lv;
 }
 
-int battle_check_undead(int race, int element)
+/// Is a target an enemy?
+bool battle_check_target(struct block_list *src, struct block_list *target)
 {
-    if (battle_config.undead_detect_type == 0)
-    {
-        if (element == 9)
-            return 1;
-    }
-    else if (battle_config.undead_detect_type == 1)
-    {
-        if (race == 1)
-            return 1;
-    }
-    else
-    {
-        if (element == 9 || race == 1)
-            return 1;
-    }
-    return 0;
-}
-
-/*==========================================
- * 敵味方判定(1=肯定,0=否定,-1=エラー)
- * flag&0xf0000 = 0x00000:敵じゃないか判定（ret:1＝敵ではない）
- *                              = 0x10000:パーティー判定（ret:1=パーティーメンバ)
- *                              = 0x20000:全て(ret:1=敵味方両方)
- *                              = 0x40000:敵か判定(ret:1=敵)
- *                              = 0x50000:パーティーじゃないか判定(ret:1=パーティでない)
- *------------------------------------------
- */
-int battle_check_target(struct block_list *src, struct block_list *target,
-                         int flag)
-{
-    int s_p, t_p;
-    struct block_list *ss = src;
-
     nullpo_retr(0, src);
     nullpo_retr(0, target);
+    if (src == target)
+        return 0;
+    // The master (if a mob)
+    struct block_list *ss = src;
 
-    if (flag & 0x40000)
-    {                           // 反転フラグ
-        int ret = battle_check_target(src, target, flag & 0x30000);
-        if (ret != -1)
-            return !ret;
-        return -1;
-    }
-
-    if (flag & 0x20000)
-    {
-        if (target->type == BL_MOB || target->type == BL_PC)
-            return 1;
-        else
-            return -1;
-    }
-
-    if (target->type == BL_PC
-        && ((struct map_session_data *) target)->invincible_timer != -1)
-        return -1;
-
-    // Mobでmaster_idがあってspecial_mob_aiなら、召喚主を求める
+    struct map_session_data *sd = NULL;
+    struct mob_data *md = NULL;
+    if (src->type == BL_PC)
+        sd = (struct map_session_data *)src;
     if (src->type == BL_MOB)
+        md = (struct mob_data *)src;
+
+    struct map_session_data *tsd = NULL;
+    struct mob_data *tmd = NULL;
+    if (target->type == BL_PC)
+        tsd = (struct map_session_data *)target;
+    if (target->type == BL_MOB)
+        tmd = (struct mob_data *)target;
+
+    if (tsd && tsd->invincible_timer != -1)
+        return 0;
+
+    if (md && md->master_id)
     {
-        struct mob_data *md = (struct mob_data *) src;
-        if (md && md->master_id > 0)
-        {
-            if (md->master_id == target->id)    // 主なら肯定
-                return 1;
-            if (md->state.special_mob_ai)
-            {
-                if (target->type == BL_MOB)
-                {               //special_mob_aiで対象がMob
-                    struct mob_data *tmd = (struct mob_data *) target;
-                    if (tmd)
-                    {
-                        if (tmd->master_id != md->master_id)    //召喚主が一緒でなければ否定
-                            return 0;
-                        else
-                        {       //召喚主が一緒なので肯定したいけど自爆は否定
-                            if (md->state.special_mob_ai > 2)
-                                return 0;
-                            else
-                                return 1;
-                        }
-                    }
-                }
-            }
-            if ((ss = map_id2bl(md->master_id)) == NULL)
-                return -1;
-        }
+        if (md->master_id == target->id)
+            return 0;
+        if (md->state.special_mob_ai && tmd)
+            return tmd->master_id != md->master_id || md->state.special_mob_ai > 2;
+        ss = map_id2bl(md->master_id);
+        if (!ss)
+            return 0;
+        if (ss == target)
+            return 0;
     }
 
-    if (src == target || ss == target)  // 同じなら肯定
+    if (tsd && pc_isinvisible(tsd))
+        return 0;
+
+    if (src->prev == NULL || (sd && pc_isdead(sd)))
+        return 0;
+
+    if (ss->type == BL_PC)
+        sd = (struct map_session_data *)ss;
+    if (ss->type == BL_MOB)
+        md = (struct mob_data *)ss;
+
+    if ((sd && tmd) || (md && tsd))
         return 1;
 
-    if (target->type == BL_PC
-        && pc_isinvisible((struct map_session_data *) target))
-        return -1;
+    // must both be PCs for PvP
+    if (!ss || !tsd)
+        return 0;
 
-    if (src->prev == NULL ||    // 死んでるならエラー
-        (src->type == BL_PC && pc_isdead((struct map_session_data *) src)))
-        return -1;
+    if (!maps[ss->m].flag.pvp && !pc_iskiller(sd, tsd))
+        return 0;
 
-    if ((ss->type == BL_PC && target->type == BL_MOB) ||
-        (ss->type == BL_MOB && target->type == BL_PC))
-        return 0;               // PCvsMOBなら否定
+    if (!maps[ss->m].flag.pvp_noparty)
+        return 1;
 
-    s_p = battle_get_party_id(ss);
+    int s_p = battle_get_party_id(ss);
+    int t_p = battle_get_party_id(target);
 
-    t_p = battle_get_party_id(target);
-
-    if (flag & 0x10000)
-    {
-        if (s_p && t_p && s_p == t_p)   // 同じパーティなら肯定（味方）
-            return 1;
-        else                    // パーティ検索なら同じパーティじゃない時点で否定
-            return 0;
-    }
-
-//printf("ss:%d src:%d target:%d flag:0x%x %d %d ",ss->id,src->id,target->id,flag,src->type,target->type);
-//printf("p:%d %d g:%d %d\n",s_p,t_p,s_g,t_g);
-
-    if (ss->type == BL_PC && target->type == BL_PC)
-    {                           // 両方PVPモードなら否定（敵）
-        if (maps[ss->m].flag.pvp
-            || pc_iskiller((struct map_session_data *) ss,
-                            (struct map_session_data *) target))
-        {                       // [MouseJstr]
-            if (battle_config.pk_mode)
-                return 1;       // prevent novice engagement in pk_mode [Valaris]
-            else if (maps[ss->m].flag.pvp_noparty && s_p > 0 && t_p > 0
-                     && s_p == t_p)
-                return 1;
-            return 0;
-        }
-    }
-
-    return 1;                   // 該当しないので無関係人物（まあ敵じゃないので味方）
+    // return true unless they are in the same party
+    return !s_p || !t_p || s_p != t_p;
 }
 
 /*==========================================

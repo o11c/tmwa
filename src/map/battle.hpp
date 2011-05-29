@@ -101,17 +101,13 @@ int battle_check_range(struct block_list *src, struct block_list *bl,
 
 extern struct Battle_Config
 {
-    int warp_point_debug;
     int enemy_critical;
     int enemy_critical_rate;
     int enemy_str;
     int enemy_perfect_flee;
-    int cast_rate, delay_rate, delay_dependon_dex;
     int sdelay_attack_enable;
-    int left_cardfix_to_right;
     int pc_damage_delay;
     int pc_damage_delay_rate;
-    int defnotenemy;
     int random_monster_checklv;
     int attr_recover;
     int flooritem_lifetime;
@@ -119,39 +115,27 @@ extern struct Battle_Config
     int item_first_get_time;
     int item_second_get_time;
     int item_third_get_time;
-    int item_rate, base_exp_rate, job_exp_rate;    // removed item rate, depreciated
+    int base_exp_rate;
+    int job_exp_rate;
     int drop_rate0item;
     int death_penalty_type;
     int death_penalty_base, death_penalty_job;
-    int pvp_exp;               // [MouseJstr]
-    int zeny_penalty;
+    int pvp_exp;
     int restart_hp_rate;
     int restart_sp_rate;
     int monster_hp_rate;
     int monster_max_aspd;
     int atc_spawn_quantity_limit;
-    int gm_allequip;
-    int wp_rate;
-    int pp_rate;
     int monster_active_enable;
     int monster_damage_delay_rate;
     int monster_loot_type;
     int mob_count_rate;
     int pc_invincible_time;
     int skill_min_damage;
-    int finger_offensive_type;
-    int heal_exp;
-    int resurrection_exp;
-    int shop_exp;
-    int combo_delay_rate;
-    int item_check;
-    int wedding_modifydisplay;
     int natural_healhp_interval;
     int natural_healsp_interval;
     int natural_heal_skill_interval;
     int natural_heal_weight_rate;
-    int item_name_override_grffile;
-    int arrow_decrement;
     int max_aspd;
     int max_hp;
     int max_sp;
@@ -159,8 +143,6 @@ extern struct Battle_Config
     int max_parameter;
     int save_clothcolor;
     int undead_detect_type;
-    int pc_auto_counter_type;
-    int monster_auto_counter_type;
     int agi_penaly_type;
     int agi_penaly_count;
     int agi_penaly_num;
@@ -169,34 +151,31 @@ extern struct Battle_Config
     int vit_penaly_num;
     int player_defense_type;
     int monster_defense_type;
-    int magic_defense_type;
-    int pc_cloak_check_type;
-    int monster_cloak_check_type;
     int pc_attack_direction_change;
     int monster_attack_direction_change;
-    int pc_undead_nofreeze;
-    int monster_class_change_full_recover;
-    int produce_item_name_input;
-    int produce_potion_name_input;
-    int making_arrow_name_input;
-    int holywater_name_input;
-    int chat_warpportal;
-    int mob_warpportal;
     int dead_branch_active;
-    int show_steal_in_same_party;
     int mob_attack_attr_none;
-    int mob_ghostring_fix;
-    int pc_attack_attr_none;
-    int item_rate_common, item_rate_card, item_rate_equip, item_rate_heal, item_rate_use;  // Added by RoVeRT, Additional Heal and Usable item rate by Val
-    int item_drop_common_min, item_drop_common_max;    // Added by TyrNemesis^
-    int item_drop_card_min, item_drop_card_max;
-    int item_drop_equip_min, item_drop_equip_max;
-    int item_drop_heal_min, item_drop_heal_max;    // Added by Valatris
-    int item_drop_use_min, item_drop_use_max;  //End
 
-    int prevent_logout;        // Added by RoVeRT
+    int item_rate_common;
+    int item_rate_card;
+    int item_rate_equip;
+    int item_rate_heal;
+    int item_rate_use;
 
-    int alchemist_summon_reward;   // [Valaris]
+    int item_drop_common_min;
+    int item_drop_common_max;
+    int item_drop_card_min;
+    int item_drop_card_max;
+    int item_drop_equip_min;
+    int item_drop_equip_max;
+    int item_drop_heal_min;
+    int item_drop_heal_max;
+    int item_drop_use_min;
+    int item_drop_use_max;
+
+    int prevent_logout;
+
+    int alchemist_summon_reward;
     int maximum_level;
     int drops_by_luk;
     int monsters_ignore_gm;
@@ -204,34 +183,22 @@ extern struct Battle_Config
     int equipment_break_rate;
     int multi_level_up;
     int pk_mode;
-    int show_mob_hp;           // end additions [Valaris]
 
     int agi_penaly_count_lv;
     int vit_penaly_count_lv;
 
-    int gx_allhit;
-    int gx_cardfix;
-    int gx_dupele;
-    int gx_disptype;
     int hide_GM_session;
-    int unit_movement_type;
     int invite_request_check;
     int disp_experience;
-    int backstab_bow_penalty;
 
-    int hack_info_GM_level;    // added by [Yor]
-    int any_warp_GM_min_level; // added by [Yor]
-    int packet_ver_flag;       // added by [Yor]
+    int hack_info_GM_level;
+    int any_warp_GM_min_level;
 
-    int min_hair_style;        // added by [MouseJstr]
-    int max_hair_style;        // added by [MouseJstr]
-    int min_hair_color;        // added by [MouseJstr]
-    int max_hair_color;        // added by [MouseJstr]
-    int min_cloth_color;       // added by [MouseJstr]
-    int max_cloth_color;       // added by [MouseJstr]
+    int max_hair_style;
+    int max_hair_color;
+    int max_cloth_color;
 
-    int castrate_dex_scale;    // added by [MouseJstr]
-    int area_size;             // added by [MouseJstr]
+    int area_size;
 
     int chat_lame_penalty;
     int chat_spam_threshold;
@@ -246,8 +213,8 @@ extern struct Battle_Config
 
     int mask_ip_gms;
 
-    int drop_pickup_safety_zone;   // [Fate] Max. distance to an object dropped by a kill by self in which dropsteal protection works
-    int itemheal_regeneration_factor;  // [Fate] itemheal speed factor
+    int drop_pickup_safety_zone;
+    int itemheal_regeneration_factor;
 
 } battle_config;
 

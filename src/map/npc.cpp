@@ -1064,10 +1064,8 @@ int npc_parse_warp(char *w1, const char *, char *w3, char *w4)
     memcpy(nd->name, w3, 24);
     memcpy(nd->exname, w3, 24);
 
-    if (!battle_config.warp_point_debug)
-        nd->npc_class = WARP_CLASS;
-    else
-        nd->npc_class = WARP_DEBUG_CLASS;
+    nd->npc_class = WARP_CLASS;
+
     nd->speed = 200;
     nd->option = 0;
     nd->opt1 = 0;

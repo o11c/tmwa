@@ -32,7 +32,6 @@ static void itemdb_read(void);
 static int itemdb_readdb(void);
 static int itemdb_read_randomitem(void);
 static int itemdb_read_itemavail(void);
-static int itemdb_read_itemnametable(void);
 static int itemdb_read_noequip(void);
 
 /*==========================================
@@ -199,41 +198,6 @@ int itemdb_isequip3(int nameid)
     int type = itemdb_type(nameid);
     if (type == 4 || type == 5 || type == 8)
         return 1;
-    return 0;
-}
-
-//
-// 初期化
-//
-/*==========================================
- *
- *------------------------------------------
- */
-static int itemdb_read_itemslottable(void)
-{
-    char *buf, *p;
-    size_t s;
-
-    buf = (char *)grfio_reads("data\\itemslottable.txt", &s);
-    if (buf == NULL)
-        return -1;
-    buf[s] = 0;
-    for (p = buf; p - buf < s;)
-    {
-        int nameid, equip;
-        sscanf(p, "%d#%d#", &nameid, &equip);
-        itemdb_search(nameid)->equip = equip;
-        p = strchr(p, 10);
-        if (!p)
-            break;
-        p++;
-        p = strchr(p, 10);
-        if (!p)
-            break;
-        p++;
-    }
-    free(buf);
-
     return 0;
 }
 
@@ -483,90 +447,6 @@ static int itemdb_read_itemavail(void)
 }
 
 /*==========================================
- * アイテムの名前テーブルを読み込む
- *------------------------------------------
- */
-static int itemdb_read_itemnametable(void)
-{
-    char *buf, *p;
-    size_t s;
-
-    buf = (char *)grfio_reads("data\\idnum2itemdisplaynametable.txt", &s);
-
-    if (buf == NULL)
-        return -1;
-
-    buf[s] = 0;
-    for (p = buf; p - buf < s;)
-    {
-        int nameid;
-        char buf2[64];
-
-        if (sscanf(p, "%d#%[^#]#", &nameid, buf2) == 2)
-        {
-
-#ifdef ITEMDB_OVERRIDE_NAME_VERBOSE
-            if (itemdb_exists(nameid) &&
-                strncmp(itemdb_search(nameid)->jname, buf2, 24) != 0)
-            {
-                printf("[override] %d %s => %s\n", nameid,
-                        itemdb_search(nameid)->jname, buf2);
-            }
-#endif
-
-            memcpy(itemdb_search(nameid)->jname, buf2, 24);
-        }
-
-        p = strchr(p, 10);
-        if (!p)
-            break;
-        p++;
-    }
-    free(buf);
-    printf("read data\\idnum2itemdisplaynametable.txt done.\n");
-
-    return 0;
-}
-
-/*==========================================
- * カードイラストのリソース名前テーブルを読み込む
- *------------------------------------------
- */
-static int itemdb_read_cardillustnametable(void)
-{
-    char *buf, *p;
-    size_t s;
-
-    buf = (char *)grfio_reads("data\\num2cardillustnametable.txt", &s);
-
-    if (buf == NULL)
-        return -1;
-
-    buf[s] = 0;
-    for (p = buf; p - buf < s;)
-    {
-        int nameid;
-        char buf2[64];
-
-        if (sscanf(p, "%d#%[^#]#", &nameid, buf2) == 2)
-        {
-            strcat(buf2, ".bmp");
-            memcpy(itemdb_search(nameid)->cardillustname, buf2, 64);
-//          printf("%d %s\n",nameid,itemdb_search(nameid)->cardillustname);
-        }
-
-        p = strchr(p, 10);
-        if (!p)
-            break;
-        p++;
-    }
-    free(buf);
-    printf("read data\\num2cardillustnametable.txt done.\n");
-
-    return 0;
-}
-
-/*==========================================
  * 装備制限ファイル読み出し
  *------------------------------------------
  */
@@ -634,14 +514,10 @@ void itemdebugtxt()
  */
 static void itemdb_read(void)
 {
-    itemdb_read_itemslottable();
     itemdb_readdb();
     itemdb_read_randomitem();
     itemdb_read_itemavail();
     itemdb_read_noequip();
-    itemdb_read_cardillustnametable();
-    if (!battle_config.item_name_override_grffile)
-        itemdb_read_itemnametable();
 }
 
 /*==========================================

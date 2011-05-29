@@ -1456,8 +1456,7 @@ int battle_weapon_attack(struct block_list *src, struct block_list *target,
         {
             if (sd->equip_index[10] >= 0)
             {
-                if (battle_config.arrow_decrement)
-                    pc_delitem(sd, sd->equip_index[10], 1, 0);
+                pc_delitem(sd, sd->equip_index[10], 1, 0);
             }
             else
             {
@@ -1786,19 +1785,13 @@ int battle_config_read(const char *cfgName)
 
     if ((count++) == 0)
     {
-        battle_config.warp_point_debug = 0;
         battle_config.enemy_critical = 0;
         battle_config.enemy_critical_rate = 100;
         battle_config.enemy_str = 1;
         battle_config.enemy_perfect_flee = 0;
-        battle_config.cast_rate = 100;
-        battle_config.delay_rate = 100;
-        battle_config.delay_dependon_dex = 0;
         battle_config.sdelay_attack_enable = 0;
-        battle_config.left_cardfix_to_right = 0;
         battle_config.pc_damage_delay = 1;
         battle_config.pc_damage_delay_rate = 100;
-        battle_config.defnotenemy = 1;
         battle_config.random_monster_checklv = 1;
         battle_config.attr_recover = 1;
         battle_config.flooritem_lifetime = LIFETIME_FLOORITEM * 1000;
@@ -1815,34 +1808,21 @@ int battle_config_read(const char *cfgName)
         battle_config.death_penalty_type = 0;
         battle_config.death_penalty_base = 0;
         battle_config.death_penalty_job = 0;
-        battle_config.zeny_penalty = 0;
         battle_config.restart_hp_rate = 0;
         battle_config.restart_sp_rate = 0;
         battle_config.monster_hp_rate = 100;
         battle_config.monster_max_aspd = 199;
-        battle_config.gm_allequip = 0;
-        battle_config.wp_rate = 100;
-        battle_config.pp_rate = 100;
         battle_config.monster_active_enable = 1;
         battle_config.monster_damage_delay_rate = 100;
         battle_config.monster_loot_type = 0;
         battle_config.mob_count_rate = 100;
         battle_config.pc_invincible_time = 5000;
         battle_config.skill_min_damage = 0;
-        battle_config.finger_offensive_type = 0;
-        battle_config.heal_exp = 0;
-        battle_config.resurrection_exp = 0;
-        battle_config.shop_exp = 0;
-        battle_config.combo_delay_rate = 100;
-        battle_config.item_check = 1;
-        battle_config.wedding_modifydisplay = 0;
         battle_config.natural_healhp_interval = 6000;
         battle_config.natural_healsp_interval = 8000;
         battle_config.natural_heal_skill_interval = 10000;
         battle_config.natural_heal_weight_rate = 50;
         battle_config.itemheal_regeneration_factor = 1;
-        battle_config.item_name_override_grffile = 1;
-        battle_config.arrow_decrement = 1;
         battle_config.max_aspd = 199;
         battle_config.max_hp = 32500;
         battle_config.max_sp = 32500;
@@ -1850,8 +1830,6 @@ int battle_config_read(const char *cfgName)
         battle_config.max_parameter = 99;
         battle_config.save_clothcolor = 0;
         battle_config.undead_detect_type = 0;
-        battle_config.pc_auto_counter_type = 1;
-        battle_config.monster_auto_counter_type = 1;
         battle_config.agi_penaly_type = 0;
         battle_config.agi_penaly_count = 3;
         battle_config.agi_penaly_num = 0;
@@ -1862,30 +1840,11 @@ int battle_config_read(const char *cfgName)
         battle_config.vit_penaly_count_lv = ATK_DEF;
         battle_config.player_defense_type = 0;
         battle_config.monster_defense_type = 0;
-        battle_config.magic_defense_type = 0;
-        battle_config.pc_cloak_check_type = 0;
-        battle_config.monster_cloak_check_type = 0;
         battle_config.pc_attack_direction_change = 1;
         battle_config.monster_attack_direction_change = 1;
-        battle_config.pc_undead_nofreeze = 0;
-        battle_config.monster_class_change_full_recover = 0;
-        battle_config.produce_item_name_input = 1;
-        battle_config.produce_potion_name_input = 1;
-        battle_config.making_arrow_name_input = 1;
-        battle_config.holywater_name_input = 1;
-        battle_config.chat_warpportal = 0;
-        battle_config.mob_warpportal = 0;
         battle_config.dead_branch_active = 0;
-        battle_config.show_steal_in_same_party = 0;
-        battle_config.pc_attack_attr_none = 0;
         battle_config.mob_attack_attr_none = 1;
-        battle_config.mob_ghostring_fix = 0;
-        battle_config.gx_allhit = 0;
-        battle_config.gx_cardfix = 0;
-        battle_config.gx_dupele = 1;
-        battle_config.gx_disptype = 1;
         battle_config.hide_GM_session = 0;
-        battle_config.unit_movement_type = 0;
         battle_config.invite_request_check = 1;
         battle_config.disp_experience = 0;
         battle_config.item_rate_common = 100;
@@ -1910,19 +1869,11 @@ int battle_config_read(const char *cfgName)
         battle_config.equipment_break_rate = 100;   // [Valaris]
         battle_config.pk_mode = 0;  // [Valaris]
         battle_config.multi_level_up = 0;   // [Valaris]
-        battle_config.backstab_bow_penalty = 0; // Akaru
-        battle_config.show_mob_hp = 0;  // [Valaris]
         battle_config.hack_info_GM_level = 60;  // added by [Yor] (default: 60, GM level)
         battle_config.any_warp_GM_min_level = 20;   // added by [Yor]
-        battle_config.packet_ver_flag = 63; // added by [Yor]
-        battle_config.min_hair_style = 0;
         battle_config.max_hair_style = 20;
-        battle_config.min_hair_color = 0;
         battle_config.max_hair_color = 9;
-        battle_config.min_cloth_color = 0;
         battle_config.max_cloth_color = 4;
-
-        battle_config.castrate_dex_scale = 150;
 
         battle_config.area_size = 14;
 
@@ -1954,19 +1905,13 @@ int battle_config_read(const char *cfgName)
             int *val;
         } data[] =
         {
-            {"warp_point_debug", &battle_config.warp_point_debug},
             {"enemy_critical", &battle_config.enemy_critical},
             {"enemy_critical_rate", &battle_config.enemy_critical_rate},
             {"enemy_str", &battle_config.enemy_str},
             {"enemy_perfect_flee", &battle_config.enemy_perfect_flee},
-            {"casting_rate", &battle_config.cast_rate},
-            {"delay_rate", &battle_config.delay_rate},
-            {"delay_dependon_dex", &battle_config.delay_dependon_dex},
             {"skill_delay_attack_enable", &battle_config.sdelay_attack_enable},
-            {"left_cardfix_to_right", &battle_config.left_cardfix_to_right},
             {"player_damage_delay", &battle_config.pc_damage_delay},
             {"player_damage_delay_rate", &battle_config.pc_damage_delay_rate},
-            {"defunit_not_enemy", &battle_config.defnotenemy},
             {"random_monster_checklv", &battle_config.random_monster_checklv},
             {"attribute_recover", &battle_config.attr_recover},
             {"flooritem_lifetime", &battle_config.flooritem_lifetime},
@@ -1975,7 +1920,6 @@ int battle_config_read(const char *cfgName)
             {"item_first_get_time", &battle_config.item_first_get_time},
             {"item_second_get_time", &battle_config.item_second_get_time},
             {"item_third_get_time", &battle_config.item_third_get_time},
-            {"item_rate", &battle_config.item_rate},
             {"drop_rate0item", &battle_config.drop_rate0item},
             {"base_exp_rate", &battle_config.base_exp_rate},
             {"job_exp_rate", &battle_config.job_exp_rate},
@@ -1983,35 +1927,22 @@ int battle_config_read(const char *cfgName)
             {"death_penalty_type", &battle_config.death_penalty_type},
             {"death_penalty_base", &battle_config.death_penalty_base},
             {"death_penalty_job", &battle_config.death_penalty_job},
-            {"zeny_penalty", &battle_config.zeny_penalty},
             {"restart_hp_rate", &battle_config.restart_hp_rate},
             {"restart_sp_rate", &battle_config.restart_sp_rate},
             {"monster_hp_rate", &battle_config.monster_hp_rate},
             {"monster_max_aspd", &battle_config.monster_max_aspd},
             {"atcommand_spawn_quantity_limit", &battle_config.atc_spawn_quantity_limit},
-            {"gm_all_equipment", &battle_config.gm_allequip},
-            {"weapon_produce_rate", &battle_config.wp_rate},
-            {"potion_produce_rate", &battle_config.pp_rate},
             {"monster_active_enable", &battle_config.monster_active_enable},
             {"monster_damage_delay_rate", &battle_config.monster_damage_delay_rate},
             {"monster_loot_type", &battle_config.monster_loot_type},
             {"mob_count_rate", &battle_config.mob_count_rate},
             {"player_invincible_time", &battle_config.pc_invincible_time},
             {"skill_min_damage", &battle_config.skill_min_damage},
-            {"finger_offensive_type", &battle_config.finger_offensive_type},
-            {"heal_exp", &battle_config.heal_exp},
-            {"resurrection_exp", &battle_config.resurrection_exp},
-            {"shop_exp", &battle_config.shop_exp},
-            {"combo_delay_rate", &battle_config.combo_delay_rate},
-            {"item_check", &battle_config.item_check},
-            {"wedding_modifydisplay", &battle_config.wedding_modifydisplay},
             {"natural_healhp_interval", &battle_config.natural_healhp_interval},
             {"natural_healsp_interval", &battle_config.natural_healsp_interval},
             {"natural_heal_skill_interval", &battle_config.natural_heal_skill_interval},
             {"natural_heal_weight_rate", &battle_config.natural_heal_weight_rate},
             {"itemheal_regeneration_factor", &battle_config.itemheal_regeneration_factor},
-            {"item_name_override_grffile", &battle_config.item_name_override_grffile},
-            {"arrow_decrement", &battle_config.arrow_decrement},
             {"max_aspd", &battle_config.max_aspd},
             {"max_hp", &battle_config.max_hp},
             {"max_sp", &battle_config.max_sp},
@@ -2019,8 +1950,6 @@ int battle_config_read(const char *cfgName)
             {"max_parameter", &battle_config.max_parameter},
             {"save_clothcolor", &battle_config.save_clothcolor},
             {"undead_detect_type", &battle_config.undead_detect_type},
-            {"player_auto_counter_type", &battle_config.pc_auto_counter_type},
-            {"monster_auto_counter_type", &battle_config.monster_auto_counter_type},
             {"agi_penaly_type", &battle_config.agi_penaly_type},
             {"agi_penaly_count", &battle_config.agi_penaly_count},
             {"agi_penaly_num", &battle_config.agi_penaly_num},
@@ -2031,29 +1960,11 @@ int battle_config_read(const char *cfgName)
             {"vit_penaly_count_lv", &battle_config.vit_penaly_count_lv},
             {"player_defense_type", &battle_config.player_defense_type},
             {"monster_defense_type", &battle_config.monster_defense_type},
-            {"magic_defense_type", &battle_config.magic_defense_type},
-            {"player_cloak_check_type", &battle_config.pc_cloak_check_type},
-            {"monster_cloak_check_type", &battle_config.monster_cloak_check_type},
             {"player_attack_direction_change", &battle_config.pc_attack_direction_change},
             {"monster_attack_direction_change", &battle_config.monster_attack_direction_change},
-            {"monster_class_change_full_recover", &battle_config.monster_class_change_full_recover},
-            {"produce_item_name_input", &battle_config.produce_item_name_input},
-            {"produce_potion_name_input", &battle_config.produce_potion_name_input},
-            {"making_arrow_name_input", &battle_config.making_arrow_name_input},
-            {"holywater_name_input", &battle_config.holywater_name_input},
-            {"chat_warpportal", &battle_config.chat_warpportal},
-            {"mob_warpportal", &battle_config.mob_warpportal},
             {"dead_branch_active", &battle_config.dead_branch_active},
-            {"show_steal_in_same_party", &battle_config.show_steal_in_same_party},
             {"mob_attack_attr_none", &battle_config.mob_attack_attr_none},
-            {"mob_ghostring_fix", &battle_config.mob_ghostring_fix},
-            {"pc_attack_attr_none", &battle_config.pc_attack_attr_none},
-            {"gx_allhit", &battle_config.gx_allhit},
-            {"gx_cardfix", &battle_config.gx_cardfix},
-            {"gx_dupele", &battle_config.gx_dupele},
-            {"gx_disptype", &battle_config.gx_disptype},
             {"hide_GM_session", &battle_config.hide_GM_session},
-            {"unit_movement_type", &battle_config.unit_movement_type},
             {"invite_request_check", &battle_config.invite_request_check},
             {"disp_experience", &battle_config.disp_experience},
             {"item_rate_common", &battle_config.item_rate_common},   // Added by RoVeRT
@@ -2076,18 +1987,11 @@ int battle_config_read(const char *cfgName)
             {"equipment_break_rate", &battle_config.equipment_break_rate},   // [Valaris]
             {"pk_mode", &battle_config.pk_mode}, // [Valaris]
             {"multi_level_up", &battle_config.multi_level_up},   // [Valaris]
-            {"backstab_bow_penalty", &battle_config.backstab_bow_penalty},
-            {"show_mob_hp", &battle_config.show_mob_hp}, // [Valaris]
             {"hack_info_GM_level", &battle_config.hack_info_GM_level},   // added by [Yor]
             {"any_warp_GM_min_level", &battle_config.any_warp_GM_min_level}, // added by [Yor]
-            {"packet_ver_flag", &battle_config.packet_ver_flag}, // added by [Yor]
-            {"min_hair_style", &battle_config.min_hair_style},   // added by [MouseJstr]
             {"max_hair_style", &battle_config.max_hair_style},   // added by [MouseJstr]
-            {"min_hair_color", &battle_config.min_hair_color},   // added by [MouseJstr]
             {"max_hair_color", &battle_config.max_hair_color},   // added by [MouseJstr]
-            {"min_cloth_color", &battle_config.min_cloth_color}, // added by [MouseJstr]
             {"max_cloth_color", &battle_config.max_cloth_color}, // added by [MouseJstr]
-            {"castrate_dex_scale", &battle_config.castrate_dex_scale},   // added by [MouseJstr]
             {"area_size", &battle_config.area_size}, // added by [MouseJstr]
             {"chat_lame_penalty", &battle_config.chat_lame_penalty},
             {"chat_spam_threshold", &battle_config.chat_spam_threshold},
@@ -2232,10 +2136,6 @@ int battle_config_read(const char *cfgName)
             battle_config.mask_ip_gms = 0;
         else if (battle_config.mask_ip_gms > 1)
             battle_config.mask_ip_gms = 1;
-
-        // at least 1 client must be accepted
-        if ((battle_config.packet_ver_flag & 63) == 0)  // added by [Yor]
-            battle_config.packet_ver_flag = 63; // accept all clients
 
     }
 

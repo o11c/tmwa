@@ -472,11 +472,6 @@ int pc_isequip(struct map_session_data *sd, int n)
     nullpo_retr(0, sd);
 
     item = sd->inventory_data[n];
-    //s_class = pc_calc_base_job(sd->status.class);
-
-    if (battle_config.gm_allequip > 0
-        && pc_isGM(sd) >= battle_config.gm_allequip)
-        return 1;
 
     if (item == NULL)
         return 0;
@@ -5062,7 +5057,7 @@ int pc_checkitem(struct map_session_data *sd)
     {
         if ((id = sd->status.inventory[i].nameid) == 0)
             continue;
-        if (battle_config.item_check && !itemdb_available(id))
+        if (!itemdb_available(id))
         {
             map_log("illeagal imap_logtem id %d in %d[%s] inventory.\n", id,
                     sd->bl.id, sd->status.name);

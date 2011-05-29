@@ -2372,8 +2372,7 @@ int buildin_countitem(struct script_state *st)
         }
     else
     {
-        if (battle_config.error_log)
-            printf("wrong item ID : countitem(%i)\n", nameid);
+        map_log("wrong map_logitem ID : countitem(%i)\n", nameid);
     }
     push_val(st->stack, C_INT, count);
 
@@ -5941,8 +5940,7 @@ int run_func(struct script_state *st)
          io--);
     if (io == 0)
     {
-        if (battle_config.error_log)
-            printf("function not found\n");
+        map_log("functimap_logon not found\n");
 //      st->stack->sp=0;
         st->state = END;
         return 0;
@@ -5966,9 +5964,8 @@ int run_func(struct script_state *st)
     }
     else
     {
-        if (battle_config.error_log)
-            printf("run_func : %s? (%d(%d))\n", str_buf + str_data[func].str,
-                    func, str_data[func].type);
+        map_log("run_fumap_lognc : %s? (%d(%d))\n", str_buf + str_data[func].str,
+                func, str_data[func].type);
         push_val(st->stack, C_INT, 0);
     }
 
@@ -6026,9 +6023,8 @@ static int run_script_main(script_ptr script, int pos, int, int,
             case C_EOL:
                 if (stack->sp != st->defsp)
                 {
-                    if (battle_config.error_log)
-                        printf("stack.sp(%d) != default(%d)\n", stack->sp,
-                                st->defsp);
+                    map_log("stack.sp(%d) != demap_logfault(%d)\n", stack->sp,
+                            st->defsp);
                     stack->sp = st->defsp;
                 }
                 rerun_pos = st->pos;
@@ -6098,8 +6094,7 @@ static int run_script_main(script_ptr script, int pos, int, int,
                 break;
 
             default:
-                if (battle_config.error_log)
-                    printf("unknown command : %d @ %d\n", c, pos);
+                map_log("unknown commanmap_logd : %d @ %d\n", c, pos);
                 st->state = END;
                 break;
         }

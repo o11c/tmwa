@@ -175,12 +175,6 @@ extern struct Battle_Config
     int max_sp;
     int max_lv;
     int max_parameter;
-    int pc_skill_log;
-    int mob_skill_log;
-    int battle_log;
-    int save_log;
-    int error_log;
-    int etc_log;
     int save_clothcolor;
     int undead_detect_type;
     int pc_auto_counter_type;

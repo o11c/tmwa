@@ -541,8 +541,7 @@ int npc_event(struct map_session_data *sd, const char *eventname,
         }
         else
         {
-            if (battle_config.error_log)
-                printf("npc_event: event not found [%s]\n", eventname);
+            map_log("npc_event:map_log event not found [%s]\n", eventname);
             return 0;
         }
     }
@@ -571,8 +570,7 @@ int npc_event(struct map_session_data *sd, const char *eventname,
                 break;
         if (i == MAX_EVENTQUEUE)
         {
-            if (battle_config.error_log)
-                printf("npc_event: event queue is full !\n");
+            map_log("npc_event:map_log event queue is full !\n");
         }
         else
         {
@@ -666,8 +664,7 @@ int npc_touch_areanpc(struct map_session_data *sd, int m, int x, int y)
     {
         if (f)
         {
-            if (battle_config.error_log)
-                printf("npc_touch_areanpc : some bug \n");
+            map_log("npc_touch_map_logareanpc : some bug \n");
         }
         return 1;
     }
@@ -708,8 +705,7 @@ int npc_checknear(struct map_session_data *sd, int id)
     nd = (struct npc_data *) map_id2bl(id);
     if (nd == NULL || nd->bl.type != BL_NPC)
     {
-        if (battle_config.error_log)
-            printf("no such npc : %d\n", id);
+        map_log("no sucmap_logh npc : %d\n", id);
         return 1;
     }
 
@@ -739,8 +735,7 @@ int npc_click(struct map_session_data *sd, int id)
 
     if (sd->npc_id != 0)
     {
-        if (battle_config.error_log)
-            printf("npc_click: npc_id != 0\n");
+        map_log("npc_clmap_logick: npc_id != 0\n");
         return 1;
     }
 
@@ -823,8 +818,7 @@ int npc_buysellsel(struct map_session_data *sd, int id, int type)
     nd = (struct npc_data *) map_id2bl(id);
     if (nd->bl.subtype != SHOP)
     {
-        if (battle_config.error_log)
-            printf("no such shop npc : %d\n", id);
+        map_log("no sucmap_logh shop npc : %d\n", id);
         sd->npc_id = 0;
         return 1;
     }

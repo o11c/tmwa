@@ -1677,9 +1677,7 @@ struct Damage battle_calc_attack(int attack_type,
         case BF_MISC:
             return battle_calc_misc_attack(bl, target);
         default:
-            if (battle_config.error_log)
-                printf("battle_calc_attack: unknwon attack type ! %d\n",
-                        attack_type);
+            map_log("battle_calc_attack: unknwon attack type ! %d\n", attack_type);
             break;
     }
     return d;
@@ -2200,12 +2198,6 @@ int battle_config_read(const char *cfgName)
         battle_config.max_sp = 32500;
         battle_config.max_lv = 99;  // [MouseJstr]
         battle_config.max_parameter = 99;
-        battle_config.pc_skill_log = 0;
-        battle_config.mob_skill_log = 0;
-        battle_config.battle_log = 0;
-        battle_config.save_log = 0;
-        battle_config.error_log = 1;
-        battle_config.etc_log = 1;
         battle_config.save_clothcolor = 0;
         battle_config.undead_detect_type = 0;
         battle_config.pc_auto_counter_type = 1;
@@ -2388,12 +2380,6 @@ int battle_config_read(const char *cfgName)
             {"max_sp", &battle_config.max_sp},
             {"max_lv", &battle_config.max_lv},
             {"max_parameter", &battle_config.max_parameter},
-            {"player_skill_log", &battle_config.pc_skill_log},
-            {"monster_skill_log", &battle_config.mob_skill_log},
-            {"battle_log", &battle_config.battle_log},
-            {"save_log", &battle_config.save_log},
-            {"error_log", &battle_config.error_log},
-            {"etc_log", &battle_config.etc_log},
             {"save_clothcolor", &battle_config.save_clothcolor},
             {"undead_detect_type", &battle_config.undead_detect_type},
             {"player_auto_counter_type", &battle_config.pc_auto_counter_type},

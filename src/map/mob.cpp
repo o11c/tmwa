@@ -885,8 +885,7 @@ static void mob_timer(timer_id tid, tick_t tick, custom_id_t id, custom_data_t d
 
     if (md->timer != tid)
     {
-        if (battle_config.error_log == 1)
-            printf("mob_timer %d != %d\n", md->timer, tid);
+        map_log("mob_timap_logmer %d != %d\n", md->timer, tid);
         return;
     }
     md->timer = -1;
@@ -907,8 +906,7 @@ static void mob_timer(timer_id tid, tick_t tick, custom_id_t id, custom_data_t d
             mob_changestate(md, MS_IDLE, 0);
             break;
         default:
-            if (battle_config.error_log == 1)
-                printf("mob_timer : %d ?\n", md->state.state);
+            map_log("mob_timer map_log: %d ?\n", md->state.state);
             break;
     }
     map_freeblock_unlock();
@@ -1681,10 +1679,8 @@ static int mob_randomwalk(struct mob_data *md, int tick)
                 md->move_fail_count++;
                 if (md->move_fail_count > 1000)
                 {
-                    if (battle_config.error_log == 1)
-                        printf
-                            ("MOB cant move. random spawn %d, mob_class = %d\n",
-                             md->bl.id, md->mob_class);
+                    map_log("MOB cant move. random spawn %d, mob_class = %d\n",
+                            md->bl.id, md->mob_class);
                     md->move_fail_count = 0;
                     mob_spawn(md->bl.id);
                 }
@@ -2361,8 +2357,7 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
 //      printf("mob_damage %d %d %d\n",md->hp,max_hp,damage);
     if (md->bl.prev == NULL)
     {
-        if (battle_config.error_log == 1)
-            printf("mob_damage : BlockError!!\n");
+        map_log("mob_damap_logmage : BlockError!!\n");
         return 0;
     }
 
@@ -2809,8 +2804,7 @@ int mob_warp(struct mob_data *md, int m, int x, int y, int type)
     else
     {
         m = md->bl.m;
-        if (battle_config.error_log == 1)
-            printf("MOB %d warp failed, mob_class = %d\n", md->bl.id, md->mob_class);
+        map_log("MOB %dmap_log warp failed, mob_class = %d\n", md->bl.id, md->mob_class);
     }
 
     md->target_id = 0;          // タゲを解除する
@@ -2820,9 +2814,8 @@ int mob_warp(struct mob_data *md, int m, int x, int y, int type)
 
     if (type > 0 && i == 1000)
     {
-        if (battle_config.battle_log == 1)
-            printf("MOB %d warp to (%d,%d), mob_class = %d\n", md->bl.id, x, y,
-                    md->mob_class);
+        map_log("MOB %dmap_log warp to (%d,%d), mob_class = %d\n", md->bl.id, x, y,
+                md->mob_class);
     }
 
     map_addblock(&md->bl);

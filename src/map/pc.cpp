@@ -169,8 +169,7 @@ static void pc_invincible_timer(timer_id tid, tick_t, custom_id_t id, custom_dat
 
     if (sd->invincible_timer != tid)
     {
-        if (battle_config.error_log)
-            printf("invincible_timer %d != %d\n", sd->invincible_timer, tid);
+        map_log("invincmap_logible_timer %d != %d\n", sd->invincible_timer, tid);
         return;
     }
     sd->invincible_timer = -1;
@@ -1870,8 +1869,7 @@ int pc_bonus(struct map_session_data *sd, int type, int val)
             sd->special_state.deaf = 1;
             break;
         default:
-            if (battle_config.error_log)
-                printf("pc_bonus: unknown type %d %d !\n", type, val);
+            map_log("pc_bonus: map_logunknown type %d %d !\n", type, val);
             break;
     }
     return 0;
@@ -1887,8 +1885,7 @@ int pc_skill(struct map_session_data *sd, int id, int level, int flag)
 
     if (level > MAX_SKILL_LEVEL)
     {
-        if (battle_config.error_log)
-            printf("support card skill only!\n");
+        map_log("suppormap_logt card skill only!\n");
         return 0;
     }
     if (!flag && (sd->status.skill[id].id == id || level == 0))
@@ -2465,8 +2462,7 @@ int pc_setpos(struct map_session_data *sd, const char *mapname_org, int x, int y
     {
         if (x || y)
         {
-            if (battle_config.error_log)
-                printf("stacked (%d,%d)\n", x, y);
+            map_log("stacked (%d,%d)\n", x, y);
         }
         do
         {
@@ -2588,8 +2584,7 @@ static void pc_walk(timer_id tid, tick_t tick, custom_id_t id, custom_data_t dat
 
     if (sd->walktimer != tid)
     {
-        if (battle_config.error_log)
-            printf("pc_walk %d != %d\n", sd->walktimer, tid);
+        map_log("pc_walmap_logk %d != %d\n", sd->walktimer, tid);
         return;
     }
     sd->walktimer = -1;
@@ -2842,8 +2837,7 @@ static void pc_attack_timer(timer_id tid, tick_t tick, custom_id_t id, custom_da
         return;
     if (sd->attacktimer != tid)
     {
-        if (battle_config.error_log)
-            printf("pc_attack_timer %d != %d\n", sd->attacktimer, tid);
+        map_log("pc_attmap_logack_timer %d != %d\n", sd->attacktimer, tid);
         return;
     }
     sd->attacktimer = -1;
@@ -4534,9 +4528,8 @@ int pc_setglobalreg(struct map_session_data *sd, const char *reg, int val)
         sd->status.global_reg_num++;
         return 0;
     }
-    if (battle_config.error_log)
-        printf("pc_setglobalreg : couldn't set %s (GLOBAL_REG_NUM = %d)\n",
-                reg, GLOBAL_REG_NUM);
+    map_log("pcmap_log_setglobalreg : couldn't set %s (GLOBAL_REG_NUM = %d)\n",
+            reg, GLOBAL_REG_NUM);
 
     return 1;
 }
@@ -4602,9 +4595,8 @@ int pc_setaccountreg(struct map_session_data *sd, const char *reg, int val)
         intif_saveaccountreg(sd);
         return 0;
     }
-    if (battle_config.error_log)
-        printf("pc_setaccountreg : couldn't set %s (ACCOUNT_REG_NUM = %d)\n",
-                reg, ACCOUNT_REG_NUM);
+    map_log("pcmap_log_setaccountreg : couldn't set %s (ACCOUNT_REG_NUM = %d)\n",
+            reg, ACCOUNT_REG_NUM);
 
     return 1;
 }
@@ -4670,10 +4662,8 @@ int pc_setaccountreg2(struct map_session_data *sd, const char *reg, int val)
         chrif_saveaccountreg2(sd);
         return 0;
     }
-    if (battle_config.error_log)
-        printf
-            ("pc_setaccountreg2 : couldn't set %s (ACCOUNT_REG2_NUM = %d)\n",
-             reg, ACCOUNT_REG2_NUM);
+    map_log("pc_setaccountreg2 : couldn't set %s (ACCOUNT_REG2_NUM = %d)\n",
+            reg, ACCOUNT_REG2_NUM);
 
     return 1;
 }
@@ -4725,8 +4715,7 @@ static void pc_eventtimer(timer_id tid, tick_t, custom_id_t id, custom_data_t da
     free((void *) data.p);
     if (i == MAX_EVENTTIMER)
     {
-        if (battle_config.error_log)
-            printf("pc_eventtimer: no such event timer\n");
+        map_log("pc_evemap_lognttimer: no such event timer\n");
     }
 }
 
@@ -4867,8 +4856,7 @@ int pc_equipitem(struct map_session_data *sd, int n, int pos)
     id = sd->inventory_data[n];
     pos = pc_equippoint(sd, n);
 
-    if (battle_config.battle_log)
-        printf("equip %d(%d) %x:%x\n", nameid, n, id->equip, pos);
+    map_log("eqmap_loguip %d(%d) %x:%x\n", nameid, n, id->equip, pos);
     if (!pc_isequip(sd, n) || !pos || sd->status.inventory[n].broken == 1)
     {                           // [Valaris]
         clif_equipitemack(sd, n, 0, 0);    // fail
@@ -4988,8 +4976,7 @@ int pc_unequipitem(struct map_session_data *sd, int n, int type)
 {
     nullpo_retr(0, sd);
 
-    if (battle_config.battle_log)
-        printf("unequip %d %x:%x\n", n, pc_equippoint(sd, n),
+    map_log("unmap_logequip %d %x:%x\n", n, pc_equippoint(sd, n),
                 sd->status.inventory[n].equip);
     if (sd->status.inventory[n].equip)
     {
@@ -5087,9 +5074,8 @@ int pc_checkitem(struct map_session_data *sd)
             continue;
         if (battle_config.item_check && !itemdb_available(id))
         {
-            if (battle_config.error_log)
-                printf("illeagal item id %d in %d[%s] inventory.\n", id,
-                        sd->bl.id, sd->status.name);
+            map_log("illeagal imap_logtem id %d in %d[%s] inventory.\n", id,
+                    sd->bl.id, sd->status.name);
             pc_delitem(sd, i, sd->status.inventory[i].amount, 3);
             continue;
         }

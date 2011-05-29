@@ -179,9 +179,7 @@ static int chrif_recvmap(int fd)
 //      if (battle_config.etc_log)
 //          printf("recv map %d %s\n", j, RFIFOP(fd,i));
     }
-    if (battle_config.etc_log)
-        printf("recv map on %d.%d.%d.%d:%d (%d maps)\n", p[0], p[1], p[2],
-                p[3], port, j);
+    map_log("recv map on %d.%d.%d.%d:%d (%d maps)\n", p[0], p[1], p[2], p[3], port, j);
 
     return 0;
 }
@@ -235,8 +233,7 @@ static int chrif_changemapserverack(int fd)
 
     if (RFIFOL(fd, 6) == 1)
     {
-        if (battle_config.error_log)
-            printf("map server change failed.\n");
+        map_log("map server change failed.\n");
         pc_authfail(sd->fd);
         return 0;
     }
@@ -372,8 +369,7 @@ int chrif_searchcharid(int char_id)
  */
 int chrif_changegm(int id, const char *pass, int len)
 {
-    if (battle_config.etc_log)
-        printf("chrif_changegm: account: %d, password: '%s'.\n", id, pass);
+    map_log("chrif_changegm: account: %d, password: '%s'.\n", id, pass);
 
     WFIFOW(char_fd, 0) = 0x2b0a;
     WFIFOW(char_fd, 2) = len + 8;
@@ -391,10 +387,8 @@ int chrif_changegm(int id, const char *pass, int len)
 int chrif_changeemail(int id, const char *actual_email,
                        const char *new_email)
 {
-    if (battle_config.etc_log)
-        printf
-            ("chrif_changeemail: account: %d, actual_email: '%s', new_email: '%s'.\n",
-             id, actual_email, new_email);
+    map_log("chrif_changeemail: account: %d, actual_email: '%s', new_email: '%s'.\n",
+            id, actual_email, new_email);
 
     WFIFOW(char_fd, 0) = 0x2b0c;
     WFIFOL(char_fd, 2) = id;
@@ -608,9 +602,7 @@ static int chrif_changedgm(int fd)
 
     sd = map_id2sd(acc);
 
-    if (battle_config.etc_log)
-        printf("chrif_changedgm: account: %d, GM level 0 -> %d.\n", acc,
-                level);
+    map_log("chrif_changedgm: account: %d, GM level 0 -> %d.\n", acc, level);
     if (sd != NULL)
     {
         if (level > 0)
@@ -633,8 +625,7 @@ static int chrif_changedsex(int fd)
 
     acc = RFIFOL(fd, 2);
     sex = RFIFOL(fd, 6);
-    if (battle_config.etc_log)
-        printf("chrif_changedsex %d.\n", acc);
+    map_log("chrif_changedsex %d.\n", acc);
     sd = map_id2sd(acc);
     if (acc > 0)
     {
@@ -787,8 +778,7 @@ static int chrif_accountdeletion(int fd)
     struct map_session_data *sd;
 
     acc = RFIFOL(fd, 2);
-    if (battle_config.etc_log)
-        printf("chrif_accountdeletion %d.\n", acc);
+    map_log("chrif_accountdeletion %d.\n", acc);
     sd = map_id2sd(acc);
     if (acc > 0)
     {
@@ -819,8 +809,7 @@ static int chrif_accountban(int fd)
     struct map_session_data *sd;
 
     acc = RFIFOL(fd, 2);
-    if (battle_config.etc_log)
-        printf("chrif_accountban %d.\n", acc);
+    map_log("chrif_accountban %d.\n", acc);
     sd = map_id2sd(acc);
     if (acc > 0)
     {
@@ -1156,9 +1145,7 @@ static void chrif_parse(int fd)
                 break;
 
             default:
-                if (battle_config.error_log)
-                    printf("chrif_parse : unknown packet %d %d\n", fd,
-                            RFIFOW(fd, 0));
+                map_log("chrif_parse : unknown packet %d %d\n", fd, RFIFOW(fd, 0));
                 session[fd]->eof = 1;
                 return;
         }

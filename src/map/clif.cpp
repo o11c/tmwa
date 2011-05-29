@@ -441,8 +441,6 @@ static int clif_send(unsigned char *buf, int len, struct block_list *bl, int typ
             break;
 
         default:
-            if (battle_config.error_log)
-                printf("clif_send まだ作ってないよー\n");
             return -1;
     }
 
@@ -1920,8 +1918,7 @@ int clif_updatestatus(struct map_session_data *sd, int type)
             break;
 
         default:
-            if (battle_config.error_log)
-                printf("clif_updatestatus : make %d routine\n", type);
+            map_log("%s: make %d routine\n", __func__, type);
             return 1;
     }
     WFIFOSET(fd, len);
@@ -2752,8 +2749,7 @@ static void clif_getareachar(struct block_list *bl, va_list ap)
             clif_getareachar_item(sd, (struct flooritem_data *) bl);
             break;
         default:
-            if (battle_config.error_log)
-                printf("get area char ??? %d\n", bl->type);
+            map_log("%s: ??? %d\n", __func__, bl->type);
             break;
     }
 }
@@ -3612,8 +3608,7 @@ static void clif_parse_WantToConnection(int fd, struct map_session_data *sd)
 
     if (sd)
     {
-        if (battle_config.error_log)
-            printf("clif_parse_WantToConnection : invalid request?\n");
+        map_log("%s: invalid request?\n", __func__);
         return;
     }
 
@@ -3942,9 +3937,7 @@ static void clif_parse_GetCharNameRequest(int fd, struct map_session_data *sd)
         }
             break;
         default:
-            if (battle_config.error_log)
-                printf("clif_parse_GetCharNameRequest : bad type %d(%d)\n",
-                        bl->type, account_id);
+            map_log("%s: bad type %d(%d)\n", __func__, bl->type, account_id);
             break;
     }
 }
@@ -5665,8 +5658,6 @@ static void clif_parse(int fd)
     }
     else
     {
-        // 不明なパケット
-        if (battle_config.error_log)
         {
             if (fd)
                 printf("\nclif_parse: session #%d, packet 0x%x, lenght %d\n",

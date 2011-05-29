@@ -232,8 +232,7 @@ int skill_status_change_active(struct block_list *bl, int type)
     nullpo_retr(0, bl);
     if (bl->type != BL_PC && bl->type != BL_MOB)
     {
-        if (battle_config.error_log)
-            printf("skill_status_change_active: neither MOB nor PC !\n");
+        map_log("%s: neither MOB nor PC !\n", __func__);
         return 0;
     }
 
@@ -251,8 +250,7 @@ int skill_status_change_end(struct block_list *bl, int type, int tid)
     nullpo_retr(0, bl);
     if (bl->type != BL_PC && bl->type != BL_MOB)
     {
-        if (battle_config.error_log)
-            printf("skill_status_change_end: neither MOB nor PC !\n");
+        map_log("%s: neither MOB nor PC !\n", __func__);
         return 0;
     }
     nullpo_retr(0, sc_data = battle_get_sc_data(bl));
@@ -369,9 +367,7 @@ void skill_status_change_timer(timer_id tid, tick_t tick, custom_id_t id, custom
 
     if (sc_data[type].timer != tid)
     {
-        if (battle_config.error_log)
-            printf("skill_status_change_timer %d != %d\n", tid,
-                    sc_data[type].timer);
+        map_log("%s: %d != %d\n", __func__, tid, sc_data[type].timer);
     }
 
     if (sc_data[type].spell_invocation)
@@ -489,8 +485,7 @@ int skill_status_effect(struct block_list *bl, int type, int val1, int val2,
     }
     else
     {
-        if (battle_config.error_log)
-            printf("skill_status_change_start: neither MOB nor PC !\n");
+        map_log("%s: neither MOB nor PC !\n", __func__);
         return 0;
     }
 
@@ -547,8 +542,7 @@ int skill_status_effect(struct block_list *bl, int type, int val1, int val2,
             updateflag = SP_WEIGHT;
             break;
         default:
-            if (battle_config.error_log)
-                printf("UnknownStatusChange [%d]\n", type);
+            map_log("UnknownStatusChange [%d]\n", type);
             return 0;
     }
 

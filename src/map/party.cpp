@@ -152,9 +152,8 @@ static int party_check_member(struct party *p)
                 if (f)
                 {
                     sd->status.party_id = 0;
-                    if (battle_config.error_log)
-                        printf("party: check_member %d[%s] is not member\n",
-                                sd->status.account_id, sd->status.name);
+                    map_log("party: check_membemap_logr %d[%s] is not member\n",
+                            sd->status.account_id, sd->status.name);
                 }
             }
         }
@@ -327,9 +326,8 @@ int party_member_added(int party_id, int account_id, int flag)
     {
         if (flag == 0)
         {
-            if (battle_config.error_log)
-                printf("party: member added error %d is not online\n",
-                        account_id);
+            map_log("party: memmap_logber added error %d is not online\n",
+                    account_id);
             intif_party_leave(party_id, account_id);   // キャラ側に登録できなかったため脱退要求を出す
         }
         return 0;
@@ -524,9 +522,8 @@ int party_recv_movemap(int party_id, int account_id, char *map, int online,
     }
     if (i == MAX_PARTY)
     {
-        if (battle_config.error_log)
-            printf("party: not found member %d on %d[%s]", account_id,
-                    party_id, p->name);
+        map_log("party:map_log not found member %d on %d[%s]", account_id,
+                party_id, p->name);
         return 0;
     }
 

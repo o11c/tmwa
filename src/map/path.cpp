@@ -222,14 +222,12 @@ int path_blownpos(int m, int x_0, int y_0, int dx, int dy, int count)
 
     if (count > 15)
     {                           // 最大10マスに制限
-        if (battle_config.error_log)
-            printf("path_blownpos: count too many %d !\n", count);
+        map_log("path_bmap_loglownpos: count too many %d !\n", count);
         count = 15;
     }
     if (dx > 1 || dx < -1 || dy > 1 || dy < -1)
     {
-        if (battle_config.error_log)
-            printf("path_blownpos: illeagal dx=%d or dy=%d !\n", dx, dy);
+        map_log("path_bmap_loglownpos: illeagal dx=%d or dy=%d !\n", dx, dy);
         dx = (dx >= 0) ? 1 : ((dx < 0) ? -1 : 0);
         dy = (dy >= 0) ? 1 : ((dy < 0) ? -1 : 0);
     }

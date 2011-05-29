@@ -70,9 +70,8 @@ int intif_wis_message(struct map_session_data *sd, char *nick, char *mes,
     memcpy(WFIFOP(inter_fd, 52), mes, mes_len);
     WFIFOSET(inter_fd, WFIFOW(inter_fd, 2));
 
-    if (battle_config.etc_log)
-        printf("intif_wis_message from %s to %s (message: '%s')\n",
-                sd->status.name, nick, mes);
+    map_log("inmap_logtif_wis_message from %s to %s (message: '%s')\n",
+            sd->status.name, nick, mes);
 
     return 0;
 }
@@ -85,8 +84,7 @@ static int intif_wis_replay(int id, int flag)
     WFIFOB(inter_fd, 6) = flag;    // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
     WFIFOSET(inter_fd, 7);
 
-    if (battle_config.etc_log)
-        printf("intif_wis_replay: id: %d, flag:%d\n", id, flag);
+    map_log("inmap_logtif_wis_replay: id: %d, flag:%d\n", id, flag);
 
     return 0;
 }
@@ -102,10 +100,8 @@ int intif_wis_message_to_gm(char *Wisp_name, int min_gm_level, char *mes,
     memcpy(WFIFOP(inter_fd, 30), mes, mes_len);
     WFIFOSET(inter_fd, WFIFOW(inter_fd, 2));
 
-    if (battle_config.etc_log)
-        printf
-            ("intif_wis_message_to_gm: from: '%s', min level: %d, message: '%s'.\n",
-             Wisp_name, min_gm_level, mes);
+    map_log("intif_wis_message_to_gm: from: '%s', min level: %d, message: '%s'.\n",
+            Wisp_name, min_gm_level, mes);
 
     return 0;
 }
@@ -284,10 +280,8 @@ static int intif_parse_WisMessage(int fd)
 {                               // rewritten by [Yor]
     struct map_session_data *sd;
 
-    if (battle_config.etc_log)
-        printf
-            ("intif_parse_wismessage: id: %d, from: %s, to: %s, message: '%s'\n",
-             RFIFOL(fd, 4), RFIFOP(fd, 8), RFIFOP(fd, 32), RFIFOP(fd,
+    map_log("intif_parse_wismessage: id: %d, from: %s, to: %s, message: '%s'\n",
+            RFIFOL(fd, 4), RFIFOP(fd, 8), RFIFOP(fd, 32), RFIFOP(fd,
                                                                       56));
     sd = map_nick2sd((char *)RFIFOP(fd, 32)); // Searching destination player
     if (sd != NULL && strcmp(sd->status.name, (char *)RFIFOP(fd, 32)) == 0)
@@ -306,8 +300,8 @@ static int intif_parse_WisEnd(int fd)
 {
     struct map_session_data *sd;
 
-    if (battle_config.etc_log)
-        printf("intif_parse_wisend: player: %s, flag: %d\n", (char *)RFIFOP(fd, 2), RFIFOB(fd, 26)); // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
+    map_log("inmap_logtif_parse_wisend: player: %s, flag: %d\n",
+            (char *)RFIFOP(fd, 2), RFIFOB(fd, 26)); // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
     sd = map_nick2sd((char *)RFIFOP(fd, 2));
     if (sd != NULL)
         clif_wis_end(sd->fd, RFIFOB(fd, 26));
@@ -377,38 +371,31 @@ static int intif_parse_LoadStorage(int fd)
     sd = map_id2sd(RFIFOL(fd, 4));
     if (sd == NULL)
     {
-        if (battle_config.error_log)
-            printf("intif_parse_LoadStorage: user not found %d\n",
-                    RFIFOL(fd, 4));
+        map_log("intif_map_logparse_LoadStorage: user not found %d\n",
+                RFIFOL(fd, 4));
         return 1;
     }
     stor = account2storage(RFIFOL(fd, 4));
     if (stor->storage_status == 1)
     {                           // Already open.. lets ignore this update
-        if (battle_config.error_log)
-            printf
-                ("intif_parse_LoadStorage: storage received for a client already open (User %d:%d)\n",
-                 sd->status.account_id, sd->status.char_id);
+        map_log("intif_parse_LoadStorage: storage received for a client already open (User %d:%d)\n",
+                sd->status.account_id, sd->status.char_id);
         return 1;
     }
     if (stor->dirty)
     {                           // Already have storage, and it has been modified and not saved yet! Exploit! [Skotlex]
-        if (battle_config.error_log)
-            printf
-                ("intif_parse_LoadStorage: received storage for an already modified non-saved storage! (User %d:%d)\n",
-                 sd->status.account_id, sd->status.char_id);
+        map_log("intif_parse_LoadStorage: received storage for an already modified non-saved storage! (User %d:%d)\n",
+                sd->status.account_id, sd->status.char_id);
         return 1;
     }
 
     if (RFIFOW(fd, 2) - 8 != sizeof(struct storage))
     {
-        if (battle_config.error_log)
-            printf("intif_parse_LoadStorage: data size error %d %d\n",
-                    RFIFOW(fd, 2) - 8, sizeof(struct storage));
+        map_log("intif_map_logparse_LoadStorage: data size error %d %d\n",
+                RFIFOW(fd, 2) - 8, sizeof(struct storage));
         return 1;
     }
-    if (battle_config.save_log)
-        printf("intif_openstorage: %d\n", RFIFOL(fd, 4));
+    map_log("inmap_logtif_openstorage: %d\n", RFIFOL(fd, 4));
     memcpy(stor, RFIFOP(fd, 8), sizeof(struct storage));
     stor->dirty = 0;
     stor->storage_status = 1;
@@ -423,17 +410,15 @@ static int intif_parse_LoadStorage(int fd)
 // 倉庫データ送信成功
 static int intif_parse_SaveStorage(int fd)
 {
-    if (battle_config.save_log)
-        printf("intif_savestorage: done %d %d\n", RFIFOL(fd, 2),
-                RFIFOB(fd, 6));
+    map_log("inmap_logtif_savestorage: done %d %d\n", RFIFOL(fd, 2),
+            RFIFOB(fd, 6));
     storage_storage_saved(RFIFOL(fd, 2));
     return 0;
 }
 // パーティ作成可否
 static int intif_parse_PartyCreated(int fd)
 {
-    if (battle_config.etc_log)
-        printf("intif: party created\n");
+    map_log("inmap_logtif: party created\n");
     party_created(RFIFOL(fd, 2), RFIFOB(fd, 6), RFIFOL(fd, 7),
                    (char *)RFIFOP(fd, 11));
     return 0;
@@ -444,8 +429,7 @@ static int intif_parse_PartyInfo(int fd)
 {
     if (RFIFOW(fd, 2) == 8)
     {
-        if (battle_config.error_log)
-            printf("intif: party noinfo %d\n", RFIFOL(fd, 4));
+        map_log("intif:map_log party noinfo %d\n", RFIFOL(fd, 4));
         party_recv_noinfo(RFIFOL(fd, 4));
         return 0;
     }
@@ -453,10 +437,8 @@ static int intif_parse_PartyInfo(int fd)
 //  printf("intif: party info %d\n",RFIFOL(fd,4));
     if (RFIFOW(fd, 2) != sizeof(struct party) + 4)
     {
-        if (battle_config.error_log)
-            printf("intif: party info : data size error %d %d %d\n",
-                    RFIFOL(fd, 4), RFIFOW(fd, 2),
-                    sizeof(struct party) + 4);
+        map_log("intif:map_log party info : data size error %d %d %d\n",
+                RFIFOL(fd, 4), RFIFOW(fd, 2), sizeof(struct party) + 4);
     }
     party_recv_info((struct party *) RFIFOP(fd, 4));
     return 0;
@@ -465,9 +447,8 @@ static int intif_parse_PartyInfo(int fd)
 // パーティ追加通知
 static int intif_parse_PartyMemberAdded(int fd)
 {
-    if (battle_config.etc_log)
-        printf("intif: party member added %d %d %d\n", RFIFOL(fd, 2),
-                RFIFOL(fd, 6), RFIFOB(fd, 10));
+    map_log("inmap_logtif: party member added %d %d %d\n", RFIFOL(fd, 2),
+            RFIFOL(fd, 6), RFIFOB(fd, 10));
     party_member_added(RFIFOL(fd, 2), RFIFOL(fd, 6), RFIFOB(fd, 10));
     return 0;
 }
@@ -483,9 +464,8 @@ static int intif_parse_PartyOptionChanged(int fd)
 // パーティ脱退通知
 static int intif_parse_PartyMemberLeaved(int fd)
 {
-    if (battle_config.etc_log)
-        printf("intif: party member left %d %d %s\n", RFIFOL(fd, 2),
-                RFIFOL(fd, 6), RFIFOP(fd, 10));
+    map_log("inmap_logtif: party member left %d %d %s\n", RFIFOL(fd, 2),
+            RFIFOL(fd, 6), RFIFOP(fd, 10));
     party_member_left(RFIFOL(fd, 2), RFIFOL(fd, 6), (char *)RFIFOP(fd, 10));
     return 0;
 }
@@ -600,9 +580,7 @@ int intif_parse(int fd)
             //case 0x3882:  intif_parse_SaveP.etOk(fd); break;
             //case 0x3883:  intif_parse_DeleteP.etOk(fd); break;
         default:
-            if (battle_config.error_log)
-                printf("intif_parse : unknown packet %d %x\n", fd,
-                        RFIFOW(fd, 0));
+            map_log("intif_parsmap_loge : unknown packet %d %x\n", fd, RFIFOW(fd, 0));
             return 0;
     }
     // パケット読み飛ばし

@@ -88,7 +88,7 @@ short *battle_get_opt3(struct block_list *bl);
 short *battle_get_option(struct block_list *bl);
 
 bool battle_check_target(struct block_list *src, struct block_list *target);
-int battle_check_range(struct block_list *src, struct block_list *bl, int range);
+bool battle_check_range(struct block_list *src, struct block_list *bl, int range);
 
 extern struct Battle_Config
 {

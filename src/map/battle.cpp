@@ -1378,163 +1378,134 @@ struct Damage battle_calc_weapon_attack(struct block_list *src, struct block_lis
 /// One being attacks another at some time
 AttackResult battle_weapon_attack(struct block_list *src, struct block_list *target, tick_t tick)
 {
-    struct map_session_data *sd = NULL;
-    struct status_change *t_sc_data = battle_get_sc_data(target);
-    short *opt1;
-    int damage, rdamage = 0;
-    struct Damage wd;
-
     nullpo_retr(AttackResult::ZERO, src);
     nullpo_retr(AttackResult::ZERO, target);
 
+    struct map_session_data *sd = NULL;
     if (src->type == BL_PC)
         sd = (struct map_session_data *) src;
 
     if (src->prev == NULL || target->prev == NULL)
         return AttackResult::ZERO;
-    if (src->type == BL_PC && pc_isdead(sd))
+    if (sd && pc_isdead(sd))
         return AttackResult::ZERO;
-    if (target->type == BL_PC
-        && pc_isdead((struct map_session_data *) target))
+    struct map_session_data *tsd = NULL;
+    if (target->type == BL_PC)
+        tsd = (struct map_session_data *) target;
+    if (tsd && pc_isdead(tsd))
         return AttackResult::ZERO;
 
-    opt1 = battle_get_opt1(src);
+    short *opt1 = battle_get_opt1(src);
     if (opt1 && *opt1 > 0)
     {
         battle_stopattack(src);
         return AttackResult::ZERO;
     }
 
-    if (battle_check_target(src, target) > 0 &&
-        battle_check_range(src, target, 0))
+    if (!battle_check_target(src, target) || !battle_check_range(src, target, 0))
+        return AttackResult::ZERO;
+
+    if (sd && sd->status.weapon == 11)
     {
-        // 攻撃対象となりうるので攻撃
-        if (sd && sd->status.weapon == 11)
+        if (sd->equip_index[10] >= 0)
         {
-            if (sd->equip_index[10] >= 0)
-            {
-                pc_delitem(sd, sd->equip_index[10], 1, 0);
-            }
-            else
-            {
-                clif_arrow_fail(sd, 0);
-                return AttackResult::ZERO;
-            }
-        }
-        wd = battle_calc_weapon_attack(src, target);
-
-        // significantly increase injuries for hasted characters
-        if (wd.damage > 0 && (t_sc_data[SC_HASTE].timer != -1))
-        {
-            wd.damage = (wd.damage * (16 + t_sc_data[SC_HASTE].val1)) >> 4;
-        }
-
-        if (wd.damage > 0
-            && t_sc_data[SC_PHYS_SHIELD].timer != -1 && target->type == BL_PC)
-        {
-            int reduction = t_sc_data[SC_PHYS_SHIELD].val1;
-            if (reduction > wd.damage)
-                reduction = wd.damage;
-
-            wd.damage -= reduction;
-            MAP_LOG_PC(((struct map_session_data *) target),
-                        "MAGIC-ABSORB-DMG %d", reduction);
-        }
-
-        if ((damage = wd.damage + wd.damage2) > 0 && src != target)
-        {
-            if (wd.flag & BF_SHORT)
-            {
-                if (target->type == BL_PC)
-                {
-                    struct map_session_data *tsd =
-                        (struct map_session_data *) target;
-                    if (tsd && tsd->short_weapon_damage_return > 0)
-                    {
-                        rdamage +=
-                            damage * tsd->short_weapon_damage_return / 100;
-                        if (rdamage < 1)
-                            rdamage = 1;
-                    }
-                }
-            }
-            else if (wd.flag & BF_LONG)
-            {
-                if (target->type == BL_PC)
-                {
-                    struct map_session_data *tsd =
-                        (struct map_session_data *) target;
-                    if (tsd && tsd->long_weapon_damage_return > 0)
-                    {
-                        rdamage +=
-                            damage * tsd->long_weapon_damage_return / 100;
-                        if (rdamage < 1)
-                            rdamage = 1;
-                    }
-                }
-            }
-
-            if (rdamage > 0)
-                clif_damage(src, src, tick, wd.amotion, 0, rdamage, 1, 4, 0);
-        }
-
-        if (wd.div_ == 255 && sd)
-        {                       //三段掌
-            int delay =
-                1000 - 4 * battle_get_agi(src) - 2 * battle_get_dex(src);
-            sd->attackabletime = sd->canmove_tick = tick + delay;
+            pc_delitem(sd, sd->equip_index[10], 1, 0);
         }
         else
         {
-            clif_damage(src, target, tick, wd.amotion, wd.dmotion,
-                         wd.damage, wd.div_, wd.type, wd.damage2);
-            //二刀流左手とカタール追撃のミス表示(無理やり〜)
-            if (sd && sd->status.weapon >= 16 && wd.damage2 == 0)
-                clif_damage(src, target, tick + 10, wd.amotion, wd.dmotion,
-                             0, 1, 0, 0);
+            clif_arrow_fail(sd, 0);
+            return AttackResult::ZERO;
         }
-        map_freeblock_lock();
+    }
 
-        if (src->type == BL_PC)
+    struct Damage wd = battle_calc_weapon_attack(src, target);
+
+    struct status_change *t_sc_data = battle_get_sc_data(target);
+    // significantly increase injuries for hasted characters
+    if (wd.damage > 0 && (t_sc_data[SC_HASTE].timer != -1))
+    {
+        per_unit_add<16>(wd.damage, t_sc_data[SC_HASTE].val1);
+    }
+
+    if (wd.damage > 0 && t_sc_data[SC_PHYS_SHIELD].timer != -1 && tsd)
+    {
+        int reduction = t_sc_data[SC_PHYS_SHIELD].val1;
+        if (reduction > wd.damage)
+            reduction = wd.damage;
+
+        wd.damage -= reduction;
+        MAP_LOG_PC(((struct map_session_data *) target), "MAGIC-ABSORB-DMG %d", reduction);
+    }
+
+    int damage = wd.damage + wd.damage2;
+    // returned damage
+    int rdamage = 0;
+    if (damage > 0 && src != target && tsd)
+    {
+        if (wd.flag & BF_SHORT || tsd->short_weapon_damage_return > 0)
         {
-            int weapon_index = sd->equip_index[9];
-            int weapon = 0;
-            if (sd->inventory_data[weapon_index]
-                && sd->status.inventory[weapon_index].equip & 0x2)
-                weapon = sd->inventory_data[weapon_index]->nameid;
-
-            map_log("PC%d %d:%d,%d WPNDMG %s%d %d FOR %d WPN %d",
-                     sd->status.char_id, src->m, src->x, src->y,
-                     (target->type == BL_PC) ? "PC" : "MOB",
-                     (target->type ==
-                      BL_PC) ? ((struct map_session_data *) target)->
-                     status.char_id : target->id,
-                     (target->type ==
-                      BL_PC) ? 0 : ((struct mob_data *) target)->mob_class,
-                     wd.damage + wd.damage2, weapon);
+            rdamage = damage * tsd->short_weapon_damage_return / 100;
+            if (rdamage < 1)
+                rdamage = 1;
         }
-
-        if (target->type == BL_PC)
+        if (wd.flag & BF_LONG && tsd->long_weapon_damage_return > 0)
         {
-            struct map_session_data *sd2 = (struct map_session_data *) target;
-            map_log("PC%d %d:%d,%d WPNINJURY %s%d %d FOR %d",
-                     sd2->status.char_id, target->m, target->x, target->y,
-                     (src->type == BL_PC) ? "PC" : "MOB",
-                     (src->type ==
-                      BL_PC) ? ((struct map_session_data *) src)->
-                     status.char_id : src->id,
-                     (src->type ==
-                      BL_PC) ? 0 : ((struct mob_data *) src)->mob_class,
-                     wd.damage + wd.damage2);
+            rdamage = damage * tsd->long_weapon_damage_return / 100;
+            if (rdamage < 1)
+                rdamage = 1;
         }
-
-        battle_damage(src, target, (wd.damage + wd.damage2));
 
         if (rdamage > 0)
-            battle_damage(target, src, rdamage);
-
-        map_freeblock_unlock();
+            clif_damage(src, src, tick, wd.amotion, 0, rdamage, 1, 4, 0);
     }
+
+    if (wd.div_ == 255 && sd)
+    {
+        int delay = 1000 - 4 * battle_get_agi(src) - 2 * battle_get_dex(src);
+        sd->attackabletime = sd->canmove_tick = tick + delay;
+    }
+    else
+    {
+        clif_damage(src, target, tick, wd.amotion, wd.dmotion,
+                    wd.damage, wd.div_, wd.type, wd.damage2);
+        if (sd && sd->status.weapon >= 16 && wd.damage2 == 0)
+            clif_damage(src, target, tick + 10, wd.amotion, wd.dmotion, 0, 1, 0, 0);
+    }
+
+    map_freeblock_lock();
+
+    if (sd)
+    {
+        int weapon_index = sd->equip_index[9];
+        int weapon = 0;
+        if (sd->inventory_data[weapon_index] && sd->status.inventory[weapon_index].equip & 0x2)
+            weapon = sd->inventory_data[weapon_index]->nameid;
+
+        map_log("PC%d %d:%d,%d WPNDMG %s%d %d FOR %d WPN %d",
+                sd->status.char_id, src->m, src->x, src->y,
+                tsd ? "PC" : "MOB",
+                tsd ? tsd->status.char_id : target->id,
+                tsd ? 0 : ((struct mob_data *) target)->mob_class,
+                wd.damage + wd.damage2, weapon);
+    }
+
+    if (tsd)
+    {
+        map_log("PC%d %d:%d,%d WPNINJURY %s%d %d FOR %d",
+                tsd->status.char_id, target->m, target->x, target->y,
+                tsd ? "PC" : "MOB",
+                sd ? sd->status.char_id : src->id,
+                sd ? 0 : ((struct mob_data *) src)->mob_class,
+                wd.damage + wd.damage2);
+    }
+
+    battle_damage(src, target, (wd.damage + wd.damage2));
+    if (rdamage > 0)
+        // target might have been killed, but the blocks won't have been freed
+        battle_damage(target, src, rdamage);
+
+    map_freeblock_unlock();
+
     return wd.dmg_lv;
 }
 
@@ -1609,60 +1580,54 @@ bool battle_check_target(struct block_list *src, struct block_list *target)
     return !s_p || !t_p || s_p != t_p;
 }
 
-/*==========================================
- * 射程判定
- *------------------------------------------
- */
-int battle_check_range(struct block_list *src, struct block_list *bl,
-                        int range)
+/// Check if a target is within the given range
+// range 0 = unlimited
+bool battle_check_range(struct block_list *src, struct block_list *bl, int range)
 {
-
-    int dx, dy;
-    struct walkpath_data wpd;
-    int arange;
-
     nullpo_retr(0, src);
     nullpo_retr(0, bl);
 
-    dx = abs(bl->x - src->x);
-    dy = abs(bl->y - src->y);
-    arange = ((dx > dy) ? dx : dy);
-
-    if (src->m != bl->m)        // 違うマップ
+    if (src->m != bl->m)
         return 0;
 
-    if (range > 0 && range < arange)    // 遠すぎる
+    int arange = std::max(abs(bl->x - src->x), abs(bl->y - src->y));
+
+
+    if (range > 0 && range < arange)
         return 0;
 
-    if (arange < 2)             // 同じマスか隣接
+    if (arange < 2)
         return 1;
 
-    // 障害物判定
+    struct walkpath_data wpd;
     wpd.path_len = 0;
     wpd.path_pos = 0;
     wpd.path_half = 0;
-    if (path_search(&wpd, src->m, src->x, src->y, bl->x, bl->y, 0x10001) !=
-        -1)
+    // flag bit 0x1 means line of sight
+    // flag bit 0x10000 indicates a ranged attack
+    // but the different collision is not used in TMW maps
+    if (path_search(&wpd, src->m, src->x, src->y, bl->x, bl->y, 0x10001) != -1)
         return 1;
-
-    dx = (dx > 0) ? 1 : ((dx < 0) ? -1 : 0);
-    dy = (dy > 0) ? 1 : ((dy < 0) ? -1 : 0);
-    return (path_search(&wpd, src->m, src->x + dx, src->y + dy,
-                         bl->x - dx, bl->y - dy, 0x10001) != -1) ? 1 : 0;
+    // path_search only calculates diagonal first
+    // this corrects for the case where target is just around the corner
+    int dx = (src->x > bl->x) - (src->x < bl->x);
+    int dy = (src->x > bl->x) - (src->x < bl->x);
+    return path_search(&wpd, src->m, src->x + dx, src->y + dy, bl->x - dx, bl->y - dy, 0x10001) != -1;
 }
 
-/*==========================================
- * 設定ファイルを読み込む
- *------------------------------------------
- */
+/// Read the config options
 int battle_config_read(const char *cfgName)
 {
-    int i;
-    char line[1024], w1[1024], w2[1024];
-    FILE *fp;
+    FILE *fp = fopen_(cfgName, "r");
+    if (!fp)
+    {
+        printf("file not found: %s\n", cfgName);
+        return 1;
+    }
+
     static int count = 0;
 
-    if ((count++) == 0)
+    if (!count++)
     {
         battle_config.enemy_critical = 0;
         battle_config.enemy_critical_rate = 100;
@@ -1770,15 +1735,10 @@ int battle_config_read(const char *cfgName)
         battle_config.mask_ip_gms = 1;
     }
 
-    fp = fopen_(cfgName, "r");
-    if (fp == NULL)
+    char line[1024];
+    while (fgets(line, sizeof(line), fp))
     {
-        printf("file not found: %s\n", cfgName);
-        return 1;
-    }
-    while (fgets(line, 1020, fp))
-    {
-        const struct
+        static const struct
         {
             char str[128];
             int *val;
@@ -1886,14 +1846,24 @@ int battle_config_read(const char *cfgName)
 
         if (line[0] == '/' && line[1] == '/')
             continue;
+
+        char w1[1024], w2[1024];
         if (sscanf(line, "%[^:]:%s", w1, w2) != 2)
             continue;
-        for (i = 0; i < sizeof(data) / (sizeof(data[0])); i++)
-            if (strcasecmp(w1, data[i].str) == 0)
-                *data[i].val = config_switch(w2);
 
         if (strcasecmp(w1, "import") == 0)
+        {
             battle_config_read(w2);
+            continue;
+        }
+        for (int i = 0; i < sizeof(data) / (sizeof(data[0])); i++)
+            if (strcasecmp(w1, data[i].str) == 0)
+            {
+                *data[i].val = config_switch(w2);
+                goto continue_outer;
+            }
+        map_log("%s: No such setting: %s", __func__, line);
+    continue_outer: ;
     }
     fclose_(fp);
 
@@ -1948,7 +1918,7 @@ int battle_config_read(const char *cfgName)
         if (battle_config.vit_penaly_count < 2)
             battle_config.vit_penaly_count = 2;
 
-        if (battle_config.item_drop_common_min < 1) // Added by TyrNemesis^
+        if (battle_config.item_drop_common_min < 1)
             battle_config.item_drop_common_min = 1;
         if (battle_config.item_drop_common_max > 10000)
             battle_config.item_drop_common_max = 10000;
@@ -1961,12 +1931,12 @@ int battle_config_read(const char *cfgName)
         if (battle_config.item_drop_card_max > 10000)
             battle_config.item_drop_card_max = 10000;
 
-        if (battle_config.hack_info_GM_level < 0)   // added by [Yor]
+        if (battle_config.hack_info_GM_level < 0)
             battle_config.hack_info_GM_level = 0;
         else if (battle_config.hack_info_GM_level > 100)
             battle_config.hack_info_GM_level = 100;
 
-        if (battle_config.any_warp_GM_min_level < 0)    // added by [Yor]
+        if (battle_config.any_warp_GM_min_level < 0)
             battle_config.any_warp_GM_min_level = 0;
         else if (battle_config.any_warp_GM_min_level > 100)
             battle_config.any_warp_GM_min_level = 100;

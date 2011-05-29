@@ -31,41 +31,6 @@ struct mob_db
 };
 extern struct mob_db mob_db[];
 
-enum
-{
-    MST_TARGET = 0,
-    MST_SELF,
-    MST_FRIEND,
-    MST_MASTER,
-    MST_AROUND5,
-    MST_AROUND6,
-    MST_AROUND7,
-    MST_AROUND8,
-    MST_AROUND1,
-    MST_AROUND2,
-    MST_AROUND3,
-    MST_AROUND4,
-    MST_AROUND = MST_AROUND4,
-
-    MSC_ALWAYS = 0x0000,
-    MSC_MYHPLTMAXRATE = 0x0001,
-    MSC_FRIENDHPLTMAXRATE = 0x0010,
-    MSC_MYSTATUSON = 0x0020,
-    MSC_MYSTATUSOFF = 0x0021,
-    MSC_FRIENDSTATUSON = 0x0030,
-    MSC_FRIENDSTATUSOFF = 0x0031,
-    MSC_NOTINTOWN = 0x0032,
-
-    MSC_ATTACKPCGT = 0x0100,
-    MSC_ATTACKPCGE = 0x0101,
-    MSC_SLAVELT = 0x0110,
-    MSC_SLAVELE = 0x0111,
-    MSC_CLOSEDATTACKED = 0x1000,
-    MSC_LONGRANGEATTACKED = 0x1001,
-    MSC_SKILLUSED = 0x1010,
-    MSC_CASTTARGETED = 0x1011,
-};
-
 int mobdb_searchname(const char *str);
 int mobdb_checkid(const int id);
 int mob_once_spawn(struct map_session_data *sd, const char *mapname,

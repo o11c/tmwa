@@ -2919,35 +2919,6 @@ int clif_skillup(struct map_session_data *sd, int skill_num)
 }
 
 /*==========================================
- * スキル攻撃エフェクト＆ダメージ
- *------------------------------------------
- */
-int clif_skill_damage(struct block_list *src, struct block_list *dst,
-                       unsigned int tick, int sdelay, int ddelay, int damage,
-                       int div_, int skill_id, int skill_lv, int type)
-{
-    unsigned char buf[64];
-
-    nullpo_retr(0, src);
-    nullpo_retr(0, dst);
-
-    WBUFW(buf, 0) = 0x1de;
-    WBUFW(buf, 2) = skill_id;
-    WBUFL(buf, 4) = src->id;
-    WBUFL(buf, 8) = dst->id;
-    WBUFL(buf, 12) = tick;
-    WBUFL(buf, 16) = sdelay;
-    WBUFL(buf, 20) = ddelay;
-    WBUFL(buf, 24) = damage;
-    WBUFW(buf, 28) = skill_lv;
-    WBUFW(buf, 30) = div_;
-    WBUFB(buf, 32) = (type > 0) ? type : 0; //skill_get_hit(skill_id);
-    clif_send(buf, packet_len_table[0x1de], src, AREA);
-
-    return 0;
-}
-
-/*==========================================
  * 状態異常アイコン/メッセージ表示
  *------------------------------------------
  */
@@ -4055,8 +4026,7 @@ static void clif_parse_Emotion(int fd, struct map_session_data *sd)
 
     nullpo_retv(sd);
 
-    if (battle_config.basic_skill_check == 0
-        || pc_checkskill(sd, NV_EMOTE) >= 1)
+    if (pc_checkskill(sd, NV_EMOTE) >= 1)
     {
         WBUFW(buf, 0) = 0xc0;
         WBUFL(buf, 2) = sd->bl.id;
@@ -4467,8 +4437,7 @@ static void clif_parse_TradeRequest(int, struct map_session_data *sd)
 {
     nullpo_retv(sd);
 
-    if (battle_config.basic_skill_check == 0
-        || pc_checkskill(sd, NV_TRADE) >= 1)
+    if (pc_checkskill(sd, NV_TRADE) >= 1)
     {
         trade_traderequest(sd, RFIFOL(sd->fd, 2));
     }
@@ -4684,8 +4653,7 @@ static void clif_parse_CloseKafra(int, struct map_session_data *sd)
  */
 static void clif_parse_CreateParty(int fd, struct map_session_data *sd)
 {
-    if (battle_config.basic_skill_check == 0
-        || pc_checkskill(sd, NV_PARTY) >= 2)
+    if (pc_checkskill(sd, NV_PARTY) >= 2)
     {
         party_create(sd, (char *)RFIFOP(fd, 2));
     }
@@ -4712,8 +4680,7 @@ static void clif_parse_PartyInvite(int fd, struct map_session_data *sd)
  */
 static void clif_parse_ReplyPartyInvite(int fd, struct map_session_data *sd)
 {
-    if (battle_config.basic_skill_check == 0
-        || pc_checkskill(sd, NV_PARTY) >= 1)
+    if (pc_checkskill(sd, NV_PARTY) >= 1)
     {
         party_reply_invite(sd, RFIFOL(fd, 2), RFIFOL(fd, 6));
     }

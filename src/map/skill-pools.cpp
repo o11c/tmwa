@@ -39,7 +39,7 @@ void skill_pool_register(int id)
 
 const char *skill_name(int skill)
 {
-    if (skill > 0 && skill < MAX_SKILL_DB)
+    if (skill > 0 && skill < MAX_SKILL)
         return skill_names[skill].desc;
     else
         return NULL;

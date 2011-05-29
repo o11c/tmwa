@@ -21,10 +21,6 @@
 #include "script.hpp"
 #include "../common/socket.hpp"
 
-static const int SKILLUNITTIMER_INVERVAL = 100;
-
-static const int STATE_BLIND = 0x10;
-
 static void skill_status_change_timer(timer_id, tick_t, custom_id_t, custom_data_t);
 
 struct skill_name_db skill_names[] =
@@ -55,141 +51,17 @@ static const int dirx[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
 static const int diry[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
 
 /* スキルデータベース */
-struct skill_db skill_db[MAX_SKILL_DB];
+struct skill_db skill_db[MAX_SKILL];
 
 #define UNARMED_PLAYER_DAMAGE_MIN(bl)   (skill_power_bl((bl), TMW_BRAWLING) >> 4)   // +50 for 200
 #define UNARMED_PLAYER_DAMAGE_MAX(bl)   (skill_power_bl((bl), TMW_BRAWLING))    // +200 for 200
-
-int skill_get_max(int id)
-{
-    return skill_db[id].max;
-}
 
 int skill_get_max_raise(int id)
 {
     return skill_db[id].max_raise;
 }
 
-/*==========================================
- * スキル追加効果
- *------------------------------------------
- */
-int skill_additional_effect(struct block_list *src, struct block_list *bl,
-                             int, int skilllv, int,
-                             unsigned int)
-{
-    struct map_session_data *sd = NULL;
-    struct mob_data *md = NULL;
-
-    int luk;
-
-    int sc_def_mdef, sc_def_vit, sc_def_int, sc_def_luk;
-
-    nullpo_retr(0, src);
-    nullpo_retr(0, bl);
-
-    if (skilllv < 0)
-        return 0;
-
-    if (src->type == BL_PC)
-    {
-        nullpo_retr(0, sd = (struct map_session_data *) src);
-    }
-    else if (src->type == BL_MOB)
-    {
-        nullpo_retr(0, md = (struct mob_data *) src);  //未使用？
-    }
-
-    //対象の耐性
-    luk = battle_get_luk(bl);
-    sc_def_mdef = 100 - (3 + battle_get_mdef(bl) + luk / 3);
-    sc_def_vit = 100 - (3 + battle_get_vit(bl) + luk / 3);
-    sc_def_int = 100 - (3 + battle_get_int(bl) + luk / 3);
-    sc_def_luk = 100 - (3 + luk);
-    //自分の耐性
-    luk = battle_get_luk(src);
-    if (bl->type == BL_MOB)
-    {
-        if (sc_def_mdef > 50)
-            sc_def_mdef = 50;
-        if (sc_def_vit > 50)
-            sc_def_vit = 50;
-        if (sc_def_int > 50)
-            sc_def_int = 50;
-        if (sc_def_luk > 50)
-            sc_def_luk = 50;
-    }
-    if (sc_def_mdef < 0)
-        sc_def_mdef = 0;
-    if (sc_def_vit < 0)
-        sc_def_vit = 0;
-    if (sc_def_int < 0)
-        sc_def_int = 0;
-    return 0;
-}
-
 /*---------------------------------------------------------------------------- */
-
-/*==========================================
- * 詠唱時間計算
- *------------------------------------------
- */
-int skill_castfix(struct block_list *bl, int time_)
-{
-    struct mob_data *md;        // [Valaris]
-    int dex;
-    int castrate = 100;
-    int skill = 0;
-
-    nullpo_retr(0, bl);
-
-    if (bl->type == BL_MOB)
-    {                           // Crash fix [Valaris]
-        md = (struct mob_data *) bl;
-        skill = md->skillid;
-    }
-
-    dex = battle_get_dex(bl);
-
-    if (skill > MAX_SKILL_DB || skill < 0)
-        return 0;
-
-    if (time_ == 0)
-        return 0;
-    if (bl->type == BL_PC)
-    {
-        castrate = ((struct map_session_data *) bl)->castrate;
-        time_ =
-            time_ * castrate * (battle_config.castrate_dex_scale -
-                               dex) / (battle_config.castrate_dex_scale *
-                                       100);
-        time_ = time_ * battle_config.cast_rate / 100;
-    }
-    return (time_ > 0) ? time_ : 0;
-}
-
-/*==========================================
- * ディレイ計算
- *------------------------------------------
- */
-int skill_delayfix(struct block_list *bl, int time_)
-{
-    nullpo_retr(0, bl);
-
-    if (time_ <= 0)
-        return 0;
-
-    if (bl->type == BL_PC)
-    {
-        if (battle_config.delay_dependon_dex)   /* dexの影響を計算する */
-            time_ =
-                time_ * (battle_config.castrate_dex_scale -
-                        battle_get_dex(bl)) /
-                battle_config.castrate_dex_scale;
-        time_ = time_ * battle_config.delay_rate / 100;
-    }
-    return (time_ > 0) ? time_ : 0;
-}
 
 /*==========================================
  * スキル詠唱キャンセル
@@ -642,28 +514,6 @@ int skill_status_change_clear(struct block_list *bl, int type)
     return 0;
 }
 
-/* クローキング検査（周りに移動不可能地帯があるか） */
-int skill_check_cloaking(struct block_list *bl)
-{
-    static int dx[] = { -1, 0, 1, -1, 1, -1, 0, 1 };
-    static int dy[] = { -1, -1, -1, 0, 0, 1, 1, 1 };
-    int end = 1, i;
-
-    nullpo_retr(0, bl);
-
-    if (bl->type == BL_PC && battle_config.pc_cloak_check_type & 1)
-        return 0;
-    if (bl->type == BL_MOB && battle_config.monster_cloak_check_type & 1)
-        return 0;
-    for (i = 0; i < sizeof(dx) / sizeof(dx[0]); i++)
-    {
-        int c = map_getcell(bl->m, bl->x + dx[i], bl->y + dy[i]);
-        if (c == 1 || c == 5)
-            end = 0;
-    }
-    return end;
-}
-
 /*----------------------------------------------------------------------------
  * アイテム合成
  *----------------------------------------------------------------------------
@@ -695,12 +545,7 @@ static int scan_stat(char *statname)
     return 0;
 }
 
-/*==========================================
- * スキル関係ファイル読み込み
- * skill_db.txt スキルデータ
- * skill_cast_db.txt スキルの詠唱時間とディレイデータ
- *------------------------------------------
- */
+/// read skill_db.txt
 static int skill_readdb(void)
 {
     int i, j;
@@ -738,7 +583,7 @@ static int skill_readdb(void)
         }
 
         i = atoi(split[0]);
-        if (i < 0 || i > MAX_SKILL_DB)
+        if (i < 0 || i > MAX_SKILL)
             continue;
 
         // split[1]: ranges
@@ -747,21 +592,14 @@ static int skill_readdb(void)
 //         skill_db[i].pl = atoi(split[4]);
 //         skill_db[i].nk = atoi(split[5]);
         skill_db[i].max_raise = atoi(split[6]);
-        skill_db[i].max = atoi(split[7]);
+//         skill_db[i].max = atoi(split[7]);
 
         // split[8]:
 //         skill_db[i].castcancel = strcasecmp(split[9], "yes") == 0;
 //         skill_db[i].cast_def_rate = atoi(split[10]);
 //         skill_db[i].inf2 = atoi(split[11]);
 //         skill_db[i].maxcount = atoi(split[12]);
-        if (strcasecmp(split[13], "weapon") == 0)
-            skill_db[i].skill_type = BF_WEAPON;
-        else if (strcasecmp(split[13], "magic") == 0)
-            skill_db[i].skill_type = BF_MAGIC;
-        else if (strcasecmp(split[13], "misc") == 0)
-            skill_db[i].skill_type = BF_MISC;
-        else
-            skill_db[i].skill_type = 0;
+        // split[13]: skill type (weapon/magic/misc)
         memset(split2, 0, sizeof(split2));
         for (j = 0, p = split[14]; j < MAX_SKILL_LEVEL && p; j++)
         {

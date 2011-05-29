@@ -503,9 +503,8 @@ obj_id_t map_addobject(struct block_list *bl)
     return first_free_object_id;
 }
 
-// The only external use of this function is skill_delunit
-// TODO understand why that is
-void map_delobjectnofree(obj_id_t id, BlockType type)
+// TODO inline this
+static void map_delobjectnofree(obj_id_t id, BlockType type)
 {
     if (!object[id])
         return;

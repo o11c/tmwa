@@ -9,7 +9,6 @@ struct Damage
     int damage, damage2;
     int type, div_;
     int amotion, dmotion;
-    int blewcount;
     int flag;
     int dmg_lv;                //囲まれ減算計算用　0:スキル攻撃 ATK_LUCKY,ATK_FLEE,ATK_DEF
 };
@@ -21,17 +20,7 @@ struct map_session_data;
 struct mob_data;
 struct block_list;
 
-// ダメージ計算
-
-struct Damage battle_calc_attack(int attack_type,
-                                  struct block_list *bl,
-                                  struct block_list *target, int skill_num,
-                                 int skill_lv);
-struct Damage battle_calc_weapon_attack(struct block_list *bl,
-                                        struct block_list *target,
-                                        int skill_num, int skill_lv);
-struct Damage battle_calc_magic_attack(struct block_list *bl, struct block_list *target);
-struct Damage battle_calc_misc_attack(struct block_list *bl, struct block_list *target);
+struct Damage battle_calc_weapon_attack(struct block_list *bl, struct block_list *target);
 
 
 int battle_calc_damage(struct block_list *target, int damage, int div_, int flag);
@@ -43,11 +32,8 @@ const int
     BF_MISC = 0x0004,
     BF_SHORT = 0x0010,
     BF_LONG = 0x0040,
-    BF_SKILL = 0x0100,
-    BF_NORMAL = 0x0200,
     BF_WEAPONMASK = 0x000f,
-    BF_RANGEMASK = 0x00f0,
-    BF_SKILLMASK = 0x0f00;
+    BF_RANGEMASK = 0x00f0;
 
 // 実際にHPを増減
 int battle_delay_damage(tick_t tick, struct block_list *src,
@@ -123,9 +109,6 @@ extern struct Battle_Config
     int cast_rate, delay_rate, delay_dependon_dex;
     int sdelay_attack_enable;
     int left_cardfix_to_right;
-    int pc_skill_add_range;
-    int skill_out_range_consume;
-    int mob_skill_add_range;
     int pc_damage_delay;
     int pc_damage_delay_rate;
     int defnotenemy;
@@ -154,7 +137,6 @@ extern struct Battle_Config
     int monster_damage_delay_rate;
     int monster_loot_type;
     int mob_count_rate;
-    int basic_skill_check;
     int pc_invincible_time;
     int skill_min_damage;
     int finger_offensive_type;
@@ -188,23 +170,16 @@ extern struct Battle_Config
     int player_defense_type;
     int monster_defense_type;
     int magic_defense_type;
-    int pc_skill_reiteration;
-    int monster_skill_reiteration;
-    int pc_skill_nofootset;
-    int monster_skill_nofootset;
     int pc_cloak_check_type;
     int monster_cloak_check_type;
-    int mob_changetarget_byskill;
     int pc_attack_direction_change;
     int monster_attack_direction_change;
     int pc_undead_nofreeze;
-    int party_skill_penaly;
     int monster_class_change_full_recover;
     int produce_item_name_input;
     int produce_potion_name_input;
     int making_arrow_name_input;
     int holywater_name_input;
-    int display_delay_skill_fail;
     int chat_warpportal;
     int mob_warpportal;
     int dead_branch_active;
@@ -238,11 +213,9 @@ extern struct Battle_Config
     int gx_cardfix;
     int gx_dupele;
     int gx_disptype;
-    int player_skill_partner_check;
     int hide_GM_session;
     int unit_movement_type;
     int invite_request_check;
-    int skill_removetrap_type;
     int disp_experience;
     int backstab_bow_penalty;
 

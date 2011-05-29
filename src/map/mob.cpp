@@ -44,8 +44,6 @@ struct mob_db mob_db[2001];
 static int distance(int, int, int, int);
 static int mob_makedummymobdb(int);
 static void mob_timer(timer_id, tick_t, custom_id_t, custom_data_t);
-int mobskill_use_id(struct mob_data *md, struct block_list *target,
-                      int skill_idx);
 static int mob_unlocktarget(struct mob_data *md, int tick);
 
 /*==========================================
@@ -639,9 +637,6 @@ static int mob_walk(struct mob_data *md, unsigned int tick, int data)
                                y - AREA_SIZE, x + AREA_SIZE, y + AREA_SIZE,
                                -dx, -dy, BL_PC, md);
         md->state.state = MS_IDLE;
-
-        if (md->option & 4)
-            skill_check_cloaking(&md->bl);
     }
     if ((i = calc_next_walk_step(md)) > 0)
     {
@@ -844,7 +839,6 @@ int mob_changestate(struct mob_data *md, int state, int type)
             break;
         case MS_DEAD:
             skill_castcancel(&md->bl);
-//      mobskill_deltimer(md);
             md->last_deadtime = gettick();
             // Since it died, all aggressors' attack to this mob is stopped.
             clif_foreachclient(mob_stopattacked, md->bl.id);
@@ -1109,11 +1103,7 @@ int mob_spawn(int id)
     md->attackabletime = tick;
     md->canmove_tick = tick;
 
-    md->sg_count = 0;
     md->deletetimer = -1;
-
-    md->skillid = 0;
-    md->skilllv = 0;
 
     memset(md->dmglog, 0, sizeof(md->dmglog));
     if (md->lootitem)

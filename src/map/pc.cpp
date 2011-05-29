@@ -623,10 +623,7 @@ int pc_authok(int id, int login_id2, time_t connect_until_time,
     sd->state.auth = 1;
     sd->walktimer = -1;
     sd->attacktimer = -1;
-    sd->skillitem = -1;
-    sd->skillitemlv = -1;
     sd->invincible_timer = -1;
-    sd->sg_count = 0;
 
     sd->deal_locked = 0;
     sd->trade_partner = 0;
@@ -934,11 +931,6 @@ int pc_calcstatus(struct map_session_data *sd, int first)
     sd->speed_add_rate = sd->aspd_add_rate = 100;
     sd->double_add_rate = sd->perfect_hit_add = sd->get_zeny_add_num = 0;
     sd->splash_range = sd->splash_add_range = 0;
-    sd->autospell_id = sd->autospell_lv = sd->autospell_rate = 0;
-    sd->hp_drain_rate = sd->hp_drain_per = sd->sp_drain_rate =
-        sd->sp_drain_per = 0;
-    sd->hp_drain_rate_ = sd->hp_drain_per_ = sd->sp_drain_rate_ =
-        sd->sp_drain_per_ = 0;
     sd->short_weapon_damage_return = sd->long_weapon_damage_return = 0;
     sd->magic_damage_return = 0;    //AppleGirl Was Here
     sd->random_attack_increase_add = sd->random_attack_increase_per = 0;
@@ -2666,8 +2658,6 @@ static void pc_walk(timer_id tid, tick_t tick, custom_id_t id, custom_data_t dat
                     sd->party_hp = -1;
             }
         }
-        if (sd->status.option & 4)  // クローキングの消滅検査
-            skill_check_cloaking(&sd->bl);
 
         if (map_getcell(sd->bl.m, x, y) & 0x80)
             npc_touch_areanpc(sd, sd->bl.m, x, y);
@@ -2790,7 +2780,7 @@ int pc_checkskill(struct map_session_data *sd, int skill_id)
 {
     if (sd == NULL)
         return 0;
-    if (skill_id >= 10000)
+    if (skill_id >= MAX_SKILL)
     {
         return 0;
     }

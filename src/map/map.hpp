@@ -120,8 +120,6 @@ struct quick_regeneration
     unsigned char tickdelay;    // number of ticks to next update
 };
 
-#define VERSION_2_SKILLINFO  0x02   // client supports full skillinfo blocks
-
 struct map_session_data
 {
     struct block_list bl;
@@ -132,7 +130,6 @@ struct map_session_data
         unsigned attack_continue:1;
         unsigned menu_or_input:1;
         unsigned dead_sit:2;
-        unsigned skillcastcancel:1;
         unsigned waitingdisconnect:1;
         unsigned lr_flag:2;
         unsigned connect_new:1;
@@ -159,7 +156,6 @@ struct map_session_data
         unsigned no_gemstone:1;
         unsigned unbreakable_weapon:1;
         unsigned unbreakable_armor:1;
-        unsigned infinite_autospell:1;
         unsigned deaf:1;
     } special_state;
     int char_id, login_id1, login_id2, sex;
@@ -212,7 +208,6 @@ struct map_session_data
     //_current slowly approximates _target, and _target is determined by equipment.
 
     short attackrange, attackrange_;
-    short skillitem, skillitemlv;
 
     // [Fate] Used for gradual healing; amount of enqueued regeneration
     struct quick_regeneration quick_regeneration_hp, quick_regeneration_sp;
@@ -259,9 +254,6 @@ struct map_session_data
     int double_add_rate, speed_add_rate, aspd_add_rate, perfect_hit_add,
         get_zeny_add_num;
     short splash_range, splash_add_range;
-    short autospell_id, autospell_lv, autospell_rate;
-    short hp_drain_rate, hp_drain_per, sp_drain_rate, sp_drain_per;
-    short hp_drain_rate_, hp_drain_per_, sp_drain_rate_, sp_drain_per_;
     int short_weapon_damage_return, long_weapon_damage_return;
     short break_weapon_rate, break_armor_rate;
     short add_steal_rate;
@@ -301,9 +293,6 @@ struct map_session_data
 
     char eventqueue[MAX_EVENTQUEUE][50];
     int eventtimer[MAX_EVENTTIMER];
-
-    int last_skillid, last_skilllv;    // Added by RoVeRT
-    short sg_count;
 
     struct
     {
@@ -441,12 +430,8 @@ struct mob_data
     short sc_count;
     short opt1, opt2, opt3, option;
     short min_chase;
-    short sg_count;
     int deletetimer;
 
-    int skilltarget;
-    short skillx, skilly;
-    short skillid, skilllv, skillidx;
     int def_ele;
     int master_id, master_dist;
     int exclusion_src, exclusion_party;
@@ -566,7 +551,7 @@ enum
     SP_ADD_DAMAGE_CLASS, SP_ADD_MAGIC_DAMAGE_CLASS, SP_ADD_DEF_CLASS, SP_ADD_MDEF_CLASS,    // 1043-1046
     SP_ADD_MONSTER_DROP_ITEM, SP_DEF_RATIO_ATK_ELE, SP_DEF_RATIO_ATK_RACE, SP_ADD_SPEED,    // 1047-1050
     SP_HIT_RATE, SP_FLEE_RATE, SP_FLEE2_RATE, SP_DEF_RATE, SP_DEF2_RATE, SP_MDEF_RATE, SP_MDEF2_RATE,   // 1051-1057
-    SP_SPLASH_RANGE, SP_SPLASH_ADD_RANGE, SP_AUTOSPELL, SP_HP_DRAIN_RATE, SP_SP_DRAIN_RATE, // 1058-1062
+    SP_SPLASH_RANGE, SP_SPLASH_ADD_RANGE, SP_1060, SP_1061, SP_1062, // 1058-1062
     SP_SHORT_WEAPON_DAMAGE_RETURN, SP_LONG_WEAPON_DAMAGE_RETURN, SP_WEAPON_COMA_ELE, SP_WEAPON_COMA_RACE,   // 1063-1066
     SP_ADDEFF2, SP_BREAK_WEAPON_RATE, SP_BREAK_ARMOR_RATE, SP_ADD_STEAL_RATE,   // 1067-1070
     SP_MAGIC_DAMAGE_RETURN, SP_RANDOM_ATTACK_INCREASE, SP_ALL_STATS, SP_AGI_VIT, SP_AGI_DEX_STR, SP_PERFECT_HIDE,   // 1071-1077
@@ -631,7 +616,6 @@ void map_foreachinmovearea(void(*)(struct block_list *, va_list), int, int,
 typedef uint32_t obj_id_t;
 obj_id_t map_addobject(struct block_list *);
 void map_delobject(obj_id_t, BlockType type);
-void map_delobjectnofree(obj_id_t id, BlockType type);
 void map_foreachobject(void(*)(struct block_list *, va_list), BlockType, ...);
 
 void map_quit(struct map_session_data *);

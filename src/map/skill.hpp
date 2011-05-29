@@ -1,15 +1,11 @@
 #ifndef SKILL_H
 #define SKILL_H
 
+#include "../common/mmo.hpp"
 #include "../common/timer.hpp"
 
 #include "map.hpp"
 #include "magic.hpp"
-
-#define MAX_SKILL_DB         450
-#define MAX_SKILL_PRODUCE_DB 150
-#define MAX_SKILL_ARROW_DB   150
-#define MAX_SKILL_ABRA_DB    350
 
 #define SKILL_POOL_FLAG      0x1 // is a pool skill
 #define SKILL_POOL_ACTIVE    0x2 // is an active pool skill
@@ -18,10 +14,9 @@
 // スキルデータベース
 struct skill_db
 {
-    int max, stat, poolflags, max_raise; // `max' is the global max, `max_raise' is the maximum attainable via skill-ups
-    int skill_type;
+    int stat, poolflags, max_raise;
 };
-extern struct skill_db skill_db[MAX_SKILL_DB];
+extern struct skill_db skill_db[MAX_SKILL];
 
 struct skill_name_db
 {
@@ -36,22 +31,10 @@ struct map_session_data;
 
 void do_init_skill(void);
 
-int skill_get_max(int id);
 int skill_get_max_raise(int id);
-
-// 追加効果
-int skill_additional_effect(struct block_list *src, struct block_list *bl,
-                              int skillid, int skilllv, int attack_type,
-                             unsigned int tick);
-
-int skill_castfix(struct block_list *bl, int time);
-int skill_delayfix(struct block_list *bl, int time);
 
 // 詠唱キャンセル
 int skill_castcancel(struct block_list *bl);
-
-// その他
-int skill_check_cloaking(struct block_list *bl);
 
 // ステータス異常
 int skill_status_effect(struct block_list *bl, int type, int val1, int val2,

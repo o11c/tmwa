@@ -103,10 +103,6 @@ void clif_moboutsight(struct block_list *, va_list);
 int clif_skillinfoblock(struct map_session_data *sd);
 int clif_skillup(struct map_session_data *sd, int skill_num);
 
-int clif_skill_damage(struct block_list *src, struct block_list *dst,
-                        unsigned int tick, int sdelay, int ddelay, int damage,
-                       int div, int skill_id, int skill_lv, int type);
-
 int clif_changemapcell(int m, int x, int y, int cell_type, int type);
 
 int clif_status_change(struct block_list *bl, int type, int flag);

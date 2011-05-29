@@ -151,7 +151,6 @@ static int buildin_bonus(struct script_state *st);
 static int buildin_skill(struct script_state *st);
 static int buildin_setskill(struct script_state *st);
 static int buildin_getskilllv(struct script_state *st);
-static int buildin_basicskillcheck(struct script_state *st);
 static int buildin_getgmlevel(struct script_state *st);
 static int buildin_end(struct script_state *st);
 static int buildin_getopt2(struct script_state *st);
@@ -325,7 +324,6 @@ struct builtin_function
     {buildin_skill, "skill", "ii*"},
     {buildin_setskill, "setskill", "ii"},    // [Fate]
     {buildin_getskilllv, "getskilllv", "i"},
-    {buildin_basicskillcheck, "basicskillcheck", "*"},
     {buildin_getgmlevel, "getgmlevel", "*"},
     {buildin_end, "end", ""},
     {buildin_getopt2, "getopt2", "i"},
@@ -3282,16 +3280,6 @@ int buildin_getskilllv(struct script_state *st)
  *
  *------------------------------------------
  */
-int buildin_basicskillcheck(struct script_state *st)
-{
-    push_val(st->stack, C_INT, battle_config.basic_skill_check);
-    return 0;
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
 int buildin_getgmlevel(struct script_state *st)
 {
     push_val(st->stack, C_INT, pc_isGM(script_rid2sd(st)));
@@ -4303,14 +4291,16 @@ int buildin_isloggedin(struct script_state *st)
 }
 
 /*==========================================
- *
+ * Note: Fixed to correspond with const.txt
  *------------------------------------------
  */
 enum
 {
-    MF_NOMEMO, MF_NOTELEPORT, MF_NOSAVE, MF_NOBRANCH, MF_NOPENALTY,
-    MF_NOZENYPENALTY, MF_PVP, MF_PVP_NOPARTY,
-    MF_NOTRADE, MF_NOSKILL, MF_NOWARP, MF_NOPVP,
+    MF_NOMEMO = 0, MF_NOTELEPORT = 1, MF_NOSAVE = 2, MF_NOBRANCH = 3,
+    MF_NOPENALTY = 4, MF_PVP = 5, MF_PVP_NOPARTY = 6,
+    MF_NOZENYPENALTY = 10,
+    // not in const.txt but could be useful
+    MF_NOTRADE, MF_NOWARP, MF_NOPVP,
 };
 
 int buildin_setmapflagnosave(struct script_state *st)

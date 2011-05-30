@@ -3,8 +3,6 @@
 
 #include "../common/mmo.hpp"
 
-int intif_parse(int fd);
-
 int intif_GMmessage(const char *mes, int len);
 
 int intif_wis_message(struct map_session_data *sd, char *nick, char *mes,

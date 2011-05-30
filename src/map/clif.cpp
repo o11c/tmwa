@@ -41,60 +41,199 @@
 #define STATE_BLIND 0x10
 #define EMOTE_IGNORED 0x0e
 
-static int clif_changelook_towards(struct block_list *, int, int, struct map_session_data *dst); // area or target
+static int clif_changelook_towards(struct block_list *, int, int, struct map_session_data *dst);
 static void clif_sitting(int fd, struct map_session_data *sd);
 static int clif_itemlist(struct map_session_data *sd);
 static int clif_GM_kickack(struct map_session_data *sd, int id);
 
+/// I would really like to delete this table
+// most of them are not used and such
+static const int packet_len_table[0x220] =
+{
+//#0x0000
+    10, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+//#0x0010
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+//#0x0020
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+//#0x0030
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
 
-static const int packet_len_table[0x220] = {
-    10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 //#0x0040
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, -1, 55, 17, 3, 37, 46, -1, 23, -1, 3, 108, 3, 2,
-    3, 28, 19, 11, 3, -1, 9, 5, 54, 53, 58, 60, 41, 2, 6, 6,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+//#0x0050
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+//#0x0060
+    0, 0, 0, -1,
+    55, 17, 3, 37,
+    46, -1, 23, -1,
+    3, 108, 3, 2,
+//#0x0070
+    3, 28, 19, 11,
+    3, -1, 9, 5,
+    54, 53, 58, 60,
+    41, 2, 6, 6,
+
 //#0x0080
-    7, 3, 2, 2, 2, 5, 16, 12, 10, 7, 29, 23, -1, -1, -1, 0, // 0x8b unknown... size 2 or 23?
-    7, 22, 28, 2, 6, 30, -1, -1, 3, -1, -1, 5, 9, 17, 17, 6,
-    23, 6, 6, -1, -1, -1, -1, 8, 7, 6, 7, 4, 7, 0, -1, 6,
-    8, 8, 3, 3, -1, 6, 6, -1, 7, 6, 2, 5, 6, 44, 5, 3,
+    // 0x8b unknown... size 2 or 23?
+    7, 3, 2, 2,
+    2, 5, 16, 12,
+    10, 7, 29, 23,
+    -1, -1, -1, 0,
+//#0x0090
+    7, 22, 28, 2,
+    6, 30, -1, -1,
+    3, -1, -1, 5,
+    9, 17, 17, 6,
+//#0x00A0
+    23, 6, 6, -1,
+    -1, -1, -1, 8,
+    7, 6, 7, 4,
+    7, 0, -1, 6,
+//#0x00B0
+    8, 8, 3, 3,
+    -1, 6, 6, -1,
+    7, 6, 2, 5,
+    6, 44, 5, 3,
+
 //#0x00C0
-    7, 2, 6, 8, 6, 7, -1, -1, -1, -1, 3, 3, 6, 6, 2, 27,
-    3, 4, 4, 2, -1, -1, 3, -1, 6, 14, 3, -1, 28, 29, -1, -1,
-    30, 30, 26, 2, 6, 26, 3, 3, 8, 19, 5, 2, 3, 2, 2, 2,
-    3, 2, 6, 8, 21, 8, 8, 2, 2, 26, 3, -1, 6, 27, 30, 10,
+    7, 2, 6, 8,
+    6, 7, -1, -1,
+    -1, -1, 3, 3,
+    6, 6, 2, 27,
+//#0x00D0
+    3, 4, 4, 2,
+    -1, -1, 3, -1,
+    6, 14, 3, -1,
+    28, 29, -1, -1,
+//#0x00E0
+    30, 30, 26, 2,
+    6, 26, 3, 3,
+    8, 19, 5, 2,
+    3, 2, 2, 2,
+//#0x00F0
+    3, 2, 6, 8,
+    21, 8, 8, 2,
+    2, 26, 3, -1,
+    6, 27, 30, 10,
 
 //#0x0100
-    2, 6, 6, 30, 79, 31, 10, 10, -1, -1, 4, 6, 6, 2, 11, -1,
-    10, 39, 4, 10, 31, 35, 10, 18, 2, 13, 15, 20, 68, 2, 3, 16,
-    6, 14, -1, -1, 21, 8, 8, 8, 8, 8, 2, 2, 3, 4, 2, -1,
-    6, 86, 6, -1, -1, 7, -1, 6, 3, 16, 4, 4, 4, 6, 24, 26,
+    2, 6, 6, 30,
+    79, 31, 10, 10,
+    -1, -1, 4, 6,
+    6, 2, 11, -1,
+//#0x0110
+    10, 39, 4, 10,
+    31, 35, 10, 18,
+    2, 13, 15, 20,
+    68, 2, 3, 16,
+//#0x0120
+    6, 14, -1, -1,
+    21, 8, 8, 8,
+    8, 8, 2, 2,
+    3, 4, 2, -1,
+//#0x0130
+    6, 86, 6, -1,
+    -1, 7, -1, 6,
+    3, 16, 4, 4,
+    4, 6, 24, 26,
+
 //#0x0140
-    22, 14, 6, 10, 23, 19, 6, 39, 8, 9, 6, 27, -1, 2, 6, 6,
-    110, 6, -1, -1, -1, -1, -1, 6, -1, 54, 66, 54, 90, 42, 6, 42,
-    -1, -1, -1, -1, -1, 30, -1, 3, 14, 3, 30, 10, 43, 14, 186, 182,
-    14, 30, 10, 3, -1, 6, 106, -1, 4, 5, 4, -1, 6, 7, -1, -1,
+    22, 14, 6, 10,
+    23, 19, 6, 39,
+    8, 9, 6, 27,
+    -1, 2, 6, 6,
+//#0x0150
+    110, 6, -1, -1,
+    -1, -1, -1, 6,
+    -1, 54, 66, 54,
+    90, 42, 6, 42,
+//#0x0160
+    -1, -1, -1, -1,
+    -1, 30, -1, 3,
+    14, 3, 30, 10,
+    43, 14, 186, 182,
+//#0x0170
+    14, 30, 10, 3,
+    -1, 6, 106, -1,
+    4, 5, 4, -1,
+    6, 7, -1, -1,
+
 //#0x0180
-    6, 3, 106, 10, 10, 34, 0, 6, 8, 4, 4, 4, 29, -1, 10, 6,
-    90, 86, 24, 6, 30, 102, 9, 4, 8, 4, 14, 10, -1, 6, 2, 6,
-    3, 3, 35, 5, 11, 26, -1, 4, 4, 6, 10, 12, 6, -1, 4, 4,
-    11, 7, -1, 67, 12, 18, 114, 6, 3, 6, 26, 26, 26, 26, 2, 3,
-//#0x01C0,   Set 0x1d5=-1
-    2, 14, 10, -1, 22, 22, 4, 2, 13, 97, 0, 9, 9, 30, 6, 28,
-    8, 14, 10, 35, 6, -1, 4, 11, 54, 53, 60, 2, -1, 47, 33, 6,
-    30, 8, 34, 14, 2, 6, 26, 2, 28, 81, 6, 10, 26, 2, -1, -1,
-    -1, -1, 20, 10, 32, 9, 34, 14, 2, 6, 48, 56, -1, 4, 5, 10,
-//#0x200
-    26, -1, 26, 10, 18, 26, 11, 34, 14, 36, 10, 19, 10, -1, 24, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    6, 3, 106, 10,
+    10, 34, 0, 6,
+    8, 4, 4, 4,
+    29, -1, 10, 6,
+//#0x0190
+    90, 86, 24, 6,
+    30, 102, 9, 4,
+    8, 4, 14, 10,
+    -1, 6, 2, 6,
+//#0x01A0
+    3, 3, 35, 5,
+    11, 26, -1, 4,
+    4, 6, 10, 12,
+    6, -1, 4, 4,
+//#0x01B0
+    11, 7, -1, 67,
+    12, 18, 114, 6,
+    3, 6, 26, 26,
+    26, 26, 2, 3,
+
+//#0x01C0
+    2, 14, 10, -1,
+    22, 22, 4, 2,
+    13, 97, 0, 9,
+    9, 30, 6, 28,
+//#0x01D0
+    // Set 0x1d5=-1
+    8, 14, 10, 35,
+    6, -1, 4, 11,
+    54, 53, 60, 2,
+    -1, 47, 33, 6,
+//#0x01E0
+    30, 8, 34, 14,
+    2, 6, 26, 2,
+    28, 81, 6, 10,
+    26, 2, -1, -1,
+//#0x01F0
+    -1, -1, 20, 10,
+    32, 9, 34, 14,
+    2, 6, 48, 56,
+    -1, 4, 5, 10,
+
+//#0x0200
+    26, -1, 26, 10,
+    18, 26, 11, 34,
+    14, 36, 10, 19,
+    10, -1, 24, 0,
+//#0x0210
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
 };
 
 // local define
-enum
+enum class Whom
 {
     ALL_CLIENT,
     ALL_SAMEMAP,
@@ -124,39 +263,27 @@ static int map_port = 5121;
 int map_fd;
 char talkie_mes[80];
 
-/*==========================================
- * map鯖のip設定
- *------------------------------------------
- */
-void clif_setip(char *ip)
+/// Our public IP
+void clif_setip(const char *ip)
 {
-    memcpy(map_ip_str, ip, 16);
+    STRZCPY(map_ip_str, ip);
     map_ip = inet_addr(map_ip_str);
 }
 
-/*==========================================
- * map鯖のport設定
- *------------------------------------------
- */
-void clif_setport(int port)
+/// The port on which we listen
+void clif_setport(uint16_t port)
 {
     map_port = port;
 }
 
-/*==========================================
- * map鯖のip読み出し
- *------------------------------------------
- */
+/// Our public IP
 in_addr_t clif_getip(void)
 {
     return map_ip;
 }
 
-/*==========================================
- * map鯖のport読み出し
- *------------------------------------------
- */
-int clif_getport(void)
+/// The port on which we listen
+in_port_t clif_getport(void)
 {
     return map_port;
 }
@@ -216,7 +343,7 @@ static uint8_t *clif_validate_chat(struct map_session_data *sd, int type,
                                  char **message, size_t *message_len);
 
 /*==========================================
- * clif_sendでAREA*指定時用
+ * clif_sendでWhom::AREA*指定時用
  *------------------------------------------
  */
 static void clif_send_sub(struct block_list *bl, va_list ap)
@@ -238,12 +365,12 @@ static void clif_send_sub(struct block_list *bl, va_list ap)
 
     switch (type)
     {
-        case AREA_WOS:
+        case Whom::AREA_WOS:
             if (bl && bl == src_bl)
                 return;
             break;
 
-        case AREA_CHAT_WOC:
+        case Whom::AREA_CHAT_WOC:
             if (is_deaf(bl)
                 && !(bl->type == BL_PC
                      && pc_isGM((struct map_session_data *) src_bl)))
@@ -252,11 +379,11 @@ static void clif_send_sub(struct block_list *bl, va_list ap)
                 return;
             }
             /* fall through... */
-        case AREA_WOC:
+        case Whom::AREA_WOC:
             if (bl && bl == src_bl)
                 return;
             break;
-        case AREA_WOSC:
+        case Whom::AREA_WOSC:
             break;
     }
 
@@ -286,13 +413,13 @@ static void clif_send_sub(struct block_list *bl, va_list ap)
  *
  *------------------------------------------
  */
-static int clif_send(unsigned char *buf, int len, struct block_list *bl, int type)
+static int clif_send(unsigned char *buf, int len, struct block_list *bl, Whom type)
 {
     int i;
     struct party *p = NULL;
     int x_0 = 0, x_1 = 0, y_0 = 0, y_1 = 0;
 
-    if (type != ALL_CLIENT)
+    if (type != Whom::ALL_CLIENT)
     {
         nullpo_retr(0, bl);
 
@@ -305,13 +432,13 @@ static int clif_send(unsigned char *buf, int len, struct block_list *bl, int typ
 
                 switch (type)
                 {
-                    case AREA:
-                    case AREA_WOC:
-                        type = SELF;
+                    case Whom::AREA:
+                    case Whom::AREA_WOC:
+                        type = Whom::SELF;
                         break;
 
-                    case AREA_WOS:
-                    case AREA_WOSC:
+                    case Whom::AREA_WOS:
+                    case Whom::AREA_WOSC:
                         return 1;
 
                     default:
@@ -324,7 +451,7 @@ static int clif_send(unsigned char *buf, int len, struct block_list *bl, int typ
     struct map_session_data *sd;
     switch (type)
     {
-        case ALL_CLIENT:       // 全クライアントに送信
+        case Whom::ALL_CLIENT:       // 全クライアントに送信
             for (i = 0; i < fd_max; i++)
             {
                 if (session[i] && (sd = (struct map_session_data *)session[i]->session_data) != NULL
@@ -338,7 +465,7 @@ static int clif_send(unsigned char *buf, int len, struct block_list *bl, int typ
                 }
             }
             break;
-        case ALL_SAMEMAP:      // 同じマップの全クライアントに送信
+        case Whom::ALL_SAMEMAP:      // 同じマップの全クライアントに送信
             for (i = 0; i < fd_max; i++)
             {
                 if (session[i] && (sd = (struct map_session_data *)session[i]->session_data) != NULL
@@ -352,31 +479,31 @@ static int clif_send(unsigned char *buf, int len, struct block_list *bl, int typ
                 }
             }
             break;
-        case AREA:
-        case AREA_WOS:
-        case AREA_WOC:
-        case AREA_WOSC:
+        case Whom::AREA:
+        case Whom::AREA_WOS:
+        case Whom::AREA_WOC:
+        case Whom::AREA_WOSC:
             map_foreachinarea(clif_send_sub, bl->m, bl->x - AREA_SIZE,
                                bl->y - AREA_SIZE, bl->x + AREA_SIZE,
                                bl->y + AREA_SIZE, BL_PC, buf, len, bl, type);
             break;
-        case AREA_CHAT_WOC:
+        case Whom::AREA_CHAT_WOC:
             map_foreachinarea(clif_send_sub, bl->m, bl->x - (AREA_SIZE - 5),
                                bl->y - (AREA_SIZE - 5),
                                bl->x + (AREA_SIZE - 5),
                                bl->y + (AREA_SIZE - 5), BL_PC, buf, len, bl,
-                               AREA_CHAT_WOC);
+                               Whom::AREA_CHAT_WOC);
             break;
-        case PARTY_AREA:       // 同じ画面内の全パーティーメンバに送信
-        case PARTY_AREA_WOS:   // 自分以外の同じ画面内の全パーティーメンバに送信
+        case Whom::PARTY_AREA:       // 同じ画面内の全パーティーメンバに送信
+        case Whom::PARTY_AREA_WOS:   // 自分以外の同じ画面内の全パーティーメンバに送信
             x_0 = bl->x - AREA_SIZE;
             y_0 = bl->y - AREA_SIZE;
             x_1 = bl->x + AREA_SIZE;
             y_1 = bl->y + AREA_SIZE;
-        case PARTY:            // 全パーティーメンバに送信
-        case PARTY_WOS:        // 自分以外の全パーティーメンバに送信
-        case PARTY_SAMEMAP:    // 同じマップの全パーティーメンバに送信
-        case PARTY_SAMEMAP_WOS:    // 自分以外の同じマップの全パーティーメンバに送信
+        case Whom::PARTY:            // 全パーティーメンバに送信
+        case Whom::PARTY_WOS:        // 自分以外の全パーティーメンバに送信
+        case Whom::PARTY_SAMEMAP:    // 同じマップの全パーティーメンバに送信
+        case Whom::PARTY_SAMEMAP_WOS:    // 自分以外の同じマップの全パーティーメンバに送信
             if (bl->type == BL_PC)
             {
                 sd = (struct map_session_data *) bl;
@@ -396,14 +523,14 @@ static int clif_send(unsigned char *buf, int len, struct block_list *bl, int typ
                 {
                     if ((sd = p->member[i].sd) != NULL)
                     {
-                        if (sd->bl.id == bl->id && (type == PARTY_WOS ||
-                                                    type == PARTY_SAMEMAP_WOS
+                        if (sd->bl.id == bl->id && (type == Whom::PARTY_WOS ||
+                                                    type == Whom::PARTY_SAMEMAP_WOS
                                                     || type ==
-                                                    PARTY_AREA_WOS))
+                                                    Whom::PARTY_AREA_WOS))
                             continue;
-                        if (type != PARTY && type != PARTY_WOS && bl->m != sd->bl.m)    // マップチェック
+                        if (type != Whom::PARTY && type != Whom::PARTY_WOS && bl->m != sd->bl.m)    // マップチェック
                             continue;
-                        if ((type == PARTY_AREA || type == PARTY_AREA_WOS) &&
+                        if ((type == Whom::PARTY_AREA || type == Whom::PARTY_AREA_WOS) &&
                             (sd->bl.x < x_0 || sd->bl.y < y_0 ||
                              sd->bl.x > x_1 || sd->bl.y > y_1))
                             continue;
@@ -431,7 +558,7 @@ static int clif_send(unsigned char *buf, int len, struct block_list *bl, int typ
                 }
             }
             break;
-        case SELF:
+        case Whom::SELF:
             sd = (struct map_session_data *) bl;
             if (packet_len_table[RBUFW(buf, 0)])
             {                   // packet must exist
@@ -554,7 +681,7 @@ int clif_dropflooritem(struct flooritem_data *fitem)
     if (fitem->item_data.nameid <= 0)
         return 0;
     clif_set009e(fitem, buf);
-    clif_send(buf, packet_len_table[0x9e], &fitem->bl, AREA);
+    clif_send(buf, packet_len_table[0x9e], &fitem->bl, Whom::AREA);
 
     return 0;
 }
@@ -574,7 +701,7 @@ int clif_clearflooritem(struct flooritem_data *fitem, int fd)
 
     if (fd == 0)
     {
-        clif_send(buf, packet_len_table[0xa1], &fitem->bl, AREA);
+        clif_send(buf, packet_len_table[0xa1], &fitem->bl, Whom::AREA);
     }
     else
     {
@@ -600,13 +727,13 @@ int clif_clearchar(struct block_list *bl, int type)
     if (type == 9)
     {
         WBUFB(buf, 6) = 0;
-        clif_send(buf, packet_len_table[0x80], bl, AREA);
+        clif_send(buf, packet_len_table[0x80], bl, Whom::AREA);
     }
     else
     {
         WBUFB(buf, 6) = type;
         clif_send(buf, packet_len_table[0x80], bl,
-                   type == 1 ? AREA : AREA_WOS);
+                   type == 1 ? Whom::AREA : Whom::AREA_WOS);
     }
 
     return 0;
@@ -966,7 +1093,7 @@ int clif_spawnpc(struct map_session_data *sd)
         WBUFW(buf, 10) = 0x40;
         WBUFB(buf, 12) = 0;
 
-        clif_send(buf, packet_len_table[0x119], &sd->bl, SELF);
+        clif_send(buf, packet_len_table[0x119], &sd->bl, Whom::SELF);
 
         memset(buf, 0, packet_len_table[0x7c]);
 
@@ -978,14 +1105,14 @@ int clif_spawnpc(struct map_session_data *sd)
         WBUFW(buf, 12) = sd->status.option;
         WBUFW(buf, 20) = sd->disguise;
         WBUFPOS(buf, 36, sd->bl.x, sd->bl.y);
-        clif_send(buf, packet_len_table[0x7c], &sd->bl, AREA);
+        clif_send(buf, packet_len_table[0x7c], &sd->bl, Whom::AREA);
     }
 
     clif_set0078(sd, buf);
 
     WBUFW(buf, 0) = 0x1d9;
     WBUFW(buf, 51) = 0;
-    clif_send(buf, packet_len_table[0x1d9], &sd->bl, AREA_WOS);
+    clif_send(buf, packet_len_table[0x1d9], &sd->bl, Whom::AREA_WOS);
 
 //        clif_changelook_accessories(&sd->bl, NULL);
 
@@ -1014,10 +1141,10 @@ int clif_spawnnpc(struct npc_data *nd)
     WBUFW(buf, 20) = nd->npc_class;
     WBUFPOS(buf, 36, nd->bl.x, nd->bl.y);
 
-    clif_send(buf, packet_len_table[0x7c], &nd->bl, AREA);
+    clif_send(buf, packet_len_table[0x7c], &nd->bl, Whom::AREA);
 
     len = clif_npc0078(nd, buf);
-    clif_send(buf, len, &nd->bl, AREA);
+    clif_send(buf, len, &nd->bl, Whom::AREA);
 
     return 0;
 }
@@ -1083,11 +1210,11 @@ int clif_spawnmob(struct mob_data *md)
         WBUFW(buf, 12) = md->option;
         WBUFW(buf, 20) = mob_get_viewclass(md->mob_class);
         WBUFPOS(buf, 36, md->bl.x, md->bl.y);
-        clif_send(buf, packet_len_table[0x7c], &md->bl, AREA);
+        clif_send(buf, packet_len_table[0x7c], &md->bl, Whom::AREA);
     }
 
     len = clif_mob0078(md, buf);
-    clif_send(buf, len, &md->bl, AREA);
+    clif_send(buf, len, &md->bl, Whom::AREA);
 
     return 0;
 }
@@ -1145,11 +1272,11 @@ int clif_movechar(struct map_session_data *sd)
 
     if (sd->disguise > 23 && sd->disguise < 4001)
     {
-        clif_send(buf, len, &sd->bl, AREA);
+        clif_send(buf, len, &sd->bl, Whom::AREA);
         return 0;
     }
     else
-        clif_send(buf, len, &sd->bl, AREA_WOS);
+        clif_send(buf, len, &sd->bl, Whom::AREA_WOS);
 
     if (battle_config.save_clothcolor == 1 && sd->status.clothes_color > 0)
         clif_changelook(&sd->bl, LOOK_CLOTHES_COLOR,
@@ -1248,7 +1375,7 @@ int clif_fixpos(struct block_list *bl)
     WBUFW(buf, 6) = bl->x;
     WBUFW(buf, 8) = bl->y;
 
-    clif_send(buf, packet_len_table[0x88], bl, AREA);
+    clif_send(buf, packet_len_table[0x88], bl, Whom::AREA);
 
     return 0;
 }
@@ -1993,7 +2120,7 @@ int clif_changelook_towards(struct block_list *bl, int type, int val,
         if (dstsd)
             WFIFOSET(dstsd->fd, packet_len_table[0x1d7]);
         else
-            clif_send(buf, packet_len_table[0x1d7], bl, AREA);
+            clif_send(buf, packet_len_table[0x1d7], bl, Whom::AREA);
     }
     else
     {
@@ -2005,7 +2132,7 @@ int clif_changelook_towards(struct block_list *bl, int type, int val,
         if (dstsd)
             WFIFOSET(dstsd->fd, packet_len_table[0x1d7]);
         else
-            clif_send(buf, packet_len_table[0x1d7], bl, AREA);
+            clif_send(buf, packet_len_table[0x1d7], bl, Whom::AREA);
     }
     return 0;
 }
@@ -2184,7 +2311,7 @@ int clif_misceffect(struct block_list *bl, int type)
     WBUFL(buf, 2) = bl->id;
     WBUFL(buf, 6) = type;
 
-    clif_send(buf, packet_len_table[0x19b], bl, AREA);
+    clif_send(buf, packet_len_table[0x19b], bl, Whom::AREA);
 
     return 0;
 }
@@ -2214,14 +2341,14 @@ int clif_changeoption(struct block_list *bl)
         struct map_session_data *sd = ((struct map_session_data *) bl);
         if (sd && sd->disguise > 23 && sd->disguise < 4001)
         {
-            clif_send(buf, packet_len_table[0x119], bl, AREA_WOS);
+            clif_send(buf, packet_len_table[0x119], bl, Whom::AREA_WOS);
             clif_spawnpc(sd);
         }
         else
-            clif_send(buf, packet_len_table[0x119], bl, AREA);
+            clif_send(buf, packet_len_table[0x119], bl, Whom::AREA);
     }
     else
-        clif_send(buf, packet_len_table[0x119], bl, AREA);
+        clif_send(buf, packet_len_table[0x119], bl, Whom::AREA);
 
     return 0;
 }
@@ -2254,7 +2381,7 @@ int clif_useitemack(struct map_session_data *sd, int idx, int amount,
         WBUFL(buf, 6) = sd->bl.id;
         WBUFW(buf, 10) = amount;
         WBUFB(buf, 12) = ok;
-        clif_send(buf, packet_len_table[0x1c8], &sd->bl, SELF);
+        clif_send(buf, packet_len_table[0x1c8], &sd->bl, Whom::SELF);
     }
 
     return 0;
@@ -2586,7 +2713,7 @@ int clif_movemob(struct mob_data *md)
     nullpo_retr(0, md);
 
     len = clif_mob007b(md, buf);
-    clif_send(buf, len, &md->bl, AREA);
+    clif_send(buf, len, &md->bl, Whom::AREA);
 
     return 0;
 }
@@ -2605,12 +2732,12 @@ int clif_fixmobpos(struct mob_data *md)
     if (md->state.state == MS_WALK)
     {
         len = clif_mob007b(md, buf);
-        clif_send(buf, len, &md->bl, AREA);
+        clif_send(buf, len, &md->bl, Whom::AREA);
     }
     else
     {
         len = clif_mob0078(md, buf);
-        clif_send(buf, len, &md->bl, AREA);
+        clif_send(buf, len, &md->bl, Whom::AREA);
     }
 
     return 0;
@@ -2630,12 +2757,12 @@ int clif_fixpcpos(struct map_session_data *sd)
     if (sd->walktimer != -1)
     {
         len = clif_set007b(sd, buf);
-        clif_send(buf, len, &sd->bl, AREA);
+        clif_send(buf, len, &sd->bl, Whom::AREA);
     }
     else
     {
         len = clif_set0078(sd, buf);
-        clif_send(buf, len, &sd->bl, AREA);
+        clif_send(buf, len, &sd->bl, Whom::AREA);
     }
     clif_changelook_accessories(&sd->bl, NULL);
 
@@ -2666,7 +2793,7 @@ int clif_damage(struct block_list *src, struct block_list *dst,
     WBUFW(buf, 24) = div_;
     WBUFB(buf, 26) = type;
     WBUFW(buf, 27) = damage2;
-    clif_send(buf, packet_len_table[0x8a], src, AREA);
+    clif_send(buf, packet_len_table[0x8a], src, Whom::AREA);
 
     return 0;
 }
@@ -2932,7 +3059,7 @@ int clif_status_change(struct block_list *bl, int type, int flag)
     WBUFW(buf, 2) = type;
     WBUFL(buf, 4) = bl->id;
     WBUFB(buf, 8) = flag;
-    clif_send(buf, packet_len_table[0x196], bl, AREA);
+    clif_send(buf, packet_len_table[0x196], bl, Whom::AREA);
     return 0;
 }
 
@@ -2970,8 +3097,8 @@ int clif_GMmessage(struct block_list *bl, const char *mes, int len, int flag)
     memcpy(WBUFP(buf, 4), mes, len);
     flag &= 0x07;
     clif_send(buf, WBUFW(buf, 2), bl,
-               (flag == 1) ? ALL_SAMEMAP :
-               (flag == 2) ? AREA : (flag == 3) ? SELF : ALL_CLIENT);
+               (flag == 1) ? Whom::ALL_SAMEMAP :
+               (flag == 2) ? Whom::AREA : (flag == 3) ? Whom::SELF : Whom::ALL_CLIENT);
     if (buf != lbuf)
         free(buf);
     return 0;
@@ -2998,7 +3125,7 @@ int clif_resurrection(struct block_list *bl, int type)
     WBUFL(buf, 2) = bl->id;
     WBUFW(buf, 6) = type;
 
-    clif_send(buf, packet_len_table[0x148], bl, type == 1 ? AREA : AREA_WOS);
+    clif_send(buf, packet_len_table[0x148], bl, type == 1 ? Whom::AREA : Whom::AREA_WOS);
 
     return 0;
 }
@@ -3091,7 +3218,7 @@ int clif_party_info(struct party *p, int fd)
         return 9;
     }
     if (sd != NULL)
-        clif_send(buf, WBUFW(buf, 2), &sd->bl, PARTY);
+        clif_send(buf, WBUFW(buf, 2), &sd->bl, Whom::PARTY);
     return 0;
 }
 
@@ -3179,7 +3306,7 @@ int clif_party_option(struct party *p, struct map_session_data *sd, int flag)
     WBUFW(buf, 2) = ((flag & 0x01) ? 2 : p->exp);
     WBUFW(buf, 4) = ((flag & 0x10) ? 2 : p->item);
     if (flag == 0)
-        clif_send(buf, packet_len_table[0x101], &sd->bl, PARTY);
+        clif_send(buf, packet_len_table[0x101], &sd->bl, Whom::PARTY);
     else
     {
         memcpy(WFIFOP(sd->fd, 0), buf, packet_len_table[0x101]);
@@ -3212,7 +3339,7 @@ int clif_party_left(struct party *p, struct map_session_data *sd,
                 if ((sd = p->member[i].sd) != NULL)
                     break;
         if (sd != NULL)
-            clif_send(buf, packet_len_table[0x105], &sd->bl, PARTY);
+            clif_send(buf, packet_len_table[0x105], &sd->bl, Whom::PARTY);
     }
     else if (sd != NULL)
     {
@@ -3245,7 +3372,7 @@ int clif_party_message(struct party *p, int account_id, char *mes, int len)
         WBUFW(buf, 2) = len + 8;
         WBUFL(buf, 4) = account_id;
         memcpy(WBUFP(buf, 8), mes, len);
-        clif_send(buf, len + 8, &sd->bl, PARTY);
+        clif_send(buf, len + 8, &sd->bl, Whom::PARTY);
     }
     return 0;
 }
@@ -3264,7 +3391,7 @@ int clif_party_xy(struct party *, struct map_session_data *sd)
     WBUFL(buf, 2) = sd->status.account_id;
     WBUFW(buf, 6) = sd->bl.x;
     WBUFW(buf, 8) = sd->bl.y;
-    clif_send(buf, packet_len_table[0x107], &sd->bl, PARTY_SAMEMAP_WOS);
+    clif_send(buf, packet_len_table[0x107], &sd->bl, Whom::PARTY_SAMEMAP_WOS);
 //  if (battle_config.etc_log)
 //      printf("clif_party_xy %d\n",sd->status.account_id);
     return 0;
@@ -3285,7 +3412,7 @@ int clif_party_hp(struct party *, struct map_session_data *sd)
     WBUFW(buf, 6) = (sd->status.hp > 0x7fff) ? 0x7fff : sd->status.hp;
     WBUFW(buf, 8) =
         (sd->status.max_hp > 0x7fff) ? 0x7fff : sd->status.max_hp;
-    clif_send(buf, packet_len_table[0x106], &sd->bl, PARTY_AREA_WOS);
+    clif_send(buf, packet_len_table[0x106], &sd->bl, Whom::PARTY_AREA_WOS);
 //  if (battle_config.etc_log)
 //      printf("clif_party_hp %d\n",sd->status.account_id);
     return 0;
@@ -3311,7 +3438,7 @@ int clif_party_move(struct party *p, struct map_session_data *sd, int online)
     memcpy(WBUFP(buf, 15), p->name, 24);
     memcpy(WBUFP(buf, 39), sd->status.name, 24);
     memcpy(WBUFP(buf, 63), maps[sd->bl.m].name, 16);
-    clif_send(buf, packet_len_table[0x104], &sd->bl, PARTY);
+    clif_send(buf, packet_len_table[0x104], &sd->bl, Whom::PARTY);
     return 0;
 }
 
@@ -3356,9 +3483,9 @@ int clif_changemapcell(int m, int x, int y, int cell_type, int type)
     WBUFW(buf, 6) = cell_type;
     memcpy(WBUFP(buf, 8), maps[m].name, 16);
     if (!type)
-        clif_send(buf, packet_len_table[0x192], &bl, AREA);
+        clif_send(buf, packet_len_table[0x192], &bl, Whom::AREA);
     else
-        clif_send(buf, packet_len_table[0x192], &bl, ALL_SAMEMAP);
+        clif_send(buf, packet_len_table[0x192], &bl, Whom::ALL_SAMEMAP);
 
     return 0;
 }
@@ -3376,7 +3503,7 @@ void clif_emotion(struct block_list *bl, int type)
     WBUFW(buf, 0) = 0xc0;
     WBUFL(buf, 2) = bl->id;
     WBUFB(buf, 6) = type;
-    clif_send(buf, packet_len_table[0xc0], bl, AREA);
+    clif_send(buf, packet_len_table[0xc0], bl, Whom::AREA);
 }
 
 static void clif_emotion_towards(struct block_list *bl,
@@ -3414,7 +3541,7 @@ void clif_talkiebox(struct block_list *bl, char *talkie)
     WBUFW(buf, 0) = 0x191;
     WBUFL(buf, 2) = bl->id;
     memcpy(WBUFP(buf, 6), talkie, 80);
-    clif_send(buf, packet_len_table[0x191], bl, AREA);
+    clif_send(buf, packet_len_table[0x191], bl, Whom::AREA);
 }
 
 /*==========================================
@@ -3430,7 +3557,7 @@ void clif_wedding_effect(struct block_list *bl)
 
     WBUFW(buf, 0) = 0x1ea;
     WBUFL(buf, 2) = bl->id;
-    clif_send(buf, packet_len_table[0x1ea], bl, AREA);
+    clif_send(buf, packet_len_table[0x1ea], bl, Whom::AREA);
 }
 
 /*==========================================
@@ -3446,7 +3573,7 @@ void clif_sitting(int, struct map_session_data *sd)
     WBUFW(buf, 0) = 0x8a;
     WBUFL(buf, 2) = sd->bl.id;
     WBUFB(buf, 26) = 2;
-    clif_send(buf, packet_len_table[0x8a], &sd->bl, AREA);
+    clif_send(buf, packet_len_table[0x8a], &sd->bl, Whom::AREA);
 }
 
 /*==========================================
@@ -3465,7 +3592,7 @@ int clif_disp_onlyself(struct map_session_data *sd, char *mes, int len)
     WBUFW(buf, 2) = len + 8;
     memcpy(WBUFP(buf, 4), mes, len + 4);
 
-    clif_send(buf, WBUFW(buf, 2), &sd->bl, SELF);
+    clif_send(buf, WBUFW(buf, 2), &sd->bl, Whom::SELF);
 
     if (buf != lbuf)
         free(buf);
@@ -3556,9 +3683,9 @@ int clif_specialeffect(struct block_list *bl, int type, int flag)
     }
 
     else if (flag == 1)
-        clif_send(buf, packet_len_table[0x19b], bl, SELF);
+        clif_send(buf, packet_len_table[0x19b], bl, Whom::SELF);
     else if (!flag)
-        clif_send(buf, packet_len_table[0x19b], bl, AREA);
+        clif_send(buf, packet_len_table[0x19b], bl, Whom::AREA);
 
     return 0;
 
@@ -3956,7 +4083,7 @@ static void clif_parse_GlobalMessage(int fd, struct map_session_data *sd)
         WBUFW(buf, 2) = msg_len + 8;   /* Header (2) + length (2) + ID (4). */
         WBUFL(buf, 4) = sd->bl.id;
 
-        clif_send(buf, msg_len + 8, &sd->bl, AREA_CHAT_WOC);
+        clif_send(buf, msg_len + 8, &sd->bl, Whom::AREA_CHAT_WOC);
     }
 
     /* Send the message back to the speaker. */
@@ -3983,7 +4110,7 @@ int clif_message(struct block_list *bl, const char *msg)
     WBUFL(buf, 4) = bl->id;
     memcpy(WBUFP(buf, 8), msg, msg_len);
 
-    clif_send(buf, WBUFW(buf, 2), bl, AREA);
+    clif_send(buf, WBUFW(buf, 2), bl, Whom::AREA);
 
     return 0;
 }
@@ -4010,9 +4137,9 @@ static void clif_parse_ChangeDir(int fd, struct map_session_data *sd)
     WBUFW(buf, 6) = 0;
     WBUFB(buf, 8) = (int)dir;
     if (sd->disguise > 23 && sd->disguise < 4001)   // mob disguises [Valaris]
-        clif_send(buf, packet_len_table[0x9c], &sd->bl, AREA);
+        clif_send(buf, packet_len_table[0x9c], &sd->bl, Whom::AREA);
     else
-        clif_send(buf, packet_len_table[0x9c], &sd->bl, AREA_WOS);
+        clif_send(buf, packet_len_table[0x9c], &sd->bl, Whom::AREA_WOS);
 
 }
 
@@ -4031,7 +4158,7 @@ static void clif_parse_Emotion(int fd, struct map_session_data *sd)
         WBUFW(buf, 0) = 0xc0;
         WBUFL(buf, 2) = sd->bl.id;
         WBUFB(buf, 6) = RFIFOB(fd, 2);
-        clif_send(buf, packet_len_table[0xc0], &sd->bl, AREA);
+        clif_send(buf, packet_len_table[0xc0], &sd->bl, Whom::AREA);
     }
 }
 
@@ -4103,7 +4230,7 @@ static void clif_parse_ActionRequest(int fd, struct map_session_data *sd)
             WBUFW(buf, 0) = 0x8a;
             WBUFL(buf, 2) = sd->bl.id;
             WBUFB(buf, 26) = 3;
-            clif_send(buf, packet_len_table[0x8a], &sd->bl, AREA);
+            clif_send(buf, packet_len_table[0x8a], &sd->bl, Whom::AREA);
             break;
     }
 }

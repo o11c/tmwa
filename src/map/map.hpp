@@ -581,7 +581,7 @@ extern char motd_txt[];
 
 extern char talkie_mes[];
 
-extern char wisp_server_name[];
+extern char wisp_server_name[24];
 
 // global information
 void map_setusers(int);

@@ -309,7 +309,7 @@ bool pass_ok(const char *password, const char *crypted) {
 
 // [M|h]ashes up an IP address and a secret key
 // to return a hopefully unique masked IP.
-in_addr_t MD5_ip(char *secret, in_addr_t ip)
+in_addr_t MD5_ip(const char *secret, in_addr_t ip)
 {
     char ipbuf[32];
     uint8_t obuf[16];

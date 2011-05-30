@@ -59,6 +59,6 @@ const char *make_salt(void);
 bool pass_ok(const char *password, const char *crypted);
 
 /// This returns an in_addr_t because it is configurable whether it gets called at all
-in_addr_t MD5_ip(char *secret, in_addr_t ip);
+in_addr_t MD5_ip(const char *secret, in_addr_t ip);
 
 #endif

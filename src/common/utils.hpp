@@ -84,7 +84,7 @@ FILE *create_null_stream(const char *mode);
 
 const char *stamp_now(bool millis);
 
-const char *stamp_time(time_t when, const char *def);
+const char *stamp_time(time_t when, const char *def = NULL);
 
 static inline void log_time(FILE *fp)
 {

@@ -7,6 +7,8 @@
 #include <math.h>
 #include <time.h>
 
+#include <algorithm>
+
 #include "../common/nullpo.hpp"
 #include "../common/timer.hpp"
 
@@ -63,12 +65,13 @@ static void npc_enable_sub(struct block_list *bl, va_list ap)
 {
     struct map_session_data *sd;
     struct npc_data *nd;
-    char *name = (char *) calloc(50, sizeof(char));
+    char *name;
+    CREATE(name, char, 50);
 
     nullpo_retv(bl);
     nullpo_retv(ap);
     nullpo_retv(nd = va_arg(ap, struct npc_data *));
-    if (bl->type == BL_PC && (sd = (struct map_session_data *) bl))
+    if (bl->type == BL_PC && (sd = reinterpret_cast<struct map_session_data *>(bl)))
     {
 
         if (nd->flag & 1)       // 無効化されている
@@ -85,7 +88,7 @@ static void npc_enable_sub(struct block_list *bl, va_list ap)
 
 int npc_enable(const char *name, int flag)
 {
-    struct npc_data *nd = (struct npc_data *)strdb_search(npcname_db, name).p;
+    struct npc_data *nd = reinterpret_cast<struct npc_data *>(strdb_search(npcname_db, name).p);
     if (nd == NULL)
         return -1;
 
@@ -125,7 +128,7 @@ int npc_enable(const char *name, int flag)
  */
 struct npc_data *npc_name2id(const char *name)
 {
-    return (struct npc_data *)strdb_search(npcname_db, name).p;
+    return reinterpret_cast<struct npc_data *>(strdb_search(npcname_db, name).p);
 }
 
 /*==========================================
@@ -178,8 +181,8 @@ void npc_event_timer(timer_id, tick_t, custom_id_t id, custom_data_t data)
     if (sd == NULL)
         return;
 
-    npc_event(sd, (const char *) data.p, 0);
-    free((void *) data.p);
+    npc_event(sd, reinterpret_cast<const char *>(data.p), 0);
+    free(data.p);
 }
 
 /*==========================================
@@ -195,7 +198,7 @@ static void npc_event_doall_sub(db_key_t key, db_val_t data, va_list ap)
     int *c;
     const char *name;
 
-    nullpo_retv(ev = (struct event_data *) data.p);
+    nullpo_retv(ev = reinterpret_cast<struct event_data *>(data.p));
     nullpo_retv(ap);
     nullpo_retv(c = va_arg(ap, int *));
 
@@ -232,7 +235,7 @@ static void npc_event_do_sub(db_key_t key, db_val_t data, va_list ap)
     int rid, argc;
     argrec_t *argv;
 
-    nullpo_retv(ev = (struct event_data *) data.p);
+    nullpo_retv(ev = reinterpret_cast<struct event_data *>(data.p));
     nullpo_retv(ap);
     nullpo_retv(c = va_arg(ap, int *));
 
@@ -325,9 +328,8 @@ static int npc_addeventtimer(struct npc_data *nd, int tick, const char *name)
         char *evname;
         CREATE(evname, char, 24);
         memcpy(evname, name, 24);
-        nd->eventtimer[i] = add_timer(gettick() + tick,
-                                       npc_event_timer, nd->bl.id,
-                                       (int) evname);
+        nd->eventtimer[i] = add_timer(gettick() + tick, npc_event_timer,
+                                      nd->bl.id, evname);
     }
     else
         printf("npc_addtimer: event timer is full !\n");
@@ -339,10 +341,7 @@ static int npc_deleventtimer(struct npc_data *nd, const char *name)
 {
     int i;
     for (i = 0; i < MAX_EVENTTIMER; i++)
-        if (nd->eventtimer[i] != -1 && strcmp((char
-                                                *) (get_timer(nd->eventtimer
-                                                               [i])->data.p),
-                                               name) == 0)
+        if (nd->eventtimer[i] != -1 && strcmp(reinterpret_cast<char *>(get_timer(nd->eventtimer[i])->data.p), name) == 0)
         {
             delete_timer(nd->eventtimer[i], npc_event_timer);
             nd->eventtimer[i] = -1;
@@ -355,7 +354,7 @@ static int npc_deleventtimer(struct npc_data *nd, const char *name)
 static void npc_do_ontimer_sub(db_key_t key, db_val_t data, va_list ap)
 {
     const char *p = key.s;
-    struct event_data *ev = (struct event_data *) data.p;
+    struct event_data *ev = reinterpret_cast<struct event_data *>(data.p);
     int *c = va_arg(ap, int *);
 //  struct map_session_data *sd=va_arg(ap,struct map_session_data *);
     int option = va_arg(ap, int);
@@ -363,7 +362,7 @@ static void npc_do_ontimer_sub(db_key_t key, db_val_t data, va_list ap)
     char temp[10];
     char event[50];
 
-    if (ev->nd->bl.id == (int) *c && (p = strchr(p, ':')) && p
+    if (ev->nd->bl.id == *c && (p = strchr(p, ':')) && p
         && strncasecmp("::OnTimer", p, 8) == 0)
     {
         sscanf(&p[9], "%s", temp);
@@ -396,7 +395,7 @@ int npc_do_ontimer(int npc_id, struct map_session_data *sd, int option)
 static void npc_timerevent(timer_id, tick_t tick, custom_id_t id, custom_data_t data)
 {
     int next, t;
-    struct npc_data *nd = (struct npc_data *) map_id2bl(id);
+    struct npc_data *nd = reinterpret_cast<struct npc_data *>(map_id2bl(id));
     struct npc_timerevent_list *te;
     if (nd == NULL || nd->u.scr.nexttimer < 0)
     {
@@ -460,7 +459,7 @@ int npc_timerevent_stop(struct npc_data *nd)
     if (nd->u.scr.nexttimer >= 0)
     {
         nd->u.scr.nexttimer = -1;
-        nd->u.scr.timer += (int) (gettick() - nd->u.scr.timertick);
+        nd->u.scr.timer += gettick() - nd->u.scr.timertick;
         if (nd->u.scr.timerid != -1)
             delete_timer(nd->u.scr.timerid, npc_timerevent);
         nd->u.scr.timerid = -1;
@@ -481,7 +480,7 @@ int npc_gettimerevent_tick(struct npc_data *nd)
     tick = nd->u.scr.timer;
 
     if (nd->u.scr.nexttimer >= 0)
-        tick += (int) (gettick() - nd->u.scr.timertick);
+        tick += gettick() - nd->u.scr.timertick;
     return tick;
 }
 
@@ -511,7 +510,7 @@ int npc_settimerevent_tick(struct npc_data *nd, int newtimer)
 int npc_event(struct map_session_data *sd, const char *eventname,
                int mob_kill)
 {
-    struct event_data *ev = (struct event_data *)strdb_search(ev_db, eventname).p;
+    struct event_data *ev = reinterpret_cast<struct event_data *>(strdb_search(ev_db, eventname).p);
     struct npc_data *nd;
     int xs, ys;
     char mobevent[100];
@@ -531,7 +530,7 @@ int npc_event(struct map_session_data *sd, const char *eventname,
         {
             strcpy(mobevent, eventname);
             strcat(mobevent, "::OnMyMobDead");
-            ev = (struct event_data *)strdb_search(ev_db, mobevent).p;
+            ev = reinterpret_cast<struct event_data *>(strdb_search(ev_db, mobevent).p);
             if (ev == NULL || (nd = ev->nd) == NULL)
             {
                 if (strncasecmp(eventname, "GM_MONSTER", 10) != 0)
@@ -596,7 +595,7 @@ int npc_event(struct map_session_data *sd, const char *eventname,
 static void npc_command_sub(db_key_t key, db_val_t data, va_list ap)
 {
     const char *p = key.s;
-    struct event_data *ev = (struct event_data *) data.p;
+    struct event_data *ev = reinterpret_cast<struct event_data *>(data.p);
     char *npcname = va_arg(ap, char *);
     char *command = va_arg(ap, char *);
     char temp[100];
@@ -677,7 +676,8 @@ int npc_touch_areanpc(struct map_session_data *sd, int m, int x, int y)
         case MESSAGE:
         case SCRIPT:
         {
-            char *name = (char *)malloc(50);
+            char *name;
+            CREATE(name, char, 50);
 
             memcpy(name, maps[m].npc[i]->name, 50);
             if (sd->areanpc_id == maps[m].npc[i]->bl.id)
@@ -702,7 +702,7 @@ int npc_checknear(struct map_session_data *sd, int id)
 
     nullpo_retr(0, sd);
 
-    nd = (struct npc_data *) map_id2bl(id);
+    nd = reinterpret_cast<struct npc_data *>(map_id2bl(id));
     if (nd == NULL || nd->bl.type != BL_NPC)
     {
         map_log("no sucmap_logh npc : %d\n", id);
@@ -744,7 +744,7 @@ int npc_click(struct map_session_data *sd, int id)
         return 1;
     }
 
-    nd = (struct npc_data *) map_id2bl(id);
+    nd = reinterpret_cast<struct npc_data *>(map_id2bl(id));
 
     if (nd->flag & 1)           // 無効化されている
         return 1;
@@ -788,7 +788,7 @@ int npc_scriptcont(struct map_session_data *sd, int id)
         return 1;
     }
 
-    nd = (struct npc_data *) map_id2bl(id);
+    nd = reinterpret_cast<struct npc_data *>(map_id2bl(id));
 
     if (!nd /* NPC was disposed? */  || nd->bl.subtype == MESSAGE)
     {
@@ -815,7 +815,7 @@ int npc_buysellsel(struct map_session_data *sd, int id, int type)
     if (npc_checknear(sd, id))
         return 1;
 
-    nd = (struct npc_data *) map_id2bl(id);
+    nd = reinterpret_cast<struct npc_data *>(map_id2bl(id));
     if (nd->bl.subtype != SHOP)
     {
         map_log("no sucmap_logh shop npc : %d\n", id);
@@ -842,7 +842,7 @@ int npc_buysellsel(struct map_session_data *sd, int id, int type)
  *------------------------------------------
  */
 int npc_buylist(struct map_session_data *sd, int n,
-                 unsigned short *item_list)
+                const unsigned short *item_list)
 {
     struct npc_data *nd;
     double z;
@@ -854,7 +854,7 @@ int npc_buylist(struct map_session_data *sd, int n,
     if (npc_checknear(sd, sd->npc_shopid))
         return 3;
 
-    nd = (struct npc_data *) map_id2bl(sd->npc_shopid);
+    nd = reinterpret_cast<struct npc_data *>(map_id2bl(sd->npc_shopid));
     if (nd->bl.subtype != SHOP)
         return 3;
 
@@ -868,11 +868,7 @@ int npc_buylist(struct map_session_data *sd, int n,
         if (nd->u.shop_item[j].nameid == 0)
             return 3;
 
-        if (itemdb_value_notdc(nd->u.shop_item[j].nameid))
-            z += (double) nd->u.shop_item[j].value * item_list[i * 2];
-        else
-            z += pc_modifybuyvalue(sd, nd->u.shop_item[j].value) *
-                (double) item_list[i * 2];
+        z += static_cast<double>(nd->u.shop_item[j].value) * item_list[i * 2];
         itemamount += item_list[i * 2];
 
         switch (pc_checkadditem(sd, item_list[i * 2 + 1], item_list[i * 2]))
@@ -892,7 +888,7 @@ int npc_buylist(struct map_session_data *sd, int n,
         w += itemdb_weight(item_list[i * 2 + 1]) * item_list[i * 2];
     }
 
-    if (z > (double) sd->status.zeny)
+    if (z > sd->status.zeny)
         return 1;               // zeny不足
     if (w + sd->weight > sd->max_weight)
         return 2;               // 重量超過
@@ -901,7 +897,7 @@ int npc_buylist(struct map_session_data *sd, int n,
     if (sd->trade_partner != 0)
         return 4;               // cant buy while trading
 
-    pc_payzeny(sd, (int) z);
+    pc_payzeny(sd, static_cast<int>(z));
 
     for (i = 0; i < n; i++)
     {
@@ -938,7 +934,7 @@ int npc_buylist(struct map_session_data *sd, int n,
  *------------------------------------------
  */
 int npc_selllist(struct map_session_data *sd, int n,
-                  unsigned short *item_list)
+                 const unsigned short *item_list)
 {
     double z;
     int i, itemamount = 0;
@@ -960,17 +956,13 @@ int npc_selllist(struct map_session_data *sd, int n,
             return 1;
         if (sd->trade_partner != 0)
             return 2;           // cant sell while trading
-        if (itemdb_value_notoc(nameid))
-            z += (double) itemdb_value_sell(nameid) * item_list[i * 2 + 1];
-        else
-            z += pc_modifysellvalue(sd, itemdb_value_sell(nameid)) *
-                (double)item_list[i * 2 + 1];
+        z += static_cast<double>(itemdb_value_sell(nameid)) * item_list[i * 2 + 1];
         itemamount += item_list[i * 2 + 1];
     }
 
     if (z > MAX_ZENY)
         z = MAX_ZENY;
-    pc_getzeny(sd, (int) z);
+    pc_getzeny(sd, static_cast<int>(z));
     for (i = 0; i < n; i++)
     {
         int item_id = item_list[i * 2] - 2;
@@ -1018,7 +1010,7 @@ void npc_addsrcfile(char *name)
     }
 
     len = sizeof(*new_src) + strlen(name);
-    new_src = (struct npc_src_list *) calloc(1, len);
+    new_src = reinterpret_cast<struct npc_src_list *>(calloc(1, len));
     new_src->next = NULL;
     strncpy(new_src->name, name, strlen(name) + 1);
     if (npc_src_first == NULL)
@@ -1051,7 +1043,7 @@ int npc_parse_warp(char *w1, const char *, char *w3, char *w4)
 
     m = map_mapname2mapid(mapname);
 
-    nd = (struct npc_data *) calloc(1, sizeof(struct npc_data));
+    CREATE(nd, struct npc_data, 1);
     nd->bl.id = npc_get_new_npc_id();
     nd->n = map_addnpc(m, nd);
 
@@ -1097,7 +1089,7 @@ int npc_parse_warp(char *w1, const char *, char *w3, char *w4)
     nd->bl.subtype = WARP;
     map_addblock(&nd->bl);
     clif_spawnnpc(nd);
-    strdb_insert(npcname_db, nd->name, (void *)nd);
+    strdb_insert(npcname_db, nd->name, static_cast<void *>(nd));
 
     return 0;
 }
@@ -1123,9 +1115,7 @@ static int npc_parse_shop(char *w1, char *, char *w3, char *w4)
     }
     m = map_mapname2mapid(mapname);
 
-    nd = (struct npc_data *) calloc(1, sizeof(struct npc_data) +
-                                      sizeof(nd->u.shop_item[0]) * (max +
-                                                                     1));
+    nd = reinterpret_cast<struct npc_data *>(calloc(1, sizeof(struct npc_data) + sizeof(nd->u.shop_item[0]) * (max + 1)));
     p = strchr(w4, ',');
 
     while (p && pos < max)
@@ -1175,7 +1165,7 @@ static int npc_parse_shop(char *w1, char *, char *w3, char *w4)
     nd->bl.x = x;
     nd->bl.y = y;
     nd->bl.id = npc_get_new_npc_id();
-    nd->dir = (Direction)dir;
+    nd->dir = static_cast<Direction>(dir);
     nd->flag = 0;
     memcpy(nd->name, w3, 24);
     nd->npc_class = atoi(w4);
@@ -1185,8 +1175,7 @@ static int npc_parse_shop(char *w1, char *, char *w3, char *w4)
     nd->opt2 = 0;
     nd->opt3 = 0;
 
-    nd = (struct npc_data *)
-        realloc(nd, sizeof(struct npc_data) + sizeof(nd->u.shop_item[0]) * pos);
+    nd = reinterpret_cast<struct npc_data *>(realloc(nd, sizeof(struct npc_data) + sizeof(nd->u.shop_item[0]) * pos));
 
     //printf("shop npc %s %d read done\n",mapname,nd->bl.id);
     npc_shop++;
@@ -1195,7 +1184,7 @@ static int npc_parse_shop(char *w1, char *, char *w3, char *w4)
     nd->n = map_addnpc(m, nd);
     map_addblock(&nd->bl);
     clif_spawnnpc(nd);
-    strdb_insert(npcname_db, nd->name, (void *)nd);
+    strdb_insert(npcname_db, nd->name, static_cast<void *>(nd));
 
     return 0;
 }
@@ -1211,7 +1200,7 @@ static void npc_convertlabel_db(db_key_t key, db_val_t data, va_list ap)
     struct npc_data *nd;
     struct npc_label_list *lst;
     int num;
-    char *p = (char *)strchr(lname, ':');
+    const char *p = strchr(lname, ':');
 
     nullpo_retv(ap);
     nullpo_retv(nd = va_arg(ap, struct npc_data *));
@@ -1220,18 +1209,15 @@ static void npc_convertlabel_db(db_key_t key, db_val_t data, va_list ap)
     num = nd->u.scr.label_list_num;
     if (!lst)
     {
-        lst = (struct npc_label_list *)
-                calloc(1, sizeof(struct npc_label_list));
+        CREATE(lst, struct npc_label_list, 1);
         num = 0;
     }
     else
-        lst = (struct npc_label_list *)
-                realloc(lst, sizeof(struct npc_label_list) * (num + 1));
+    {
+        RECREATE(lst, struct npc_label_list, num + 1);
+    }
+    strzcpy(lst[num].name, lname, std::min(static_cast<size_t>(p - lname), sizeof(lst[num].name)-1));
 
-    *p = '\0';
-    strncpy(lst[num].name, lname, sizeof(lst[num].name)-1);
-    lst[num].name[sizeof(lst[num].name)-1] = '\0';
-    *p = ':';
     lst[num].pos = pos;
     nd->u.scr.label_list = lst;
     nd->u.scr.label_list_num = num + 1;
@@ -1249,7 +1235,7 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
     script_ptr srcbuf = NULL, script;
     int srcsize = 65536;
     int startline = 0;
-    unsigned char line[1024];
+    char line[1024];
     struct npc_data *nd;
     int evflag = 0;
     struct dbt *label_db;
@@ -1279,10 +1265,10 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
     if (strcmp(w2, "script") == 0)
     {
         // スクリプトの解析
-        srcbuf = (script_ptr) calloc(srcsize, 1);
+        CREATE(srcbuf, char, 1);
         if (strchr(first_line, '{'))
         {
-            strcpy((char *)srcbuf, strchr(first_line, '{'));
+            strcpy(srcbuf, strchr(first_line, '{'));
             startline = *lines;
         }
         else
@@ -1290,30 +1276,30 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
         while (1)
         {
             int i;
-            for (i = strlen((char *)srcbuf) - 1; i >= 0 && isspace(srcbuf[i]); i--);
+            for (i = strlen(srcbuf) - 1; i >= 0 && isspace(srcbuf[i]); i--);
             if (i >= 0 && srcbuf[i] == '}')
                 break;
-            if (!fgets((char *)line, 1020, fp))
+            if (!fgets(line, 1020, fp))
                 break;
             (*lines)++;
             if (feof(fp))
                 break;
-            if (strlen((char *)srcbuf) + strlen((char *)line) + 1 >= srcsize)
+            if (strlen(srcbuf) + strlen(line) + 1 >= srcsize)
             {
                 srcsize += 65536;
-                srcbuf = (script_ptr) realloc(srcbuf, srcsize);
+                RECREATE(srcbuf, char, srcsize);
                 memset(srcbuf + srcsize - 65536, '\0', 65536);
             }
             if (srcbuf[0] != '{')
             {
-                if (strchr((char *)line, '{'))
+                if (strchr(line, '{'))
                 {
-                    strcpy((char *)srcbuf, strchr((char *)line, '{'));
+                    strcpy(srcbuf, strchr(line, '{'));
                     startline = *lines;
                 }
             }
             else
-                strcat((char *)srcbuf, (char *)line);
+                strcat(srcbuf, line);
         }
         script = parse_script(srcbuf, startline);
         if (script == NULL)
@@ -1347,7 +1333,7 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
 
     }                           // end of スクリプト解析
 
-    nd = (struct npc_data *) calloc(1, sizeof(struct npc_data));
+    CREATE(nd, struct npc_data, 1);
 
     if (m == -1)
     {
@@ -1417,7 +1403,7 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
     nd->bl.x = x;
     nd->bl.y = y;
     nd->bl.id = npc_get_new_npc_id();
-    nd->dir = (Direction)dir;
+    nd->dir = static_cast<Direction>(dir);
     nd->flag = 0;
     nd->npc_class = npc_class;
     nd->speed = 200;
@@ -1439,16 +1425,16 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
 
         if (evflag)
         {                       // イベント型
-            struct event_data *ev =
-                (struct event_data *) calloc(1, sizeof(struct event_data));
+            struct event_data *ev;
+            CREATE(ev, struct event_data, 1);
             ev->nd = nd;
             ev->pos = 0;
-            strdb_insert(ev_db, nd->exname, (void *)ev);
+            strdb_insert(ev_db, nd->exname, static_cast<void *>(ev));
         }
         else
             clif_spawnnpc(nd);
     }
-    strdb_insert(npcname_db, nd->exname, (void *)nd);
+    strdb_insert(npcname_db, nd->exname, static_cast<void *>(nd));
 
     //-----------------------------------------
     // ラベルデータの準備
@@ -1488,9 +1474,8 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
             struct event_data *ev;
             char *buf;
             // エクスポートされる
-            ev = (struct event_data *) calloc(1,
-                                                sizeof(struct event_data));
-            buf = (char *) calloc(50, sizeof(char));
+            CREATE(ev, struct event_data, 1);
+            CREATE(buf, char, 50);
             if (strlen(lname) > 24)
             {
                 printf("npc_parse_script: label name error !\n");
@@ -1501,7 +1486,7 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
                 ev->nd = nd;
                 ev->pos = pos;
                 sprintf(buf, "%s::%s", nd->exname, lname);
-                strdb_insert(ev_db, buf, (void *)ev);
+                strdb_insert(ev_db, buf, static_cast<void *>(ev));
             }
         }
     }
@@ -1519,14 +1504,13 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
             struct npc_timerevent_list *te = nd->u.scr.timer_event;
             int j, k = nd->u.scr.timeramount;
             if (te == NULL)
-                te = (struct npc_timerevent_list *) calloc(1,
-                                                             sizeof(struct
-                                                                     npc_timerevent_list));
+            {
+                CREATE(te, struct npc_timerevent_list, 1);
+            }
             else
-                te = (struct npc_timerevent_list *) realloc(te,
-                                                              sizeof(struct
-                                                                      npc_timerevent_list)
-                                                              * (k + 1));
+            {
+                RECREATE(te, struct npc_timerevent_list, k + 1);
+            }
             for (j = 0; j < k; j++)
             {
                 if (te[j].timer > t)
@@ -1564,17 +1548,17 @@ static int npc_parse_function(char *, char *, char *w3, char *,
     char *p;
 
     // スクリプトの解析
-    srcbuf = (script_ptr) calloc(srcsize, 1);
+    CREATE(srcbuf, char, srcsize);
     if (strchr(first_line, '{'))
     {
-        strcpy((char *)srcbuf, strchr(first_line, '{'));
+        strcpy(srcbuf, strchr(first_line, '{'));
         startline = *lines;
     }
     else
         srcbuf[0] = 0;
     while (1)
     {
-        for (i = strlen((char *)srcbuf) - 1; i >= 0 && isspace(srcbuf[i]); i--);
+        for (i = strlen(srcbuf) - 1; i >= 0 && isspace(srcbuf[i]); i--);
         if (i >= 0 && srcbuf[i] == '}')
             break;
         if (!fgets(line, 1020, fp))
@@ -1582,22 +1566,22 @@ static int npc_parse_function(char *, char *, char *w3, char *,
         (*lines)++;
         if (feof(fp))
             break;
-        if (strlen((char *)srcbuf) + strlen((char *)line) + 1 >= srcsize)
+        if (strlen(srcbuf) + strlen(line) + 1 >= srcsize)
         {
             srcsize += 65536;
-            srcbuf = (script_ptr) realloc(srcbuf, srcsize);
+            RECREATE(srcbuf, char, srcsize);
             memset(srcbuf + srcsize - 65536, '\0', 65536);
         }
         if (srcbuf[0] != '{')
         {
             if (strchr(line, '{'))
             {
-                strcpy((char *)srcbuf, strchr((char *)line, '{'));
+                strcpy(srcbuf, strchr(line, '{'));
                 startline = *lines;
             }
         }
         else
-            strcat((char *)srcbuf, line);
+            strcat(srcbuf, line);
     }
     script = parse_script(srcbuf, startline);
     if (script == NULL)
@@ -1607,10 +1591,10 @@ static int npc_parse_function(char *, char *, char *w3, char *,
         return 1;
     }
 
-    p = (char *) calloc(50, sizeof(char));
+    CREATE(p, char, 50);
 
     strncpy(p, w3, 49);
-    strdb_insert(script_get_userfunc_db(), p, (void *)script);
+    strdb_insert(script_get_userfunc_db(), p, static_cast<void *>(script));
 
 //  label_db=script_get_label_db();
 
@@ -1655,7 +1639,7 @@ int npc_parse_mob(char *w1, char *, char *w3, char *w4)
 
     for (i = 0; i < num; i++)
     {
-        md = (struct mob_data *) calloc(1, sizeof(struct mob_data));
+        CREATE(md, struct mob_data, 1);
 
         md->bl.prev = NULL;
         md->bl.next = NULL;
@@ -1686,8 +1670,9 @@ int npc_parse_mob(char *w1, char *, char *w3, char *w4)
         md->attacked_id = 0;
 
         if (mob_db[mob_class].mode & 0x02)
-            md->lootitem =
-                (struct item *) calloc(LOOTITEM_SIZE, sizeof(struct item));
+        {
+            CREATE(md->lootitem, struct item, LOOTITEM_SIZE);
+        }
         else
             md->lootitem = NULL;
 
@@ -1852,8 +1837,8 @@ static int npc_parse_mapflag(char *w1, char *, char *w3, char *w4)
 struct npc_data *npc_spawn_text(int m, int x, int y,
                                  int npc_class, const char *name, const char *message)
 {
-    struct npc_data *retval =
-        (struct npc_data *) calloc(1, sizeof(struct npc_data));
+    struct npc_data *retval;
+    CREATE(retval, struct npc_data, 1);
     retval->bl.id = npc_get_new_npc_id();
     retval->bl.x = x;
     retval->bl.y = y;
@@ -1874,7 +1859,7 @@ struct npc_data *npc_spawn_text(int m, int x, int y,
     map_addblock(&retval->bl);
     map_addiddb(&retval->bl);
     if (retval->name && retval->name[0])
-        strdb_insert(npcname_db, retval->name, (void *)retval);
+        strdb_insert(npcname_db, retval->name, static_cast<void *>(retval));
 
     return retval;
 }
@@ -1926,7 +1911,7 @@ void npc_free(struct npc_data *nd)
 
 static void ev_release(db_key_t key, db_val_t val)
 {
-    free((char*)key.s);
+    free(const_cast<char *>(key.s));
     free(val.p);
 }
 

@@ -16,7 +16,7 @@ static int strdb_cmp(const char *a, const char* b)
 static hash_t strdb_hash(const char *a)
 {
     hash_t h = 0;
-    const unsigned char *p = (const unsigned char*)a;
+    const uint8_t *p = reinterpret_cast<const uint8_t*>(a);
     while (*p)
     {
         h = (h * 33 + *p++) ^ (h >> 24);
@@ -43,7 +43,7 @@ static int numdb_cmp(numdb_key_t a, numdb_key_t b)
 
 static hash_t numdb_hash(numdb_key_t a)
 {
-    return (hash_t) a;
+    return static_cast<hash_t>(a);
 }
 
 struct dbt *numdb_init(void)
@@ -89,7 +89,7 @@ db_val_t db_search(struct dbt *table, db_key_t key)
         else
             p = p->right;
     }
-    return (db_val_t)(void *)NULL;
+    return static_cast<void *>(NULL);
 }
 
 // Tree maintainance methods
@@ -384,7 +384,7 @@ db_val_t db_erase(struct dbt *table, db_key_t key)
             p = p->right;
     }
     if (!p)
-        return (db_val_t)(void *)NULL;
+        return static_cast<void *>(NULL);
     db_val_t data = p->data;
     db_rebalance_erase(p, &table->ht[hash]);
     free(p);

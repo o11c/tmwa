@@ -28,8 +28,8 @@ static struct dbt *storage_db;
  */
 int storage_comp_item(const void *_i1, const void *_i2)
 {
-    struct item *i1 = (struct item *) _i1;
-    struct item *i2 = (struct item *) _i2;
+    const struct item *i1 = reinterpret_cast<const struct item *>(_i1);
+    const struct item *i2 = reinterpret_cast<const struct item *>(_i2);
 
     if (i1->nameid == i2->nameid)
         return 0;
@@ -60,12 +60,12 @@ int do_init_storage(void)      // map.c::do_init()から呼ばれる
 struct storage *account2storage(int account_id)
 {
     struct storage *stor =
-        (struct storage *) numdb_search(storage_db, account_id).p;
+            reinterpret_cast<struct storage *>(numdb_search(storage_db, account_id).p);
     if (stor == NULL)
     {
         CREATE(stor, struct storage, 1);
         stor->account_id = account_id;
-        numdb_insert(storage_db, (numdb_key_t)stor->account_id, (void *)stor);
+        numdb_insert(storage_db, static_cast<numdb_key_t>(stor->account_id), static_cast<void *>(stor));
     }
     return stor;
 }
@@ -73,13 +73,13 @@ struct storage *account2storage(int account_id)
 // Just to ask storage, without creation
 struct storage *account2storage2(int account_id)
 {
-    return (struct storage *) numdb_search(storage_db, account_id).p;
+    return reinterpret_cast<struct storage *>(numdb_search(storage_db, account_id).p);
 }
 
 int storage_delete(int account_id)
 {
     struct storage *stor =
-        (struct storage *) numdb_search(storage_db, account_id).p;
+            reinterpret_cast<struct storage *>(numdb_search(storage_db, account_id).p);
     if (stor)
     {
         numdb_erase(storage_db, account_id);
@@ -100,9 +100,10 @@ int storage_storageopen(struct map_session_data *sd)
     if (sd->state.storage_flag)
         return 1;               //Already open?
 
-    if ((stor =
-         (struct storage *) numdb_search(storage_db,
-                                          (numdb_key_t)sd->status.account_id).p) == NULL)
+    if ((stor = reinterpret_cast<struct storage *>(
+            numdb_search(storage_db,
+                         static_cast<numdb_key_t>(sd->status.account_id)).p)
+        ) == NULL)
     {                           //Request storage.
         intif_request_storage(sd->status.account_id);
         return 1;

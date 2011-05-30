@@ -38,7 +38,7 @@ struct db_val_t
     db_val_t(intptr_t iv) : i(iv) {}
 };
 typedef uint32_t hash_t;
-typedef void(*db_func_t)(db_key_t, db_val_t, va_list);
+typedef void (*db_func_t)(db_key_t, db_val_t, va_list);
 
 /// DataBase Node
 struct dbn
@@ -61,19 +61,19 @@ struct dbt
     dbt_type type;
     /// Note, before replacement, key/values to be replaced
     // TODO refactor to decrease/eliminate the uses of this?
-    void(*release)(db_key_t, db_val_t) __attribute__((deprecated));
+    void (*release)(db_key_t, db_val_t) __attribute__((deprecated));
     /// The root trees
     struct dbn *ht[HASH_SIZE];
 };
 
-# define strdb_search(t,k)   db_search((t), (db_key_t)(k))
-# define strdb_insert(t,k,d) db_insert((t), (db_key_t)(k), (db_val_t)(d))
-# define strdb_erase(t,k)    db_erase((t), (db_key_t)(k))
+# define strdb_search(t,k)   db_search((t), static_cast<db_key_t>(k))
+# define strdb_insert(t,k,d) db_insert((t), static_cast<db_key_t>(k), static_cast<db_val_t>(d))
+# define strdb_erase(t,k)    db_erase((t), static_cast<db_key_t>(k))
 # define strdb_foreach       db_foreach
 # define strdb_final         db_final
-# define numdb_search(t,k)   db_search((t), (db_key_t)(k))
-# define numdb_insert(t,k,d) db_insert((t), (db_key_t)(k), (db_val_t)(d))
-# define numdb_erase(t,k)    db_erase((t), (db_key_t)(k))
+# define numdb_search(t,k)   db_search((t), static_cast<db_key_t>(k))
+# define numdb_insert(t,k,d) db_insert((t), static_cast<db_key_t>(k), static_cast<db_val_t>(d))
+# define numdb_erase(t,k)    db_erase((t), static_cast<db_key_t>(k))
 # define numdb_foreach       db_foreach
 # define numdb_final         db_final
 

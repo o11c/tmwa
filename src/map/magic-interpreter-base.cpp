@@ -59,8 +59,8 @@ char *magic_find_invocation(const char *spellname)
 
 static int spell_compare(const void *lhs, const void *rhs)
 {
-    return strcmp((*((spell_t **) lhs))->invocation,
-                   (*((spell_t **) rhs))->invocation);
+    return strcmp((*reinterpret_cast<spell_t *const *>(lhs))->invocation,
+                  (*reinterpret_cast<spell_t *const *>(rhs))->invocation);
 }
 
 spell_t *magic_find_spell(char *invocation)
@@ -78,10 +78,9 @@ spell_t *magic_find_spell(char *invocation)
 
     key.invocation = invocation;
 
-    retval =
-        ((spell_t **)
-         bsearch(&keyp, magic_conf.spells, magic_conf.spells_nr,
-                  sizeof(spell_t *), spell_compare));
+    retval = reinterpret_cast<spell_t **>(
+            bsearch(&keyp, magic_conf.spells, magic_conf.spells_nr,
+                    sizeof(spell_t *), spell_compare));
 
     if (!retval)
         return NULL;
@@ -95,8 +94,8 @@ spell_t *magic_find_spell(char *invocation)
 
 static int compare_teleport_anchor(const void *lhs, const void *rhs)
 {
-    return strcmp((*((teleport_anchor_t **) lhs))->invocation,
-                   (*((teleport_anchor_t **) rhs))->invocation);
+    return strcmp((*reinterpret_cast<teleport_anchor_t *const *>(lhs))->invocation,
+                  (*reinterpret_cast<teleport_anchor_t *const *>(rhs))->invocation);
 }
 
 char *magic_find_anchor_invocation(const char *anchor_name)
@@ -125,11 +124,9 @@ teleport_anchor_t *magic_find_anchor(char *name)
 
     key.invocation = name;
 
-    retval = (teleport_anchor_t **) bsearch(&keyp,
-                                             magic_conf.anchors,
-                                             -magic_conf.anchors_nr,
-                                             sizeof(teleport_anchor_t *),
-                                             compare_teleport_anchor);
+    retval = reinterpret_cast<teleport_anchor_t **>(
+            bsearch(&keyp, magic_conf.anchors, -magic_conf.anchors_nr,
+                    sizeof(teleport_anchor_t *), compare_teleport_anchor));
 
     if (!retval)
         return NULL;
@@ -224,8 +221,8 @@ void magic_add_component(component_t ** component_holder, int id, int count)
 
     if (*component_holder == NULL)
     {
-        component_t *component =
-            (component_t *) malloc(sizeof(component_t));
+        component_t *component;
+        CREATE(component, component_t, 1);
         component->next = NULL;
         component->item_id = id;
         component->count = count;
@@ -245,8 +242,7 @@ void magic_add_component(component_t ** component_holder, int id, int count)
     }
 }
 
-static void
-copy_components(component_t ** component_holder, component_t * component)
+static void copy_components(component_t ** component_holder, component_t * component)
 {
     if (component == NULL)
         return;
@@ -285,8 +281,7 @@ static void consume_components(character_t * caster, component_t * component)
     }
 }
 
-static int
-spellguard_can_satisfy(spellguard_check_t * check, character_t * caster,
+static int spellguard_can_satisfy(spellguard_check_t * check, character_t * caster,
                         env_t * env, int *near_miss)
 {
     unsigned int tick = gettick();
@@ -312,7 +307,7 @@ spellguard_can_satisfy(spellguard_check_t * check, character_t * caster,
 
     if (retval)
     {
-        unsigned int casttime = (unsigned int) check->casttime;
+        unsigned int casttime = check->casttime;
 
         if (VAR(VAR_MIN_CASTTIME).ty == TY_INT)
             casttime = MAX(casttime, VAR(VAR_MIN_CASTTIME).v.v_int);
@@ -447,11 +442,11 @@ void spell_update_location(invocation_t * invocation)
         return;
     else
     {
-        character_t *owner = (character_t *) map_id2bl(invocation->subject);
+        character_t *owner = reinterpret_cast<character_t *>(map_id2bl(invocation->subject));
         if (!owner)
             return;
 
-        spell_set_location(invocation, (entity_t *) owner);
+        spell_set_location(invocation, reinterpret_cast<entity_t *>(owner));
     }
 }
 
@@ -485,7 +480,7 @@ invocation_t *spell_instantiate(effect_set_t * effect_set, env_t * env)
 
 invocation_t *spell_clone_effect(invocation_t * base)
 {
-    invocation_t *retval = (invocation_t *) malloc(sizeof(invocation_t));
+    invocation_t *retval = reinterpret_cast<invocation_t *>(malloc(sizeof(invocation_t)));
     env_t *env;
 
     memcpy(retval, base, sizeof(invocation_t));
@@ -536,7 +531,7 @@ void spell_bind(character_t * subject, invocation_t * invocation)
         invocation->subject = subject->bl.id;
     }
 
-    spell_set_location(invocation, (entity_t *) subject);
+    spell_set_location(invocation, reinterpret_cast<entity_t *>(subject));
 }
 
 int spell_unbind(character_t * subject, invocation_t * invocation)

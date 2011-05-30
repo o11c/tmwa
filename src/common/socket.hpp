@@ -16,10 +16,10 @@
 /// Check how much can be read
 # define RFIFOREST(fd) (session[fd]->rdata_size-session[fd]->rdata_pos)
 /// Read from the queue
-# define RFIFOP(fd,pos) (((const uint8_t *)(session[fd]->rdata))+session[fd]->rdata_pos+(pos))
-# define RFIFOB(fd,pos) (*(const uint8_t*)(RFIFOP(fd, pos)))
-# define RFIFOW(fd,pos) (*(const uint16_t*)(RFIFOP(fd, pos)))
-# define RFIFOL(fd,pos) (*(const uint32_t*)(RFIFOP(fd, pos)))
+# define RFIFOP(fd,pos) (static_cast<const uint8_t *>(session[fd]->rdata)+session[fd]->rdata_pos+(pos))
+# define RFIFOB(fd,pos) (*reinterpret_cast<const uint8_t*>(RFIFOP(fd, pos)))
+# define RFIFOW(fd,pos) (*reinterpret_cast<const uint16_t*>(RFIFOP(fd, pos)))
+# define RFIFOL(fd,pos) (*reinterpret_cast<const uint32_t*>(RFIFOP(fd, pos)))
 
 /// Done reading
 void RFIFOSKIP(int fd, size_t len);
@@ -33,10 +33,10 @@ session[fd]->rdata_pos=0)
 # define RFIFOSPACE(fd) (session[fd]->max_rdata-session[fd]->rdata_size)
 
 /// Read from an arbitrary buffer
-# define RBUFP(p,pos) (((const uint8_t*)(p))+(pos))
-# define RBUFB(p,pos) (*(const uint8_t*)RBUFP((p),(pos)))
-# define RBUFW(p,pos) (*(const uint16_t*)RBUFP((p),(pos)))
-# define RBUFL(p,pos) (*(const uint32_t*)RBUFP((p),(pos)))
+# define RBUFP(p,pos) (static_cast<const uint8_t*>(p)+(pos))
+# define RBUFB(p,pos) (*reinterpret_cast<const uint8_t*>(RBUFP((p),(pos))))
+# define RBUFW(p,pos) (*reinterpret_cast<const uint16_t*>(RBUFP((p),(pos))))
+# define RBUFL(p,pos) (*reinterpret_cast<const uint32_t*>(RBUFP((p),(pos))))
 
 
 
@@ -44,17 +44,17 @@ session[fd]->rdata_pos=0)
 # define WFIFOSPACE(fd) (session[fd]->max_wdata-session[fd]->wdata_size)
 /// Write to the queue
 # define WFIFOP(fd,pos) (session[fd]->wdata+session[fd]->wdata_size+(pos))
-# define WFIFOB(fd,pos) (*(uint8_t*)(WFIFOP(fd,pos)))
-# define WFIFOW(fd,pos) (*(uint16_t*)(WFIFOP(fd,pos)))
-# define WFIFOL(fd,pos) (*(uint32_t*)(WFIFOP(fd,pos)))
+# define WFIFOB(fd,pos) (*reinterpret_cast<uint8_t*>(WFIFOP(fd,pos)))
+# define WFIFOW(fd,pos) (*reinterpret_cast<uint16_t*>(WFIFOP(fd,pos)))
+# define WFIFOL(fd,pos) (*reinterpret_cast<uint32_t*>(WFIFOP(fd,pos)))
 /// Finish writing
 void WFIFOSET(int fd, size_t len);
 
 /// Write to an arbitrary buffer
-#define WBUFP(p,pos) (((uint8_t*)(p))+(pos))
-#define WBUFB(p,pos) (*(uint8_t*)WBUFP((p),(pos)))
-#define WBUFW(p,pos) (*(uint16_t*)WBUFP((p),(pos)))
-#define WBUFL(p,pos) (*(uint32_t*)WBUFP((p),(pos)))
+#define WBUFP(p,pos) (static_cast<uint8_t*>(p)+(pos))
+#define WBUFB(p,pos) (*reinterpret_cast<uint8_t*>(WBUFP((p),(pos))))
+#define WBUFW(p,pos) (*reinterpret_cast<uint16_t*>(WBUFP((p),(pos))))
+#define WBUFL(p,pos) (*reinterpret_cast<uint32_t*>(WBUFP((p),(pos))))
 
 // Struct declaration
 
@@ -83,13 +83,13 @@ struct socket_data
     /// Only called when select() indicates the socket is ready
     /// If, after that, nothing is read, it sets eof
     // These could probably be hard-coded with a little work
-    void(*func_recv)(int);
-    void(*func_send)(int);
+    void (*func_recv)(int);
+    void (*func_send)(int);
     /// This is the important one
     /// Set to different functions depending on whether the connection
     /// is a player or a server/ladmin
     /// Can be set explicitly or via set_defaultparse
-    void(*func_parse)(int);
+    void (*func_parse)(int);
     /// Server-specific data type
     // TODO make this into a type-safe-but-generic struct session_data *
     void *session_data;
@@ -97,7 +97,7 @@ struct socket_data
     // used when forwarding a packet with different ID
     void rfifo_change_packet(uint16_t newpacket)
     {
-        *(uint16_t *)(rdata + rdata_pos) = newpacket;
+        *reinterpret_cast<uint16_t *>(rdata + rdata_pos) = newpacket;
     }
 };
 
@@ -135,7 +135,7 @@ void do_socket(void);
 /// Change the default parser for newly connected clients
 // typically called once per server, but individual clients may identify
 // themselves as servers
-void set_defaultparse(void(*defaultparse)(int));
+void set_defaultparse(void (*defaultparse)(int));
 
 /// Wrappers to track number of free FDs
 void fclose_(FILE * fp);

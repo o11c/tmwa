@@ -221,12 +221,12 @@ proc_formals_list       : /* empty  */
 proc_formals_list_ne    : ID
                           { CREATE($$, proc_t, 1);
                             $$->args_nr = 1;
-                            $$->args = (int*)malloc(sizeof(int));
+                            CREATE($$->args, int, 1);
                             $$->args[0] = intern_id($1);
                           }
                         | proc_formals_list_ne ',' ID
                           { $$ = $1;
-                            $$->args = (int*)realloc($$->args, sizeof(int) * (1 + $$->args_nr));
+                            RECREATE($$->args, int, 1 + $$->args_nr);
                             $$->args[$$->args_nr++] = intern_id($3);
                           }
                         ;
@@ -667,7 +667,7 @@ effect                  : '(' effect_list ')'
                                 }
                         | SCRIPT_DATA
                                 { $$ = new_effect(EFFECT_SCRIPT);
-                                  $$->e.e_script = parse_script((script_ptr) $1, @1.first_line);
+                                  $$->e.e_script = parse_script($1, @1.first_line);
                                   free($1);
                                   if ($$->e.e_script == NULL)
                                       fail(@1.first_line, @1.first_column, "Failed to compile script\n");
@@ -696,7 +696,7 @@ static int intern_id(const char *id_name)
 
         for (i = 0; i < magic_conf.vars_nr; i++)
                 if (!strcmp(id_name, magic_conf.var_name[i])) {
-                        free((char*)id_name);
+                        free(const_cast<char*>(id_name));
                         return i;
                 }
 
@@ -811,7 +811,8 @@ static spell_t *new_spell(spellguard_t *guard)
 {
         static int spell_counter = 0;
 
-        spell_t *retval = (spell_t*)calloc(1, sizeof(spell_t));
+        spell_t *retval;
+        CREATE(retval, spell_t, 1);
         retval->idx = ++spell_counter;
         retval->spellguard = guard;
         return retval;
@@ -819,7 +820,8 @@ static spell_t *new_spell(spellguard_t *guard)
 
 static spellguard_t *new_spellguard(int ty)
 {
-        spellguard_t *retval = (spellguard_t *)calloc(1, sizeof(spellguard_t));
+        spellguard_t *retval;
+        CREATE(retval, spellguard_t, 1);
         retval->ty = ty;
         return retval;
 }
@@ -855,7 +857,8 @@ static spellguard_t *spellguard_implication(spellguard_t *a, spellguard_t *b)
 
 static effect_t *new_effect(int ty)
 {
-        effect_t *effect = (effect_t *) calloc(1, sizeof(effect_t));
+        effect_t *effect;
+        CREATE(effect, effect_t, 1);
         effect->ty = ty;
         return effect;
 }
@@ -973,11 +976,13 @@ static void bind_constant(char *name, val_t *val, int line_nr)
         }
 
         if (!const_defs)
-                const_defs = (struct const_def_rec *)malloc(sizeof(struct const_def_rec));
+        {
+            CREATE(const_defs, struct const_def_rec, 1);
+        }
         else
-                const_defs = (struct const_def_rec *)realloc(const_defs,
-                                                             (const_defs_nr + 1) * sizeof(struct const_def_rec));
-
+        {
+            RECREATE(const_defs, struct const_def_rec, const_defs_nr + 1);
+        }
         const_defs[const_defs_nr].name = name;
         const_defs[const_defs_nr].val = *val;
         ++const_defs_nr;
@@ -1011,8 +1016,8 @@ int magic_init(const char *conffile) // must be called after itemdb initialisati
         // TODO was there a reason these were mallocing a minimal amount?
         // probably it was just somebody not knowing the standard library
         // very well - that it is safe to realloc NULL
-        magic_conf.var_name = (const char **)NULL;
-        magic_conf.vars = (val_t *)NULL;
+        magic_conf.var_name = static_cast<const char **>(NULL);
+        magic_conf.vars = static_cast<val_t *>(NULL);
 
         magic_conf.obscure_chance = 95;
         magic_conf.min_casttime = 100;

@@ -29,7 +29,7 @@
 #include "../common/socket.hpp"
 #include "magic.hpp"
 
-static void map_helpscreen(void) __attribute__((noreturn));
+static void map_helpscreen() __attribute__((noreturn));
 
 
 static struct dbt *id_db = NULL;
@@ -499,7 +499,7 @@ obj_id_t map_addobject(struct block_list *bl)
     if (last_object_id < first_free_object_id)
         last_object_id = first_free_object_id;
     object[first_free_object_id] = bl;
-    numdb_insert(id_db, first_free_object_id, (void *)bl);
+    numdb_insert(id_db, first_free_object_id, static_cast<void *>(bl));
     return first_free_object_id;
 }
 
@@ -512,7 +512,7 @@ static void map_delobjectnofree(obj_id_t id, BlockType type)
     if (object[id]->type != type)
     {
         map_log("Incorrect type: expected %d, got %d", type, object[id]->type);
-        SEGFAULT();
+        abort();
     }
 
     map_delblock(object[id]);
@@ -575,7 +575,7 @@ void map_foreachobject(void (*func) (struct block_list *, va_list), BlockType ty
 /// Delete floor items
 void map_clearflooritem_timer(timer_id tid, tick_t, custom_id_t id, custom_data_t data)
 {
-    struct flooritem_data *fitem = (struct flooritem_data *) object[id];
+    struct flooritem_data *fitem = reinterpret_cast<struct flooritem_data *>(object[id]);
     if (!fitem || fitem->bl.type != BL_ITEM)
     {
         map_log("%s: error: no such item", __func__);
@@ -731,7 +731,7 @@ int map_addflooritem(struct item *item_data, int amount, uint16_t m, uint16_t x,
 // then send the reply to that session
 void map_addchariddb(charid_t charid, const char *name)
 {
-    struct charid2nick *p = (struct charid2nick *)numdb_search(charid_db, charid).p;
+    struct charid2nick *p = reinterpret_cast<struct charid2nick *>(numdb_search(charid_db, charid).p);
     if (!p)
     {
         // if not in the database, it will need to be added it
@@ -742,14 +742,14 @@ void map_addchariddb(charid_t charid, const char *name)
         numdb_erase(charid_db, charid);
 
     STRZCPY(p->nick, name);
-    numdb_insert(charid_db, charid, (void *)p);
+    numdb_insert(charid_db, charid, static_cast<void *>(p));
 }
 
 /// Add block to DB
 void map_addiddb(struct block_list *bl)
 {
     nullpo_retv(bl);
-    numdb_insert(id_db, bl->id, (void *)bl);
+    numdb_insert(id_db, bl->id, static_cast<void *>(bl));
 }
 
 /// Delete block from DB
@@ -763,7 +763,7 @@ void map_deliddb(struct block_list *bl)
 void map_addnickdb(struct map_session_data *sd)
 {
     nullpo_retv(sd);
-    strdb_insert(nick_db, sd->status.name, (void *)sd);
+    strdb_insert(nick_db, sd->status.name, static_cast<void *>(sd));
 }
 
 /// A player quits from the map server
@@ -808,7 +808,7 @@ void map_quit(struct map_session_data *sd)
 
     numdb_erase(id_db, sd->bl.id);
     strdb_erase(nick_db, sd->status.name);
-    numdb_erase(charid_db, (numdb_key_t)sd->status.char_id);
+    numdb_erase(charid_db, static_cast<numdb_key_t>(sd->status.char_id));
 }
 
 // return the session of the given id
@@ -820,7 +820,7 @@ struct map_session_data *map_id2sd(unsigned int id)
     {
         if (!session[i])
             continue;
-        struct map_session_data *sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (sd && sd->bl.id == id)
             return sd;
     }
@@ -830,7 +830,7 @@ struct map_session_data *map_id2sd(unsigned int id)
 /// get name of a character
 const char *map_charid2nick(charid_t id)
 {
-    struct charid2nick *p = (struct charid2nick *)numdb_search(charid_db, id).p;
+    struct charid2nick *p = static_cast<struct charid2nick *>(numdb_search(charid_db, id).p);
 
     if (!p)
         return NULL;
@@ -843,7 +843,7 @@ static struct map_session_data *map_get_session(int i)
 {
     if (i < 0 || i > fd_max || !session[i])
         return NULL;
-    struct map_session_data *d = (struct map_session_data *)session[i]->session_data;
+    struct map_session_data *d = static_cast<struct map_session_data *>(session[i]->session_data);
     if (d && d->state.auth)
         return d;
 
@@ -910,7 +910,7 @@ struct map_session_data *map_nick2sd(const char *nick)
     {
         if (!session[i])
             continue;
-        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *pl_sd = static_cast<struct map_session_data *>(session[i]->session_data);
         if (pl_sd && pl_sd->state.auth)
         {
             // Without case sensitive check (increase the number of similar character names found)
@@ -937,7 +937,7 @@ struct block_list *map_id2bl(unsigned int id)
 {
     if (id < ARRAY_SIZEOF(object))
         return object[id];
-    return (struct block_list *)numdb_search(id_db, id).p;
+    return static_cast<struct block_list *>(numdb_search(id_db, id).p);
 }
 
 /// Run func for whole ID db
@@ -974,7 +974,7 @@ int map_addnpc(int m, struct npc_data *nd)
 
     maps[m].npc[i] = nd;
     nd->n = i;
-    numdb_insert(id_db, nd->bl.id, (void *)nd);
+    numdb_insert(id_db, nd->bl.id, static_cast<void *>(nd));
 
     return i;
 }
@@ -982,7 +982,7 @@ int map_addnpc(int m, struct npc_data *nd)
 // get a map index from map name
 int map_mapname2mapid(const char *name)
 {
-    struct map_data *md = (struct map_data *)strdb_search(map_db, name).p;
+    struct map_data *md = static_cast<struct map_data *>(strdb_search(map_db, name).p);
     if (md == NULL || md->gat == NULL)
         return -1;
     return md->m;
@@ -991,7 +991,7 @@ int map_mapname2mapid(const char *name)
 /// Get IP/port of a map on another server
 bool map_mapname2ipport(const char *name, in_addr_t *ip, in_port_t *port)
 {
-    struct map_data *mdos = (struct map_data *)strdb_search(map_db, name).p;
+    struct map_data *mdos = static_cast<struct map_data *>(strdb_search(map_db, name).p);
     if (mdos == NULL || mdos->gat)
         return 0;
     *ip = mdos->ip;
@@ -1061,7 +1061,7 @@ void map_setcell(int m, int x, int y, uint8_t t)
 /// know what to do for maps on other map-servers
 bool map_setipport(const char *name, in_addr_t ip, in_port_t port)
 {
-    struct map_data *md = (struct map_data *)strdb_search(map_db, name).p;
+    struct map_data *md = static_cast<struct map_data *>(strdb_search(map_db, name).p);
     if (!md)
     {
         // not exist -> add new data
@@ -1070,7 +1070,7 @@ bool map_setipport(const char *name, in_addr_t ip, in_port_t port)
         md->gat = NULL;
         md->ip = ip;
         md->port = port;
-        strdb_insert(map_db, md->name, (void *)md);
+        strdb_insert(map_db, md->name, static_cast<void *>(md));
         return 0;
     }
     if (md->gat)
@@ -1095,13 +1095,13 @@ static bool map_readmap(int m, const char *filename)
     fflush(stdout);
 
     // read & convert fn
-    uint8_t *gat = (uint8_t *)grfio_read(filename);
+    uint8_t *gat = static_cast<uint8_t *>(grfio_read(filename));
     if (!gat)
         return 0;
 
     maps[m].m = m;
-    int xs = maps[m].xs = *(uint16_t *) (gat);
-    int ys = maps[m].ys = *(uint16_t *) (gat + 2);
+    int xs = maps[m].xs = *reinterpret_cast<uint16_t *>(gat);
+    int ys = maps[m].ys = *reinterpret_cast<uint16_t *>(gat + 2);
     printf("%i %i", xs, ys);
     fflush(stdout);
 
@@ -1124,7 +1124,7 @@ static bool map_readmap(int m, const char *filename)
     CREATE(maps[m].block_count, int, size);
     CREATE(maps[m].block_mob_count, int, size);
 
-    strdb_insert(map_db, maps[m].name, (void *)&maps[m]);
+    strdb_insert(map_db, maps[m].name, static_cast<void *>(&maps[m]));
 
     return 1;
 }
@@ -1180,7 +1180,7 @@ static void map_close_logfile(void)
 {
     if (map_logfile)
     {
-        char *filenameop_buf = (char*)malloc(strlen(map_logfile_name) + 50);
+        char *filenameop_buf = static_cast<char*>(malloc(strlen(map_logfile_name) + 50));
         sprintf(filenameop_buf, "gzip -f %s.%ld", map_logfile_name,
                  map_logfile_index);
 
@@ -1195,7 +1195,7 @@ static void map_close_logfile(void)
 
 static void map_start_logfile(long suffix)
 {
-    char *filename_buf = (char*)malloc(strlen(map_logfile_name) + 50);
+    char *filename_buf = static_cast<char*>(malloc(strlen(map_logfile_name) + 50));
     map_logfile_index = suffix >> LOGFILE_SECONDS_PER_CHUNK_SHIFT;
 
     sprintf(filename_buf, "%s.%ld", map_logfile_name, map_logfile_index);
@@ -1235,7 +1235,7 @@ void map_log(const char *format, ...)
 
     va_list args;
     va_start(args, format);
-    fprintf(map_logfile, "%ld.%06ld ", (long) tv.tv_sec, (long) tv.tv_usec);
+    fprintf(map_logfile, "%ld.%06ld ", static_cast<long>(tv.tv_sec), static_cast<long>(tv.tv_usec));
     vfprintf(map_logfile, format, args);
     fputc('\n', map_logfile);
     va_end(args);
@@ -1459,7 +1459,7 @@ int map_scriptcont(struct map_session_data *sd, int id)
         case BL_NPC:
             return npc_scriptcont(sd, id);
         case BL_SPELL:
-            spell_execute_script((struct invocation *) bl);
+            spell_execute_script(reinterpret_cast<struct invocation *>(bl));
             break;
     }
 

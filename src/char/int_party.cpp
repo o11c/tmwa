@@ -90,7 +90,7 @@ bool inter_party_init(void)
         {
             if (p->party_id >= party_newid)
                 party_newid = p->party_id + 1;
-            numdb_insert(party_db, (numdb_key_t)p->party_id, (void *)p);
+            numdb_insert(party_db, static_cast<numdb_key_t>(p->party_id), static_cast<void *>(p));
             party_check_empty(p);
         }
         else
@@ -108,7 +108,7 @@ bool inter_party_init(void)
 static void inter_party_save_sub(db_key_t, db_val_t data, va_list ap)
 {
     FILE *fp = va_arg(ap, FILE *);
-    inter_party_tofile(fp, (struct party *) data.p);
+    inter_party_tofile(fp, static_cast<struct party *>(data.p));
 }
 
 /// Save all parties
@@ -129,7 +129,7 @@ bool inter_party_save(void)
 /// Check if a party has the name
 static void search_partyname_sub(db_key_t, db_val_t data, va_list ap)
 {
-    struct party *p = (struct party *) data.p;
+    struct party *p = static_cast<struct party *>(data.p);
     const char *str = va_arg(ap, const char *);
     struct party **dst = va_arg(ap, struct party **);
     if (strcasecmp(p->name, str) == 0)
@@ -173,7 +173,7 @@ bool party_check_empty(struct party *p)
         if (p->member[i].account_id)
             return 0;
     mapif_party_broken(p->party_id, 0);
-    numdb_erase(party_db, (numdb_key_t)p->party_id);
+    numdb_erase(party_db, static_cast<numdb_key_t>(p->party_id));
     free(p);
     return 1;
 }
@@ -181,7 +181,7 @@ bool party_check_empty(struct party *p)
 /// Checks if player is in the party, but only if it isn't the target party
 static void party_check_conflict_sub(db_key_t, db_val_t data, va_list ap)
 {
-    struct party *p = (struct party *) data.p;
+    struct party *p = static_cast<struct party *>(data.p);
 
     party_t party_id = va_arg(ap, party_t);
     account_t account_id = va_arg(ap, account_t);
@@ -220,14 +220,14 @@ static void mapif_party_created(int fd, account_t account_id, struct party *p)
     {
         WFIFOB(fd, 6) = 0;
         WFIFOL(fd, 7) = p->party_id;
-        STRZCPY2((char *)WFIFOP(fd, 11), p->name);
+        STRZCPY2(sign_cast<char *>(WFIFOP(fd, 11)), p->name);
         printf("int_party: created! %d %s\n", p->party_id, p->name);
     }
     else
     {
         WFIFOB(fd, 6) = 1;
         WFIFOL(fd, 7) = 0;
-        strzcpy((char *)WFIFOP(fd, 11), "error", 24);
+        strzcpy(sign_cast<char *>(WFIFOP(fd, 11)), "error", 24);
     }
     WFIFOSET(fd, 35);
 }
@@ -294,7 +294,7 @@ static void mapif_party_left(party_t party_id, account_t account_id, const char 
     WBUFW(buf, 0) = 0x3824;
     WBUFL(buf, 2) = party_id;
     WBUFL(buf, 6) = account_id;
-    strzcpy((char *)WBUFP(buf, 10), name, 24);
+    strzcpy(sign_cast<char *>(WBUFP(buf, 10)), name, 24);
     mapif_sendall(buf, 34);
     printf("int_party: left party %u, did %u %s\n", party_id, account_id, name);
 }
@@ -306,7 +306,7 @@ static void mapif_party_membermoved(struct party *p, int idx)
     WBUFW(buf, 0) = 0x3825;
     WBUFL(buf, 2) = p->party_id;
     WBUFL(buf, 6) = p->member[idx].account_id;
-    STRZCPY2((char *)WBUFP(buf, 10), p->member[idx].map);
+    STRZCPY2(sign_cast<char *>(WBUFP(buf, 10)), p->member[idx].map);
     WBUFB(buf, 26) = p->member[idx].online;
     WBUFW(buf, 27) = p->member[idx].lv;
     mapif_sendall(buf, 29);
@@ -371,7 +371,7 @@ static void mapif_parse_CreateParty(int fd, account_t account_id, const char *na
     p->member[0].online = 1;
     p->member[0].lv = lv;
 
-    numdb_insert(party_db, (numdb_key_t)p->party_id, (void *)p);
+    numdb_insert(party_db, static_cast<numdb_key_t>(p->party_id), static_cast<void *>(p));
 
     mapif_party_created(fd, account_id, p);
     mapif_party_info(fd, p);
@@ -380,7 +380,7 @@ static void mapif_parse_CreateParty(int fd, account_t account_id, const char *na
 /// Request for party info
 static void mapif_parse_PartyInfo(int fd, party_t party_id)
 {
-    struct party *p = (struct party *)numdb_search(party_db, (numdb_key_t)party_id).p;
+    struct party *p = reinterpret_cast<struct party *>(numdb_search(party_db, static_cast<numdb_key_t>(party_id)).p);
     if (p)
         mapif_party_info(fd, p);
     else
@@ -391,7 +391,7 @@ static void mapif_parse_PartyInfo(int fd, party_t party_id)
 static void mapif_parse_PartyAddMember(int fd, party_t party_id, account_t account_id,
                                  const char *nick, const char *map, level_t lv)
 {
-    struct party *p = (struct party *)numdb_search(party_db, (numdb_key_t)party_id).p;
+    struct party *p = reinterpret_cast<struct party *>(numdb_search(party_db, static_cast<numdb_key_t>(party_id)).p);
     if (!p)
     {
         mapif_party_memberadded(fd, party_id, account_id, 1);
@@ -430,7 +430,7 @@ static void mapif_parse_PartyAddMember(int fd, party_t party_id, account_t accou
 static void mapif_parse_PartyChangeOption(int fd, party_t party_id, account_t account_id,
                                     bool exp, bool item)
 {
-    struct party *p = (struct party *)numdb_search(party_db, (numdb_key_t)party_id).p;
+    struct party *p = reinterpret_cast<struct party *>(numdb_search(party_db, static_cast<numdb_key_t>(party_id)).p);
     if (!p)
         return;
 
@@ -450,7 +450,7 @@ static void mapif_parse_PartyChangeOption(int fd, party_t party_id, account_t ac
 /// Somebody leaves the party
 void mapif_parse_PartyLeave(int, party_t party_id, account_t account_id)
 {
-    struct party *p = (struct party *)numdb_search(party_db, (numdb_key_t)party_id).p;
+    struct party *p = reinterpret_cast<struct party *>(numdb_search(party_db, static_cast<numdb_key_t>(party_id)).p);
     if (!p)
         return;
     for (int i = 0; i < MAX_PARTY; i++)
@@ -471,7 +471,7 @@ void mapif_parse_PartyLeave(int, party_t party_id, account_t account_id)
 static void mapif_parse_PartyChangeMap(int fd, party_t party_id, account_t account_id,
                                  const char *map, bool online, level_t lv)
 {
-    struct party *p = (struct party *)numdb_search(party_db, (numdb_key_t)party_id).p;
+    struct party *p = reinterpret_cast<struct party *>(numdb_search(party_db, static_cast<numdb_key_t>(party_id)).p);
     if (!p)
         return;
 
@@ -500,10 +500,10 @@ static void mapif_parse_PartyChangeMap(int fd, party_t party_id, account_t accou
 /// Request to delete a party
 static void mapif_parse_BreakParty(int fd, party_t party_id)
 {
-    struct party *p = (struct party *)numdb_search(party_db, (numdb_key_t)party_id).p;
+    struct party *p = reinterpret_cast<struct party *>(numdb_search(party_db, static_cast<numdb_key_t>(party_id)).p);
     if (!p)
         return;
-    numdb_erase(party_db, (numdb_key_t)party_id);
+    numdb_erase(party_db, static_cast<numdb_key_t>(party_id));
     mapif_party_broken(fd, party_id);
 }
 
@@ -515,18 +515,18 @@ bool inter_party_parse_frommap(int fd)
     switch (RFIFOW(fd, 0))
     {
     case 0x3020:
-        mapif_parse_CreateParty(fd, RFIFOL(fd, 2), (char *)RFIFOP(fd, 6),
-                                 (char *)RFIFOP(fd, 30),
-                                 (char *)RFIFOP(fd, 54), RFIFOW(fd, 70));
+        mapif_parse_CreateParty(fd, RFIFOL(fd, 2), sign_cast<const char *>(RFIFOP(fd, 6)),
+                                sign_cast<const char *>(RFIFOP(fd, 30)),
+                                sign_cast<const char *>(RFIFOP(fd, 54)), RFIFOW(fd, 70));
         return 1;
     case 0x3021:
         mapif_parse_PartyInfo(fd, RFIFOL(fd, 2));
         return 1;
     case 0x3022:
         mapif_parse_PartyAddMember(fd, RFIFOL(fd, 2), RFIFOL(fd, 6),
-                                    (char *)RFIFOP(fd, 10),
-                                    (char *)RFIFOP(fd, 34),
-                                    RFIFOW(fd, 50));
+                                   sign_cast<const char *>(RFIFOP(fd, 10)),
+                                   sign_cast<const char *>(RFIFOP(fd, 34)),
+                                   RFIFOW(fd, 50));
         return 1;
     case 0x3023:
         mapif_parse_PartyChangeOption(fd, RFIFOL(fd, 2), RFIFOL(fd, 6),
@@ -537,19 +537,18 @@ bool inter_party_parse_frommap(int fd)
         return 1;
     case 0x3025:
         mapif_parse_PartyChangeMap(fd, RFIFOL(fd, 2), RFIFOL(fd, 6),
-                                    (char *)RFIFOP(fd, 10),
-                                    RFIFOB(fd, 26), RFIFOW(fd, 27));
+                                   sign_cast<const char *>(RFIFOP(fd, 10)),
+                                   RFIFOB(fd, 26), RFIFOW(fd, 27));
         return 1;
     case 0x3026:
         mapif_parse_BreakParty(fd, RFIFOL(fd, 2));
         return 1;
     case 0x3027:
         mapif_party_message(RFIFOL(fd, 4), RFIFOL(fd, 8),
-                                  (char *)RFIFOP(fd, 12),
-                                  RFIFOW(fd, 2) - 12);
+                            sign_cast<const char *>(RFIFOP(fd, 12)), RFIFOW(fd, 2) - 12);
         return 1;
     case 0x3028:
-        party_check_conflict(RFIFOL(fd, 2), RFIFOL(fd, 6), (char *)RFIFOP(fd, 10));
+        party_check_conflict(RFIFOL(fd, 2), RFIFOL(fd, 6), sign_cast<const char *>(RFIFOP(fd, 10)));
         return 1;
     default:
         return 0;

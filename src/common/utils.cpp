@@ -68,7 +68,7 @@ bool strzcpy(char *dst, const char *src, size_t n)
 void remove_control_chars(char *str)
 {
     for (int i = 0; str[i]; i++)
-        if ((unsigned char)str[i] < 32)
+        if (!(str[i] & 0xE0))
             str[i] = '_';
 }
 
@@ -76,7 +76,7 @@ void remove_control_chars(char *str)
 bool has_control_chars(char *str)
 {
     for (int i = 0; str[i]; i++)
-        if ((unsigned char)str[i] < 32)
+        if (!(str[i] & 0xE0))
             return true;
     return false;
 }
@@ -152,7 +152,7 @@ const char *stamp_now(bool millis)
     static char tmpstr[DATE_FORMAT_MAX + 4];
     strftime(tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime(&tv.tv_sec));
     if (millis)
-        sprintf(tmpstr + DATE_FORMAT_MAX, ".%03u", (unsigned) (tv.tv_usec / 1000));
+        sprintf(tmpstr + DATE_FORMAT_MAX, ".%03u", static_cast<unsigned int>(tv.tv_usec / 1000));
     return tmpstr;
 }
 

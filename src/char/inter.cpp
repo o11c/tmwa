@@ -196,7 +196,7 @@ static void inter_accreg_init(void)
         CREATE(reg, struct accreg, 1);
         if (!inter_accreg_fromstr(line, reg) && reg->account_id)
         {
-            numdb_insert(accreg_db, (numdb_key_t)reg->account_id, (void *)reg);
+            numdb_insert(accreg_db, static_cast<numdb_key_t>(reg->account_id), static_cast<void *>(reg));
         }
         else
         {
@@ -212,7 +212,7 @@ static void inter_accreg_init(void)
 static void inter_accreg_save_sub(db_key_t, db_val_t data, va_list ap)
 {
     FILE *fp = va_arg(ap, FILE *);
-    struct accreg *reg = (struct accreg *) data.p;
+    struct accreg *reg = static_cast<struct accreg *>(data.p);
     inter_accreg_tofile(fp, reg);
 }
 
@@ -304,7 +304,7 @@ void inter_init(const char *file)
 
 /// Send a message to all GMs
 // length of mes is actually only len-4 - it includes the header
-static void mapif_GMmessage(char *mes, int len)
+static void mapif_GMmessage(const char *mes, int len)
 {
     unsigned char buf[len];
 
@@ -323,9 +323,9 @@ static void mapif_whis_message(struct WhisperData *wd)
     WBUFW(buf, 0) = 0x3801;
     WBUFW(buf, 2) = 56 + wd->len;
     WBUFL(buf, 4) = wd->id;
-    STRZCPY2((char *)WBUFP(buf, 8), wd->src);
-    STRZCPY2((char *)WBUFP(buf, 32), wd->dst);
-    strzcpy((char *)WBUFP(buf, 56), wd->msg, wd->len);
+    STRZCPY2(sign_cast<char *>(WBUFP(buf, 8)), wd->src);
+    STRZCPY2(sign_cast<char *>(WBUFP(buf, 32)), wd->dst);
+    strzcpy(sign_cast<char *>(WBUFP(buf, 56)), wd->msg, wd->len);
     // This was the only case where the return value of mapif_sendall was used
     mapif_sendall(buf, WBUFW(buf, 2));
     wd->count = 0;
@@ -341,7 +341,7 @@ static void mapif_whis_end(struct WhisperData *wd, uint8_t flag)
     unsigned char buf[27];
 
     WBUFW(buf, 0) = 0x3802;
-    STRZCPY2((char *)WBUFP(buf, 2), wd->src);
+    STRZCPY2(sign_cast<char *>(WBUFP(buf, 2)), wd->src);
     // flag: 0: success, 1: target not logged in, 2: ignored
     WBUFB(buf, 26) = flag;
     mapif_send(wd->fd, buf, 27);
@@ -357,7 +357,7 @@ static void mapif_account_reg(int fd)
 /// Account variable reply
 static void mapif_account_reg_reply(int fd, account_t account_id)
 {
-    struct accreg *reg = (struct accreg *)numdb_search(accreg_db, (numdb_key_t)account_id).p;
+    struct accreg *reg = reinterpret_cast<struct accreg *>(numdb_search(accreg_db, static_cast<numdb_key_t>(account_id)).p);
 
     WFIFOW(fd, 0) = 0x3804;
     WFIFOL(fd, 4) = account_id;
@@ -370,7 +370,7 @@ static void mapif_account_reg_reply(int fd, account_t account_id)
         int p = 8;
         for (int j = 0; j < reg->reg_num; j++)
         {
-            STRZCPY2((char *)WFIFOP(fd, p), reg->reg[j].str);
+            STRZCPY2(sign_cast<char *>(WFIFOP(fd, p)), reg->reg[j].str);
             p += 32;
             WFIFOL(fd, p) = reg->reg[j].value;
             p += 4;
@@ -384,7 +384,7 @@ static void mapif_account_reg_reply(int fd, account_t account_id)
 /// Check whisper data to time out
 static void check_ttl_whisdata_sub(db_key_t, db_val_t data, va_list ap)
 {
-    struct WhisperData *wd = (struct WhisperData *) data.p;
+    struct WhisperData *wd = static_cast<struct WhisperData *>(data.p);
     tick_t tick = va_arg(ap, tick_t);
 
     if (DIFF_TICK(tick, wd->tick) > WHISPER_DATA_TTL
@@ -409,7 +409,7 @@ static void check_ttl_whisdata(void)
         numdb_foreach(whis_db, check_ttl_whisdata_sub, tick);
         for (int i = 0; i < whis_delnum; i++)
         {
-            struct WhisperData *wd = (struct WhisperData *)numdb_search(whis_db, whis_dellist[i]).p;
+            struct WhisperData *wd = reinterpret_cast<struct WhisperData *>(numdb_search(whis_db, whis_dellist[i]).p);
             printf("inter: whis data id=%d time out : from %s to %s\n",
                     wd->id, wd->src, wd->dst);
             numdb_erase(whis_db, wd->id);
@@ -425,7 +425,7 @@ static void check_ttl_whisdata(void)
 // GM messaging
 static void mapif_parse_GMmessage(int fd)
 {
-    mapif_GMmessage((char *)RFIFOP(fd, 4), RFIFOW(fd, 2));
+    mapif_GMmessage(sign_cast<const char *>(RFIFOP(fd, 4)), RFIFOW(fd, 2));
 }
 
 /// Send whisper
@@ -441,7 +441,7 @@ static void mapif_parse_WhisRequest(int fd)
     }
 
     // search if character exists before to ask all map-servers
-    struct mmo_charstatus *character = character_by_name((char *)RFIFOP(fd, 28));
+    struct mmo_charstatus *character = character_by_name(sign_cast<const char *>(RFIFOP(fd, 28)));
     if (!character)
     {
         unsigned char buf[27];
@@ -452,15 +452,16 @@ static void mapif_parse_WhisRequest(int fd)
         mapif_send(fd, buf, 27);
         return;
     }
+    char character_name[24];
     // Character exists. So, ask all map-servers
     // to be sure of the correct name, rewrite it
-    STRZCPY2((char *)RFIFOP(fd, 28), character->name);
+    STRZCPY2(character_name, character->name);
     // if source is destination, don't ask other servers.
-    if (strcmp((char *)RFIFOP(fd, 4), (char *)RFIFOP(fd, 28)) == 0)
+    if (strcmp(sign_cast<const char *>(RFIFOP(fd, 4)), character_name) == 0)
     {
         unsigned char buf[27];
         WBUFW(buf, 0) = 0x3802;
-        strzcpy((char *)WBUFP(buf, 2), (char *)RFIFOP(fd, 4), 24);
+        strzcpy(sign_cast<char *>(WBUFP(buf, 2)), sign_cast<const char *>(RFIFOP(fd, 4)), 24);
         // flag: 0: success, 1: target not logged in, 2: ignored
         WBUFB(buf, 26) = 1;
         mapif_send(fd, buf, 27);
@@ -476,11 +477,11 @@ static void mapif_parse_WhisRequest(int fd)
     wd->id = ++whisid;
     wd->fd = fd;
     wd->len = RFIFOW(fd, 2) - 52;
-    STRZCPY(wd->src, (char *)RFIFOP(fd, 4));
-    STRZCPY(wd->dst, (char *)RFIFOP(fd, 28));
-    strzcpy(wd->msg, (char *)RFIFOP(fd, 52), wd->len);
+    STRZCPY(wd->src, sign_cast<const char *>(RFIFOP(fd, 4)));
+    STRZCPY(wd->dst, character_name);
+    strzcpy(wd->msg, sign_cast<const char *>(RFIFOP(fd, 52)), wd->len);
     wd->tick = gettick();
-    numdb_insert(whis_db, wd->id, (void *)wd);
+    numdb_insert(whis_db, wd->id, static_cast<void *>(wd));
     mapif_whis_message(wd);
 }
 
@@ -490,7 +491,7 @@ static void mapif_parse_WhisReply(int fd)
 {
     int id = RFIFOL(fd, 2);
     uint8_t flag = RFIFOB(fd, 6);
-    struct WhisperData *wd = (struct WhisperData *)numdb_search(whis_db, id).p;
+    struct WhisperData *wd = static_cast<struct WhisperData *>(numdb_search(whis_db, id).p);
 
     /// timeout or already delivered to another map-server
     if (!wd)
@@ -521,20 +522,20 @@ static void mapif_parse_WhisToGM(int fd)
 static void mapif_parse_AccReg(int fd)
 {
     account_t acc = RFIFOL(fd, 4);
-    struct accreg *reg = (struct accreg*)numdb_search(accreg_db, (numdb_key_t)acc).p;
+    struct accreg *reg = reinterpret_cast<struct accreg*>(numdb_search(accreg_db, static_cast<numdb_key_t>(acc)).p);
 
     if (!reg)
     {
         CREATE(reg, struct accreg, 1);
         reg->account_id = acc;
-        numdb_insert(accreg_db, (numdb_key_t)acc, (void *)reg);
+        numdb_insert(accreg_db, static_cast<numdb_key_t>(acc), static_cast<void *>(reg));
     }
 
     int j;
     int p = 8;
     for (j = 0; j < ACCOUNT_REG_NUM && p < RFIFOW(fd, 2); j++)
     {
-        STRZCPY(reg->reg[j].str, (char *)RFIFOP(fd, p));
+        STRZCPY(reg->reg[j].str, sign_cast<const char *>(RFIFOP(fd, p)));
         p += 32;
         reg->reg[j].value = RFIFOL(fd, p);
         p += 4;

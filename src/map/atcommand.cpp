@@ -462,7 +462,8 @@ void gm_log(const char *fmt, ...)
 
     if (logfile_nr != last_logfile_nr)
     {
-        char *fullname = (char *)malloc(strlen(gm_logfile_name) + 10);
+        char *fullname;
+        CREATE(fullname, char, strlen(gm_logfile_name) + 10);
         sprintf(fullname, "%s.%04d-%02d", gm_logfile_name, year, month);
 
         if (gm_logfile)
@@ -559,14 +560,14 @@ AtCommandInfo *atcommand(gm_level_t level, const char *message)
 /// Kill an individual monster (with or without loot)
 static void atkillmonster_sub(struct block_list *bl, va_list ap)
 {
-    bool flag = (bool)va_arg(ap, int);
+    bool flag = static_cast<bool>(va_arg(ap, int));
 
     nullpo_retv(bl);
-
+    struct mob_data *md = reinterpret_cast<struct mob_data *>(bl);
     if (flag)
-        mob_damage(NULL, (struct mob_data *) bl, ((struct mob_data *) bl)->hp, 2);
+        mob_damage(NULL, md, md->hp, 2);
     else
-        mob_delete((struct mob_data *) bl);
+        mob_delete(md);
 }
 
 /// Find the @command by name
@@ -865,7 +866,7 @@ int atcommand_who(int fd, struct map_session_data *sd,
     {
         if (!session[i])
             continue;
-        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (!pl_sd || !pl_sd->state.auth)
             continue;
 
@@ -917,7 +918,7 @@ int atcommand_whogroup(int fd, struct map_session_data *sd,
     {
         if (!session[i])
             continue;
-        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (!pl_sd || !pl_sd->state.auth)
             continue;
         gm_level_t pl_gm_level = pc_isGM(pl_sd);
@@ -980,7 +981,7 @@ int atcommand_whomap(int fd, struct map_session_data *sd,
     {
         if (!session[i])
             continue;
-        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (!pl_sd || !pl_sd->state.auth)
             continue;
         if (pl_sd->bl.m != map_id)
@@ -1040,7 +1041,7 @@ int atcommand_whomapgroup(int fd, struct map_session_data *sd,
     {
         if (!session[i])
             continue;
-        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
 
         if (!pl_sd || !pl_sd->state.auth)
             continue;
@@ -1096,7 +1097,7 @@ int atcommand_whogm(int fd, struct map_session_data *sd,
     {
         if (!session[i])
             continue;
-        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (!pl_sd || !pl_sd->state.auth)
             continue;
 
@@ -1419,9 +1420,9 @@ int atcommand_item(int fd, struct map_session_data *sd,
         struct item item_tmp = {};
         item_tmp.nameid = item_id;
         item_tmp.identify = 1;
-        int flag = pc_additem((struct map_session_data *) sd, &item_tmp, get_count);
+        int flag = pc_additem(sd, &item_tmp, get_count);
         if (flag)
-            clif_additem((struct map_session_data *) sd, 0, 0, flag);
+            clif_additem(sd, 0, 0, flag);
     }
     clif_displaymessage(fd, "Item created.");
 
@@ -1774,7 +1775,7 @@ int atcommand_pvpoff(int fd, struct map_session_data *sd,
     {
         if (!session[i])
             continue;
-        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (!pl_sd || !pl_sd->state.auth)
             continue;
         if (sd->bl.m != pl_sd->bl.m)
@@ -1812,7 +1813,7 @@ int atcommand_pvpon(int fd, struct map_session_data *sd,
     maps[sd->bl.m].flag.pvp = 1;
     for (int i = 0; i < fd_max; i++)
     {
-        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (!pl_sd || !pl_sd->state.auth)
             continue;
         if (sd->bl.m != pl_sd->bl.m || pl_sd->pvp_timer == -1)
@@ -1967,7 +1968,7 @@ int atcommand_spawn(int fd, struct map_session_data *sd,
                 my = sd->bl.y + (MRAND(range) - (range / 2));
             else
                 my = y;
-            k = mob_once_spawn((struct map_session_data *) sd, "this", mx,
+            k = mob_once_spawn(sd, "this", mx,
                                 my, "", mob_id, 1, "");
         }
         count += k;
@@ -2026,7 +2027,7 @@ static void atlist_nearby_sub(struct block_list *bl, va_list ap)
     nullpo_retv(bl);
 
     char buf[32];
-    sprintf(buf, " - \"%s\"", ((struct map_session_data *) bl)->status.name);
+    sprintf(buf, " - \"%s\"", reinterpret_cast<struct map_session_data *>(bl)->status.name);
 
     int fd = va_arg(ap, int);
     clif_displaymessage(fd, buf);
@@ -2153,7 +2154,7 @@ int atcommand_statuspoint(int fd, struct map_session_data *sd,
             clif_displaymessage(fd, "Impossible to increase the number/value.");
         return -1;
     }
-    sd->status.status_point = (short) new_status_points;
+    sd->status.status_point = static_cast<short>(new_status_points);
     clif_updatestatus(sd, SP_STATUSPOINT);
     clif_displaymessage(fd, "Number of status points changed!");
 
@@ -2184,7 +2185,7 @@ int atcommand_skillpoint(int fd, struct map_session_data *sd,
             clif_displaymessage(fd, "Impossible to increase the number/value.");
         return -1;
     }
-    sd->status.skill_point = (short) new_skill_points;
+    sd->status.skill_point = static_cast<short>(new_skill_points);
     clif_updatestatus(sd, SP_SKILLPOINT);
     clif_displaymessage(fd, "Number of skill points changed!");
 
@@ -2259,7 +2260,7 @@ int atcommand_param(int fd, struct map_session_data *sd,
             clif_displaymessage(fd, "Impossible to increase the number/value.");
         return -1;
     }
-    *status = (short)new_value;
+    *status = static_cast<short>(new_value);
     clif_updatestatus(sd, SP_STR + idx);
     clif_updatestatus(sd, SP_USTR + idx);
     pc_calcstatus(sd, 0);
@@ -2285,7 +2286,7 @@ int atcommand_all_stats(int fd, struct map_session_data *sd,
     int count = 0;
     for (int idx = 0; idx < 6; idx++)
     {
-        int new_value = (int) *status[idx] + value;
+        int new_value = static_cast<int>(*status[idx]) + value;
         if (new_value > battle_config.max_parameter)
             new_value = battle_config.max_parameter;
         if (new_value < 1)
@@ -2443,7 +2444,7 @@ int atcommand_character_stats_all(int fd, struct map_session_data *,
     {
         if (!session[i])
             continue;
-        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (!pl_sd || !pl_sd->state.auth)
             continue;
 
@@ -2768,7 +2769,7 @@ int atcommand_doom(int fd, struct map_session_data *sd,
             continue;
         if (!session[i])
             continue;
-        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (!pl_sd || !pl_sd->state.auth)
             continue;
         if (pc_isGM(sd) < pc_isGM(pl_sd))
@@ -2792,7 +2793,7 @@ int atcommand_doommap(int fd, struct map_session_data *sd,
             continue;
         if (!session[i])
             continue;
-        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (!pl_sd || !pl_sd->state.auth)
             continue;
         if (sd->bl.m != pl_sd->bl.m)
@@ -2829,7 +2830,7 @@ int atcommand_raise(int fd, struct map_session_data *,
     for (int i = 0; i < fd_max; i++)
     {
         if (session[i])
-            atcommand_raise_sub((struct map_session_data *)session[i]->session_data);
+            atcommand_raise_sub(reinterpret_cast<struct map_session_data *>(session[i]->session_data));
     }
     clif_displaymessage(fd, "Mercy has been granted.");
 
@@ -2844,7 +2845,7 @@ int atcommand_raisemap(int fd, struct map_session_data *sd,
     {
         if (!session[i])
             continue;
-        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (!pl_sd || !pl_sd->state.auth)
             continue;
         if (sd->bl.m != pl_sd->bl.m)
@@ -3014,7 +3015,7 @@ int atcommand_kickall(int fd, struct map_session_data *sd,
             continue;
         if (!session[i])
             continue;
-        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (!pl_sd || !pl_sd->state.auth)
             continue;
         if (pc_isGM(sd) < pc_isGM(pl_sd))
@@ -3419,7 +3420,7 @@ int atcommand_recallall(int fd, struct map_session_data *sd,
     {
         if (!session[i])
             continue;
-        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (!pl_sd || !pl_sd->state.auth)
             continue;
         if (sd->status.account_id != pl_sd->status.account_id)
@@ -3475,7 +3476,7 @@ int atcommand_partyrecall(int fd, struct map_session_data *sd,
         if (!session[i])
             continue;
 
-        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (!pl_sd || !pl_sd->state.auth)
             continue;
         if (sd->status.account_id == pl_sd->status.account_id)
@@ -3575,7 +3576,7 @@ int atcommand_mapinfo(int fd, struct map_session_data *sd,
         {
             if (!session[i])
                 continue;
-            struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+            struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
             if (!pl_sd || !pl_sd->state.auth)
                 continue;
             if (pl_sd->bl.m != m_id)
@@ -3945,7 +3946,7 @@ int atcommand_effect(int fd, struct map_session_data *sd,
     {
         if (!session[i])
             continue;
-        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (!pl_sd || !pl_sd->state.auth)
             continue;
         clif_specialeffect(&pl_sd->bl, type, flag);
@@ -4218,7 +4219,7 @@ int atcommand_charkillable(int fd, struct map_session_data *,
     if (!message || !*message)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd((char *) message);
+    struct map_session_data *pl_sd = map_nick2sd(message);
     if (!pl_sd)
         return -1;
 
@@ -4297,7 +4298,7 @@ int atcommand_chareffect(int fd, struct map_session_data *,
     if (sscanf(message, "%d %255s", &type, target) != 2)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd((char *) target);
+    struct map_session_data *pl_sd = map_nick2sd(target);
     if (!pl_sd)
         return -1;
 
@@ -4379,7 +4380,7 @@ int atcommand_summon(int, struct map_session_data *sd,
     int y = sd->bl.y + (MRAND(10) - 5);
 
     int id = mob_once_spawn(sd, "this", x, y, "--ja--", mob_id, 1, "");
-    struct mob_data *md = (struct mob_data *) map_id2bl(id);
+    struct mob_data *md = reinterpret_cast<struct mob_data *>(map_id2bl(id));
     if (md)
     {
         md->master_id = sd->bl.id;
@@ -4426,7 +4427,7 @@ int atcommand_adjgmlvl(int, struct map_session_data *,
     if (sscanf(message, "%d %99s", &newlev, user) != 2)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd((char *) user);
+    struct map_session_data *pl_sd = map_nick2sd(user);
     if (!pl_sd)
         return -1;
 
@@ -4441,7 +4442,7 @@ int atcommand_trade(int, struct map_session_data *sd,
 {
     if (!message || !*message)
         return -1;
-    struct map_session_data *pl_sd = map_nick2sd((char *) message);
+    struct map_session_data *pl_sd = map_nick2sd(message);
     if (!pl_sd)
         return -1;
     trade_traderequest(sd, pl_sd->bl.id);
@@ -4578,7 +4579,7 @@ static int atcommand_jump_iterate(int fd, struct map_session_data *sd,
 
     memset(output, '\0', sizeof(output));
 
-    struct map_session_data *pl_sd = (struct map_session_data *) map_id2bl(sd->followtarget);
+    struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(map_id2bl(sd->followtarget));
 
     if (pl_sd)
         pl_sd = get_next(pl_sd);
@@ -4779,7 +4780,7 @@ int atcommand_ipcheck(int fd, struct map_session_data *,
     {
         if (!session[i])
             continue;
-        pl_sd = (struct map_session_data *)session[i]->session_data;
+        pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (!pl_sd || !pl_sd->state.auth)
             continue;
         if (ip != session[pl_sd->fd]->client_addr.sin_addr.s_addr)

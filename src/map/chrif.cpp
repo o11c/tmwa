@@ -108,8 +108,8 @@ static void chrif_connect(int fd)
     WFIFOSET(fd, 2);
 
     WFIFOW(fd, 0) = 0x2af8;
-    STRZCPY2((char *)WFIFOP(fd, 2), userid);
-    STRZCPY2((char *)WFIFOP(fd, 26), passwd);
+    STRZCPY2(sign_cast<char *>(WFIFOP(fd, 2)), userid);
+    STRZCPY2(sign_cast<char *>(WFIFOP(fd, 26)), passwd);
     WFIFOL(fd, 50) = 0;
     WFIFOL(fd, 54) = clif_getip();
     WFIFOW(fd, 58) = clif_getport();
@@ -121,7 +121,7 @@ static void chrif_sendmap(int fd)
 {
     WFIFOW(fd, 0) = 0x2afa;
     for (int i = 0; i < map_num; i++)
-        STRZCPY2((char *)WFIFOP(fd, 4 + i * 16), maps[i].name);
+        STRZCPY2(sign_cast<char *>(WFIFOP(fd, 4 + i * 16)), maps[i].name);
     WFIFOW(fd, 2) = 4 + map_num * 16;
     WFIFOSET(fd, WFIFOW(fd, 2));
 }
@@ -137,9 +137,9 @@ static void chrif_recvmap(int fd)
     int j = 0;
     for (int i = 10; j < (RFIFOW(fd, 2) - 10) / 16; i += 16, j++)
     {
-        map_setipport((char *)RFIFOP(fd, i), ip, port);
+        map_setipport(sign_cast<const char *>(RFIFOP(fd, i)), ip, port);
     }
-    uint8_t *p = (uint8_t *) &ip;
+    uint8_t *p = reinterpret_cast<uint8_t *>(&ip);
     map_log("recv map on %hhu.%hhu.%hhu.%hhu:%hu (%d maps)\n", p[0], p[1], p[2], p[3], port, j);
 }
 
@@ -158,7 +158,7 @@ void chrif_changemapserver(struct map_session_data *sd,
     WFIFOL(char_fd, 6) = sd->login_id1;
     WFIFOL(char_fd, 10) = sd->login_id2;
     WFIFOL(char_fd, 14) = sd->status.char_id;
-    strzcpy((char *)WFIFOP(char_fd, 18), mapname, 16);
+    strzcpy(sign_cast<char *>(WFIFOP(char_fd, 18)), mapname, 16);
     WFIFOW(char_fd, 34) = x;
     WFIFOW(char_fd, 36) = y;
     WFIFOL(char_fd, 38) = ip;
@@ -183,7 +183,7 @@ static void chrif_changemapserverack(int fd)
         pc_authfail(sd->fd);
         return;
     }
-    clif_changemapserver(sd, (char *)RFIFOP(fd, 18), RFIFOW(fd, 34),
+    clif_changemapserver(sd, sign_cast<const char *>(RFIFOP(fd, 18)), RFIFOW(fd, 34),
                          RFIFOW(fd, 36), RFIFOL(fd, 38), RFIFOW(fd, 42));
 }
 
@@ -216,7 +216,7 @@ static void chrif_sendmapack(int fd)
         exit(1);
     }
 
-    STRZCPY(whisper_server_name, (const char *)RFIFOP(fd, 3));
+    STRZCPY(whisper_server_name, sign_cast<const char *>(RFIFOP(fd, 3)));
 
     chrif_state = 2;
 }
@@ -281,8 +281,8 @@ void chrif_changeemail(int id, const char *actual_email, const char *new_email)
 
     WFIFOW(char_fd, 0) = 0x2b0c;
     WFIFOL(char_fd, 2) = id;
-    strzcpy((char *)WFIFOP(char_fd, 6), actual_email, 40);
-    strzcpy((char *)WFIFOP(char_fd, 46), new_email, 40);
+    strzcpy(sign_cast<char *>(WFIFOP(char_fd, 6)), actual_email, 40);
+    strzcpy(sign_cast<char *>(WFIFOP(char_fd, 46)), new_email, 40);
     WFIFOSET(char_fd, 86);
 }
 
@@ -293,8 +293,8 @@ void chrif_char_ask_name(int id, const char *character_name, CharOperation opera
     WFIFOW(char_fd, 0) = 0x2b0e;
     // who asked, or -1 if server
     WFIFOL(char_fd, 2) = id;
-    strzcpy((char *)WFIFOP(char_fd, 6), character_name, 24);
-    WFIFOW(char_fd, 30) = (uint16_t)operation_type;
+    strzcpy(sign_cast<char *>(WFIFOP(char_fd, 6)), character_name, 24);
+    WFIFOW(char_fd, 30) = static_cast<uint16_t>(operation_type);
     if (operation_type == CharOperation::BAN)
     {
         WFIFOW(char_fd, 32) = year;
@@ -312,7 +312,7 @@ static void chrif_char_ask_name_answer(int fd)
 {
     account_t acc = RFIFOL(fd, 2);
     char player_name[24];
-    STRZCPY(player_name, (char *)RFIFOP(fd, 6));
+    STRZCPY(player_name, sign_cast<const char *>(RFIFOP(fd, 6)));
 
     struct map_session_data *sd = map_id2sd(acc);
     if (!sd)
@@ -414,7 +414,7 @@ void chrif_saveaccountreg2(struct map_session_data *sd)
         struct global_reg *reg = &sd->status.account_reg2[j];
         if (reg->str[0] && reg->value)
         {
-            STRZCPY2((char *)WFIFOP(char_fd, p), reg->str);
+            STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, p)), reg->str);
             p += 32;
             WFIFOL(char_fd, p) = reg->value;
             p += 4;
@@ -438,7 +438,7 @@ static void chrif_accountreg2(int fd)
     int j;
     for (j = 0; p < RFIFOW(fd, 2) && j < ACCOUNT_REG2_NUM; j++)
     {
-        STRZCPY(sd->status.account_reg2[j].str, (const char *)RFIFOP(fd, p));
+        STRZCPY(sd->status.account_reg2[j].str, sign_cast<const char *>(RFIFOP(fd, p)));
         p += 32;
         sd->status.account_reg2[j].value = RFIFOL(fd, p);
         p += 4;
@@ -519,7 +519,7 @@ static void chrif_accountban(int fd)
     if (RFIFOB(fd, 6))
     {
         char tmpstr[2048];
-        time_t timestamp = (time_t) RFIFOL(fd, 7);
+        time_t timestamp = RFIFOL(fd, 7);
         sprintf(tmpstr, "Your account has been banished until %s", stamp_time(timestamp));
 
         clif_displaymessage(sd->fd, tmpstr);
@@ -527,7 +527,7 @@ static void chrif_accountban(int fd)
         return;
     }
     // change of status
-    switch ((enum auth_failure)RFIFOL(fd, 7))
+    switch (static_cast<enum auth_failure>(RFIFOL(fd, 7)))
     {
         case AUTH_UNREGISTERED_ID:
             clif_displaymessage(sd->fd, "Your account has 'Unregistered'.");
@@ -597,7 +597,7 @@ static void ladmin_itemfrob_c2(struct block_list *bl, int source_id,
     {
     case BL_PC:
     {
-        struct map_session_data *pc = (struct map_session_data *) bl;
+        struct map_session_data *pc = reinterpret_cast<struct map_session_data *>(bl);
         struct storage *stor = account2storage2(pc->status.account_id);
 
         for (int j = 0; j < MAX_INVENTORY; j++)
@@ -629,7 +629,7 @@ static void ladmin_itemfrob_c2(struct block_list *bl, int source_id,
 
     case BL_MOB:
     {
-        struct mob_data *mob = (struct mob_data *) bl;
+        struct mob_data *mob = reinterpret_cast<struct mob_data *>(bl);
         for (int i = 0; i < mob->lootitem_count; i++)
             FIX(mob->lootitem[i]);
         break;
@@ -637,7 +637,7 @@ static void ladmin_itemfrob_c2(struct block_list *bl, int source_id,
 
     case BL_ITEM:
     {
-        struct flooritem_data *item = (struct flooritem_data *) bl;
+        struct flooritem_data *item = reinterpret_cast<struct flooritem_data *>(bl);
         FIX(item->item_data);
         break;
     }
@@ -657,7 +657,7 @@ static void ladmin_itemfrob(int fd)
 {
     int source_id = RFIFOL(fd, 2);
     int dest_id = RFIFOL(fd, 6);
-    struct block_list *bl = (struct block_list *) map_get_first_session();
+    struct block_list *bl = reinterpret_cast<struct block_list *>(map_get_first_session());
 
     // flooritems
     map_foreachobject(ladmin_itemfrob_c, BL_NUL, source_id, dest_id);
@@ -689,8 +689,8 @@ void intif_whisper_message(struct map_session_data *sd, const char *nick,
 
     WFIFOW(char_fd, 0) = 0x3001;
     WFIFOW(char_fd, 2) = mes_len + 52;
-    STRZCPY2((char *)WFIFOP(char_fd, 4), sd->status.name);
-    strzcpy((char *)WFIFOP(char_fd, 28), nick, 24);
+    STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 4)), sd->status.name);
+    strzcpy(sign_cast<char *>(WFIFOP(char_fd, 28)), nick, 24);
     memcpy(WFIFOP(char_fd, 52), mes, mes_len);
     WFIFOSET(char_fd, WFIFOW(char_fd, 2));
 }
@@ -710,7 +710,7 @@ void intif_whisper_message_to_gm(const char *whisper_name, gm_level_t min_gm_lev
 {
     WFIFOW(char_fd, 0) = 0x3003;
     WFIFOW(char_fd, 2) = mes_len + 30;
-    strzcpy((char *)WFIFOP(char_fd, 4), whisper_name, 24);
+    strzcpy(sign_cast<char *>(WFIFOP(char_fd, 4)), whisper_name, 24);
     WFIFOW(char_fd, 28) = min_gm_level;
     memcpy(WFIFOP(char_fd, 30), mes, mes_len);
     WFIFOSET(char_fd, WFIFOW(char_fd, 2));
@@ -774,9 +774,9 @@ void intif_create_party(struct map_session_data *sd, const char *name)
 
     WFIFOW(char_fd, 0) = 0x3020;
     WFIFOL(char_fd, 2) = sd->status.account_id;
-    strzcpy((char *)WFIFOP(char_fd, 6), name, 24);
-    STRZCPY2((char *)WFIFOP(char_fd, 30), sd->status.name);
-    STRZCPY2((char *)WFIFOP(char_fd, 54), maps[sd->bl.m].name);
+    strzcpy(sign_cast<char *>(WFIFOP(char_fd, 6)), name, 24);
+    STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 30)), sd->status.name);
+    STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 54)), maps[sd->bl.m].name);
     WFIFOW(char_fd, 70) = sd->status.base_level;
     WFIFOSET(char_fd, 72);
 }
@@ -798,8 +798,8 @@ void intif_party_addmember(party_t party_id, account_t account_id)
     WFIFOW(char_fd, 0) = 0x3022;
     WFIFOL(char_fd, 2) = party_id;
     WFIFOL(char_fd, 6) = account_id;
-    STRZCPY2((char *)WFIFOP(char_fd, 10), sd->status.name);
-    STRZCPY2((char *)WFIFOP(char_fd, 34), maps[sd->bl.m].name);
+    STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 10)), sd->status.name);
+    STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 34)), maps[sd->bl.m].name);
     WFIFOW(char_fd, 50) = sd->status.base_level;
     WFIFOSET(char_fd, 52);
 }
@@ -865,17 +865,17 @@ void intif_party_checkconflict(party_t party_id, account_t account_id, const cha
 /// Whisper
 static void intif_parse_whisper(int fd)
 {
-    struct map_session_data *sd = map_nick2sd((char *)RFIFOP(fd, 32));
+    struct map_session_data *sd = map_nick2sd(sign_cast<const char *>(RFIFOP(fd, 32)));
     if (!sd)
         return;
     map_log("intif_parse_whispermessage: id: %d, from: %s, to: %s, message: '%s'\n",
             RFIFOL(fd, 4), RFIFOP(fd, 8), RFIFOP(fd, 32), RFIFOP(fd, 56));
-    if (strcmp(sd->status.name, (char *)RFIFOP(fd, 32)) != 0)
+    if (strcmp(sd->status.name, sign_cast<const char *>(RFIFOP(fd, 32))) != 0)
     {
         intif_whisper_reply(RFIFOL(fd, 4), 1);
         return;
     }
-    clif_whisper_message(sd->fd, (char *)RFIFOP(fd, 8), (char *)RFIFOP(fd, 56),
+    clif_whisper_message(sd->fd, sign_cast<const char *>(RFIFOP(fd, 8)), sign_cast<const char *>(RFIFOP(fd, 56)),
                          RFIFOW(fd, 2) - 56);
     intif_whisper_reply(RFIFOL(fd, 4), 0);
 }
@@ -883,10 +883,10 @@ static void intif_parse_whisper(int fd)
 /// We sent a whisper to the inter server and get this result
 static void intif_parse_whisper_end(int fd)
 {
-    struct map_session_data *sd = map_nick2sd((char *)RFIFOP(fd, 2));
+    struct map_session_data *sd = map_nick2sd(sign_cast<const char *>(RFIFOP(fd, 2)));
 
     map_log("intif_parse_whisperend: player: %s, flag: %d\n",
-            (char *)RFIFOP(fd, 2), RFIFOB(fd, 26));
+            sign_cast<const char *>(RFIFOP(fd, 2)), RFIFOB(fd, 26));
     if (sd)
         clif_whisper_end(sd->fd, RFIFOB(fd, 26));
 }
@@ -902,16 +902,16 @@ static void mapif_parse_WhisperToGM(int fd)
     gm_level_t min_gm_level = RFIFOW(fd, 28);
 
     char whisper_name[24];
-    STRZCPY(whisper_name, (const char *)RFIFOP(fd, 4));
+    STRZCPY(whisper_name, sign_cast<const char *>(RFIFOP(fd, 4)));
 
     char message[len];
-    STRZCPY(message, (const char *)RFIFOP(fd, 30));
+    STRZCPY(message, sign_cast<const char *>(RFIFOP(fd, 30)));
 
     for (int i = 0; i < fd_max; i++)
     {
         if (!session[i])
             continue;
-        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (!pl_sd || !pl_sd->state.auth)
             continue;
         if (pc_isGM(pl_sd) < min_gm_level)
@@ -932,7 +932,7 @@ static void intif_parse_AccountReg(int fd)
     int j;
     for (j = 0; p < RFIFOW(fd, 2) && j < ACCOUNT_REG_NUM; j++)
     {
-        STRZCPY(sd->status.account_reg[j].str, (const char *)RFIFOP(fd, p));
+        STRZCPY(sd->status.account_reg[j].str, sign_cast<const char *>(RFIFOP(fd, p)));
         p += 32;
         sd->status.account_reg[j].value = RFIFOL(fd, p);
         p += 4;
@@ -991,7 +991,7 @@ static void intif_parse_PartyCreated(int fd)
 {
     map_log("%s: party created\n", __func__);
     party_created(RFIFOL(fd, 2), RFIFOB(fd, 6), RFIFOL(fd, 7),
-                   (char *)RFIFOP(fd, 11));
+                   sign_cast<const char *>(RFIFOP(fd, 11)));
 }
 
 /// Parse party info
@@ -1011,7 +1011,7 @@ static void intif_parse_PartyInfo(int fd)
         return;
     }
 
-    party_recv_info((const struct party *) RFIFOP(fd, 4));
+    party_recv_info(reinterpret_cast<const struct party *>(RFIFOP(fd, 4)));
 }
 
 /// Notification of party member added
@@ -1034,7 +1034,7 @@ static void intif_parse_PartyMemberLeft(int fd)
 {
     map_log("intif: party member left %d %d %s\n", RFIFOL(fd, 2),
             RFIFOL(fd, 6), RFIFOP(fd, 10));
-    party_member_left(RFIFOL(fd, 2), RFIFOL(fd, 6), (char *)RFIFOP(fd, 10));
+    party_member_left(RFIFOL(fd, 2), RFIFOL(fd, 6), sign_cast<const char *>(RFIFOP(fd, 10)));
 }
 
 /// A party no longer exists
@@ -1046,14 +1046,14 @@ static void intif_parse_PartyBroken(int fd)
 /// Notification that somebody in the party has changed maps
 static void intif_parse_PartyMove(int fd)
 {
-    party_recv_movemap(RFIFOL(fd, 2), RFIFOL(fd, 6), (char *)RFIFOP(fd, 10),
+    party_recv_movemap(RFIFOL(fd, 2), RFIFOL(fd, 6), sign_cast<const char *>(RFIFOP(fd, 10)),
                        RFIFOB(fd, 26), RFIFOW(fd, 27));
 }
 
 /// Receive party chat
 static void intif_parse_PartyMessage(int fd)
 {
-    party_recv_message(RFIFOL(fd, 4), RFIFOL(fd, 8), (char *)RFIFOP(fd, 12),
+    party_recv_message(RFIFOL(fd, 4), RFIFOL(fd, 8), sign_cast<const char *>(RFIFOP(fd, 12)),
                        RFIFOW(fd, 2) - 12);
 }
 
@@ -1083,7 +1083,7 @@ static void chrif_parse(int fd)
             if (RFIFOREST(fd) < 10)
                 return;
         {
-            Version *server_version = (Version *)RFIFOP(fd, 2);
+            const Version *server_version = reinterpret_cast<const Version *>(RFIFOP(fd, 2));
             if (!(server_version->what_server & ATHENA_SERVER_CHAR))
             {
                 map_log("Not a char server!");
@@ -1128,8 +1128,8 @@ static void chrif_parse(int fd)
             if (RFIFOREST(fd) < RFIFOW(fd, 2))
                 return;
             pc_authok(RFIFOL(fd, 4), RFIFOL(fd, 8),
-                      (time_t) RFIFOL(fd, 12), RFIFOW(fd, 16),
-                      (struct mmo_charstatus *) RFIFOP(fd, 18));
+                      RFIFOL(fd, 12), RFIFOW(fd, 16),
+                      reinterpret_cast<const struct mmo_charstatus *>(RFIFOP(fd, 18)));
             RFIFOSKIP(fd, RFIFOW(fd, 2));
             break;
         case 0x2afe:
@@ -1167,7 +1167,7 @@ static void chrif_parse(int fd)
         case 0x2b09:
             if (RFIFOREST(fd) < 30)
                 return;
-            map_addchariddb(RFIFOL(fd, 2), (char *)RFIFOP(fd, 6));
+            map_addchariddb(RFIFOL(fd, 2), sign_cast<const char *>(RFIFOP(fd, 6)));
             RFIFOSKIP(fd, 30);
             break;
         case 0x2b0b:
@@ -1225,7 +1225,7 @@ static void chrif_parse(int fd)
         case 0x3800:
             if (RFIFOREST(fd) < 4 || RFIFOREST(fd) < RFIFOW(fd, 2))
                 return;
-            clif_GMmessage(NULL, (char *)RFIFOP(fd, 4), RFIFOW(fd, 2) - 4, 0);
+            clif_GMmessage(NULL, sign_cast<const char *>(RFIFOP(fd, 4)), RFIFOW(fd, 2) - 4, 0);
             RFIFOSKIP(fd, RFIFOW(fd, 2));
             break;
         case 0x3801:
@@ -1333,7 +1333,7 @@ static void send_users_tochar(timer_id, tick_t, custom_id_t, custom_data_t)
     {
         if (!session[i])
             continue;
-        struct map_session_data *sd = (struct map_session_data *)session[i]->session_data;
+        struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
         if (!sd || !sd->state.auth)
             continue;
         if ((battle_config.hide_GM_session

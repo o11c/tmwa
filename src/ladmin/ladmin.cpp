@@ -272,7 +272,7 @@ int ladmin_log(const char *fmt, ...)
             gettimeofday(&tv, NULL);
             strftime(tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, localtime(&tv.tv_sec));
             sprintf(tmpstr + strlen(tmpstr), ".%03d: %s",
-                    (int) tv.tv_usec / 1000, fmt);
+                    static_cast<int>(tv.tv_usec / 1000), fmt);
             vfprintf(logfp, tmpstr, ap);
         }
         fclose_(logfp);
@@ -1152,12 +1152,12 @@ static int banaddaccount(char *param)
 
     WFIFOW(login_fd, 0) = 0x794c;
     memcpy(WFIFOP(login_fd, 2), name, 24);
-    WFIFOW(login_fd, 26) = (short) year;
-    WFIFOW(login_fd, 28) = (short) month;
-    WFIFOW(login_fd, 30) = (short) day;
-    WFIFOW(login_fd, 32) = (short) hour;
-    WFIFOW(login_fd, 34) = (short) minute;
-    WFIFOW(login_fd, 36) = (short) second;
+    WFIFOW(login_fd, 26) = year;
+    WFIFOW(login_fd, 28) = month;
+    WFIFOW(login_fd, 30) = day;
+    WFIFOW(login_fd, 32) = hour;
+    WFIFOW(login_fd, 34) = minute;
+    WFIFOW(login_fd, 36) = second;
     WFIFOSET(login_fd, 38);
     bytes_to_read = 1;
 
@@ -1270,7 +1270,7 @@ static int bansetaccountsub(char *name, const char *date, const char *time_)
 
     WFIFOW(login_fd, 0) = 0x794a;
     memcpy(WFIFOP(login_fd, 2), name, 24);
-    WFIFOL(login_fd, 26) = (int) ban_until_time;
+    WFIFOL(login_fd, 26) = ban_until_time;
     WFIFOSET(login_fd, 30);
     bytes_to_read = 1;
 
@@ -2237,12 +2237,12 @@ static int timeaddaccount(char *param)
 
     WFIFOW(login_fd, 0) = 0x7950;
     memcpy(WFIFOP(login_fd, 2), name, 24);
-    WFIFOW(login_fd, 26) = (short) year;
-    WFIFOW(login_fd, 28) = (short) month;
-    WFIFOW(login_fd, 30) = (short) day;
-    WFIFOW(login_fd, 32) = (short) hour;
-    WFIFOW(login_fd, 34) = (short) minute;
-    WFIFOW(login_fd, 36) = (short) second;
+    WFIFOW(login_fd, 26) = year;
+    WFIFOW(login_fd, 28) = month;
+    WFIFOW(login_fd, 30) = day;
+    WFIFOW(login_fd, 32) = hour;
+    WFIFOW(login_fd, 34) = minute;
+    WFIFOW(login_fd, 36) = second;
     WFIFOSET(login_fd, 38);
     bytes_to_read = 1;
 
@@ -2371,7 +2371,7 @@ static int timesetaccount(char *param)
 
     WFIFOW(login_fd, 0) = 0x7948;
     memcpy(WFIFOP(login_fd, 2), name, 24);
-    WFIFOL(login_fd, 26) = (int) connect_until_time;
+    WFIFOL(login_fd, 26) = connect_until_time;
     WFIFOSET(login_fd, 30);
     bytes_to_read = 1;
 
@@ -2758,14 +2758,14 @@ static void parse_fromlogin(int fd)
                     md5key[sizeof(md5key) - 1] = '0';
                     if (passenc == 1)
                     {
-                        strncpy(md5str, (char *)RFIFOP(fd, 4), RFIFOW(fd, 2) - 4);
+                        strncpy(md5str, sign_cast<const char *>(RFIFOP(fd, 4)), RFIFOW(fd, 2) - 4);
                         strcat(md5str, loginserveradminpassword);
                     }
                     else if (passenc == 2)
                     {
                         strncpy(md5str, loginserveradminpassword,
                                  sizeof(loginserveradminpassword));
-                        strcat(md5str, (char *)RFIFOP(fd, 4));
+                        strcat(md5str, sign_cast<const char *>(RFIFOP(fd, 4)));
                     }
                     MD5_to_bin(MD5_from_cstring(md5str), md5bin);
                     WFIFOW(login_fd, 0) = 0x7918;  // Request for administation login (encrypted password)
@@ -2787,7 +2787,7 @@ static void parse_fromlogin(int fd)
             {
                 Iprintf("  Login-Server [%s:%d]\n", loginserverip,
                         loginserverport);
-                Version *server_version = (Version *)RFIFOP(login_fd, 2);
+                const Version *server_version = reinterpret_cast<const Version *>(RFIFOP(login_fd, 2));
                 if (!(server_version->what_server & ATHENA_SERVER_LOGIN))
                 {
                     ladmin_log("Not a login server!");
@@ -2860,7 +2860,7 @@ static void parse_fromlogin(int fd)
                             if (RFIFOB(fd, i + 4) == 0)
                                 printf("   ");
                             else
-                                printf("%2d ", (int) RFIFOB(fd, i + 4));
+                                printf("%2d ", static_cast<int>(RFIFOB(fd, i + 4)));
                             printf("%-24s", userid);
                             if (RFIFOB(fd, i + 29) == 0)
                                 printf("%-5s ", "Femal");
@@ -3211,7 +3211,7 @@ static void parse_fromlogin(int fd)
             case 0x7947:       // answer of an account name search
                 if (RFIFOREST(fd) < 30)
                     return;
-                if (strcmp((char *)RFIFOP(fd, 6), "") == 0)
+                if (strcmp(sign_cast<const char *>(RFIFOP(fd, 6)), "") == 0)
                 {
                     printf("Unable to find the account [%d] name. Account doesn't exist.\n",
                             RFIFOL(fd, 2));
@@ -3340,7 +3340,7 @@ static void parse_fromlogin(int fd)
             case 0x794f:       // answer of a broadcast
                 if (RFIFOREST(fd) < 4)
                     return;
-                if (RFIFOW(fd, 2) == (unsigned short) -1)
+                if (RFIFOW(fd, 2) == static_cast<unsigned short>(-1))
                 {
                     printf("Message sending failed. No online char-server.\n");
                     ladmin_log("Message sending failed. No online char-server.\n");
@@ -3411,10 +3411,10 @@ static void parse_fromlogin(int fd)
                     last_ip[sizeof(last_ip) - 1] = '\0';
                     memcpy(email, RFIFOP(fd, 100), sizeof(email));
                     email[sizeof(email) - 1] = '\0';
-                    connect_until_time = (time_t) RFIFOL(fd, 140);
-                    ban_until_time = (time_t) RFIFOL(fd, 144);
+                    connect_until_time = RFIFOL(fd, 140);
+                    ban_until_time = RFIFOL(fd, 144);
                     memset(memo, '\0', sizeof(memo));
-                    strncpy(memo, (char *)RFIFOP(fd, 150), RFIFOW(fd, 148));
+                    strncpy(memo, sign_cast<const char *>(RFIFOP(fd, 150)), RFIFOW(fd, 148));
                     if (RFIFOL(fd, 2) == -1)
                     {
                         printf("Unabled to find the account [%s]. Account doesn't exist.\n",
@@ -3440,7 +3440,7 @@ static void parse_fromlogin(int fd)
                         else
                         {
                             printf(" Id:     %d (GM level %d)\n",
-                                    RFIFOL(fd, 2), (int) RFIFOB(fd, 6));
+                                    RFIFOL(fd, 2), static_cast<int>(RFIFOB(fd, 6)));
                         }
                         printf(" Name:   '%s'\n", userid);
                         if (RFIFOB(fd, 31) == 0)
@@ -3605,16 +3605,16 @@ static int ladmin_config_read(const char *cfgName)
                 struct hostent *h = gethostbyname(w2);
                 if (h != NULL)
                 {
-                    Iprintf("Login server IP address: %s -> %d.%d.%d.%d\n",
-                             w2, (unsigned char) h->h_addr[0],
-                            (unsigned char) h->h_addr[1],
-                            (unsigned char) h->h_addr[2],
-                            (unsigned char) h->h_addr[3]);
-                    sprintf(loginserverip, "%d.%d.%d.%d",
-                            (unsigned char) h->h_addr[0],
-                            (unsigned char) h->h_addr[1],
-                            (unsigned char) h->h_addr[2],
-                            (unsigned char) h->h_addr[3]);
+                    Iprintf("Login server IP address: %s -> %hhu.%hhu.%hhu.%hhu\n",
+                             w2, static_cast<uint8_t>(h->h_addr[0]),
+                            static_cast<uint8_t>(h->h_addr[1]),
+                            static_cast<uint8_t>(h->h_addr[2]),
+                            static_cast<uint8_t>(h->h_addr[3]));
+                    sprintf(loginserverip, "%hhu.%hhu.%hhu.%hhu",
+                            static_cast<uint8_t>(h->h_addr[0]),
+                            static_cast<uint8_t>(h->h_addr[1]),
+                            static_cast<uint8_t>(h->h_addr[2]),
+                            static_cast<uint8_t>(h->h_addr[3]));
                 }
                 else
                     memcpy(loginserverip, w2, 16);

@@ -167,8 +167,8 @@ struct map_session_data
     int npc_menu;
     int npc_amount;
     int npc_stack, npc_stackmax;
-    script_ptr npc_script, npc_scriptroot;
-    char *npc_stackbuf;
+    char *npc_script, *npc_scriptroot;
+    struct script_data *npc_stackbuf;
     char npc_str[256];
     struct
     {
@@ -593,16 +593,16 @@ int map_freeblock_unlock(void);
 // block related
 bool map_addblock(struct block_list *);
 int map_delblock(struct block_list *);
-void map_foreachinarea(void(*)(struct block_list *, va_list), int, int, int,
+void map_foreachinarea(void (*)(struct block_list *, va_list), int, int, int,
                        int, int, BlockType, ...);
-void map_foreachinmovearea(void(*)(struct block_list *, va_list), int, int,
+void map_foreachinmovearea(void (*)(struct block_list *, va_list), int, int,
                            int, int, int, int, int, BlockType, ...);
 
 /// Temporary objects (loot, etc)
 typedef uint32_t obj_id_t;
 obj_id_t map_addobject(struct block_list *);
 void map_delobject(obj_id_t, BlockType type);
-void map_foreachobject(void(*)(struct block_list *, va_list), BlockType, ...);
+void map_foreachobject(void (*)(struct block_list *, va_list), BlockType, ...);
 
 void map_quit(struct map_session_data *);
 // npc

@@ -29,7 +29,7 @@ int pc_counttargeted(struct map_session_data *sd, struct block_list *src,
 int pc_setrestartvalue(struct map_session_data *sd, int type);
 int pc_makesavestatus(struct map_session_data *);
 int pc_setnewpc(struct map_session_data *, int, int, int, int, int, int);
-int pc_authok(int, int, time_t, short tmw_version, struct mmo_charstatus *);
+int pc_authok(int, int, time_t, short tmw_version, const struct mmo_charstatus *);
 int pc_authfail(int);
 
 int pc_equippoint(struct map_session_data *sd, int n);
@@ -64,9 +64,6 @@ int pc_dropitem(struct map_session_data *, int, int);
 int pc_calcstatus(struct map_session_data *, int);
 int pc_bonus(struct map_session_data *, int, int);
 int pc_skill(struct map_session_data *, int, int, int);
-
-int pc_modifybuyvalue(struct map_session_data *, int);
-int pc_modifysellvalue(struct map_session_data *, int);
 
 int pc_attack(struct map_session_data *, int, int);
 int pc_stopattack(struct map_session_data *);

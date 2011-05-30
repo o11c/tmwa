@@ -17,11 +17,11 @@ I deleted malloc.{h,c} because it was redundant;
 future calls should either use this or depend on the coming segfault.
 */
 # define CREATE(result, type, number) \
-   if (!((result) = (type *) calloc((number), sizeof(type))))   \
+   if (!((result) = reinterpret_cast<type *>(calloc((number), sizeof(type)))))   \
       { perror("SYSERR: malloc failure"); abort(); } else(void)0
 
 # define RECREATE(result,type,number) \
-  if (!((result) = (type *) realloc((result), sizeof(type) * (number))))\
+  if (!((result) = reinterpret_cast<type *>(realloc((result), sizeof(type) * (number)))))\
       { perror("SYSERR: realloc failure"); abort(); } else(void)0
 
 /// Dump data in hex (without ascii)
@@ -60,7 +60,7 @@ struct is_an_array<false>
     static _true_ test(B *n);
 };
 
-#define ARRAY_SIZEOF(arr) ({ typedef decltype(is_an_array<(bool)__builtin_constant_p(sizeof(arr))>::test(arr)) type; sizeof(arr) / sizeof((arr)[0]); })
+#define ARRAY_SIZEOF(arr) ({ typedef decltype(is_an_array<static_cast<bool>(__builtin_constant_p(sizeof(arr)))>::test(arr)) type; sizeof(arr) / sizeof((arr)[0]); })
 
 #define STRZCPY(dst, src) strzcpy(dst, src, ARRAY_SIZEOF(dst))
 #define STRZCPY2(dst, src) strzcpy(dst, src, ARRAY_SIZEOF(src))
@@ -92,9 +92,6 @@ static inline void log_time(FILE *fp)
 }
 
 FILE *create_or_fake_or_die(const char *filename);
-
-/// Die, and hopefully generate a backtrace
-#define SEGFAULT() *((char *) 0) = 0
 
 template<int unit>
 inline void per_unit_adjust(int& val, int proportion)
@@ -132,5 +129,36 @@ static inline void prefix##_add(int& val, int proportion) \
 
 PER_UNIT_SPECIALIZE(percent, 100)
 PER_UNIT_SPECIALIZE(per256, 256)
+
+template<class R, class A>
+class sign_cast_impl;
+
+template<class R, class A>
+class sign_cast_impl<R*, A*>
+{
+public:
+    static_assert(sizeof(R) == sizeof(A), "You can only use this on pointers to objects of the same size");
+    static R* do_cast(A* input)
+    {
+        return reinterpret_cast<R*>(input);
+    }
+};
+
+template<class R, class A>
+class sign_cast_impl<R&, A&>
+{
+public:
+    static_assert(sizeof(R) == sizeof(A), "You can only use this on references to objects of the same size");
+    static R& do_cast(A& input)
+    {
+        return reinterpret_cast<R&>(input);
+    }
+};
+
+template<class R, class A>
+inline R sign_cast(A input)
+{
+    return sign_cast_impl<R, A>::do_cast(input);
+}
 
 #endif //UTILS_H

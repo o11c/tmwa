@@ -139,7 +139,7 @@ int skill_power(struct map_session_data *sd, int skill_id)
 int skill_power_bl(struct block_list *bl, int skill)
 {
     if (bl->type == BL_PC)
-        return skill_power((struct map_session_data *) bl, skill);
+        return skill_power(reinterpret_cast<struct map_session_data *>(bl), skill);
     else
         return 0;
 }

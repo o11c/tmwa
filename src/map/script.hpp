@@ -2,7 +2,7 @@
 #define SCRIPT_H
 
 /// This really should be plain char, but there is a lot of bad code
-typedef unsigned char *script_ptr;
+typedef char *script_ptr;
 
 struct script_data
 {

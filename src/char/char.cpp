@@ -610,8 +610,8 @@ struct new_char_dat
 /// Create a new character, from
 static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
 {
-    struct new_char_dat dat = *(struct new_char_dat *) raw_dat;
-    struct char_session_data *sd = (struct char_session_data *)session[fd]->session_data;
+    struct new_char_dat dat = *reinterpret_cast<const struct new_char_dat *>(raw_dat);
+    struct char_session_data *sd = reinterpret_cast<struct char_session_data *>(session[fd]->session_data);
 
     // remove control characters from the name
     char *name = dat.name;
@@ -1240,7 +1240,7 @@ static void disconnect_player(account_t account_id)
     {
         if (!session[i])
             continue;
-        struct char_session_data *sd = (struct char_session_data*)session[i]->session_data;
+        struct char_session_data *sd = reinterpret_cast<struct char_session_data*>(session[i]->session_data);
         if (!sd)
             continue;
         if (sd->account_id == account_id)
@@ -1323,7 +1323,7 @@ static void parse_tologin(int fd)
             {
                 if (!session[i])
                     continue;
-                struct char_session_data *sd = (struct char_session_data*)session[i]->session_data;
+                struct char_session_data *sd = reinterpret_cast<struct char_session_data*>(session[i]->session_data);
                 if (!sd || sd->account_id != RFIFOL(fd, 2))
                     continue;
                 if (RFIFOB(fd, 6))
@@ -1343,10 +1343,10 @@ static void parse_tologin(int fd)
                     goto end_x2713;
                 }
                 // connection ok
-                STRZCPY(sd->email, (char *)RFIFOP(fd, 7));
+                STRZCPY(sd->email, sign_cast<const char *>(RFIFOP(fd, 7)));
                 if (!e_mail_check(sd->email))
                     STRZCPY(sd->email, "a@a.com");
-                sd->connect_until_time = (time_t) RFIFOL(fd, 47);
+                sd->connect_until_time = RFIFOL(fd, 47);
                 // send characters to player
                 mmo_char_send006b(i, sd);
                 goto end_x2713;
@@ -1367,13 +1367,13 @@ static void parse_tologin(int fd)
             {
                 if (!session[i])
                     continue;
-                struct char_session_data *sd = (struct char_session_data *)session[i]->session_data;
+                struct char_session_data *sd = reinterpret_cast<struct char_session_data*>(session[i]->session_data);
                 if (!sd || sd->account_id != RFIFOL(fd, 2))
                     continue;
-                STRZCPY(sd->email, (char *) RFIFOP(fd, 6));
+                STRZCPY(sd->email, sign_cast<const char *>(RFIFOP(fd, 6)));
                 if (!e_mail_check(sd->email))
                     STRZCPY(sd->email, "a@a.com");
-                sd->connect_until_time = (time_t) RFIFOL(fd, 46);
+                sd->connect_until_time = RFIFOL(fd, 46);
                 goto end_x2717;
             }
         }
@@ -1400,7 +1400,7 @@ static void parse_tologin(int fd)
                 return;
         {
             account_t acc = RFIFOL(fd, 2);
-            enum gender sex = (enum gender)RFIFOB(fd, 6);
+            enum gender sex = static_cast<enum gender>(RFIFOB(fd, 6));
             if (!acc)
                 // ?
                 goto reply_x2323_x2b0d;
@@ -1447,7 +1447,7 @@ static void parse_tologin(int fd)
             goto end_x2726;
         tmp_x2726: ;
             char message[RFIFOL(fd, 4) + 1];
-            STRZCPY(message, (char *)RFIFOP(fd, 8));
+            STRZCPY(message, sign_cast<const char *>(RFIFOP(fd, 8)));
             remove_control_chars(message);
             // remove all first spaces
             char *p = message;
@@ -1500,7 +1500,7 @@ static void parse_tologin(int fd)
             int j;
             for (j = 0; p < RFIFOW(fd, 2) && j < ACCOUNT_REG2_NUM; j++)
             {
-                STRZCPY(reg[j].str, (char *)RFIFOP(fd, p));
+                STRZCPY(reg[j].str, sign_cast<const char *>(RFIFOP(fd, p)));
                 p += 32;
                 reg[j].value = RFIFOL(fd, p);
                 p += 4;
@@ -1517,7 +1517,7 @@ static void parse_tologin(int fd)
             if (RFIFOREST(fd) < 10)
                 return;
         {
-            Version *server_version = (Version *)RFIFOP(login_fd, 2);
+            const Version *server_version = reinterpret_cast<const Version *>(RFIFOP(login_fd, 2));
             if (!(server_version->what_server & ATHENA_SERVER_LOGIN))
             {
                 char_log("Not a login server!");
@@ -1604,7 +1604,7 @@ static void parse_tologin(int fd)
                 {
                     if (!session[j])
                         continue;
-                    struct char_session_data *sd2 = (struct char_session_data*)session[j]->session_data;
+                    struct char_session_data *sd2 = reinterpret_cast<struct char_session_data*>(session[j]->session_data);
                     if (!sd2 || sd2->account_id != char_dat[char_num].account_id)
                         continue;
                     for (int k = 0; k < MAX_CHARS_PER_ACCOUNT; k++)
@@ -1683,7 +1683,7 @@ static void parse_tologin(int fd)
             {
                 if (!session[i])
                     continue;
-                struct char_session_data *sd = (struct char_session_data *)session[i]->session_data;
+                struct char_session_data *sd = reinterpret_cast<struct char_session_data*>(session[i]->session_data);
                 if (!sd || sd->account_id != acc)
                     continue;
                 WFIFOW(i, 0) = 0x62;
@@ -1768,7 +1768,7 @@ static void parse_frommap(int fd)
                           id, j, ip, server[id].port, id);
                 WFIFOW(fd, 0) = 0x2afb;
                 WFIFOB(fd, 2) = 0;
-                STRZCPY2((char *)WFIFOP(fd, 3), whisper_server_name);
+                STRZCPY2(sign_cast<char *>(WFIFOP(fd, 3)), whisper_server_name);
                 WFIFOSET(fd, 27);
                 if (j == 0)
                 {
@@ -1796,7 +1796,7 @@ static void parse_frommap(int fd)
                     int n = 0;
                     for (int i = 0; i < MAX_MAP_PER_SERVER; i++)
                         if (server[x].map[i][0])
-                            STRZCPY2((char *)WFIFOP(fd, 10 + (n++) * 16), server[x].map[i]);
+                            STRZCPY2(sign_cast<char *>(WFIFOP(fd, 10 + (n++) * 16)), server[x].map[i]);
                     if (n)
                     {
                         WFIFOW(fd, 2) = n * 16 + 10;
@@ -1898,7 +1898,7 @@ static void parse_frommap(int fd)
                     if (char_dat[i].account_id == RFIFOL(fd, 4) &&
                         char_dat[i].char_id == RFIFOL(fd, 8))
                     {
-                        char_dat[i] = *(struct mmo_charstatus *)RFIFOP(fd, 12);
+                        char_dat[i] = *reinterpret_cast<const struct mmo_charstatus *>(RFIFOP(fd, 12));
                         break;
                     }
                 }
@@ -1946,7 +1946,7 @@ static void parse_frommap(int fd)
                 auth_fifo[auth_fifo_pos].login_id1 = RFIFOL(fd, 6);
                 auth_fifo[auth_fifo_pos].login_id2 = RFIFOL(fd, 10);
                 auth_fifo[auth_fifo_pos].delflag = 0;
-                auth_fifo[auth_fifo_pos].sex = (enum gender)RFIFOB(fd, 44);
+                auth_fifo[auth_fifo_pos].sex = static_cast<enum gender>(RFIFOB(fd, 44));
                 auth_fifo[auth_fifo_pos].connect_until_time = 0;
                 auth_fifo[auth_fifo_pos].ip = RFIFOL(fd, 45);
                 for (int i = 0; i < char_num; i++)
@@ -1975,12 +1975,12 @@ static void parse_frommap(int fd)
             {
                 WFIFOW(fd, 0) = 0x2b09;
                 WFIFOL(fd, 2) = RFIFOL(fd, 2);
-                STRZCPY2((char *)WFIFOP(fd, 6), unknown_char_name);
+                STRZCPY2(sign_cast<char *>(WFIFOP(fd, 6)), unknown_char_name);
                 for (int i = 0; i < char_num; i++)
                 {
                     if (char_dat[i].char_id == RFIFOL(fd, 2))
                     {
-                        STRZCPY2((char *)WFIFOP(fd, 6), char_dat[i].name);
+                        STRZCPY2(sign_cast<char *>(WFIFOP(fd, 6)), char_dat[i].name);
                         break;
                     }
                 }
@@ -2038,7 +2038,7 @@ static void parse_frommap(int fd)
             {
                 account_t acc = RFIFOL(fd, 2);
                 char character_name[24];
-                STRZCPY(character_name, (char *)RFIFOP(fd, 6));
+                STRZCPY(character_name, sign_cast<const char *>(RFIFOP(fd, 6)));
                 // prepare answer
                 WFIFOW(fd, 0) = 0x2b0f;
                 WFIFOL(fd, 2) = acc;
@@ -2053,7 +2053,7 @@ static void parse_frommap(int fd)
                     goto end_x2b0e;
                 }
 
-                STRZCPY2((char *)WFIFOP(fd, 6), character->name);
+                STRZCPY2(sign_cast<char *>(WFIFOP(fd, 6)), character->name);
                 WFIFOW(fd, 32) = 0;
                 // FIXME - should GMs have power over those the same GM level?
                 if (acc != -1 && isGM(acc) < isGM(character->account_id))
@@ -2123,7 +2123,7 @@ static void parse_frommap(int fd)
                 int j;
                 for (j = 0; p < RFIFOW(fd, 2) && j < ACCOUNT_REG2_NUM; j++)
                 {
-                    STRZCPY(reg[j].str, (char *)RFIFOP(fd, p));
+                    STRZCPY(reg[j].str, sign_cast<const char *>(RFIFOP(fd, p)));
                     p += 32;
                     reg[j].value = RFIFOL(fd, p);
                     p += 4;
@@ -2231,7 +2231,7 @@ static void parse_char(int fd)
         return;
     }
 
-    struct char_session_data *sd = (struct char_session_data*)session[fd]->session_data;
+    struct char_session_data *sd = reinterpret_cast<struct char_session_data*>(session[fd]->session_data);
 
     while (RFIFOREST(fd) >= 2)
     {
@@ -2276,7 +2276,7 @@ static void parse_char(int fd)
             sd->login_id1 = RFIFOL(fd, 6);
             sd->login_id2 = RFIFOL(fd, 10);
             sd->packet_tmw_version = RFIFOW(fd, 14);
-            sd->sex = (enum gender)RFIFOB(fd, 16);
+            sd->sex = static_cast<enum gender>(RFIFOB(fd, 16));
             // send back account_id
             WFIFOL(fd, 0) = acc;
             WFIFOSET(fd, 4);
@@ -2366,11 +2366,11 @@ static void parse_char(int fd)
         gotmap_x66:
             WFIFOW(fd, 0) = 0x71;
             WFIFOL(fd, 2) = sd->found_char[ch]->char_id;
-            STRZCPY2((char *)WFIFOP(fd, 6), sd->found_char[ch]->last_point.map);
+            STRZCPY2(sign_cast<char *>(WFIFOP(fd, 6)), sd->found_char[ch]->last_point.map);
             printf("Character selection '%s' (account: %d, slot: %d) [%s]\n",
                     sd->found_char[ch]->name, sd->account_id, ch, ip);
             printf("--Send IP of map-server. ");
-            if (lan_ip_check((uint8_t *) &session[fd]->client_addr.sin_addr))
+            if (lan_ip_check(reinterpret_cast<uint8_t *>(&session[fd]->client_addr.sin_addr)))
                 WFIFOL(fd, 22) = inet_addr(lan_map_ip);
             else
                 WFIFOL(fd, 22) = server[i].ip;
@@ -2446,7 +2446,7 @@ static void parse_char(int fd)
             WFIFOW(fd, 2 + 68) = chardat->head_mid;
             WFIFOW(fd, 2 + 70) = chardat->hair_color;
 
-            STRZCPY2((char *)WFIFOP(fd, 2 + 74), chardat->name);
+            STRZCPY2(sign_cast<char *>(WFIFOP(fd, 2 + 74)), chardat->name);
 
             WFIFOB(fd, 2 + 98) = MIN(chardat->str, 255);
             WFIFOB(fd, 2 + 99) = MIN(chardat->agi, 255);
@@ -2476,7 +2476,7 @@ static void parse_char(int fd)
                 return;
         {
             char email[40];
-            STRZCPY(email, (char *)RFIFOP(fd, 6));
+            STRZCPY(email, sign_cast<const char *>(RFIFOP(fd, 6)));
             if (e_mail_check(email) == 0)
                 STRZCPY(email, "a@a.com");
 
@@ -2496,7 +2496,7 @@ static void parse_char(int fd)
                 {
                     if (!session[j])
                         continue;
-                    struct char_session_data *sd2 = (struct char_session_data*) session[j]->session_data;
+                    struct char_session_data *sd2 = reinterpret_cast<struct char_session_data*>(session[j]->session_data);
                     if (!sd2 || sd2->account_id != char_dat[char_num].account_id)
                         continue;
                     for (int k = 0; k < MAX_CHARS_PER_ACCOUNT; k++)
@@ -2543,8 +2543,8 @@ static void parse_char(int fd)
             }
 
             if (i == MAX_MAP_SERVERS
-                    || strcmp((char *)RFIFOP(fd, 2), userid) != 0
-                    || strcmp((char *)RFIFOP(fd, 26), passwd) != 0)
+                    || strcmp(sign_cast<const char *>(RFIFOP(fd, 2)), userid) != 0
+                    || strcmp(sign_cast<const char *>(RFIFOP(fd, 26)), passwd) != 0)
             {
                 WFIFOB(fd, 2) = 3;
                 WFIFOSET(fd, 3);
@@ -2681,12 +2681,12 @@ static void check_connect_login_server(timer_id, tick_t, custom_id_t, custom_dat
     WFIFOSET(login_fd, 2);
 
     WFIFOW(login_fd, 0) = 0x2710;
-    STRZCPY2((char *)WFIFOP(login_fd, 2), userid);
-    STRZCPY2((char *)WFIFOP(login_fd, 26), passwd);
+    STRZCPY2(sign_cast<char *>(WFIFOP(login_fd, 2)), userid);
+    STRZCPY2(sign_cast<char *>(WFIFOP(login_fd, 26)), passwd);
     WFIFOL(login_fd, 50) = 0;
     WFIFOL(login_fd, 54) = char_ip;
     WFIFOW(login_fd, 58) = char_port;
-    STRZCPY2((char *)WFIFOP(login_fd, 60), server_name);
+    STRZCPY2(sign_cast<char *>(WFIFOP(login_fd, 60)), server_name);
     WFIFOW(login_fd, 80) = 0;
     WFIFOW(login_fd, 82) = char_maintenance;
     WFIFOW(login_fd, 84) = char_new;

@@ -65,7 +65,7 @@ static void send_from_fifo(int fd)
     if (len > 0)
     {
         session[fd]->wdata_size -= len;
-        if (len < (ssize_t)session[fd]->wdata_size)
+        if (len < static_cast<ssize_t>(session[fd]->wdata_size))
         {
             memmove(session[fd]->wdata, session[fd]->wdata + len,
                      session[fd]->wdata_size);
@@ -90,7 +90,7 @@ static void connect_client(int listen_fd)
     struct sockaddr_in client_address;
     socklen_t len = sizeof(client_address);
 
-    int fd = accept(listen_fd, (struct sockaddr *) &client_address, &len);
+    int fd = accept(listen_fd, reinterpret_cast<struct sockaddr *>(&client_address), &len);
     if (fd == -1)
     {
         perror("accept");
@@ -167,8 +167,8 @@ int make_listen_port(uint16_t port)
     server_address.sin_addr.s_addr = htonl(INADDR_ANY);
     server_address.sin_port = htons(port);
 
-    if (bind(fd, (struct sockaddr *) &server_address,
-              sizeof(server_address)) == -1)
+    if (bind(fd, reinterpret_cast<struct sockaddr *>(&server_address),
+             sizeof(server_address)) == -1)
     {
         perror("bind");
         exit(1);
@@ -222,8 +222,8 @@ int make_connection(uint32_t ip, uint16_t port)
 
     /// Errors not caught - we must not block
     /// Let the main select() loop detect when we know the state
-    connect(fd, (struct sockaddr *) &server_address,
-             sizeof(struct sockaddr_in));
+    connect(fd, reinterpret_cast<struct sockaddr *>(&server_address),
+            sizeof(struct sockaddr_in));
 
     FD_SET(fd, &readfds);
 

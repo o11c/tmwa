@@ -23,10 +23,10 @@ enum class AttackResult
     FLEE,
     DEF
 };
-inline bool operator < (AttackResult lhs, AttackResult rhs) { return int(lhs) < int(rhs); }
-inline bool operator <= (AttackResult lhs, AttackResult rhs) { return int(lhs) <= int(rhs); }
-inline bool operator > (AttackResult lhs, AttackResult rhs) { return int(lhs) > int(rhs); }
-inline bool operator >= (AttackResult lhs, AttackResult rhs) { return int(lhs) >= int(rhs); }
+inline bool operator < (AttackResult lhs, AttackResult rhs) { return static_cast<int>(lhs) < static_cast<int>(rhs); }
+inline bool operator <= (AttackResult lhs, AttackResult rhs) { return static_cast<int>(lhs) <= static_cast<int>(rhs); }
+inline bool operator > (AttackResult lhs, AttackResult rhs) { return static_cast<int>(lhs) > static_cast<int>(rhs); }
+inline bool operator >= (AttackResult lhs, AttackResult rhs) { return static_cast<int>(lhs) >= static_cast<int>(rhs); }
 
 struct Damage
 {

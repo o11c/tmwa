@@ -163,7 +163,7 @@ static void pc_invincible_timer(timer_id tid, tick_t, custom_id_t id, custom_dat
 {
     struct map_session_data *sd;
 
-    if ((sd = (struct map_session_data *) map_id2sd(id)) == NULL
+    if ((sd = reinterpret_cast<struct map_session_data *>(map_id2sd(id))) == NULL
         || sd->bl.type != BL_PC)
         return;
 
@@ -260,19 +260,19 @@ static void pc_counttargeted_sub(struct block_list *bl, va_list ap)
     nullpo_retv(c = va_arg(ap, int *));
 
     src = va_arg(ap, struct block_list *);
-    AttackResult target_lv = (AttackResult)va_arg(ap, int);
+    AttackResult target_lv = static_cast<AttackResult>(va_arg(ap, int));
     if (id == bl->id || (src && id == src->id))
         return;
     if (bl->type == BL_PC)
     {
-        struct map_session_data *sd = (struct map_session_data *) bl;
+        struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(bl);
         if (sd && sd->attacktarget == id && sd->attacktimer != -1
             && sd->attacktarget_lv >= target_lv)
             (*c)++;
     }
     else if (bl->type == BL_MOB)
     {
-        struct mob_data *md = (struct mob_data *) bl;
+        struct mob_data *md = reinterpret_cast<struct mob_data *>(bl);
         if (md && md->target_id == id && md->timer != -1
             && md->state.state == MS_ATTACK && md->target_lv >= target_lv)
 
@@ -577,14 +577,12 @@ int pc_breakarmor(struct map_session_data *sd)
  *------------------------------------------
  */
 int pc_authok(int id, int login_id2, time_t connect_until_time,
-               short tmw_version, struct mmo_charstatus *st)
+               short tmw_version, const struct mmo_charstatus *st)
 {
     struct map_session_data *sd = NULL;
 
     struct party *p;
     unsigned long tick = gettick();
-    struct sockaddr_in sai;
-    socklen_t sa_len = sizeof(struct sockaddr);
 
     sd = map_id2sd(id);
     if (sd == NULL)
@@ -740,9 +738,7 @@ int pc_authok(int id, int login_id2, time_t connect_until_time,
     memset(sd->flood_rates, 0, sizeof(sd->flood_rates));
     sd->packet_flood_reset_due = sd->packet_flood_in = 0;
 
-    // Obtain IP address (if they are still connected)
-    if (!getpeername(sd->fd, (struct sockaddr *)&sai, &sa_len))
-        sd->ip = sai.sin_addr.s_addr;
+    sd->ip = session[sd->fd]->client_addr.sin_addr.s_addr;
 
     // message of the limited time of the account
     if (connect_until_time != 0)
@@ -966,7 +962,7 @@ int pc_calcstatus(struct map_session_data *sd, int first)
             {
                 if (sd->status.inventory[idx].card[0] != 0x00ff
                     && sd->status.inventory[idx].card[0] != 0x00fe
-                    && sd->status.inventory[idx].card[0] != (short) 0xff00)
+                    && sd->status.inventory[idx].card[0] != static_cast<short>(0xff00))
                 {
                     int j;
                     for (j = 0; j < sd->inventory_data[idx]->slot; j++)
@@ -993,7 +989,7 @@ int pc_calcstatus(struct map_session_data *sd, int first)
             {                   // 防具
                 if (sd->status.inventory[idx].card[0] != 0x00ff
                     && sd->status.inventory[idx].card[0] != 0x00fe
-                    && sd->status.inventory[idx].card[0] != (short) 0xff00)
+                    && sd->status.inventory[idx].card[0] != static_cast<short>(0xff00))
                 {
                     int j;
                     for (j = 0; j < sd->inventory_data[idx]->slot; j++)
@@ -1895,41 +1891,6 @@ int pc_skill(struct map_session_data *sd, int id, int level, int flag)
 //
 
 /*==========================================
- * スキルによる買い値修正
- *------------------------------------------
- */
-int pc_modifybuyvalue(struct map_session_data *, int orig_value)
-{
-    int val = orig_value, rate1 = 0, rate2 = 0;
-    if (rate1 < rate2)
-        rate1 = rate2;
-    if (rate1)
-        val = (int) ((double) orig_value * (double) (100 - rate1) / 100.);
-    if (val < 0)
-        val = 0;
-    if (orig_value > 0 && val < 1)
-        val = 1;
-
-    return val;
-}
-
-/*==========================================
- * スキルによる売り値修正
- *------------------------------------------
- */
-int pc_modifysellvalue(struct map_session_data *, int orig_value)
-{
-    int val = orig_value, rate = 0;
-    if (rate)
-        val = (int) ((double) orig_value * (double) (100 + rate) / 100.);
-    if (val < 0)
-        val = 0;
-    if (orig_value > 0 && val < 1)
-        val = 1;
-
-    return val;
-}
-/*==========================================
  * アイテムを買った時に、新しいアイテム欄を使うか、
  * 3万個制限にかかるか確認
  *------------------------------------------
@@ -1987,8 +1948,8 @@ int pc_payzeny(struct map_session_data *sd, int zeny)
 
     nullpo_retr(0, sd);
 
-    z = (double) sd->status.zeny;
-    if (sd->status.zeny < zeny || z - (double) zeny > MAX_ZENY)
+    z = sd->status.zeny;
+    if (sd->status.zeny < zeny || z - zeny > MAX_ZENY)
         return 1;
     sd->status.zeny -= zeny;
     clif_updatestatus(sd, SP_ZENY);
@@ -2006,8 +1967,8 @@ int pc_getzeny(struct map_session_data *sd, int zeny)
 
     nullpo_retr(0, sd);
 
-    z = (double) sd->status.zeny;
-    if (z + (double) zeny > MAX_ZENY)
+    z = sd->status.zeny;
+    if (z + zeny > MAX_ZENY)
     {
         zeny = 0;
         sd->status.zeny = MAX_ZENY;
@@ -2548,7 +2509,7 @@ static int calc_next_walk_step(struct map_session_data *sd)
 
     if (sd->walkpath.path_pos >= sd->walkpath.path_len)
         return -1;
-    if (int(sd->walkpath.path[sd->walkpath.path_pos]) & 1)
+    if (static_cast<int>(sd->walkpath.path[sd->walkpath.path_pos]) & 1)
         return sd->speed * 14 / 10;
 
     return sd->speed;
@@ -2595,7 +2556,7 @@ static void pc_walk(timer_id tid, tick_t tick, custom_id_t id, custom_data_t dat
     }
     else
     {                           // マス目境界へ到着
-        if (int(sd->walkpath.path[sd->walkpath.path_pos]) >= 8)
+        if (static_cast<int>(sd->walkpath.path[sd->walkpath.path_pos]) >= 8)
             return;
 
         x = sd->bl.x;
@@ -2607,8 +2568,8 @@ static void pc_walk(timer_id tid, tick_t tick, custom_id_t id, custom_data_t dat
             return;
         }
         sd->dir = sd->head_dir = sd->walkpath.path[sd->walkpath.path_pos];
-        dx = dirx[(int) sd->dir];
-        dy = diry[(int) sd->dir];
+        dx = dirx[static_cast<int>(sd->dir)];
+        dy = diry[static_cast<int>(sd->dir)];
         ctype = map_getcell(sd->bl.m, x + dx, y + dy);
         if (ctype == 1 || ctype == 5)
         {
@@ -2834,7 +2795,7 @@ static void pc_attack_timer(timer_id tid, tick_t tick, custom_id_t id, custom_da
     if (bl == NULL || bl->prev == NULL)
         return;
 
-    if (bl->type == BL_PC && pc_isdead((struct map_session_data *) bl))
+    if (bl->type == BL_PC && pc_isdead(reinterpret_cast<struct map_session_data *>(bl)))
         return;
 
     // 同じmapでないなら攻撃しない
@@ -3612,8 +3573,8 @@ int pc_damage(struct block_list *src, struct map_session_data *sd,
         if (src->type == BL_PC)
         {
             MAP_LOG_PC(sd, "INJURED-BY PC%d FOR %d",
-                        ((struct map_session_data *) src)->status.char_id,
-                        damage);
+                       reinterpret_cast<struct map_session_data *>(src)->status.char_id,
+                       damage);
         }
         else
         {
@@ -3675,22 +3636,22 @@ int pc_damage(struct block_list *src, struct map_session_data *sd,
                 && battle_config.death_penalty_base > 0)
                 sd->status.base_exp -=
                     pc_nextbaseexp(sd) *
-                    (double) battle_config.death_penalty_base / 10000;
+                    static_cast<double>(battle_config.death_penalty_base) / 10000;
             if (battle_config.pk_mode && src && src->type == BL_PC)
                 sd->status.base_exp -=
                     pc_nextbaseexp(sd) *
-                    (double) battle_config.death_penalty_base / 10000;
+                    static_cast<double>(battle_config.death_penalty_base) / 10000;
             else if (battle_config.death_penalty_type == 2
                      && battle_config.death_penalty_base > 0)
             {
                 if (pc_nextbaseexp(sd) > 0)
                     sd->status.base_exp -=
-                        (double) sd->status.base_exp *
-                        (double) battle_config.death_penalty_base / 10000;
+                        static_cast<double>(sd->status.base_exp) *
+                        battle_config.death_penalty_base / 10000;
                 if (battle_config.pk_mode && src && src->type == BL_PC)
                     sd->status.base_exp -=
-                        (double) sd->status.base_exp *
-                        (double) battle_config.death_penalty_base / 10000;
+                        static_cast<double>(sd->status.base_exp) *
+                        battle_config.death_penalty_base / 10000;
             }
             if (sd->status.base_exp < 0)
                 sd->status.base_exp = 0;
@@ -3700,22 +3661,22 @@ int pc_damage(struct block_list *src, struct map_session_data *sd,
                 && battle_config.death_penalty_job > 0)
                 sd->status.job_exp -=
                     pc_nextjobexp(sd) *
-                    (double) battle_config.death_penalty_job / 10000;
+                    static_cast<double>(battle_config.death_penalty_job) / 10000;
             if (battle_config.pk_mode && src && src->type == BL_PC)
                 sd->status.job_exp -=
                     pc_nextjobexp(sd) *
-                    (double) battle_config.death_penalty_job / 10000;
+                    static_cast<double>(battle_config.death_penalty_job) / 10000;
             else if (battle_config.death_penalty_type == 2
                      && battle_config.death_penalty_job > 0)
             {
                 if (pc_nextjobexp(sd) > 0)
                     sd->status.job_exp -=
-                        (double) sd->status.job_exp *
-                        (double) battle_config.death_penalty_job / 10000;
+                        sd->status.job_exp *
+                        static_cast<double>(battle_config.death_penalty_job) / 10000;
                 if (battle_config.pk_mode && src && src->type == BL_PC)
                     sd->status.job_exp -=
-                        (double) sd->status.job_exp *
-                        (double) battle_config.death_penalty_job / 10000;
+                        sd->status.job_exp *
+                        static_cast<double>(battle_config.death_penalty_job) / 10000;
             }
             if (sd->status.job_exp < 0)
                 sd->status.job_exp = 0;
@@ -3794,7 +3755,7 @@ int pc_damage(struct block_list *src, struct map_session_data *sd,
         {
             sd->pvp_point -= 5;
             if (src && src->type == BL_PC)
-                ((struct map_session_data *) src)->pvp_point++;
+                reinterpret_cast<struct map_session_data *>(src)->pvp_point++;
             //} //fixed wrong '{' placement by Lupus
             pc_setdead(sd);
         }
@@ -4133,8 +4094,7 @@ pc_heal_quick_speed(int amount)
     }
 }
 
-static void
-pc_heal_quick_accumulate(int new_amount,
+static void pc_heal_quick_accumulate(int new_amount,
                           struct quick_regeneration *quick_regen, int max)
 {
     int current_amount = quick_regen->amount;
@@ -4661,7 +4621,7 @@ int pc_percentrefinery(struct map_session_data *, struct item *item)
     int percent;
 
     nullpo_retr(0, item);
-    percent = percentrefinery[itemdb_wlv(item->nameid)][(int) item->refine];
+    percent = percentrefinery[itemdb_wlv(item->nameid)][static_cast<unsigned>(item->refine)];
 
     // 確率の有効範囲チェック
     if (percent > 100)
@@ -4692,11 +4652,11 @@ static void pc_eventtimer(timer_id tid, tick_t, custom_id_t id, custom_data_t da
         if (sd->eventtimer[i] == tid)
         {
             sd->eventtimer[i] = -1;
-            npc_event(sd, (const char *) data.p, 0);
+            npc_event(sd, static_cast<const char *>(data.p), 0);
             break;
         }
     }
-    free((void *) data.p);
+    free(data.p);
     if (i == MAX_EVENTTIMER)
     {
         map_log("pc_evemap_lognttimer: no such event timer\n");
@@ -4719,12 +4679,13 @@ int pc_addeventtimer(struct map_session_data *sd, int tick, const char *name)
 
     if (i < MAX_EVENTTIMER)
     {
-        char *evname = (char *) calloc(24, 1);
+        char *evname;
+        CREATE(evname, char, 24);
         strncpy(evname, name, 24);
         evname[23] = '\0';
         sd->eventtimer[i] = add_timer(gettick() + tick,
                                        pc_eventtimer, sd->bl.id,
-                                       (int) evname);
+                                       evname);
         return 1;
     }
 
@@ -4742,10 +4703,7 @@ int pc_deleventtimer(struct map_session_data *sd, const char *name)
     nullpo_retr(0, sd);
 
     for (i = 0; i < MAX_EVENTTIMER; i++)
-        if (sd->eventtimer[i] != -1 && strcmp((char
-                                                *) (get_timer(sd->eventtimer
-                                                               [i])->data.p),
-                                               name) == 0)
+        if (sd->eventtimer[i] != -1 && strcmp(reinterpret_cast<char *>(get_timer(sd->eventtimer[i])->data.p), name) == 0)
         {
             delete_timer(sd->eventtimer[i], pc_eventtimer);
             sd->eventtimer[i] = -1;
@@ -4767,10 +4725,7 @@ int pc_addeventtimercount(struct map_session_data *sd, const char *name,
     nullpo_retr(0, sd);
 
     for (i = 0; i < MAX_EVENTTIMER; i++)
-        if (sd->eventtimer[i] != -1 && strcmp((char
-                                                *) (get_timer(sd->eventtimer
-                                                               [i])->data.p),
-                                               name) == 0)
+        if (sd->eventtimer[i] != -1 && strcmp(reinterpret_cast<char *>(get_timer(sd->eventtimer[i])->data.p), name) == 0)
         {
             addtick_timer(sd->eventtimer[i], tick);
             break;
@@ -4806,8 +4761,7 @@ int pc_cleareventtimer(struct map_session_data *sd)
  * アイテムを装備する
  *------------------------------------------
  */
-static int
-pc_signal_advanced_equipment_change(struct map_session_data *sd, int n)
+static int pc_signal_advanced_equipment_change(struct map_session_data *sd, int n)
 {
     if (sd->status.inventory[n].equip & 0x0040)
         clif_changelook(&sd->bl, LOOK_SHOES, 0);
@@ -5148,7 +5102,7 @@ static void pc_calc_pvprank_sub(struct block_list *bl, va_list ap)
     struct map_session_data *sd1, *sd2 = NULL;
 
     nullpo_retv(bl);
-    nullpo_retv(sd1 = (struct map_session_data *) bl);
+    nullpo_retv(sd1 = reinterpret_cast<struct map_session_data *>(bl));
     nullpo_retv(sd2 = va_arg(ap, struct map_session_data *));
 
     if (sd1->pvp_point > sd2->pvp_point)
@@ -5472,8 +5426,7 @@ static int pc_natural_heal_sp(struct map_session_data *sd)
     return 0;
 }
 
-static int
-pc_quickregenerate_effect(struct quick_regeneration *quick_regen,
+static int pc_quickregenerate_effect(struct quick_regeneration *quick_regen,
                            int heal_speed)
 {
     if (!(quick_regen->tickdelay--))
@@ -5631,7 +5584,7 @@ int pc_read_gm_account(int fd)
     for (i = 4; i < RFIFOW(fd, 2); i = i + 5)
     {
         gm_account[GM_num].account_id = RFIFOL(fd, i);
-        gm_account[GM_num].level = (int) RFIFOB(fd, i + 4);
+        gm_account[GM_num].level = RFIFOB(fd, i + 4);
         //printf("GM account: %d -> level %d\n", gm_account[GM_num].account_id, gm_account[GM_num].level);
         GM_num++;
     }
@@ -5935,7 +5888,7 @@ static void pc_statpointdb(void)
     end = ftell(stp);
     rewind(stp);
 
-    buf_stat = (char *) malloc(end + 1);
+    CREATE(buf_stat, char, end + 1);
     l = fread(buf_stat, 1, end, stp);
     fclose_(stp);
     printf("read db/statpoint.txt done (size=%d)\n", l);

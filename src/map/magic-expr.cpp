@@ -1,6 +1,7 @@
 #include "magic-expr.hpp"
 
 #include <math.h>
+#include <climits>
 
 #include "magic-expr-eval.hpp"
 #include "itemdb.hpp"
@@ -38,7 +39,8 @@ static void free_area(area_t * area)
 
 static area_t *dup_area(area_t * area)
 {
-    area_t *retval = (area_t *)malloc(sizeof(area_t));
+    area_t *retval;
+    CREATE(retval, area_t, 1);
     *retval = *area;
 
     switch (area->ty)
@@ -92,16 +94,14 @@ static const char *show_entity(entity_t * entity)
     switch (entity->type)
     {
         case BL_PC:
-            return ((struct map_session_data *) entity)->status.name;
+            return reinterpret_cast<struct map_session_data *>(entity)->status.name;
         case BL_NPC:
-            return ((struct npc_data *) entity)->name;
+            return reinterpret_cast<struct npc_data *>(entity)->name;
         case BL_MOB:
-            return ((struct mob_data *) entity)->name;
+            return reinterpret_cast<struct mob_data *>(entity)->name;
         case BL_ITEM:
-            /* Sorry about this one... */
-            return ((struct item_data
-                     *) (&((struct flooritem_data *) entity)->
-                         item_data))->name;
+            /// You should have seen this *before*
+            return itemdb_search(reinterpret_cast<struct flooritem_data *>(entity)->item_data.nameid)->name;
         case BL_SPELL:
             return "%invocation(ERROR:this-should-not-be-an-entity)";
         default:
@@ -124,7 +124,7 @@ static void stringify(val_t * v, int within_op)
             break;
 
         case TY_INT:
-            buf = (char *)malloc(32);
+            CREATE(buf, char, 32);
             sprintf(buf, "%i", v->v.v_int);
             break;
 
@@ -140,7 +140,7 @@ static void stringify(val_t * v, int within_op)
             break;
 
         case TY_LOCATION:
-            buf = (char *) malloc(128);
+            CREATE(buf, char, 128);
             sprintf(buf, "<\"%s\", %d, %d>", maps[v->v.v_location.m].name,
                      v->v.v_location.x, v->v.v_location.y);
             break;
@@ -157,7 +157,7 @@ static void stringify(val_t * v, int within_op)
         case TY_INVOCATION:
         {
             invocation_t *invocation = within_op
-                ? v->v.v_invocation : (invocation_t *) map_id2bl(v->v.v_int);
+                ? v->v.v_invocation : reinterpret_cast<invocation_t *>(map_id2bl(v->v.v_int));
             buf = strdup(invocation->spell->name);
         }
             break;
@@ -265,8 +265,7 @@ static int fun_add(env_t *, int, val_t *result, val_t *args)
         stringify(&args[0], 1);
         stringify(&args[1], 1);
         /* Yes, we could speed this up. */
-        RESULTSTR =
-            (char *) malloc(1 + strlen(ARGSTR(0)) + strlen(ARGSTR(1)));
+        CREATE(RESULTSTR, char, 1 + strlen(ARGSTR(0)) + strlen(ARGSTR(1)));
         strcpy(RESULTSTR, ARGSTR(0));
         strcat(RESULTSTR, ARGSTR(1));
         result->ty = TY_STRING;
@@ -433,8 +432,7 @@ static int fun_min(env_t *, int, val_t *result, val_t *args)
     return 0;
 }
 
-static int
-fun_if_then_else(env_t *, int, val_t *result, val_t *args)
+static int fun_if_then_else(env_t *, int, val_t *result, val_t *args)
 {
     if (ARGINT(0))
         magic_copy_var(result, &args[1]);
@@ -443,8 +441,7 @@ fun_if_then_else(env_t *, int, val_t *result, val_t *args)
     return 0;
 }
 
-void
-magic_area_rect(int *m, int *x, int *y, int *width, int *height,
+void magic_area_rect(int *m, int *x, int *y, int *width, int *height,
                  area_t * area)
 {
     switch (area->ty)
@@ -562,8 +559,7 @@ static int fun_skill(env_t *, int, val_t *result, val_t *args)
     return 0;
 }
 
-static int
-fun_has_shroud(env_t *, int, val_t *result, val_t *args)
+static int fun_has_shroud(env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = (ETY(0) == BL_PC && ARGPC(0)->state.shroud_active);
     return 0;
@@ -572,7 +568,7 @@ fun_has_shroud(env_t *, int, val_t *result, val_t *args)
 #define BATTLE_GETTER(name) \
 static int fun_get_##name(env_t *, int, val_t *result, val_t *args) \
 { \
-    RESULTINT = (int)battle_get_##name(ARGENTITY(0)); \
+    RESULTINT = static_cast<int>(battle_get_##name(ARGENTITY(0))); \
     return 0; \
 }
 
@@ -602,8 +598,7 @@ static int fun_get_##name(env_t *, int, val_t *result, val_t *args) \
 MMO_GETTER(sp);
 MMO_GETTER(max_sp);
 
-static int
-fun_name_of(env_t *, int, val_t *result, val_t *args)
+static int fun_name_of(env_t *, int, val_t *result, val_t *args)
 {
     if (TY(0) == TY_ENTITY)
     {
@@ -624,18 +619,16 @@ fun_name_of(env_t *, int, val_t *result, val_t *args)
 }
 
 /* [Freeyorp] I'm putting this one in as name_of seems to have issues with summoned or spawned mobs. */
-static int
-fun_mob_id(env_t *, int, val_t *result, val_t *args)
+static int fun_mob_id(env_t *, int, val_t *result, val_t *args)
 {
     if (ETY(0) != BL_MOB) return 1;
-    RESULTINT = ((struct mob_data *) (ARGENTITY(0)))->mob_class;
+    RESULTINT = ARGMOB(0)->mob_class;
     return 0;
 }
 
 #define COPY_LOCATION(dest, src) (dest).x = (src).x; (dest).y = (src).y; (dest).m = (src).m;
 
-static int
-fun_location(env_t *, int, val_t *result, val_t *args)
+static int fun_location(env_t *, int, val_t *result, val_t *args)
 {
     COPY_LOCATION(RESULTLOCATION, *(ARGENTITY(0)));
     return 0;
@@ -658,8 +651,7 @@ static int fun_random(env_t *, int, val_t *result, val_t *args)
     return 0;
 }
 
-static int
-fun_random_dir(env_t *, int, val_t *result, val_t *args)
+static int fun_random_dir(env_t *, int, val_t *result, val_t *args)
 {
     if (ARGINT(0))
         RESULTDIR = mt_random() & 0x7;
@@ -668,8 +660,7 @@ fun_random_dir(env_t *, int, val_t *result, val_t *args)
     return 0;
 }
 
-static int
-fun_hash_entity(env_t *, int, val_t *result, val_t *args)
+static int fun_hash_entity(env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = ARGENTITY(0)->id;
     return 0;
@@ -703,8 +694,7 @@ int magic_find_item(val_t *args, int idx, struct item *item, int *stackable)
     return 0;
 }
 
-static int
-fun_count_item(env_t *, int, val_t *result, val_t *args)
+static int fun_count_item(env_t *, int, val_t *result, val_t *args)
 {
     character_t *chr = (ETY(0) == BL_PC) ? ARGPC(0) : NULL;
     int stackable;
@@ -719,8 +709,7 @@ fun_count_item(env_t *, int, val_t *result, val_t *args)
     return 0;
 }
 
-static int
-fun_is_equipped(env_t *, int, val_t *result, val_t *args)
+static int fun_is_equipped(env_t *, int, val_t *result, val_t *args)
 {
     character_t *chr = (ETY(0) == BL_PC) ? ARGPC(0) : NULL;
     int stackable;
@@ -746,15 +735,13 @@ fun_is_equipped(env_t *, int, val_t *result, val_t *args)
     return 0;
 }
 
-static int
-fun_is_married(env_t *, int, val_t *result, val_t *args)
+static int fun_is_married(env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = (ETY(0) == BL_PC && ARGPC(0)->status.partner_id);
     return 0;
 }
 
-static int
-fun_is_dead(env_t *, int, val_t *result, val_t *args)
+static int fun_is_dead(env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = (ETY(0) == BL_PC && pc_isdead(ARGPC(0)));
     return 0;
@@ -766,22 +753,18 @@ static int fun_is_pc(env_t *, int, val_t *result, val_t *args)
     return 0;
 }
 
-static int
-fun_partner(env_t *, int, val_t *result, val_t *args)
+static int fun_partner(env_t *, int, val_t *result, val_t *args)
 {
     if (ETY(0) == BL_PC && ARGPC(0)->status.partner_id)
     {
-        RESULTENTITY =
-            (entity_t *)
-            map_nick2sd(map_charid2nick(ARGPC(0)->status.partner_id));
+        RESULTENTITY = &map_nick2sd(map_charid2nick(ARGPC(0)->status.partner_id))->bl;
         return 0;
     }
     else
         return 1;
 }
 
-static int
-fun_awayfrom(env_t *, int, val_t *result, val_t *args)
+static int fun_awayfrom(env_t *, int, val_t *result, val_t *args)
 {
     location_t *loc = &ARGLOCATION(0);
     int dx = heading_x[ARGDIR(1)];
@@ -805,18 +788,17 @@ static int fun_failed(env_t *, int, val_t *result, val_t *args)
 
 static int fun_npc(env_t *, int, val_t *result, val_t *args)
 {
-    RESULTENTITY = (entity_t *) npc_name2id(ARGSTR(0));
+    RESULTENTITY = &npc_name2id(ARGSTR(0))->bl;
     return RESULTENTITY == NULL;
 }
 
 static int fun_pc(env_t *, int, val_t *result, val_t *args)
 {
-    RESULTENTITY = (entity_t *) map_nick2sd(ARGSTR(0));
+    RESULTENTITY = &map_nick2sd(ARGSTR(0))->bl;
     return RESULTENTITY == NULL;
 }
 
-static int
-fun_distance(env_t *, int, val_t *result, val_t *args)
+static int fun_distance(env_t *, int, val_t *result, val_t *args)
 {
     if (ARGLOCATION(0).m != ARGLOCATION(1).m)
         RESULTINT = INT_MAX;
@@ -826,8 +808,7 @@ fun_distance(env_t *, int, val_t *result, val_t *args)
     return 0;
 }
 
-static int
-fun_rdistance(env_t *, int, val_t *result, val_t *args)
+static int fun_rdistance(env_t *, int, val_t *result, val_t *args)
 {
     if (ARGLOCATION(0).m != ARGLOCATION(1).m)
         RESULTINT = INT_MAX;
@@ -859,8 +840,7 @@ static int fun_anchor(env_t *env, int, val_t *result, val_t *args)
     return 0;
 }
 
-static int
-fun_line_of_sight(env_t *, int, val_t *result, val_t *args)
+static int fun_line_of_sight(env_t *, int, val_t *result, val_t *args)
 {
     entity_t e1, e2;
 
@@ -940,15 +920,13 @@ void magic_random_location(location_t * dest, area_t * area)
     }
 }
 
-static int
-fun_pick_location(env_t *, int, val_t *result, val_t *args)
+static int fun_pick_location(env_t *, int, val_t *result, val_t *args)
 {
     magic_random_location(&result->v.v_location, ARGAREA(0));
     return 0;
 }
 
-static int
-fun_read_script_int(env_t *, int, val_t *result, val_t *args)
+static int fun_read_script_int(env_t *, int, val_t *result, val_t *args)
 {
     entity_t *subject_p = ARGENTITY(0);
     char *var_name = ARGSTR(1);
@@ -956,7 +934,7 @@ fun_read_script_int(env_t *, int, val_t *result, val_t *args)
     if (subject_p->type != BL_PC)
         return 1;
 
-    RESULTINT = pc_readglobalreg((character_t *) subject_p, var_name);
+    RESULTINT = pc_readglobalreg(reinterpret_cast<character_t *>(subject_p), var_name);
     return 0;
 }
 
@@ -975,8 +953,7 @@ static int fun_rbox(env_t *, int, val_t *result, val_t *args)
     return 0;
 }
 
-static int
-fun_running_status_update(env_t *, int, val_t *result, val_t *args)
+static int fun_running_status_update(env_t *, int, val_t *result, val_t *args)
 {
     if (ETY(0) != BL_PC && ETY(0) != BL_MOB)
         return 1;
@@ -985,24 +962,19 @@ fun_running_status_update(env_t *, int, val_t *result, val_t *args)
     return 0;
 }
 
-static int
-fun_status_option(env_t *, int, val_t *result, val_t *args)
+static int fun_status_option(env_t *, int, val_t *result, val_t *args)
 {
-    RESULTINT =
-        ((((struct map_session_data *) ARGENTITY(0))->
-          status.option & ARGINT(0)) != 0);
+    RESULTINT = (ARGPC(0)->status.option & ARGINT(1)) != 0;
     return 0;
 }
 
-static int
-fun_element(env_t *, int, val_t *result, val_t *args)
+static int fun_element(env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = battle_get_element(ARGENTITY(0)) % 10;
     return 0;
 }
 
-static int
-fun_element_level(env_t *, int, val_t *result, val_t *args)
+static int fun_element_level(env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = battle_get_element(ARGENTITY(0)) / 10;
     return 0;
@@ -1014,15 +986,13 @@ static int fun_index(env_t *, int, val_t *result, val_t *args)
     return 0;
 }
 
-static int
-fun_is_exterior(env_t *, int, val_t *result, val_t *args)
+static int fun_is_exterior(env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = maps[ARGLOCATION(0).m].name[4] == '1';
     return 0;
 }
 
-static int
-fun_contains_string(env_t *, int, val_t *result, val_t *args)
+static int fun_contains_string(env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = NULL != strstr(ARGSTR(0), ARGSTR(1));
     return 0;
@@ -1059,7 +1029,7 @@ static int fun_substr(env_t *, int, val_t *result, val_t *args)
     if (offset + len > slen)
         len = slen - offset;
 
-    RESULTSTR = (char *) calloc(1, 1 + len);
+    CREATE(RESULTSTR, char, 1 + len);
     memcpy(RESULTSTR, src + offset, len);
 
     return 0;
@@ -1071,8 +1041,7 @@ static int fun_sqrt(env_t *, int, val_t *result, val_t *args)
     return 0;
 }
 
-static int
-fun_map_level(env_t *, int, val_t *result, val_t *args)
+static int fun_map_level(env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = maps[ARGLOCATION(0).m].name[4] - '0';
     return 0;
@@ -1087,8 +1056,7 @@ static int fun_map_nr(env_t *, int, val_t *result, val_t *args)
     return 0;
 }
 
-static int
-fun_dir_towards(env_t *, int, val_t *result, val_t *args)
+static int fun_dir_towards(env_t *, int, val_t *result, val_t *args)
 {
     int dx;
     int dy;
@@ -1153,8 +1121,7 @@ fun_dir_towards(env_t *, int, val_t *result, val_t *args)
     return 0;
 }
 
-static int
-fun_extract_healer_xp(env_t *, int, val_t *result, val_t *args)
+static int fun_extract_healer_xp(env_t *, int, val_t *result, val_t *args)
 {
     character_t *sd = (ETY(0) == BL_PC) ? ARGPC(0) : NULL;
 
@@ -1250,7 +1217,8 @@ static int functions_are_sorted = 0;
 
 static int compare_fun(const void *lhs, const void *rhs)
 {
-    return strcmp(((fun_t *) lhs)->name, ((fun_t *) rhs)->name);
+    return strcmp(reinterpret_cast<const fun_t *>(lhs)->name,
+                  reinterpret_cast<const fun_t *>(rhs)->name);
 }
 
 fun_t *magic_get_fun(const char *name, int *idx)
@@ -1272,8 +1240,8 @@ fun_t *magic_get_fun(const char *name, int *idx)
     }
 
     key.name = name;
-    result = (fun_t *) bsearch(&key, functions, functions_nr, sizeof(fun_t),
-                                compare_fun);
+    result = reinterpret_cast<fun_t *>(
+            bsearch(&key, functions, functions_nr, sizeof(fun_t), compare_fun));
 
     if (result && idx)
         *idx = result - functions;
@@ -1312,7 +1280,8 @@ eval_location(env_t * env, location_t * dest, e_location_t * expr)
 
 static area_t *eval_area(env_t * env, e_area_t * expr)
 {
-    area_t *area = (area_t *)malloc(sizeof(area_t));
+    area_t *area;
+    CREATE(area, area_t, 1);
     area->ty = expr->ty;
 
     switch (expr->ty)
@@ -1446,8 +1415,7 @@ static int type_key(char ty_key)
     }
 }
 
-int
-magic_signature_check(const char *opname, const char *funname, const char *signature,
+int magic_signature_check(const char *opname, const char *funname, const char *signature,
                        int args_nr, val_t *args, int line, int column)
 {
     int i;
@@ -1467,7 +1435,7 @@ magic_signature_check(const char *opname, const char *funname, const char *signa
         }
         else if (ty == TY_INVOCATION)
         {
-            arg->v.v_invocation = (invocation_t *) map_id2bl(arg->v.v_int);
+            arg->v.v_invocation = reinterpret_cast<invocation_t *>(map_id2bl(arg->v.v_int));
             if (!arg->v.v_entity)
                 ty = arg->ty = TY_FAIL;
         }
@@ -1602,7 +1570,7 @@ void magic_eval(env_t *env, val_t *dest, expr_t *expr)
 
             if (v.ty == TY_INVOCATION)
             {
-                invocation_t *t = (invocation_t *) map_id2bl(v.v.v_int);
+                invocation_t *t = reinterpret_cast<invocation_t *>(map_id2bl(v.v.v_int));
 
                 if (!t)
                     dest->ty = TY_UNDEF;
@@ -1661,7 +1629,8 @@ char *magic_eval_str(env_t * env, expr_t * expr)
 
 expr_t *magic_new_expr(int ty)
 {
-    expr_t *expr = (expr_t *) malloc(sizeof(expr_t));
+    expr_t *expr;
+    CREATE(expr, expr_t, 1);
     expr->ty = ty;
     return expr;
 }

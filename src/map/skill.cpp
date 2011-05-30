@@ -73,7 +73,7 @@ int skill_castcancel(struct block_list *bl)
 
     if (bl->type == BL_PC)
     {
-        struct map_session_data *sd = (struct map_session_data *) bl;
+        struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(bl);
         unsigned long tick = gettick();
         nullpo_retr(0, sd);
         sd->canact_tick = tick;
@@ -189,7 +189,7 @@ int skill_status_change_end(struct block_list *bl, int type, int tid)
             clif_changeoption(bl);
 
         if (bl->type == BL_PC && calc_flag)
-            pc_calcstatus((struct map_session_data *) bl, 0);  /* ステータス再計算 */
+            pc_calcstatus(reinterpret_cast<struct map_session_data *>(bl), 0);  /* ステータス再計算 */
     }
 
     return 0;
@@ -233,7 +233,7 @@ void skill_status_change_timer(timer_id tid, tick_t tick, custom_id_t id, custom
     nullpo_retv(sc_data = battle_get_sc_data(bl));
 
     if (bl->type == BL_PC)
-        sd = (struct map_session_data *) bl;
+        sd = reinterpret_cast<struct map_session_data *>(bl);
 
     //sc_count=battle_get_sc_count(bl); //使ってない？
 
@@ -268,12 +268,12 @@ void skill_status_change_timer(timer_id tid, tick_t tick, custom_id_t id, custom
                         if (bl->type == BL_PC)
                         {
                             hp = 3 + hp * 3 / 200;
-                            pc_heal((struct map_session_data *) bl, -hp, 0);
+                            pc_heal(sd, -hp, 0);
                         }
                         else if (bl->type == BL_MOB)
                         {
                             struct mob_data *md;
-                            if ((md = ((struct mob_data *) bl)) == NULL)
+                            if ((md = reinterpret_cast<struct mob_data *>(bl)) == NULL)
                                 break;
                             hp = 3 + hp / 200;
                             md->hp -= hp;
@@ -350,7 +350,7 @@ int skill_status_effect(struct block_list *bl, int type, int val1, int val2,
         return 0;
     if (bl->type == BL_PC)
     {
-        sd = (struct map_session_data *) bl;
+        sd = reinterpret_cast<struct map_session_data *>(bl);
     }
     else if (bl->type == BL_MOB)
     {

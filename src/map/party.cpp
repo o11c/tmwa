@@ -39,12 +39,13 @@ void do_init_party(void)
 // 検索
 struct party *party_search(int party_id)
 {
-    return (struct party *)numdb_search(party_db, party_id).p;
+    return reinterpret_cast<struct party *>(numdb_search(party_db, party_id).p);
 }
 
 static void party_searchname_sub(db_key_t, db_val_t data, va_list ap)
 {
-    struct party *p = (struct party *) data.p, **dst;
+    struct party *p = reinterpret_cast<struct party *>(data.p);
+    struct party **dst;
     char *str;
     str = va_arg(ap, char *);
     dst = va_arg(ap, struct party **);
@@ -61,7 +62,7 @@ struct party *party_searchname(char *str)
 }
 
 /* Process a party creation request. */
-int party_create(struct map_session_data *sd, char *name)
+int party_create(struct map_session_data *sd, const char *name)
 {
     char pname[24];
     nullpo_retr(0, sd);
@@ -84,7 +85,7 @@ int party_create(struct map_session_data *sd, char *name)
 }
 
 /* Relay the result of a party creation request. */
-int party_created(int account_id, int fail, int party_id, char *name)
+int party_created(int account_id, int fail, int party_id, const char *name)
 {
     struct map_session_data *sd;
     sd = map_id2sd(account_id);
@@ -97,7 +98,7 @@ int party_created(int account_id, int fail, int party_id, char *name)
         struct party *p;
         sd->status.party_id = party_id;
 
-        if ((p = (struct party *)numdb_search(party_db, party_id).p) != NULL)
+        if ((p = reinterpret_cast<struct party *>(numdb_search(party_db, party_id).p)) != NULL)
         {
             printf("party_created(): ID already exists!\n");
             exit(1);
@@ -106,7 +107,7 @@ int party_created(int account_id, int fail, int party_id, char *name)
         CREATE(p, struct party, 1);
         p->party_id = party_id;
         memcpy(p->name, name, 24);
-        numdb_insert(party_db, party_id, (void *)p);
+        numdb_insert(party_db, party_id, static_cast<void *>(p));
 
         /* The party was created successfully. */
         clif_party_created(sd, 0);
@@ -134,7 +135,7 @@ static int party_check_member(const struct party *p)
 
     for (i = 0; i < fd_max; i++)
     {
-        if (session[i] && (sd = (struct map_session_data *)session[i]->session_data) && sd->state.auth)
+        if (session[i] && (sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data)) && sd->state.auth)
         {
             if (sd->status.party_id == p->party_id)
             {
@@ -168,7 +169,7 @@ int party_recv_noinfo(int party_id)
     struct map_session_data *sd;
     for (i = 0; i < fd_max; i++)
     {
-        if (session[i] && (sd = (struct map_session_data *)session[i]->session_data) && sd->state.auth)
+        if (session[i] && (sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data)) && sd->state.auth)
         {
             if (sd->status.party_id == party_id)
                 sd->status.party_id = 0;
@@ -185,10 +186,10 @@ int party_recv_info(const struct party *sp)
 
     nullpo_retr(0, sp);
 
-    if ((p = (struct party *)numdb_search(party_db, (numdb_key_t)sp->party_id).p) == NULL)
+    if ((p = reinterpret_cast<struct party *>(numdb_search(party_db, static_cast<numdb_key_t>(sp->party_id)).p)) == NULL)
     {
         CREATE(p, struct party, 1);
-        numdb_insert(party_db, (numdb_key_t)sp->party_id, (void *)p);
+        numdb_insert(party_db, static_cast<numdb_key_t>(sp->party_id), static_cast<void *>(p));
 
         // 最初のロードなのでユーザーのチェックを行う
         party_check_member(sp);
@@ -366,8 +367,7 @@ int party_member_added(int party_id, int account_id, int flag)
 }
 
 // パーティ除名要求
-int party_removemember(struct map_session_data *sd, int account_id,
-                        char *)
+int party_removemember(struct map_session_data *sd, int account_id, const char *)
 {
     struct party *p;
     int i;
@@ -418,7 +418,7 @@ int party_leave(struct map_session_data *sd)
 }
 
 // パーティメンバが脱退した
-int party_member_left(int party_id, int account_id, char *name)
+int party_member_left(int party_id, int account_id, const char *name)
 {
     struct map_session_data *sd = map_id2sd(account_id);
     struct party *p = party_search(party_id);
@@ -497,8 +497,7 @@ int party_optionchanged(int party_id, int account_id, int exp, int item,
 }
 
 // パーティメンバの移動通知
-int party_recv_movemap(int party_id, int account_id, char *map, int online,
-                        int lv)
+int party_recv_movemap(int party_id, int account_id, const char *map, int online, int lv)
 {
     struct party *p;
     int i;
@@ -605,7 +604,7 @@ int party_send_message(struct map_session_data *sd, char *mes, int len)
 }
 
 // パーティメッセージ受信
-int party_recv_message(int party_id, int account_id, char *mes, int len)
+int party_recv_message(int party_id, int account_id, const char *mes, int len)
 {
     struct party *p;
     if ((p = party_search(party_id)) == NULL)
@@ -627,7 +626,7 @@ int party_check_conflict(struct map_session_data *sd)
 // 位置やＨＰ通知用
 static void party_send_xyhp_timer_sub(db_key_t, db_val_t data, va_list)
 {
-    struct party *p = (struct party *) data.p;
+    struct party *p = reinterpret_cast<struct party *>(data.p);
     int i;
 
     nullpo_retv(p);
@@ -689,7 +688,7 @@ void party_send_hp_check(struct block_list *bl, va_list ap)
     struct map_session_data *sd;
 
     nullpo_retv(bl);
-    nullpo_retv(sd = (struct map_session_data *) bl);
+    nullpo_retv(sd = reinterpret_cast<struct map_session_data *>(bl));
 
     party_id = va_arg(ap, int);
     flag = va_arg(ap, int *);

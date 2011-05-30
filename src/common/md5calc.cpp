@@ -198,7 +198,7 @@ MD5_state MD5_from_string(const char* msg, const size_t msglen)
     if (64 - rem > 8)
     {
         for (int i=0; i<8; i++)
-            buf[0x38+i] = ((uint64_t)msglen*8) >> (i*8);
+            buf[0x38+i] = (static_cast<uint64_t>(msglen)*8) >> (i*8);
     }
     for (int i=0; i<0x10; i++)
         X[i] = buf[4*i+0] | buf[4*i+1]<<8 | buf[4*i+2]<<16 | buf[4*i+3]<<24;
@@ -207,7 +207,7 @@ MD5_state MD5_from_string(const char* msg, const size_t msglen)
     {
         memset(buf,'\0', 0x38);
         for (int i=0; i<8; i++)
-            buf[0x38+i] = ((uint64_t)msglen*8) >> (i*8);
+            buf[0x38+i] = (static_cast<uint64_t>(msglen)*8) >> (i*8);
         for (int i=0; i<0x10; i++)
             X[i] = buf[4*i+0] | buf[4*i+1]<<8 | buf[4*i+2]<<16 | buf[4*i+3]<<24;
         MD5_do_block(&state, block);
@@ -324,8 +324,7 @@ in_addr_t MD5_ip(const char *secret, in_addr_t ip)
     } conv;
 
     // MD5sum a secret + the IP address
-    memset(&ipbuf, 0, sizeof(ipbuf));
-    snprintf(ipbuf, sizeof(ipbuf), "%lu%s", (unsigned long)ip, secret);
+    snprintf(ipbuf, sizeof(ipbuf), "%lu%s", static_cast<unsigned long>(ip), secret);
     /// TODO stop it from being a cstring
     MD5_to_bin(MD5_from_cstring(ipbuf), obuf);
 

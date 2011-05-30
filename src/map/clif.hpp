@@ -34,8 +34,8 @@ int clif_spawnmob(struct mob_data *); // area
 int clif_walkok(struct map_session_data *);   // self
 int clif_movechar(struct map_session_data *); // area
 int clif_movemob(struct mob_data *);  //area
-int clif_changemap(struct map_session_data *, char *, int, int);  //self
-int clif_changemapserver(struct map_session_data *, char *, int, int, int, int);  //self
+int clif_changemap(struct map_session_data *, const char *, int, int);  //self
+int clif_changemapserver(struct map_session_data *, const char *, int, int, int, int);  //self
 int clif_fixpos(struct block_list *); // area
 int clif_fixmobpos(struct mob_data *md);
 int clif_fixpcpos(struct map_session_data *sd);
@@ -123,8 +123,8 @@ int clif_party_inviteack(struct map_session_data *sd, char *nick, int flag);
 int clif_party_option(struct party *p, struct map_session_data *sd,
                        int flag);
 int clif_party_left(struct party *p, struct map_session_data *sd,
-                       int account_id, char *name, int flag);
-int clif_party_message(struct party *p, int account_id, char *mes, int len);
+                    int account_id, const char *name, int flag);
+int clif_party_message(struct party *p, int account_id, const char *mes, int len);
 int clif_party_move(struct party *p, struct map_session_data *sd,
                      int online);
 int clif_party_xy(struct party *p, struct map_session_data *sd);
@@ -142,7 +142,7 @@ int clif_message(struct block_list *bl, const char *msg);   // messages (from mo
 int clif_GM_kick(struct map_session_data *sd, struct map_session_data *tsd,
                   int type);
 
-int clif_foreachclient(void(*)(struct map_session_data *, va_list), ...);
+int clif_foreachclient(void (*)(struct map_session_data *, va_list), ...);
 
 int do_init_clif (void);
 

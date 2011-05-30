@@ -82,12 +82,12 @@ static bool storage_fromstr(const char *str, struct storage *p)
 /// Get the storage of an account, creating if it does not exist
 struct storage *account2storage(account_t account_id)
 {
-    struct storage *s = (struct storage *) numdb_search(storage_db, (numdb_key_t)account_id).p;
+    struct storage *s = reinterpret_cast<struct storage *>(numdb_search(storage_db, static_cast<numdb_key_t>(account_id)).p);
     if (!s)
     {
         CREATE(s, struct storage, 1);
         s->account_id = account_id;
-        numdb_insert(storage_db, (numdb_key_t)s->account_id, (void *)s);
+        numdb_insert(storage_db, static_cast<numdb_key_t>(s->account_id), static_cast<void *>(s));
     }
     return s;
 }
@@ -113,7 +113,7 @@ bool inter_storage_init(void)
         CREATE(s, struct storage, 1);
         if (storage_fromstr(line, s) == 0)
         {
-            numdb_insert(storage_db, (numdb_key_t)s->account_id, (void *)s);
+            numdb_insert(storage_db, static_cast<numdb_key_t>(s->account_id), static_cast<void *>(s));
         }
         else
         {
@@ -139,7 +139,7 @@ void inter_storage_final(void)
 static void inter_storage_save_sub(db_key_t, db_val_t data, va_list ap)
 {
     FILE *fp = va_arg(ap, FILE *);
-    storage_tofile(fp, (struct storage *) data.p);
+    storage_tofile(fp, reinterpret_cast<struct storage *>(data.p));
 }
 
 /// Save everybody's storage
@@ -163,10 +163,10 @@ bool inter_storage_save(void)
 /// Delete somebody's storage
 void inter_storage_delete(account_t account_id)
 {
-    struct storage *s = (struct storage *) numdb_search(storage_db, (numdb_key_t)account_id).p;
+    struct storage *s = reinterpret_cast<struct storage *>(numdb_search(storage_db, static_cast<numdb_key_t>(account_id)).p);
     if (s)
     {
-        numdb_erase(storage_db, (numdb_key_t)account_id);
+        numdb_erase(storage_db, static_cast<numdb_key_t>(account_id));
         free(s);
     }
 }
@@ -181,7 +181,7 @@ static void mapif_load_storage(int fd)
     WFIFOW(fd, 0) = 0x3810;
     WFIFOW(fd, 2) = sizeof(struct storage) + 8;
     WFIFOL(fd, 4) = account_id;
-    *(struct storage *)WFIFOP(fd, 8) = *s;
+    *reinterpret_cast<struct storage *>(WFIFOP(fd, 8)) = *s;
     WFIFOSET(fd, WFIFOW(fd, 2));
 }
 
@@ -199,7 +199,7 @@ static void mapif_parse_save_storage(int fd)
     }
     account_t account_id = RFIFOL(fd, 4);
     struct storage *s = account2storage(account_id);
-    *s = *(struct storage*) RFIFOP(fd, 8);
+    *s = *reinterpret_cast<const struct storage*>(RFIFOP(fd, 8));
 
     WFIFOW(fd, 0) = 0x3811;
     WFIFOL(fd, 2) = account_id;

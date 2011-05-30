@@ -3,17 +3,6 @@
 #include "magic-interpreter.hpp"
 #include "magic-interpreter-aux.hpp"
 
-#ifndef MAX
-#  define MAX(x,y) (((x)>(y)) ? (x) : (y))
-#endif
-#ifndef MIN
-#  define MIN(x,y) (((x)<(y)) ? (x) : (y))
-#endif
-
-#ifndef INT_MAX
-#  define INT_MAX (1<<30)       // It's more than that, but this is quite sufficient for our purposes.
-#endif
-
 /*
  * Argument types:
  *  i : int
@@ -32,14 +21,14 @@ typedef struct fun
     const char *name;
     const char *signature;
     char ret_ty;
-    int(*fun)(env_t *env, int args_nr, val_t *result, val_t* args);
+    int (*fun)(env_t *env, int args_nr, val_t *result, val_t* args);
 } fun_t;
 
 typedef struct op
 {
     const char *name;
     const char *signature;
-    int(*op)(env_t *env, int args_nr, val_t *args);
+    int (*op)(env_t *env, int args_nr, val_t *args);
 } op_t;
 
 /**

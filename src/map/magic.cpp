@@ -52,15 +52,14 @@ static char *magic_tokenise(char *src, char **parameter)
     return retval;
 }
 
-int magic_message(character_t * caster, uint8_t *spell_, size_t)
+int magic_message(character_t * caster, char *spell_, size_t)
 {
     if (pc_isdead(caster))
         return 0;
 
     int power = caster->matk1;
-    char *invocation_base = (char *)spell_ + 8;
-    char *source_invocation =
-        1 + invocation_base + strlen(caster->status.name);
+    char *invocation_base = spell_;
+    char *source_invocation = 1 + invocation_base + strlen(caster->status.name);
     spell_t *spell;
     char *parameter;
     char *spell_invocation;

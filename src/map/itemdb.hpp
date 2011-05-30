@@ -30,8 +30,6 @@ struct item_data
     struct
     {
         unsigned available:1;
-        unsigned value_notdc:1;
-        unsigned value_notoc:1;
         unsigned no_equip:3;
         unsigned no_drop:1;
         unsigned no_use:1;
@@ -65,8 +63,6 @@ int itemdb_searchrandomid(int flags);
 
 #define itemdb_value_buy(n) itemdb_search(n)->value_buy
 #define itemdb_value_sell(n) itemdb_search(n)->value_sell
-#define itemdb_value_notdc(n) itemdb_search(n)->flag.value_notdc
-#define itemdb_value_notoc(n) itemdb_search(n)->flag.value_notoc
 
 int itemdb_isequip(int);
 int itemdb_isequip2(struct item_data *);

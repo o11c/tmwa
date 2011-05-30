@@ -76,7 +76,7 @@ pid_t pid_login, pid_map, pid_char;
 static const char* make_path(const char* base, const char* path) {
     size_t base_len = strlen(base);
     size_t path_len = strlen(path);
-    char* out = (char *)malloc(base_len + 1 + path_len + 1);
+    char* out = static_cast<char *>(malloc(base_len + 1 + path_len + 1));
     memcpy(out, base, base_len);
     out[base_len] = '/';
     memcpy(out + base_len + 1, path, path_len);
@@ -146,7 +146,8 @@ static pid_t start_process(const char *exec) {
         return 0;
     }
     if (pid == 0) {
-        execv(exec, (char**)args);
+        // this is a bug in the standard
+        execv(exec, const_cast<char**>(args));
         perror("Failed to exec");
         kill(getppid(), SIGABRT);
         exit(1);
@@ -204,15 +205,15 @@ int main(int argc, char *argv[]) {
 
         if (!pid_login) {
             pid_login = start_process(login_server);
-            fprintf(stderr, "[%s] forked login server: %lu\n", timestamp, (unsigned long)pid_login);
+            fprintf(stderr, "[%s] forked login server: %lu\n", timestamp, static_cast<unsigned long>(pid_login));
         }
         if (!pid_char) {
             pid_char = start_process(char_server);
-            fprintf(stderr, "[%s] forked char server: %lu\n", timestamp, (unsigned long)pid_char);
+            fprintf(stderr, "[%s] forked char server: %lu\n", timestamp, static_cast<unsigned long>(pid_char));
         }
         if (!pid_map) {
             pid_map = start_process(map_server);
-            fprintf(stderr, "[%s] forked map server: %lu\n", timestamp, (unsigned long)pid_map);
+            fprintf(stderr, "[%s] forked map server: %lu\n", timestamp, static_cast<unsigned long>(pid_map));
         }
         pid_t dead = wait(NULL);
         if (dead < 0) perror("Failed to wait for child"), exit(1);

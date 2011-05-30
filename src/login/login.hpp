@@ -48,8 +48,8 @@ static inline char sex_to_char(enum gender sex)
 
 struct mmo_account
 {
-    char *userid;
-    char *passwd;
+    char userid[24];
+    char passwd[24];
 
     account_t account_id;
     /// magic cookies used to authenticate?

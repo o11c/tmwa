@@ -202,7 +202,7 @@ interval_t do_timer(tick_t tick)
     // this says to wait 1 sec if all timers get popped
     interval_t nextmin = 1000;
 
-    while ((i = top_timer_heap()) != (timer_id)-1)
+    while ((i = top_timer_heap()) != -1)
     {
         // while the heap is not empty and
         if (DIFF_TICK(timer_data[i].tick, tick) > 0)

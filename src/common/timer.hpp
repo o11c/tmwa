@@ -9,14 +9,19 @@ enum TIMER_TYPE
     TIMER_ONCE_AUTODEL,
     TIMER_INTERVAL,
 };
-/// This is needed to produce a signed result when 2 ticks are subtracted
-# define DIFF_TICK(a,b) ((int32_t)((a)-(b)))
 
 // TODO replace with signed 64-bit to make code more clear and protect from the future
 typedef uint32_t tick_t;
 typedef uint32_t interval_t;
 typedef uint32_t timer_id;
 typedef int32_t custom_id_t;
+
+/// This is needed to produce a signed result when 2 ticks are subtracted
+inline int32_t DIFF_TICK(tick_t a, tick_t b)
+{
+    return static_cast<int32_t>(a-b);
+}
+
 struct custom_data_t
 {
     union

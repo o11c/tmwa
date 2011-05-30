@@ -35,3 +35,16 @@
 -Werror=unused-but-set-variable
 
 -Wno-missing-field-initializers
+
+
+-Wabi
+-Wctor-dtor-privacy
+-Wnon-virtual-dtor
+-Wreorder
+-Weffc++
+-Wstrict-null-sentinel
+-Wno-non-template-friend
+-Wold-style-cast
+-Woverloaded-virtual
+-Wno-pmf-conversions
+-Wsign-promo

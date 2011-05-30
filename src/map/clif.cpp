@@ -4457,9 +4457,10 @@ static void clif_parse_EquipItem(int fd, struct map_session_data *sd)
     //ペット用装備であるかないか
     if (sd->inventory_data[idx])
     {
+        uint16_t what = RFIFOW(fd, 4);
         if (sd->inventory_data[idx]->type == 10)
-            RFIFOW(fd, 4) = 0x8000;    // 矢を無理やり装備できるように（−−；
-        pc_equipitem(sd, idx, RFIFOW(fd, 4));
+            what = 0x8000;    // 矢を無理やり装備できるように（−−；
+        pc_equipitem(sd, idx, what);
     }
 }
 

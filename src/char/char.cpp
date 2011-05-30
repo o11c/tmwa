@@ -608,7 +608,7 @@ struct new_char_dat
 };
 
 /// Create a new character, from
-static struct mmo_charstatus *make_new_char(int fd, uint8_t *raw_dat)
+static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
 {
     struct new_char_dat dat = *(struct new_char_dat *) raw_dat;
     struct char_session_data *sd = (struct char_session_data *)session[fd]->session_data;
@@ -1387,7 +1387,7 @@ static void parse_tologin(int fd)
             if (RFIFOREST(fd) < 10)
                 return;
         {
-            RFIFOW(fd, 1) = 0x2b0b;
+            session[fd]->rfifo_change_packet(0x2b0b);
             mapif_sendall(RFIFOP(fd, 0), 10);
         }
             RFIFOSKIP(fd, 10);
@@ -1422,7 +1422,7 @@ static void parse_tologin(int fd)
             // disconnect player if online on char-server
             disconnect_player(acc);
         reply_x2323_x2b0d:
-            RFIFOW(fd, 0) = 0x2b0d;
+            session[fd]->rfifo_change_packet(0x2b0d);
             mapif_sendall(RFIFOP(fd, 0), 7);
         }
             RFIFOSKIP(fd, 7);
@@ -1507,7 +1507,7 @@ static void parse_tologin(int fd)
             }
             set_account_reg2(acc, j, reg);
             // ?? need to send a ban if something about a dirty login ?
-            RFIFOW(fd, 0) = 0x2b11;
+            session[fd]->rfifo_change_packet(0x2b11);
             mapif_sendall(RFIFOP(fd, 0), RFIFOW(fd, 2));
             RFIFOSKIP(fd, RFIFOW(fd, 2));
         }
@@ -1542,7 +1542,7 @@ static void parse_tologin(int fd)
         {
             int source_id = RFIFOL(fd, 2);
             int dest_id = RFIFOL(fd, 6);
-            RFIFOW(fd, 0) = 0x2afa;
+            session[fd]->rfifo_change_packet(0x2afa);
             mapif_sendall(RFIFOP(fd, 0), 10);
             for (int i = 0; i < char_num; i++)
             {
@@ -1621,7 +1621,7 @@ static void parse_tologin(int fd)
             // Deletion of the storage
             inter_storage_delete(acc);
             // send to all map-servers to disconnect the player
-            RFIFOW(fd, 0) = 0x2b13;
+            session[fd]->rfifo_change_packet(0x2b13);
             mapif_sendall(WFIFOP(fd, 0), 6);
             // disconnect player if online on char-server
             disconnect_player(RFIFOL(fd, 2));
@@ -1636,7 +1636,7 @@ static void parse_tologin(int fd)
                 return;
             // send to all map-servers to disconnect the player
         {
-            RFIFOW(fd, 0) = 0x2b14;
+            session[fd]->rfifo_change_packet(0x2b14);
             mapif_sendall(RFIFOP(fd, 0), 11);
             // disconnect player if online on char-server
             disconnect_player(RFIFOL(fd, 2));
@@ -1664,7 +1664,7 @@ static void parse_tologin(int fd)
             /// update online players files (perhaps some online players change of GM level)
             create_online_files();
             // send new gm acccounts level to map-servers
-            RFIFOW(fd, 0) = 0x2b15;
+            session[fd]->rfifo_change_packet(0x2b15);
             mapif_sendall(RFIFOP(fd, 0), RFIFOW(fd, 2));
         }
             RFIFOSKIP(fd, RFIFOW(fd, 2));

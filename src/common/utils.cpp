@@ -16,7 +16,7 @@
 
 static const char hex[] = "0123456789abcdef";
 
-void hexdump(FILE *fp, uint8_t *data, size_t len)
+void hexdump(FILE *fp, const uint8_t *data, size_t len)
 {
     if (len > 0x10000)
         len = 0x10000;

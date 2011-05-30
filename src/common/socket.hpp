@@ -11,13 +11,16 @@
 
 # include <time.h>
 
+// TODO replace these with inline functions since we're not superstitious
+// maybe members of socket_data?
 /// Check how much can be read
 # define RFIFOREST(fd) (session[fd]->rdata_size-session[fd]->rdata_pos)
 /// Read from the queue
-# define RFIFOP(fd,pos) (session[fd]->rdata+session[fd]->rdata_pos+(pos))
-# define RFIFOB(fd,pos) (*(uint8_t*)(RFIFOP(fd, pos)))
-# define RFIFOW(fd,pos) (*(uint16_t*)(RFIFOP(fd, pos)))
-# define RFIFOL(fd,pos) (*(uint32_t*)(RFIFOP(fd, pos)))
+# define RFIFOP(fd,pos) (((const uint8_t *)(session[fd]->rdata))+session[fd]->rdata_pos+(pos))
+# define RFIFOB(fd,pos) (*(const uint8_t*)(RFIFOP(fd, pos)))
+# define RFIFOW(fd,pos) (*(const uint16_t*)(RFIFOP(fd, pos)))
+# define RFIFOL(fd,pos) (*(const uint32_t*)(RFIFOP(fd, pos)))
+
 /// Done reading
 void RFIFOSKIP(int fd, size_t len);
 /// Internal - clean up by discarding handled bytes
@@ -30,10 +33,10 @@ session[fd]->rdata_pos=0)
 # define RFIFOSPACE(fd) (session[fd]->max_rdata-session[fd]->rdata_size)
 
 /// Read from an arbitrary buffer
-# define RBUFP(p,pos) (((uint8_t*)(p))+(pos))
-# define RBUFB(p,pos) (*(uint8_t*)RBUFP((p),(pos)))
-# define RBUFW(p,pos) (*(uint16_t*)RBUFP((p),(pos)))
-# define RBUFL(p,pos) (*(uint32_t*)RBUFP((p),(pos)))
+# define RBUFP(p,pos) (((const uint8_t*)(p))+(pos))
+# define RBUFB(p,pos) (*(const uint8_t*)RBUFP((p),(pos)))
+# define RBUFW(p,pos) (*(const uint16_t*)RBUFP((p),(pos)))
+# define RBUFL(p,pos) (*(const uint32_t*)RBUFP((p),(pos)))
 
 
 
@@ -90,6 +93,12 @@ struct socket_data
     /// Server-specific data type
     // TODO make this into a type-safe-but-generic struct session_data *
     void *session_data;
+
+    // used when forwarding a packet with different ID
+    void rfifo_change_packet(uint16_t newpacket)
+    {
+        *(uint16_t *)(rdata + rdata_pos) = newpacket;
+    }
 };
 
 // save file descriptors for important stuff

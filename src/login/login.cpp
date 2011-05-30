@@ -645,7 +645,7 @@ static void check_auth_sync(timer_id, tick_t, custom_id_t, custom_data_t)
 
 /// Send a packet to all char servers, excluding sfd
 // often called with sfd == -1 to not exclude anything
-static void charif_sendallwos(int sfd, unsigned char *buf, unsigned int len)
+static void charif_sendallwos(int sfd, const uint8_t *buf, unsigned int len)
 {
     for (int i = 0; i < MAX_SERVERS; i++)
     {
@@ -1245,7 +1245,7 @@ static void x2728(int fd, int id)
     }
     auth->account_reg2_num = j;
     // Sending information towards the other char-servers.
-    RFIFOW(fd, 0) = 0x2729;
+    session[fd]->rfifo_change_packet(0x2729);
     charif_sendallwos(fd, RFIFOP(fd, 0), RFIFOW(fd, 2));
 }
 
@@ -2205,7 +2205,7 @@ static void x794e(int fd)
     login_log("'ladmin': Relay broadcast %s (ip: %s)\n",
                message, ip_of(fd));
     // forward the same message to all char-servers (no answer)
-    RFIFOW(fd, 0) = 0x2726;
+    session[fd]->rfifo_change_packet(0x2726);
     charif_sendallwos(-1, RFIFOP(fd, 0), 8 + RFIFOL(fd, 4));
 }
 

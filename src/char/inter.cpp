@@ -348,11 +348,10 @@ static void mapif_whis_end(struct WhisperData *wd, uint8_t flag)
 }
 
 /// Send all variables
-// NOTE: src is just WFIFOP(fd, 0)
-static void mapif_account_reg(int fd, uint8_t *src)
+static void mapif_account_reg(int fd)
 {
-    WBUFW(src, 0) = 0x3804;
-    mapif_sendallwos(fd, src, WBUFW(src, 2));
+    session[fd]->rfifo_change_packet(0x3804);
+    mapif_sendallwos(fd, RFIFOP(fd, 0), RFIFOW(fd, 2));
 }
 
 /// Account variable reply
@@ -514,7 +513,7 @@ static void mapif_parse_WhisReply(int fd)
 // TODO handle immediately on the originating map server and use wos
 static void mapif_parse_WhisToGM(int fd)
 {
-    RFIFOW(fd, 0) = 0x3803;
+    session[fd]->rfifo_change_packet(0x3803);
     mapif_sendall(RFIFOP(fd, 0), RFIFOW(fd, 2));
 }
 
@@ -543,7 +542,7 @@ static void mapif_parse_AccReg(int fd)
     reg->reg_num = j;
 
     /// let the other map servers know of the change
-    mapif_account_reg(fd, RFIFOP(fd, 0));
+    mapif_account_reg(fd);
 }
 
 /// Account variable reply

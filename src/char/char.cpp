@@ -45,7 +45,7 @@ int char_fd = -1;
 char userid[24];
 char passwd[24];
 char server_name[20];
-char wisp_server_name[24] = "Server";
+char whisper_server_name[24] = "Server";
 char login_ip_str[16];
 in_addr_t login_ip;
 in_port_t login_port = 6900;
@@ -321,12 +321,12 @@ static int mmo_char_fromstr(char *str, struct mmo_charstatus *p)
         }
     }
 
-    if (strcasecmp(wisp_server_name, p->name) == 0)
+    if (strcasecmp(whisper_server_name, p->name) == 0)
     {
-        char_log("mmo_auth_init: ******WARNING: character name has wisp server name:\n"
-                  "Character name '%s' = wisp server name '%s'.\n",
-                  p->name, wisp_server_name);
-        char_log("               Character read. Suggestion: change the wisp server name.\n");
+        char_log("mmo_auth_init: ******WARNING: character name has whisper server name:\n"
+                  "Character name '%s' = whisper server name '%s'.\n",
+                  p->name, whisper_server_name);
+        char_log("               Character read. Suggestion: change the whisper server name.\n");
     }
 
     str += next;
@@ -711,10 +711,10 @@ static struct mmo_charstatus *make_new_char(int fd, uint8_t *raw_dat)
         }
     }
 
-    if (strcmp(wisp_server_name, name) == 0)
+    if (strcmp(whisper_server_name, name) == 0)
     {
         char_log("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu.\n",
-                  "name used is wisp name for server",
+                  "name used is whisper name for server",
                   fd, sd->account_id, dat.slot, name,
                   dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
                   dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
@@ -1768,7 +1768,7 @@ static void parse_frommap(int fd)
                           id, j, ip, server[id].port, id);
                 WFIFOW(fd, 0) = 0x2afb;
                 WFIFOB(fd, 2) = 0;
-                STRZCPY2((char *)WFIFOP(fd, 3), wisp_server_name);
+                STRZCPY2((char *)WFIFOP(fd, 3), whisper_server_name);
                 WFIFOSET(fd, 27);
                 if (j == 0)
                 {
@@ -2840,10 +2840,10 @@ static void char_config_read(const char *cfgName)
             printf("%s server has been intialized\n", w2);
             continue;
         }
-        if (strcasecmp(w1, "wisp_server_name") == 0)
+        if (strcasecmp(w1, "whisper_server_name") == 0)
         {
             // if (strlen (w2) >= 4)
-            STRZCPY(wisp_server_name, w2);
+            STRZCPY(whisper_server_name, w2);
             continue;
         }
         if (strcasecmp(w1, "login_ip") == 0)

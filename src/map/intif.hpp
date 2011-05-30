@@ -3,27 +3,26 @@
 
 #include "../common/mmo.hpp"
 
-int intif_GMmessage(const char *mes, int len);
+void intif_GMmessage(const char *mes, int len);
 
-int intif_wis_message(struct map_session_data *sd, char *nick, char *mes,
-                       int mes_len);
-int intif_wis_message_to_gm(char *Wisp_name, int min_gm_level, char *mes,
-                             int mes_len);
+void intif_whisper_message(struct map_session_data *sd, const char *nick,
+                           const char *mes, int mes_len);
+void intif_whisper_message_to_gm(const char *whisper_name, gm_level_t min_gm_level,
+                                 const char *mes, int mes_len);
 
-int intif_saveaccountreg(struct map_session_data *sd);
-int intif_request_accountreg(struct map_session_data *sd);
+void intif_saveaccountreg(struct map_session_data *sd);
+void intif_request_accountreg(struct map_session_data *sd);
 
-int intif_request_storage(int account_id);
-int intif_send_storage(struct storage *stor);
+void intif_request_storage(account_t account_id);
+void intif_send_storage(struct storage *stor);
 
-int intif_create_party(struct map_session_data *sd, char *name);
-int intif_request_partyinfo(int party_id);
-int intif_party_addmember(int party_id, int account_id);
-int intif_party_changeoption(int party_id, int account_id, int exp,
-                              int item);
-int intif_party_leave(int party_id, int accound_id);
-int intif_party_changemap(struct map_session_data *sd, int online);
-int intif_party_message(int party_id, int account_id, char *mes, int len);
-int intif_party_checkconflict(int party_id, int account_id, char *nick);
+void intif_create_party(struct map_session_data *sd, const char *name);
+void intif_request_partyinfo(party_t party_id);
+void intif_party_addmember(party_t party_id, account_t account_id);
+void intif_party_changeoption(party_t party_id, account_t account_id, bool exp, bool item);
+void intif_party_leave(party_t party_id, account_t accound_id);
+void intif_party_changemap(struct map_session_data *sd, bool online);
+void intif_party_message(party_t party_id, account_t account_id, const char *mes, int len);
+void intif_party_checkconflict(party_t party_id, account_t account_id, const char *nick);
 
 #endif // INTIF_H

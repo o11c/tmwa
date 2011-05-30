@@ -3004,10 +3004,10 @@ int clif_resurrection(struct block_list *bl, int type)
 }
 
 /*==========================================
- * Wisp/page is transmitted to the destination player
+ * whisper is transmitted to the destination player
  *------------------------------------------
  */
-int clif_wis_message(int fd, const char *nick, const char *mes, int mes_len)   // R 0097 <len>.w <nick>.24B <message>.?B
+int clif_whisper_message(int fd, const char *nick, const char *mes, int mes_len)   // R 0097 <len>.w <nick>.24B <message>.?B
 {
     WFIFOW(fd, 0) = 0x97;
     WFIFOW(fd, 2) = mes_len + 24 + 4;
@@ -3018,10 +3018,10 @@ int clif_wis_message(int fd, const char *nick, const char *mes, int mes_len)   /
 }
 
 /*==========================================
- * The transmission result of Wisp/page is transmitted to the source player
+ * The transmission result of whisper is transmitted to the source player
  *------------------------------------------
  */
-int clif_wis_end(int fd, int flag) // R 0098 <type>.B: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
+int clif_whisper_end(int fd, int flag) // R 0098 <type>.B: 0: success to send whisper, 1: target character is not loged in?, 2: ignored by target
 {
     WFIFOW(fd, 0) = 0x98;
     WFIFOW(fd, 2) = flag;
@@ -3751,7 +3751,7 @@ static void clif_parse_WalkToXY(int fd, struct map_session_data *sd)
 
     if (pc_isdead(sd))
     {
-        clif_clearchar_area(&sd->bl, 1);
+        clif_clearchar(&sd->bl, 1);
         return;
     }
 
@@ -4060,7 +4060,7 @@ static void clif_parse_ActionRequest(int fd, struct map_session_data *sd)
 
     if (pc_isdead(sd))
     {
-        clif_clearchar_area(&sd->bl, 1);
+        clif_clearchar(&sd->bl, 1);
         return;
     }
     if (sd->npc_id != 0 || sd->opt1 > 0 || sd->status.option & 2 || sd->state.storage_flag)
@@ -4197,21 +4197,21 @@ static void clif_parse_Wis(int fd, struct map_session_data *sd)
      */
     if (!(dstsd = map_nick2sd((char *)RFIFOP(fd, 4)))
             || strcmp(dstsd->status.name, (char *)RFIFOP(fd, 4)) != 0)
-        intif_wis_message(sd, (char *)RFIFOP(fd, 4), message,  RFIFOW(fd, 2) - 28);
+        intif_whisper_message(sd, (char *)RFIFOP(fd, 4), message,  RFIFOW(fd, 2) - 28);
     else
     {
         /* Refuse messages addressed to self. */
         if (dstsd->fd == fd)
         {
             const char *mes = "You cannot page yourself.";
-            clif_wis_message(fd, wisp_server_name, mes, strlen(mes) + 1);
+            clif_whisper_message(fd, whisper_server_name, mes, strlen(mes) + 1);
         }
         else
         {
-            clif_wis_message(dstsd->fd, sd->status.name, message,
+            clif_whisper_message(dstsd->fd, sd->status.name, message,
                               RFIFOW(fd, 2) - 28);
             /* The whisper was sent successfully. */
-            clif_wis_end(fd, 0);
+            clif_whisper_end(fd, 0);
         }
     }
 
@@ -4234,7 +4234,7 @@ static void clif_parse_TakeItem(int fd, struct map_session_data *sd)
 
     if (pc_isdead(sd))
     {
-        clif_clearchar_area(&sd->bl, 1);
+        clif_clearchar(&sd->bl, 1);
         return;
     }
 
@@ -4266,7 +4266,7 @@ static void clif_parse_DropItem(int fd, struct map_session_data *sd)
 
     if (pc_isdead(sd))
     {
-        clif_clearchar_area(&sd->bl, 1);
+        clif_clearchar(&sd->bl, 1);
         return;
     }
     if (sd->npc_id != 0 || sd->opt1 > 0 || maps[sd->bl.m].flag.no_player_drops)
@@ -4288,7 +4288,7 @@ static void clif_parse_UseItem(int fd, struct map_session_data *sd)
 
     if (pc_isdead(sd))
     {
-        clif_clearchar_area(&sd->bl, 1);
+        clif_clearchar(&sd->bl, 1);
         return;
     }
     if (sd->npc_id != 0 || sd->opt1 > 0)
@@ -4312,7 +4312,7 @@ static void clif_parse_EquipItem(int fd, struct map_session_data *sd)
 
     if (pc_isdead(sd))
     {
-        clif_clearchar_area(&sd->bl, 1);
+        clif_clearchar(&sd->bl, 1);
         return;
     }
     idx = RFIFOW(fd, 2) - 2;
@@ -4348,7 +4348,7 @@ static void clif_parse_UnequipItem(int fd, struct map_session_data *sd)
 
     if (pc_isdead(sd))
     {
-        clif_clearchar_area(&sd->bl, 1);
+        clif_clearchar(&sd->bl, 1);
         return;
     }
     idx = RFIFOW(fd, 2) - 2;
@@ -4374,7 +4374,7 @@ static void clif_parse_NpcClicked(int fd, struct map_session_data *sd)
 
     if (pc_isdead(sd))
     {
-        clif_clearchar_area(&sd->bl, 1);
+        clif_clearchar(&sd->bl, 1);
         return;
     }
     if (sd->npc_id != 0)

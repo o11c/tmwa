@@ -9,11 +9,12 @@
 
 #include "map.hpp"
 
-void clif_setip(char *);
-void clif_setport(int);
-
+/// What the client uses to connect to us
+void clif_setip(const char *);
+void clif_setport(in_port_t);
 in_addr_t clif_getip(void);
-int clif_getport(void);
+in_port_t clif_getport(void);
+
 int clif_countusers(void);
 void clif_setwaitclose(int);
 
@@ -24,7 +25,6 @@ int clif_dropflooritem(struct flooritem_data *);
 int clif_clearflooritem(struct flooritem_data *, int);
 int clif_clearchar(struct block_list *, int); // area or fd
 int clif_clearchar_delay(unsigned int, struct block_list *, int);
-#define clif_clearchar_area(bl,type) clif_clearchar(bl,type)
 int clif_clearchar_id(int, int, int);
 int clif_spawnpc(struct map_session_data *);  //area
 int clif_spawnnpc(struct npc_data *); // area
@@ -107,8 +107,8 @@ int clif_changemapcell(int m, int x, int y, int cell_type, int type);
 
 int clif_status_change(struct block_list *bl, int type, int flag);
 
-int clif_wis_message(int fd, const char *nick, const char *mes, int mes_len);
-int clif_wis_end(int fd, int flag);
+int clif_whisper_message(int fd, const char *nick, const char *mes, int mes_len);
+int clif_whisper_end(int fd, int flag);
 
 int clif_equiplist(struct map_session_data *sd);
 

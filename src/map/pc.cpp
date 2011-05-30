@@ -749,7 +749,7 @@ int pc_authok(int id, int login_id2, time_t connect_until_time,
     {                           // don't display if it's unlimited or unknow value
         char tmpstr[1024];
         strftime(tmpstr, sizeof(tmpstr), "Your account time limit is: %d-%m-%Y %H:%M:%S.", gmtime(&connect_until_time));
-        clif_wis_message(sd->fd, wisp_server_name, tmpstr,
+        clif_whisper_message(sd->fd, whisper_server_name, tmpstr,
                           strlen(tmpstr) + 1);
     }
     pc_calcstatus(sd, 1);
@@ -2419,7 +2419,7 @@ int pc_setpos(struct map_session_data *sd, const char *mapname_org, int x, int y
             in_port_t port;
             if (map_mapname2ipport(mapname, &ip, &port))
             {
-                clif_clearchar_area(&sd->bl, clrtype & 0xffff);
+                clif_clearchar(&sd->bl, clrtype & 0xffff);
                 map_delblock(&sd->bl);
                 memcpy(sd->mapname, mapname, 24);
                 sd->bl.x = x;
@@ -2461,7 +2461,7 @@ int pc_setpos(struct map_session_data *sd, const char *mapname_org, int x, int y
 
     if (sd->mapname[0] && sd->bl.prev != NULL)
     {
-        clif_clearchar_area(&sd->bl, clrtype & 0xffff);
+        clif_clearchar(&sd->bl, clrtype & 0xffff);
         map_delblock(&sd->bl);
         clif_changemap(sd, maps[m].name, x, y); // [MouseJstr]
     }
@@ -3658,7 +3658,7 @@ int pc_damage(struct block_list *src, struct map_session_data *sd,
 
     pc_stop_walking(sd, 0);
     skill_castcancel(&sd->bl);  // 詠唱の中止
-    clif_clearchar_area(&sd->bl, 1);
+    clif_clearchar(&sd->bl, 1);
     pc_setglobalreg(sd, "PC_DIE_COUNTER", ++sd->die_counter);  //死にカウンター書き込み
     skill_status_change_clear(&sd->bl, 0); // ステータス異常を解除する
     clif_updatestatus(sd, SP_HP);
@@ -5979,7 +5979,7 @@ void pc_invisibility(struct map_session_data *sd, int enabled)
 {
     if (enabled && !(sd->status.option & OPTION_INVISIBILITY))
     {
-        clif_clearchar_area(&sd->bl, 3);
+        clif_clearchar(&sd->bl, 3);
         sd->status.option |= OPTION_INVISIBILITY;
         clif_status_change(&sd->bl, CLIF_OPTION_SC_INVISIBILITY, 1);
     }

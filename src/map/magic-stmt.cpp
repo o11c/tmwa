@@ -396,7 +396,7 @@ static void entity_warp(entity_t * target, int destm, int destx, int desty)
             {
                 character_t *character = (character_t *) target;
                 char *map_name;
-                clif_clearchar_area(&character->bl, 3);
+                clif_clearchar(&character->bl, 3);
                 map_delblock(&character->bl);
                 character->bl.x = destx;
                 character->bl.y = desty;

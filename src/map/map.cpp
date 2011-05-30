@@ -64,7 +64,7 @@ struct charid2nick
 char motd_txt[256] = "conf/motd.txt";
 
 // can be modified in char-server configuration file
-char wisp_server_name[24] = "Server";
+char whisper_server_name[24] = "Server";
 
 /// Save the number of users reported by the char server
 void map_setusers(int n)
@@ -790,7 +790,7 @@ void map_quit(struct map_session_data *sd)
 
     pc_calcstatus(sd, 4);
 
-    clif_clearchar_area(&sd->bl, 2);
+    clif_clearchar(&sd->bl, 2);
 
     if (pc_isdead(sd))
         pc_setrestartvalue(sd, 2);

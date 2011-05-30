@@ -155,7 +155,7 @@ void tmw_GmHackMsg(const char *fmt, ...)
     strcpy(outbuf, "[GM] ");
     strcat(outbuf, buf);
 
-    intif_wis_message_to_gm(wisp_server_name,
+    intif_whisper_message_to_gm(whisper_server_name,
                              battle_config.hack_info_GM_level, outbuf,
                              strlen(outbuf) + 1);
 }

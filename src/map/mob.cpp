@@ -1047,7 +1047,7 @@ int mob_spawn(int id)
     md->last_spawntime = tick;
     if (md->bl.prev != NULL)
     {
-//      clif_clearchar_area(&md->bl,3);
+//      clif_clearchar(&md->bl,3);
         map_delblock(&md->bl);
     }
     else
@@ -2232,7 +2232,7 @@ int mob_delete(struct mob_data *md)
     if (md->bl.prev == NULL)
         return 1;
     mob_changestate(md, MS_DEAD, 0);
-    clif_clearchar_area(&md->bl, 1);
+    clif_clearchar(&md->bl, 1);
     map_delblock(&md->bl);
     if (mob_get_viewclass(md->mob_class) <= 1000)
         clif_clearchar_delay(gettick() + 3000, &md->bl, 0);
@@ -2248,7 +2248,7 @@ int mob_catch_delete(struct mob_data *md)
     if (md->bl.prev == NULL)
         return 1;
     mob_changestate(md, MS_DEAD, 0);
-    clif_clearchar_area(&md->bl, 3);
+    clif_clearchar(&md->bl, 3);
     map_delblock(&md->bl);
     mob_setdelayspawn(md->bl.id);
     return 0;
@@ -2356,7 +2356,7 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
         if (md->bl.prev != NULL)
         {
             mob_changestate(md, MS_DEAD, 0);
-            clif_clearchar_area(&md->bl, 1);
+            clif_clearchar(&md->bl, 1);
             map_delblock(&md->bl);
             mob_setdelayspawn(md->bl.id);
         }
@@ -2682,7 +2682,7 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
             npc_event(sd, md->npc_event, 0);
     }
 
-    clif_clearchar_area(&md->bl, 1);
+    clif_clearchar(&md->bl, 1);
     map_delblock(&md->bl);
     if (mob_get_viewclass(md->mob_class) <= 1000)
         clif_clearchar_delay(tick + 3000, &md->bl, 0);
@@ -2761,7 +2761,7 @@ int mob_warp(struct mob_data *md, int m, int x, int y, int type)
     {
         if (maps[md->bl.m].flag.monster_noteleport)
             return 0;
-        clif_clearchar_area(&md->bl, type);
+        clif_clearchar(&md->bl, type);
     }
     map_delblock(&md->bl);
 

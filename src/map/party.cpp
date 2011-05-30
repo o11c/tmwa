@@ -119,13 +119,13 @@ int party_created(int account_id, int fail, int party_id, char *name)
 }
 
 // 情報要求
-int party_request_info(int party_id)
+void party_request_info(int party_id)
 {
-    return intif_request_partyinfo(party_id);
+    intif_request_partyinfo(party_id);
 }
 
 // 所属キャラの確認
-static int party_check_member(struct party *p)
+static int party_check_member(const struct party *p)
 {
     int i;
     struct map_session_data *sd;
@@ -145,14 +145,14 @@ static int party_check_member(struct party *p)
                     {
                         if (strcmp(p->member[j].name, sd->status.name) == 0)
                             f = 0;  // データがある
-                        else
-                            p->member[j].sd = NULL; // 同垢別キャラだった
+//                         else
+//                             p->member[j].sd = NULL; // 同垢別キャラだった
                     }
                 }
                 if (f)
                 {
                     sd->status.party_id = 0;
-                    map_log("party: check_membemap_logr %d[%s] is not member\n",
+                    map_log("party: check_member %d[%s] is not member\n",
                             sd->status.account_id, sd->status.name);
                 }
             }
@@ -178,7 +178,7 @@ int party_recv_noinfo(int party_id)
 }
 
 // 情報所得
-int party_recv_info(struct party *sp)
+int party_recv_info(const struct party *sp)
 {
     struct party *p;
     int i;

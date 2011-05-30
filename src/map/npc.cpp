@@ -163,7 +163,7 @@ int npc_delete(struct npc_data *nd)
     if (nd->bl.prev == NULL)
         return 1;
 
-    clif_clearchar_area(&nd->bl, 1);
+    clif_clearchar(&nd->bl, 1);
     map_delblock(&nd->bl);
     return 0;
 }

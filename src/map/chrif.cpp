@@ -216,7 +216,7 @@ static void chrif_sendmapack(int fd)
         exit(1);
     }
 
-    STRZCPY(wisp_server_name, (const char *)RFIFOP(fd, 3));
+    STRZCPY(whisper_server_name, (const char *)RFIFOP(fd, 3));
 
     chrif_state = 2;
 }
@@ -671,170 +671,141 @@ static void ladmin_itemfrob(int fd)
 }
 
 
-//-----------------------------------------------------------------
-// inter serverへの送信
 
-// Message for all GMs on all map servers
-int intif_GMmessage(const char *mes, int len)
+/// Message for all GMs on all map servers
+void intif_GMmessage(const char *mes, int len)
 {
     WFIFOW(char_fd, 0) = 0x3000;
     WFIFOW(char_fd, 2) = 4 + len;
     memcpy(WFIFOP(char_fd, 4), mes, len);
     WFIFOSET(char_fd, WFIFOW(char_fd, 2));
-
-    return 0;
 }
 
-// The transmission of Wisp/Page to inter-server (player not found on this server)
-int intif_wis_message(struct map_session_data *sd, char *nick, char *mes,
-                       int mes_len)
+/// Whisper via inter-server (player not found on this server)
+void intif_whisper_message(struct map_session_data *sd, const char *nick,
+                           const char *mes, int mes_len)
 {
-    nullpo_retr(0, sd);
+    nullpo_retv(sd);
 
     WFIFOW(char_fd, 0) = 0x3001;
     WFIFOW(char_fd, 2) = mes_len + 52;
-    memcpy(WFIFOP(char_fd, 4), sd->status.name, 24);
-    memcpy(WFIFOP(char_fd, 28), nick, 24);
+    STRZCPY2((char *)WFIFOP(char_fd, 4), sd->status.name);
+    strzcpy((char *)WFIFOP(char_fd, 28), nick, 24);
     memcpy(WFIFOP(char_fd, 52), mes, mes_len);
     WFIFOSET(char_fd, WFIFOW(char_fd, 2));
-
-    map_log("inmap_logtif_wis_message from %s to %s (message: '%s')\n",
-            sd->status.name, nick, mes);
-
-    return 0;
 }
 
-// The reply of Wisp/page
-static int intif_wis_replay(int id, int flag)
+/// Reply to a multicast whisper
+static void intif_whisper_reply(int id, int flag)
 {
     WFIFOW(char_fd, 0) = 0x3002;
     WFIFOL(char_fd, 2) = id;
-    WFIFOB(char_fd, 6) = flag;    // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
+    WFIFOB(char_fd, 6) = flag;
     WFIFOSET(char_fd, 7);
-
-    map_log("inmap_logtif_wis_replay: id: %d, flag:%d\n", id, flag);
-
-    return 0;
 }
 
-// The transmission of GM only Wisp/Page from server to inter-server
-int intif_wis_message_to_gm(char *Wisp_name, int min_gm_level, char *mes,
-                             int mes_len)
+/// @wgm for other map servers
+void intif_whisper_message_to_gm(const char *whisper_name, gm_level_t min_gm_level,
+                                 const char *mes, int mes_len)
 {
     WFIFOW(char_fd, 0) = 0x3003;
     WFIFOW(char_fd, 2) = mes_len + 30;
-    memcpy(WFIFOP(char_fd, 4), Wisp_name, 24);
-    WFIFOW(char_fd, 28) = (short) min_gm_level;
+    strzcpy((char *)WFIFOP(char_fd, 4), whisper_name, 24);
+    WFIFOW(char_fd, 28) = min_gm_level;
     memcpy(WFIFOP(char_fd, 30), mes, mes_len);
     WFIFOSET(char_fd, WFIFOW(char_fd, 2));
 
-    map_log("intif_wis_message_to_gm: from: '%s', min level: %d, message: '%s'.\n",
-            Wisp_name, min_gm_level, mes);
-
-    return 0;
+    map_log("intif_whisper_message_to_gm: from: '%s', min level: %d, message: '%s'.\n",
+            whisper_name, min_gm_level, mes);
 }
 
-// アカウント変数送信
-int intif_saveaccountreg(struct map_session_data *sd)
+/// Save variables
+void intif_saveaccountreg(struct map_session_data *sd)
 {
-    int j, p;
-
-    nullpo_retr(0, sd);
+    nullpo_retv(sd);
 
     WFIFOW(char_fd, 0) = 0x3004;
     WFIFOL(char_fd, 4) = sd->bl.id;
-    for (j = 0, p = 8; j < sd->status.account_reg_num; j++, p += 36)
+    int p = 8;
+    for (int j = 0; j < sd->status.account_reg_num; j++)
     {
         memcpy(WFIFOP(char_fd, p), sd->status.account_reg[j].str, 32);
-        WFIFOL(char_fd, p + 32) = sd->status.account_reg[j].value;
+        p += 32;
+        WFIFOL(char_fd, p) = sd->status.account_reg[j].value;
+        p += 4;
     }
     WFIFOW(char_fd, 2) = p;
     WFIFOSET(char_fd, p);
-    return 0;
 }
 
-// アカウント変数要求
-int intif_request_accountreg(struct map_session_data *sd)
+/// Request someone's variables
+void intif_request_accountreg(struct map_session_data *sd)
 {
-    nullpo_retr(0, sd);
+    nullpo_retv(sd);
 
     WFIFOW(char_fd, 0) = 0x3005;
     WFIFOL(char_fd, 2) = sd->bl.id;
     WFIFOSET(char_fd, 6);
-    return 0;
 }
 
-// 倉庫データ要求
-int intif_request_storage(int account_id)
+/// Request someone's storage
+void intif_request_storage(account_t account_id)
 {
     WFIFOW(char_fd, 0) = 0x3010;
     WFIFOL(char_fd, 2) = account_id;
     WFIFOSET(char_fd, 6);
-    return 0;
 }
 
-// 倉庫データ送信
-int intif_send_storage(struct storage *stor)
+/// Update someone's storage
+void intif_send_storage(struct storage *stor)
 {
-    nullpo_retr(0, stor);
+    nullpo_retv(stor);
     WFIFOW(char_fd, 0) = 0x3011;
     WFIFOW(char_fd, 2) = sizeof(struct storage) + 8;
     WFIFOL(char_fd, 4) = stor->account_id;
     memcpy(WFIFOP(char_fd, 8), stor, sizeof(struct storage));
     WFIFOSET(char_fd, WFIFOW(char_fd, 2));
-    return 0;
 }
 
-// パーティ作成要求
-int intif_create_party(struct map_session_data *sd, char *name)
+/// Create a party
+void intif_create_party(struct map_session_data *sd, const char *name)
 {
-    nullpo_retr(0, sd);
+    nullpo_retv(sd);
 
     WFIFOW(char_fd, 0) = 0x3020;
     WFIFOL(char_fd, 2) = sd->status.account_id;
-    memcpy(WFIFOP(char_fd, 6), name, 24);
-    memcpy(WFIFOP(char_fd, 30), sd->status.name, 24);
-    memcpy(WFIFOP(char_fd, 54), maps[sd->bl.m].name, 16);
+    strzcpy((char *)WFIFOP(char_fd, 6), name, 24);
+    STRZCPY2((char *)WFIFOP(char_fd, 30), sd->status.name);
+    STRZCPY2((char *)WFIFOP(char_fd, 54), maps[sd->bl.m].name);
     WFIFOW(char_fd, 70) = sd->status.base_level;
     WFIFOSET(char_fd, 72);
-//  if (battle_config.etc_log)
-//      printf("intif: create party\n");
-    return 0;
 }
 
-// パーティ情報要求
-int intif_request_partyinfo(int party_id)
+/// Request party info
+void intif_request_partyinfo(party_t party_id)
 {
     WFIFOW(char_fd, 0) = 0x3021;
     WFIFOL(char_fd, 2) = party_id;
     WFIFOSET(char_fd, 6);
-//  if (battle_config.etc_log)
-//      printf("intif: request party info\n");
-    return 0;
 }
 
-// パーティ追加要求
-int intif_party_addmember(int party_id, int account_id)
+/// Add someone to a party
+void intif_party_addmember(party_t party_id, account_t account_id)
 {
-    struct map_session_data *sd;
-    sd = map_id2sd(account_id);
-//  if (battle_config.etc_log)
-//      printf("intif: party add member %d %d\n",party_id,account_id);
-    if (sd != NULL)
-    {
-        WFIFOW(char_fd, 0) = 0x3022;
-        WFIFOL(char_fd, 2) = party_id;
-        WFIFOL(char_fd, 6) = account_id;
-        memcpy(WFIFOP(char_fd, 10), sd->status.name, 24);
-        memcpy(WFIFOP(char_fd, 34), maps[sd->bl.m].name, 16);
-        WFIFOW(char_fd, 50) = sd->status.base_level;
-        WFIFOSET(char_fd, 52);
-    }
-    return 0;
+    struct map_session_data *sd = map_id2sd(account_id);
+    if (!sd)
+        return;
+    WFIFOW(char_fd, 0) = 0x3022;
+    WFIFOL(char_fd, 2) = party_id;
+    WFIFOL(char_fd, 6) = account_id;
+    STRZCPY2((char *)WFIFOP(char_fd, 10), sd->status.name);
+    STRZCPY2((char *)WFIFOP(char_fd, 34), maps[sd->bl.m].name);
+    WFIFOW(char_fd, 50) = sd->status.base_level;
+    WFIFOSET(char_fd, 52);
 }
 
-// パーティ設定変更
-int intif_party_changeoption(int party_id, int account_id, int exp, int item)
+/// A player has changed the item/exp sharing of a party
+void intif_party_changeoption(party_t party_id, account_t account_id, bool exp, bool item)
 {
     WFIFOW(char_fd, 0) = 0x3023;
     WFIFOL(char_fd, 2) = party_id;
@@ -842,188 +813,163 @@ int intif_party_changeoption(int party_id, int account_id, int exp, int item)
     WFIFOW(char_fd, 10) = exp;
     WFIFOW(char_fd, 12) = item;
     WFIFOSET(char_fd, 14);
-    return 0;
 }
 
-// パーティ脱退要求
-int intif_party_leave(int party_id, int account_id)
+/// Someone leaves a party
+void intif_party_leave(party_t party_id, account_t account_id)
 {
-//  if (battle_config.etc_log)
-//      printf("intif: party leave %d %d\n",party_id,account_id);
     WFIFOW(char_fd, 0) = 0x3024;
     WFIFOL(char_fd, 2) = party_id;
     WFIFOL(char_fd, 6) = account_id;
     WFIFOSET(char_fd, 10);
-    return 0;
 }
 
-// パーティ移動要求
-int intif_party_changemap(struct map_session_data *sd, int online)
+/// Update someone's location in the party window
+void intif_party_changemap(struct map_session_data *sd, bool online)
 {
-    if (sd != NULL)
-    {
-        WFIFOW(char_fd, 0) = 0x3025;
-        WFIFOL(char_fd, 2) = sd->status.party_id;
-        WFIFOL(char_fd, 6) = sd->status.account_id;
-        memcpy(WFIFOP(char_fd, 10), maps[sd->bl.m].name, 16);
-        WFIFOB(char_fd, 26) = online;
-        WFIFOW(char_fd, 27) = sd->status.base_level;
-        WFIFOSET(char_fd, 29);
-    }
-//  if (battle_config.etc_log)
-//      printf("party: change map\n");
-    return 0;
+    if (!sd)
+        return;
+
+    WFIFOW(char_fd, 0) = 0x3025;
+    WFIFOL(char_fd, 2) = sd->status.party_id;
+    WFIFOL(char_fd, 6) = sd->status.account_id;
+    memcpy(WFIFOP(char_fd, 10), maps[sd->bl.m].name, 16);
+    WFIFOB(char_fd, 26) = online;
+    WFIFOW(char_fd, 27) = sd->status.base_level;
+    WFIFOSET(char_fd, 29);
 }
 
-// パーティ会話送信
-int intif_party_message(int party_id, int account_id, char *mes, int len)
+/// Party chat
+void intif_party_message(party_t party_id, account_t account_id, const char *mes, int len)
 {
-//  if (battle_config.etc_log)
-//      printf("intif_party_message: %s\n",mes);
     WFIFOW(char_fd, 0) = 0x3027;
     WFIFOW(char_fd, 2) = len + 12;
     WFIFOL(char_fd, 4) = party_id;
     WFIFOL(char_fd, 8) = account_id;
     memcpy(WFIFOP(char_fd, 12), mes, len);
     WFIFOSET(char_fd, len + 12);
-    return 0;
 }
 
-// パーティ競合チェック要求
-int intif_party_checkconflict(int party_id, int account_id, char *nick)
+/// Check that the player isn't already in a different party
+void intif_party_checkconflict(party_t party_id, account_t account_id, const char *nick)
 {
     WFIFOW(char_fd, 0) = 0x3028;
     WFIFOL(char_fd, 2) = party_id;
     WFIFOL(char_fd, 6) = account_id;
     memcpy(WFIFOP(char_fd, 10), nick, 24);
     WFIFOSET(char_fd, 34);
-    return 0;
 }
 
-//-----------------------------------------------------------------
-// Packets receive from inter server
 
-// Wisp/Page reception
-static int intif_parse_WisMessage(int fd)
-{                               // rewritten by [Yor]
-    struct map_session_data *sd;
 
-    map_log("intif_parse_wismessage: id: %d, from: %s, to: %s, message: '%s'\n",
-            RFIFOL(fd, 4), RFIFOP(fd, 8), RFIFOP(fd, 32), RFIFOP(fd,
-                                                                      56));
-    sd = map_nick2sd((char *)RFIFOP(fd, 32)); // Searching destination player
-    if (sd != NULL && strcmp(sd->status.name, (char *)RFIFOP(fd, 32)) == 0)
-    {                           // exactly same name (inter-server have checked the name before)
-        clif_wis_message(sd->fd, (char *)RFIFOP(fd, 8), (char *)RFIFOP(fd, 56),
-                          RFIFOW(fd, 2) - 56);
-        intif_wis_replay(RFIFOL(fd, 4), 0);   // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
-    }
-    else
-        intif_wis_replay(RFIFOL(fd, 4), 1);   // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
-    return 0;
-}
-
-// Wisp/page transmission result reception
-static int intif_parse_WisEnd(int fd)
+/// Whisper
+static void intif_parse_whisper(int fd)
 {
-    struct map_session_data *sd;
-
-    map_log("inmap_logtif_parse_wisend: player: %s, flag: %d\n",
-            (char *)RFIFOP(fd, 2), RFIFOB(fd, 26)); // flag: 0: success to send wisper, 1: target character is not loged in?, 2: ignored by target
-    sd = map_nick2sd((char *)RFIFOP(fd, 2));
-    if (sd != NULL)
-        clif_wis_end(sd->fd, RFIFOB(fd, 26));
-
-    return 0;
-}
-
-// Received wisp message from map-server via char-server for ALL gm
-static int mapif_parse_WisToGM(int fd)
-{                               // 0x3003/0x3803 <packet_len>.w <wispname>.24B <min_gm_level>.w <message>.?B
-    int i, min_gm_level, len;
-    struct map_session_data *pl_sd;
-    char Wisp_name[24];
-    char mbuf[255];
-
-    if (RFIFOW(fd, 2) - 30 <= 0)
-        return 0;
-
-    len = RFIFOW(fd, 2) - 30;
-    char *message = ((len) >= 255) ? (char *) malloc(len) : mbuf;
-
-    min_gm_level = (int) RFIFOW(fd, 28);
-    memcpy(Wisp_name, RFIFOP(fd, 4), 24);
-    Wisp_name[23] = '\0';
-    memcpy(message, RFIFOP(fd, 30), len);
-    message[len - 1] = '\0';
-    // information is sended to all online GM
-    for (i = 0; i < fd_max; i++)
-        if (session[i] && (pl_sd = (struct map_session_data *)session[i]->session_data)
-            && pl_sd->state.auth)
-            if (pc_isGM(pl_sd) >= min_gm_level)
-                clif_wis_message(i, Wisp_name, message,
-                                  strlen(message) + 1);
-
-    if (message != mbuf)
-        free(message);
-
-    return 0;
-}
-
-// アカウント変数通知
-static int intif_parse_AccountReg(int fd)
-{
-    int j, p;
-    struct map_session_data *sd;
-
-    if ((sd = map_id2sd(RFIFOL(fd, 4))) == NULL)
-        return 1;
-    for (p = 8, j = 0; p < RFIFOW(fd, 2) && j < ACCOUNT_REG_NUM;
-         p += 36, j++)
+    struct map_session_data *sd = map_nick2sd((char *)RFIFOP(fd, 32));
+    if (!sd)
+        return;
+    map_log("intif_parse_whispermessage: id: %d, from: %s, to: %s, message: '%s'\n",
+            RFIFOL(fd, 4), RFIFOP(fd, 8), RFIFOP(fd, 32), RFIFOP(fd, 56));
+    if (strcmp(sd->status.name, (char *)RFIFOP(fd, 32)) != 0)
     {
-        memcpy(sd->status.account_reg[j].str, RFIFOP(fd, p), 32);
-        sd->status.account_reg[j].value = RFIFOL(fd, p + 32);
+        intif_whisper_reply(RFIFOL(fd, 4), 1);
+        return;
+    }
+    clif_whisper_message(sd->fd, (char *)RFIFOP(fd, 8), (char *)RFIFOP(fd, 56),
+                         RFIFOW(fd, 2) - 56);
+    intif_whisper_reply(RFIFOL(fd, 4), 0);
+}
+
+/// We sent a whisper to the inter server and get this result
+static void intif_parse_whisper_end(int fd)
+{
+    struct map_session_data *sd = map_nick2sd((char *)RFIFOP(fd, 2));
+
+    map_log("intif_parse_whisperend: player: %s, flag: %d\n",
+            (char *)RFIFOP(fd, 2), RFIFOB(fd, 26));
+    if (sd)
+        clif_whisper_end(sd->fd, RFIFOB(fd, 26));
+}
+
+/// forwarded @wgm
+static void mapif_parse_WhisperToGM(int fd)
+{
+    int len = RFIFOW(fd, 2) - 30;
+
+    if (len <= 0)
+        return;
+
+    gm_level_t min_gm_level = RFIFOW(fd, 28);
+
+    char whisper_name[24];
+    STRZCPY(whisper_name, (const char *)RFIFOP(fd, 4));
+
+    char message[len];
+    STRZCPY(message, (const char *)RFIFOP(fd, 30));
+
+    for (int i = 0; i < fd_max; i++)
+    {
+        if (!session[i])
+            continue;
+        struct map_session_data *pl_sd = (struct map_session_data *)session[i]->session_data;
+        if (!pl_sd || !pl_sd->state.auth)
+            continue;
+        if (pc_isGM(pl_sd) < min_gm_level)
+            continue;
+        clif_whisper_message(i, whisper_name, message, len);
+    }
+}
+
+/// Load somebody's variables
+static void intif_parse_AccountReg(int fd)
+{
+    struct map_session_data *sd = map_id2sd(RFIFOL(fd, 4));
+
+    if (!sd)
+        return;
+
+    int p = 8;
+    int j;
+    for (j = 0; p < RFIFOW(fd, 2) && j < ACCOUNT_REG_NUM; j++)
+    {
+        STRZCPY(sd->status.account_reg[j].str, (const char *)RFIFOP(fd, p));
+        p += 32;
+        sd->status.account_reg[j].value = RFIFOL(fd, p);
+        p += 4;
     }
     sd->status.account_reg_num = j;
-//  printf("intif: accountreg\n");
-
-    return 0;
 }
 
-// 倉庫データ受信
-static int intif_parse_LoadStorage(int fd)
+/// Load somebody's storage
+static void intif_parse_LoadStorage(int fd)
 {
-    struct storage *stor;
-    struct map_session_data *sd;
-
-    sd = map_id2sd(RFIFOL(fd, 4));
-    if (sd == NULL)
+    struct map_session_data *sd = map_id2sd(RFIFOL(fd, 4));
+    if (!sd)
     {
-        map_log("intif_map_logparse_LoadStorage: user not found %d\n",
-                RFIFOL(fd, 4));
-        return 1;
+        map_log("%s: user not found %d\n", __func__, RFIFOL(fd, 4));
+        return;
     }
-    stor = account2storage(RFIFOL(fd, 4));
+    struct storage *stor = account2storage(RFIFOL(fd, 4));
     if (stor->storage_status == 1)
     {                           // Already open.. lets ignore this update
-        map_log("intif_parse_LoadStorage: storage received for a client already open (User %d:%d)\n",
-                sd->status.account_id, sd->status.char_id);
-        return 1;
+        map_log("%s: storage received for a client already open (User %d:%d)\n",
+                __func__, sd->status.account_id, sd->status.char_id);
+        return;
     }
     if (stor->dirty)
     {                           // Already have storage, and it has been modified and not saved yet! Exploit! [Skotlex]
-        map_log("intif_parse_LoadStorage: received storage for an already modified non-saved storage! (User %d:%d)\n",
-                sd->status.account_id, sd->status.char_id);
-        return 1;
+        map_log("%s: received storage for an already modified non-saved storage! (User %d:%d)\n",
+                __func__, sd->status.account_id, sd->status.char_id);
+        return;
     }
 
     if (RFIFOW(fd, 2) - 8 != sizeof(struct storage))
     {
-        map_log("intif_map_logparse_LoadStorage: data size error %d %d\n",
+        map_log("%s: data size error %d %d\n", __func__,
                 RFIFOW(fd, 2) - 8, sizeof(struct storage));
-        return 1;
+        return;
     }
-    map_log("inmap_logtif_openstorage: %d\n", RFIFOL(fd, 4));
+    map_log("%s: %d\n", __func__, RFIFOL(fd, 4));
     memcpy(stor, RFIFOP(fd, 8), sizeof(struct storage));
     stor->dirty = 0;
     stor->storage_status = 1;
@@ -1031,94 +977,84 @@ static int intif_parse_LoadStorage(int fd)
     clif_storageitemlist(sd, stor);
     clif_storageequiplist(sd, stor);
     clif_updatestorageamount(sd, stor);
-
-    return 0;
 }
 
-// 倉庫データ送信成功
-static int intif_parse_SaveStorage(int fd)
+/// Somebody's storage has been saved
+static void intif_parse_SaveStorage(int fd)
 {
-    map_log("inmap_logtif_savestorage: done %d %d\n", RFIFOL(fd, 2),
-            RFIFOB(fd, 6));
+    map_log("%s: done %d %d\n", __func__, RFIFOL(fd, 2), RFIFOB(fd, 6));
     storage_storage_saved(RFIFOL(fd, 2));
-    return 0;
 }
-// パーティ作成可否
-static int intif_parse_PartyCreated(int fd)
+
+/// A party was created
+static void intif_parse_PartyCreated(int fd)
 {
-    map_log("inmap_logtif: party created\n");
+    map_log("%s: party created\n", __func__);
     party_created(RFIFOL(fd, 2), RFIFOB(fd, 6), RFIFOL(fd, 7),
                    (char *)RFIFOP(fd, 11));
-    return 0;
 }
 
-// パーティ情報
-static int intif_parse_PartyInfo(int fd)
+/// Parse party info
+static void intif_parse_PartyInfo(int fd)
 {
     if (RFIFOW(fd, 2) == 8)
     {
-        map_log("intif:map_log party noinfo %d\n", RFIFOL(fd, 4));
+        map_log("intif: party noinfo %d\n", RFIFOL(fd, 4));
         party_recv_noinfo(RFIFOL(fd, 4));
-        return 0;
+        return;
     }
 
-//  printf("intif: party info %d\n",RFIFOL(fd,4));
     if (RFIFOW(fd, 2) != sizeof(struct party) + 4)
     {
-        map_log("intif:map_log party info : data size error %d %d %d\n",
+        map_log("intif: party info : data size error %d %d %d\n",
                 RFIFOL(fd, 4), RFIFOW(fd, 2), sizeof(struct party) + 4);
+        return;
     }
-    party_recv_info((struct party *) RFIFOP(fd, 4));
-    return 0;
+
+    party_recv_info((const struct party *) RFIFOP(fd, 4));
 }
 
-// パーティ追加通知
-static int intif_parse_PartyMemberAdded(int fd)
+/// Notification of party member added
+static void intif_parse_PartyMemberAdded(int fd)
 {
-    map_log("inmap_logtif: party member added %d %d %d\n", RFIFOL(fd, 2),
+    map_log("intif: party member added %d %d %d\n", RFIFOL(fd, 2),
             RFIFOL(fd, 6), RFIFOB(fd, 10));
     party_member_added(RFIFOL(fd, 2), RFIFOL(fd, 6), RFIFOB(fd, 10));
-    return 0;
 }
 
-// パーティ設定変更通知
-static int intif_parse_PartyOptionChanged(int fd)
+/// Notification of party exp/item sharing changed
+static void intif_parse_PartyOptionChanged(int fd)
 {
     party_optionchanged(RFIFOL(fd, 2), RFIFOL(fd, 6), RFIFOW(fd, 10),
-                         RFIFOW(fd, 12), RFIFOB(fd, 14));
-    return 0;
+                        RFIFOW(fd, 12), RFIFOB(fd, 14));
 }
 
-// パーティ脱退通知
-static int intif_parse_PartyMemberLeaved(int fd)
+/// Someone has left the party
+static void intif_parse_PartyMemberLeft(int fd)
 {
-    map_log("inmap_logtif: party member left %d %d %s\n", RFIFOL(fd, 2),
+    map_log("intif: party member left %d %d %s\n", RFIFOL(fd, 2),
             RFIFOL(fd, 6), RFIFOP(fd, 10));
     party_member_left(RFIFOL(fd, 2), RFIFOL(fd, 6), (char *)RFIFOP(fd, 10));
-    return 0;
 }
 
-// パーティ解散通知
-static int intif_parse_PartyBroken(int fd)
+/// A party no longer exists
+static void intif_parse_PartyBroken(int fd)
 {
     party_broken(RFIFOL(fd, 2));
-    return 0;
 }
 
-// パーティ移動通知
-static int intif_parse_PartyMove(int fd)
+/// Notification that somebody in the party has changed maps
+static void intif_parse_PartyMove(int fd)
 {
     party_recv_movemap(RFIFOL(fd, 2), RFIFOL(fd, 6), (char *)RFIFOP(fd, 10),
-                        RFIFOB(fd, 26), RFIFOW(fd, 27));
-    return 0;
+                       RFIFOB(fd, 26), RFIFOW(fd, 27));
 }
 
-// パーティメッセージ
-static int intif_parse_PartyMessage(int fd)
+/// Receive party chat
+static void intif_parse_PartyMessage(int fd)
 {
     party_recv_message(RFIFOL(fd, 4), RFIFOL(fd, 8), (char *)RFIFOP(fd, 12),
-                        RFIFOW(fd, 2) - 12);
-    return 0;
+                       RFIFOW(fd, 2) - 12);
 }
 
 
@@ -1295,19 +1231,19 @@ static void chrif_parse(int fd)
         case 0x3801:
             if (RFIFOREST(fd) < 4 || RFIFOREST(fd) < RFIFOW(fd, 2))
                 return;
-            intif_parse_WisMessage(fd);
+            intif_parse_whisper(fd);
             RFIFOSKIP(fd, RFIFOW(fd, 2));
             break;
         case 0x3802:
             if (RFIFOREST(fd) < 27)
                 return;
-            intif_parse_WisEnd(fd);
+            intif_parse_whisper_end(fd);
             RFIFOSKIP(fd, 27);
             break;
         case 0x3803:
             if (RFIFOREST(fd) < 4 || RFIFOREST(fd) < RFIFOW(fd, 2))
                 return;
-            mapif_parse_WisToGM(fd);
+            mapif_parse_WhisperToGM(fd);
             RFIFOSKIP(fd, RFIFOW(fd, 2));
             break;
         case 0x3804:
@@ -1355,7 +1291,7 @@ static void chrif_parse(int fd)
         case 0x3824:
             if (RFIFOREST(fd) < 34)
                 return;
-            intif_parse_PartyMemberLeaved(fd);
+            intif_parse_PartyMemberLeft(fd);
             RFIFOSKIP(fd, 34);
             break;
         case 0x3825:

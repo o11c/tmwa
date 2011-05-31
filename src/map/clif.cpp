@@ -251,11 +251,47 @@ enum class Whom
     SELF
 };
 
-#define WBUFPOS(p,pos,x,y) { unsigned char *__p = (p); __p+=(pos); __p[0] = (x)>>2; __p[1] = ((x)<<6) | (((y)>>4)&0x3f); __p[2] = (y)<<4; }
-#define WBUFPOS2(p,pos,x_0,y_0,x_1,y_1) { unsigned char *__p = (p); __p+=(pos); __p[0] = (x_0)>>2; __p[1] = ((x_0)<<6) | (((y_0)>>4)&0x3f); __p[2] = ((y_0)<<4) | (((x_1)>>6)&0x0f); __p[3]=((x_1)<<2) | (((y_1)>>8)&0x03); __p[4]=(y_1); }
+static void WBUFPOS(uint8_t *p, size_t pos, uint16_t x, uint16_t y, Direction d)
+{
+    // x = aaaa aaaa bbbb bbbb
+    // y = cccc cccc dddd dddd
+    p += pos;
+    // aabb bbbb
+    p[0] = x >> 2;
+    // bb00 0000 | (cccc dddd & 0011 1111)
+    p[1] = (x << 6) | ((y >> 4) & 0x3f);
+    //
+    p[2] = (y << 4) | (static_cast<int>(d) & 0xF);
+}
 
-#define WFIFOPOS(fd,pos,x,y) { WBUFPOS(WFIFOP(fd,pos),0,x,y); }
-#define WFIFOPOS2(fd,pos,x_0,y_0,x_1,y_1) { WBUFPOS2(WFIFOP(fd,pos),0,x_0,y_0,x_1,y_1); }
+static void WBUFPOS2(uint8_t *p, size_t pos, uint16_t x_0, uint16_t y_0, uint16_t x_1, uint16_t y_1)
+{
+    // x_0 = aaaa aaaa bbbb bbbb
+    // y_0 = cccc cccc dddd dddd
+    // x_1 = eeee eeee ffff ffff
+    // y_1 = gggg gggg hhhh hhhh
+    p += pos;
+    // aabb bbbb
+    p[0] =  x_0 >>2;
+    // bb00 0000 | (cccc dddd & 0011 1111)
+    p[1] = (x_0 << 6) | ((y_0 >> 4) & 0x3f);
+    // dddd 0000 | (eeee eeff & 0000 1111)
+    p[2] = (y_0 << 4) | ((x_1 >> 6) & 0x0f);
+    // ffff ff00 | (gggg gggg & 0000 0011)
+    p[3] = (x_1 << 2) | ((y_1 >> 8) & 0x03);
+    // hhhh hhhh
+    p[4] = y_1;
+}
+
+static void WFIFOPOS(int fd, size_t pos, uint16_t x, uint16_t y, Direction d)
+{
+    WBUFPOS(WFIFOP(fd, 0), pos, x, y, d);
+}
+
+static void WFIFOPOS2(int fd, size_t pos, uint16_t x_0, uint16_t y_0, uint16_t x_1, uint16_t y_1)
+{
+    WBUFPOS2(WFIFOP(fd, 0), pos, x_0, y_0, x_1, y_1);
+}
 
 static char map_ip_str[16];
 static in_addr_t map_ip;
@@ -597,7 +633,7 @@ int clif_authok(struct map_session_data *sd)
 
     WFIFOW(fd, 0) = 0x73;
     WFIFOL(fd, 2) = gettick();
-    WFIFOPOS(fd, 6, sd->bl.x, sd->bl.y);
+    WFIFOPOS(fd, 6, sd->bl.x, sd->bl.y, Direction::S);
     WFIFOB(fd, 9) = 5;
     WFIFOB(fd, 10) = 5;
     WFIFOSET(fd, packet_len_table[0x73]);
@@ -808,8 +844,7 @@ static int clif_set0078(struct map_session_data *sd, unsigned char *buf)
         WBUFW(buf, 14) = sd->disguise;
         WBUFW(buf, 42) = 0;
         WBUFB(buf, 44) = 0;
-        WBUFPOS(buf, 46, sd->bl.x, sd->bl.y);
-        WBUFB(buf, 48) |= static_cast<int>(sd->dir) & 0x0f;
+        WBUFPOS(buf, 46, sd->bl.x, sd->bl.y, sd->dir);
         WBUFB(buf, 49) = 5;
         WBUFB(buf, 50) = 5;
         WBUFB(buf, 51) = 0;
@@ -854,8 +889,7 @@ static int clif_set0078(struct map_session_data *sd, unsigned char *buf)
     WBUFW(buf, 42) = sd->opt3;
     WBUFB(buf, 44) = sd->status.karma;
     WBUFB(buf, 45) = sd->sex;
-    WBUFPOS(buf, 46, sd->bl.x, sd->bl.y);
-    WBUFB(buf, 48) |= static_cast<int>(sd->dir) & 0x0f;
+    WBUFPOS(buf, 46, sd->bl.x, sd->bl.y, sd->dir);
     WBUFW(buf, 49) = (pc_isGM(sd) == 60 || pc_isGM(sd) == 99) ? 0x80 : 0;
     WBUFB(buf, 51) = sd->state.dead_sit;
     WBUFW(buf, 52) = 0;
@@ -970,8 +1004,7 @@ static int clif_mob0078(struct mob_data *md, unsigned char *buf)
         WBUFB(buf, 45) = mob_get_sex(md->mob_class);
     }
 
-    WBUFPOS(buf, 46, md->bl.x, md->bl.y);
-    WBUFB(buf, 48) |= static_cast<int>(md->dir) & 0x0f;
+    WBUFPOS(buf, 46, md->bl.x, md->bl.y, md->dir);
     WBUFB(buf, 49) = 5;
     WBUFB(buf, 50) = 5;
     WBUFW(buf, 52) =
@@ -1044,7 +1077,7 @@ static int clif_npc0078(struct npc_data *nd, unsigned char *buf)
     WBUFL(buf, 2) = nd->bl.id;
     WBUFW(buf, 6) = nd->speed;
     WBUFW(buf, 14) = nd->npc_class;
-    WBUFPOS(buf, 46, nd->bl.x, nd->bl.y);
+    WBUFPOS(buf, 46, nd->bl.x, nd->bl.y, Direction::S);
     WBUFB(buf, 48) |= static_cast<int>(nd->dir) & 0x0f;
     WBUFB(buf, 49) = 5;
     WBUFB(buf, 50) = 5;
@@ -1104,7 +1137,7 @@ int clif_spawnpc(struct map_session_data *sd)
         WBUFW(buf, 10) = sd->opt2;
         WBUFW(buf, 12) = sd->status.option;
         WBUFW(buf, 20) = sd->disguise;
-        WBUFPOS(buf, 36, sd->bl.x, sd->bl.y);
+        WBUFPOS(buf, 36, sd->bl.x, sd->bl.y, Direction::S);
         clif_send(buf, packet_len_table[0x7c], &sd->bl, Whom::AREA);
     }
 
@@ -1139,7 +1172,7 @@ int clif_spawnnpc(struct npc_data *nd)
     WBUFL(buf, 2) = nd->bl.id;
     WBUFW(buf, 6) = nd->speed;
     WBUFW(buf, 20) = nd->npc_class;
-    WBUFPOS(buf, 36, nd->bl.x, nd->bl.y);
+    WBUFPOS(buf, 36, nd->bl.x, nd->bl.y, Direction::S);
 
     clif_send(buf, packet_len_table[0x7c], &nd->bl, Whom::AREA);
 
@@ -1166,7 +1199,7 @@ int clif_spawn_fake_npc_for_player(struct map_session_data *sd, int fake_npc_id)
     WFIFOW(fd, 10) = 0;
     WFIFOW(fd, 12) = 0;
     WFIFOW(fd, 20) = 127;
-    WFIFOPOS(fd, 36, sd->bl.x, sd->bl.y);
+    WFIFOPOS(fd, 36, sd->bl.x, sd->bl.y, Direction::S);
     WFIFOSET(fd, packet_len_table[0x7c]);
 
     WFIFOW(fd, 0) = 0x78;
@@ -1177,8 +1210,8 @@ int clif_spawn_fake_npc_for_player(struct map_session_data *sd, int fake_npc_id)
     WFIFOW(fd, 12) = 0;
     WFIFOW(fd, 14) = 127;      // identifies as NPC
     WFIFOW(fd, 20) = 127;
-    WFIFOPOS(fd, 46, sd->bl.x, sd->bl.y);
-    WFIFOPOS(fd, 36, sd->bl.x, sd->bl.y);
+    WFIFOPOS(fd, 46, sd->bl.x, sd->bl.y, Direction::S);
+    WFIFOPOS(fd, 36, sd->bl.x, sd->bl.y, Direction::S);
     WFIFOB(fd, 49) = 5;
     WFIFOB(fd, 50) = 5;
     WFIFOSET(fd, packet_len_table[0x78]);
@@ -1208,7 +1241,7 @@ int clif_spawnmob(struct mob_data *md)
         WBUFW(buf, 10) = md->opt2;
         WBUFW(buf, 12) = md->option;
         WBUFW(buf, 20) = mob_get_viewclass(md->mob_class);
-        WBUFPOS(buf, 36, md->bl.x, md->bl.y);
+        WBUFPOS(buf, 36, md->bl.x, md->bl.y, Direction::S);
         clif_send(buf, packet_len_table[0x7c], &md->bl, Whom::AREA);
     }
 

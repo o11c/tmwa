@@ -11,51 +11,6 @@
 
 # include <time.h>
 
-// TODO replace these with inline functions since we're not superstitious
-// maybe members of socket_data?
-/// Check how much can be read
-# define RFIFOREST(fd) (session[fd]->rdata_size-session[fd]->rdata_pos)
-/// Read from the queue
-# define RFIFOP(fd,pos) (static_cast<const uint8_t *>(session[fd]->rdata)+session[fd]->rdata_pos+(pos))
-# define RFIFOB(fd,pos) (*reinterpret_cast<const uint8_t*>(RFIFOP(fd, pos)))
-# define RFIFOW(fd,pos) (*reinterpret_cast<const uint16_t*>(RFIFOP(fd, pos)))
-# define RFIFOL(fd,pos) (*reinterpret_cast<const uint32_t*>(RFIFOP(fd, pos)))
-
-/// Done reading
-void RFIFOSKIP(int fd, size_t len);
-/// Internal - clean up by discarding handled bytes
-// Atm this is also called in char/char.c, but that is unnecessary
-# define RFIFOFLUSH(fd) (memmove(session[fd]->rdata,RFIFOP(fd,0),RFIFOREST(fd)),\
-session[fd]->rdata_size=RFIFOREST(fd),\
-session[fd]->rdata_pos=0)
-
-/// Used internally - how much room there is to read more data
-# define RFIFOSPACE(fd) (session[fd]->max_rdata-session[fd]->rdata_size)
-
-/// Read from an arbitrary buffer
-# define RBUFP(p,pos) (static_cast<const uint8_t*>(p)+(pos))
-# define RBUFB(p,pos) (*reinterpret_cast<const uint8_t*>(RBUFP((p),(pos))))
-# define RBUFW(p,pos) (*reinterpret_cast<const uint16_t*>(RBUFP((p),(pos))))
-# define RBUFL(p,pos) (*reinterpret_cast<const uint32_t*>(RBUFP((p),(pos))))
-
-
-
-/// Unused - check how much data can be written
-# define WFIFOSPACE(fd) (session[fd]->max_wdata-session[fd]->wdata_size)
-/// Write to the queue
-# define WFIFOP(fd,pos) (session[fd]->wdata+session[fd]->wdata_size+(pos))
-# define WFIFOB(fd,pos) (*reinterpret_cast<uint8_t*>(WFIFOP(fd,pos)))
-# define WFIFOW(fd,pos) (*reinterpret_cast<uint16_t*>(WFIFOP(fd,pos)))
-# define WFIFOL(fd,pos) (*reinterpret_cast<uint32_t*>(WFIFOP(fd,pos)))
-/// Finish writing
-void WFIFOSET(int fd, size_t len);
-
-/// Write to an arbitrary buffer
-#define WBUFP(p,pos) (static_cast<uint8_t*>(p)+(pos))
-#define WBUFB(p,pos) (*reinterpret_cast<uint8_t*>(WBUFP((p),(pos))))
-#define WBUFW(p,pos) (*reinterpret_cast<uint16_t*>(WBUFP((p),(pos))))
-#define WBUFL(p,pos) (*reinterpret_cast<uint32_t*>(WBUFP((p),(pos))))
-
 // Struct declaration
 
 struct socket_data
@@ -141,5 +96,92 @@ void set_defaultparse(void (*defaultparse)(int));
 void fclose_(FILE * fp);
 FILE *fopen_(const char *path, const char *mode);
 bool free_fds(void);
+
+
+
+// TODO replace these with inline functions since we're not superstitious
+// maybe members of socket_data?
+/// Check how much can be read
+inline size_t RFIFOREST(int fd)
+{
+    return session[fd]->rdata_size-session[fd]->rdata_pos;
+}
+/// Read from the queue
+inline const uint8_t *RFIFOP(int fd, size_t pos)
+{
+    return session[fd]->rdata + session[fd]->rdata_pos + pos;
+}
+inline uint8_t RFIFOB(int fd, size_t pos)
+{
+    return *reinterpret_cast<const uint8_t*>(RFIFOP(fd, pos));
+}
+inline uint16_t RFIFOW(int fd, size_t pos)
+{
+    return *reinterpret_cast<const uint16_t*>(RFIFOP(fd, pos));
+}
+inline uint32_t RFIFOL(int fd, size_t pos)
+{
+    return *reinterpret_cast<const uint32_t*>(RFIFOP(fd, pos));
+}
+
+/// Done reading
+void RFIFOSKIP(int fd, size_t len);
+
+/// Read from an arbitrary buffer
+inline const uint8_t *RBUFP(uint8_t *p, size_t pos)
+{
+    return p + pos;
+}
+inline uint8_t RBUFB(uint8_t *p, size_t pos)
+{
+    return *reinterpret_cast<const uint8_t*>(RBUFP(p, pos));
+}
+inline uint16_t RBUFW(uint8_t *p, size_t pos)
+{
+    return *reinterpret_cast<const uint16_t*>(RBUFP(p, pos));
+}
+inline uint32_t RBUFL(uint8_t *p, size_t pos)
+{
+    return *reinterpret_cast<const uint32_t*>(RBUFP(p, pos));
+}
+
+
+/// Write to the queue
+inline uint8_t *WFIFOP(int fd, size_t pos)
+{
+    return session[fd]->wdata + session[fd]->wdata_size + pos;
+}
+inline uint8_t& WFIFOB(int fd, size_t pos)
+{
+    return *reinterpret_cast<uint8_t*>(WFIFOP(fd, pos));
+}
+inline uint16_t& WFIFOW(int fd, size_t pos)
+{
+    return *reinterpret_cast<uint16_t*>(WFIFOP(fd, pos));
+}
+inline uint32_t& WFIFOL(int fd, size_t pos)
+{
+    return *reinterpret_cast<uint32_t*>(WFIFOP(fd, pos));
+}
+/// Finish writing
+void WFIFOSET(int fd, size_t len);
+
+/// Write to an arbitrary buffer
+inline uint8_t *WBUFP(uint8_t *p, size_t pos)
+{
+    return p + pos;
+}
+inline uint8_t& WBUFB(uint8_t *p, size_t pos)
+{
+    return *reinterpret_cast<uint8_t*>(WBUFP(p, pos));
+}
+inline uint16_t& WBUFW(uint8_t *p, size_t pos)
+{
+    return *reinterpret_cast<uint16_t*>(WBUFP(p, pos));
+}
+inline uint32_t& WBUFL(uint8_t *p, size_t pos)
+{
+    return *reinterpret_cast<uint32_t*>(WBUFP(p,pos));
+}
 
 #endif // SOCKET_H

@@ -1777,7 +1777,7 @@ int atcommand_pvpoff(int fd, struct map_session_data *sd,
             continue;
         if (pl_sd->pvp_timer == -1)
             continue;
-        delete_timer(pl_sd->pvp_timer, pc_calc_pvprank_timer);
+        delete_timer(pl_sd->pvp_timer);
         pl_sd->pvp_timer = -1;
     }
     clif_displaymessage(fd, "PvP: Off.");
@@ -1813,7 +1813,7 @@ int atcommand_pvpon(int fd, struct map_session_data *sd,
             continue;
         if (sd->bl.m != pl_sd->bl.m || pl_sd->pvp_timer == -1)
             continue;
-        pl_sd->pvp_timer = add_timer(gettick() + 200, pc_calc_pvprank_timer, pl_sd->bl.id, 0);
+        pl_sd->pvp_timer = add_timer(gettick() + 200, pc_calc_pvprank_timer, pl_sd->bl.id);
         pl_sd->pvp_rank = 0;
         pl_sd->pvp_lastusers = 0;
         pl_sd->pvp_point = 5;
@@ -4357,7 +4357,7 @@ int atcommand_summon(int, struct map_session_data *sd,
         md->master_id = sd->bl.id;
         md->state.special_mob_ai = 1;
         md->mode = mob_db[md->mob_class].mode | 0x04;
-        md->deletetimer = add_timer(gettick() + 60000, mob_timer_delete, id, 0);
+        md->deletetimer = add_timer(gettick() + 60000, mob_timer_delete, id);
         clif_misceffect(&md->bl, 344);
     }
 

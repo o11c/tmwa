@@ -625,7 +625,7 @@ static void mmo_auth_sync(void)
 
 /// Timer to sync the DB to disk as little as possible
 // this is resource-intensive, so fork() if possible
-static void check_auth_sync(timer_id, tick_t, custom_id_t, custom_data_t)
+static void check_auth_sync(timer_id, tick_t)
 {
     if (pid && !waitpid(pid, NULL, WNOHANG))
         // if already running
@@ -681,8 +681,7 @@ static void send_GM_accounts(void)
 
 /// Timer to check if GM file account have been changed
 // TODO replace this with inotify on systems where it is available
-static void check_GM_file(timer_id, tick_t, custom_id_t,
-                    custom_data_t)
+static void check_GM_file(timer_id, tick_t)
 {
     // if checking is disabled
     if (!gm_account_filename_check_timer)
@@ -856,8 +855,7 @@ static enum auth_failure mmo_auth(struct mmo_account *account, int fd)
 }
 
 /// Kill char servers that don't send the common packet after 5 calls
-static void char_anti_freeze_system(timer_id, tick_t,
-                              custom_id_t, custom_data_t)
+static void char_anti_freeze_system(timer_id, tick_t)
 {
     for (int i = 0; i < MAX_SERVERS; i++)
     {
@@ -3786,17 +3784,16 @@ void do_init(int argc, char **argv)
     login_fd = make_listen_port(login_port);
 
     // save account information every 5 minutes
-    add_timer_interval(gettick() + 300000, check_auth_sync, 0, 0, 300000);
+    add_timer_interval(gettick() + 300000, 300000, check_auth_sync);
 
     if (anti_freeze_enable)
-        add_timer_interval(gettick() + 1000, char_anti_freeze_system, 0,
-                            0, ANTI_FREEZE_INTERVAL * 1000);
+        add_timer_interval(gettick() + 1000, ANTI_FREEZE_INTERVAL * 1000, char_anti_freeze_system);
 
     // add timer to check GM accounts file modification
     // this shouldn't be needed
     int j = gm_account_filename_check_timer;
     if (j)
-        add_timer_interval(gettick() + j * 1000, check_GM_file, 0, 0, j * 1000);
+        add_timer_interval(gettick() + j * 1000, j * 1000, check_GM_file);
 
     login_log("The login-server is ready (Server is listening on the port %d).\n",
                login_port);

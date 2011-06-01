@@ -116,10 +116,8 @@ int pc_addeventtimer(struct map_session_data *sd, int tick,
                       const char *name);
 int pc_deleventtimer(struct map_session_data *sd, const char *name);
 int pc_cleareventtimer(struct map_session_data *sd);
-int pc_addeventtimercount(struct map_session_data *sd, const char *name,
-                           int tick);
 
-void pc_calc_pvprank_timer(timer_id, tick_t, custom_id_t, custom_data_t);
+void pc_calc_pvprank_timer(timer_id, tick_t, uint32_t);
 
 int pc_marriage(struct map_session_data *sd,
                  struct map_session_data *dstsd);

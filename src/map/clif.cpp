@@ -392,7 +392,7 @@ static void clif_send(uint8_t *buf, int len, struct block_list *bl, Whom type)
     // Validate packet
     if (!buf)
         abort();
-    if (bl && WFIFOP(reinterpret_cast<struct map_session_data *>(bl)->fd, 0) == buf)
+    if (bl && bl->type == BL_PC && WFIFOP(reinterpret_cast<struct map_session_data *>(bl)->fd, 0) == buf)
         abort();
     if (len < 2)
         abort();
@@ -644,12 +644,10 @@ void clif_being_remove(struct block_list *bl, BeingRemoveType type)
     }
 }
 
-static void clif_being_remove_delay_sub(timer_id, tick_t, custom_id_t id,
-                                        custom_data_t data)
+static void clif_being_remove_delay_sub(timer_id, tick_t, BeingRemoveType type,
+                                        struct block_list *bl)
 {
-    struct block_list *bl = reinterpret_cast<struct block_list *>(data.p);
-
-    clif_being_remove(bl, static_cast<BeingRemoveType>(id));
+    clif_being_remove(bl, type);
     map_freeblock(bl);
 }
 
@@ -659,7 +657,7 @@ void clif_being_remove_delay(tick_t tick, struct block_list *bl, BeingRemoveType
     CREATE(tmpbl, struct block_list, 1);
 
     memcpy(tmpbl, bl, sizeof(struct block_list));
-    add_timer(tick, clif_being_remove_delay_sub, static_cast<custom_id_t>(type), tmpbl);
+    add_timer(tick, clif_being_remove_delay_sub, type, tmpbl);
 }
 
 /*==========================================
@@ -1173,10 +1171,10 @@ static void clif_quitsave(int, struct map_session_data *sd)
  *
  *------------------------------------------
  */
-static void clif_waitclose(timer_id, tick_t, custom_id_t id, custom_data_t)
+static void clif_waitclose(timer_id, tick_t, int fd)
 {
-    if (session[id])
-        session[id]->eof = 1;
+    if (session[fd])
+        session[fd]->eof = 1;
 }
 
 /*==========================================
@@ -1185,7 +1183,7 @@ static void clif_waitclose(timer_id, tick_t, custom_id_t id, custom_data_t)
  */
 void clif_setwaitclose(int fd)
 {
-    add_timer(gettick() + 5000, clif_waitclose, fd, 0);
+    add_timer(gettick() + 5000, clif_waitclose, fd);
 }
 
 /*==========================================
@@ -3406,14 +3404,13 @@ static void clif_parse_LoadEndAck(int, struct map_session_data *sd)
 
     // pvp
     if (sd->pvp_timer != -1 && !battle_config.pk_mode)
-        delete_timer(sd->pvp_timer, pc_calc_pvprank_timer);
+        delete_timer(sd->pvp_timer);
     if (maps[sd->bl.m].flag.pvp)
     {
         if (!battle_config.pk_mode)
         {                       // remove pvp stuff for pk_mode [Valaris]
             sd->pvp_timer =
-                add_timer(gettick() + 200, pc_calc_pvprank_timer, sd->bl.id,
-                           0);
+                add_timer(gettick() + 200, pc_calc_pvprank_timer, sd->bl.id);
             sd->pvp_rank = 0;
             sd->pvp_lastusers = 0;
             sd->pvp_point = 5;

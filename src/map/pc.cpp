@@ -159,7 +159,7 @@ static int distance(int x_0, int y_0, int x_1, int y_1)
     return dx > dy ? dx : dy;
 }
 
-static void pc_invincible_timer(timer_id tid, tick_t, custom_id_t id, custom_data_t)
+static void pc_invincible_timer(timer_id tid, tick_t, uint32_t id)
 {
     struct map_session_data *sd;
 
@@ -180,9 +180,9 @@ int pc_setinvincibletimer(struct map_session_data *sd, int val)
     nullpo_ret(sd);
 
     if (sd->invincible_timer != -1)
-        delete_timer(sd->invincible_timer, pc_invincible_timer);
+        delete_timer(sd->invincible_timer);
     sd->invincible_timer =
-        add_timer(gettick() + val, pc_invincible_timer, sd->bl.id, 0);
+        add_timer(gettick() + val, pc_invincible_timer, sd->bl.id);
     return 0;
 }
 
@@ -192,7 +192,7 @@ int pc_delinvincibletimer(struct map_session_data *sd)
 
     if (sd->invincible_timer != -1)
     {
-        delete_timer(sd->invincible_timer, pc_invincible_timer);
+        delete_timer(sd->invincible_timer);
         sd->invincible_timer = -1;
     }
     return 0;
@@ -662,7 +662,7 @@ int pc_authok(int id, int login_id2, time_t connect_until_time,
     // イベント関係の初期化
     memset(sd->eventqueue, 0, sizeof(sd->eventqueue));
     for (int i = 0; i < MAX_EVENTTIMER; i++)
-        sd->eventtimer[i] = -1;
+        sd->eventtimer[i].tid = -1;
 
     // 位置の設定
     pc_setpos(sd, sd->status.last_point.map, sd->status.last_point.x,
@@ -2512,7 +2512,7 @@ static int calc_next_walk_step(struct map_session_data *sd)
  * 半歩進む(timer関数)
  *------------------------------------------
  */
-static void pc_walk(timer_id tid, tick_t tick, custom_id_t id, custom_data_t data)
+static void pc_walk(timer_id tid, tick_t tick, uint32_t id, uint8_t data)
 {
     struct map_session_data *sd;
     int i, ctype;
@@ -2530,7 +2530,7 @@ static void pc_walk(timer_id tid, tick_t tick, custom_id_t id, custom_data_t dat
     }
     sd->walktimer = -1;
     if (sd->walkpath.path_pos >= sd->walkpath.path_len
-        || sd->walkpath.path_pos != data.i)
+        || sd->walkpath.path_pos != data)
         return;
 
     //歩いたので息吹のタイマーを初期化
@@ -2645,7 +2645,7 @@ static int pc_walktoxy_sub(struct map_session_data *sd)
     if ((i = calc_next_walk_step(sd)) > 0)
     {
         i = i >> 2;
-        sd->walktimer = add_timer(gettick() + i, pc_walk, sd->bl.id, 0);
+        sd->walktimer = add_timer(gettick() + i, pc_walk, sd->bl.id, static_cast<uint8_t>(0));
     }
     clif_movechar(sd);
 
@@ -2691,7 +2691,7 @@ int pc_stop_walking(struct map_session_data *sd, int type)
 
     if (sd->walktimer != -1)
     {
-        delete_timer(sd->walktimer, pc_walk);
+        delete_timer(sd->walktimer);
         sd->walktimer = -1;
     }
     sd->walkpath.path_len = 0;
@@ -2763,7 +2763,7 @@ int pc_checkequip(struct map_session_data *sd, int pos)
  * PCの攻撃 (timer関数)
  *------------------------------------------
  */
-static void pc_attack_timer(timer_id tid, tick_t tick, custom_id_t id, custom_data_t)
+static void pc_attack_timer(timer_id tid, tick_t tick, uint32_t id)
 {
     struct map_session_data *sd;
     struct block_list *bl;
@@ -2863,7 +2863,7 @@ static void pc_attack_timer(timer_id tid, tick_t tick, custom_id_t id, custom_da
     if (sd->state.attack_continue)
     {
         sd->attacktimer =
-            add_timer(sd->attackabletime, pc_attack_timer, sd->bl.id, 0);
+            add_timer(sd->attackabletime, pc_attack_timer, sd->bl.id);
     }
 }
 
@@ -2900,12 +2900,12 @@ int pc_attack(struct map_session_data *sd, int target_id, int type)
     if (d > 0 && d < 2000)
     {                           // 攻撃delay中
         sd->attacktimer =
-            add_timer(sd->attackabletime, pc_attack_timer, sd->bl.id, 0);
+            add_timer(sd->attackabletime, pc_attack_timer, sd->bl.id);
     }
     else
     {
         // 本来timer関数なので引数を合わせる
-        pc_attack_timer(-1, gettick(), sd->bl.id, 0);
+        pc_attack_timer(-1, gettick(), sd->bl.id);
     }
 
     return 0;
@@ -2921,7 +2921,7 @@ int pc_stopattack(struct map_session_data *sd)
 
     if (sd->attacktimer != -1)
     {
-        delete_timer(sd->attacktimer, pc_attack_timer);
+        delete_timer(sd->attacktimer);
         sd->attacktimer = -1;
     }
     sd->attacktarget = 0;
@@ -4621,7 +4621,7 @@ int pc_percentrefinery(struct map_session_data *, struct item *item)
  * イベントタイマー処理
  *------------------------------------------
  */
-static void pc_eventtimer(timer_id tid, tick_t, custom_id_t id, custom_data_t data)
+static void pc_eventtimer(timer_id tid, tick_t, uint32_t id, char *data)
 {
     struct map_session_data *sd = map_id2sd(id);
     int i;
@@ -4630,17 +4630,17 @@ static void pc_eventtimer(timer_id tid, tick_t, custom_id_t id, custom_data_t da
 
     for (i = 0; i < MAX_EVENTTIMER; i++)
     {
-        if (sd->eventtimer[i] == tid)
+        if (sd->eventtimer[i].tid == tid)
         {
-            sd->eventtimer[i] = -1;
-            npc_event(sd, static_cast<const char *>(data.p), 0);
+            sd->eventtimer[i].tid = -1;
+            npc_event(sd, data, 0);
             break;
         }
     }
-    free(data.p);
+    free(data);
     if (i == MAX_EVENTTIMER)
     {
-        map_log("pc_evemap_lognttimer: no such event timer\n");
+        map_log("pc_eventtimer: no such event timer\n");
     }
 }
 
@@ -4655,7 +4655,7 @@ int pc_addeventtimer(struct map_session_data *sd, int tick, const char *name)
     nullpo_ret(sd);
 
     for (i = 0; i < MAX_EVENTTIMER; i++)
-        if (sd->eventtimer[i] == -1)
+        if (sd->eventtimer[i].tid == -1)
             break;
 
     if (i < MAX_EVENTTIMER)
@@ -4664,9 +4664,8 @@ int pc_addeventtimer(struct map_session_data *sd, int tick, const char *name)
         CREATE(evname, char, 24);
         strncpy(evname, name, 24);
         evname[23] = '\0';
-        sd->eventtimer[i] = add_timer(gettick() + tick,
-                                       pc_eventtimer, sd->bl.id,
-                                       evname);
+        sd->eventtimer[i].name = evname;
+        sd->eventtimer[i].tid = add_timer(gettick() + tick, pc_eventtimer, sd->bl.id, evname);
         return 1;
     }
 
@@ -4684,31 +4683,10 @@ int pc_deleventtimer(struct map_session_data *sd, const char *name)
     nullpo_ret(sd);
 
     for (i = 0; i < MAX_EVENTTIMER; i++)
-        if (sd->eventtimer[i] != -1 && strcmp(reinterpret_cast<char *>(get_timer(sd->eventtimer[i])->data.p), name) == 0)
+        if (sd->eventtimer[i].tid != -1 && strcmp(sd->eventtimer[i].name, name) == 0)
         {
-            delete_timer(sd->eventtimer[i], pc_eventtimer);
-            sd->eventtimer[i] = -1;
-            break;
-        }
-
-    return 0;
-}
-
-/*==========================================
- * イベントタイマーカウント値追加
- *------------------------------------------
- */
-int pc_addeventtimercount(struct map_session_data *sd, const char *name,
-                           int tick)
-{
-    int i;
-
-    nullpo_ret(sd);
-
-    for (i = 0; i < MAX_EVENTTIMER; i++)
-        if (sd->eventtimer[i] != -1 && strcmp(reinterpret_cast<char *>(get_timer(sd->eventtimer[i])->data.p), name) == 0)
-        {
-            addtick_timer(sd->eventtimer[i], tick);
+            delete_timer(sd->eventtimer[i].tid);
+            sd->eventtimer[i].tid = -1;
             break;
         }
 
@@ -4726,10 +4704,10 @@ int pc_cleareventtimer(struct map_session_data *sd)
     nullpo_ret(sd);
 
     for (i = 0; i < MAX_EVENTTIMER; i++)
-        if (sd->eventtimer[i] != -1)
+        if (sd->eventtimer[i].tid != -1)
         {
-            delete_timer(sd->eventtimer[i], pc_eventtimer);
-            sd->eventtimer[i] = -1;
+            delete_timer(sd->eventtimer[i].tid);
+            sd->eventtimer[i].tid = -1;
         }
 
     return 0;
@@ -5113,7 +5091,7 @@ int pc_calc_pvprank(struct map_session_data *sd)
  * PVP順位計算(timer)
  *------------------------------------------
  */
-void pc_calc_pvprank_timer(timer_id, tick_t, custom_id_t id, custom_data_t data)
+void pc_calc_pvprank_timer(timer_id, tick_t, uint32_t id)
 {
     struct map_session_data *sd = NULL;
     if (battle_config.pk_mode)  // disable pvp ranking if pk_mode on [Valaris]
@@ -5125,7 +5103,7 @@ void pc_calc_pvprank_timer(timer_id, tick_t, custom_id_t id, custom_data_t data)
     sd->pvp_timer = -1;
     if (pc_calc_pvprank(sd) > 0)
         sd->pvp_timer = add_timer(gettick() + PVP_CALCRANK_INTERVAL,
-                                   pc_calc_pvprank_timer, id, data);
+                                  pc_calc_pvprank_timer, id);
 }
 
 /*==========================================
@@ -5490,7 +5468,7 @@ static void pc_natural_heal_sub(struct map_session_data *sd, va_list)
  * HP/SP自然回復 (interval timer関数)
  *------------------------------------------
  */
-static void pc_natural_heal(timer_id, tick_t tick, custom_id_t, custom_data_t)
+static void pc_natural_heal(timer_id, tick_t tick)
 {
     natural_heal_tick = tick;
     natural_heal_diff_tick =
@@ -5539,7 +5517,7 @@ static void pc_autosave_sub(struct map_session_data *sd, va_list)
  * 自動セーブ (timer関数)
  *------------------------------------------
  */
-static void pc_autosave(timer_id, tick_t, custom_id_t, custom_data_t)
+static void pc_autosave(timer_id, tick_t)
 {
     int interval;
 
@@ -5551,7 +5529,7 @@ static void pc_autosave(timer_id, tick_t, custom_id_t, custom_data_t)
     interval = autosave_interval / (clif_countusers() + 1);
     if (interval <= 0)
         interval = 1;
-    add_timer(gettick() + interval, pc_autosave, 0, 0);
+    add_timer(gettick() + interval, pc_autosave);
 }
 
 int pc_read_gm_account(int fd)
@@ -5902,10 +5880,9 @@ int do_init_pc(void)
 
 //  gm_account_db = numdb_init();
 
-    add_timer_interval((natural_heal_prev_tick =
-                         gettick() + NATURAL_HEAL_INTERVAL), pc_natural_heal,
-                        0, 0, NATURAL_HEAL_INTERVAL);
-    add_timer(gettick() + autosave_interval, pc_autosave, 0, 0);
+    natural_heal_prev_tick = gettick() + NATURAL_HEAL_INTERVAL;
+    add_timer_interval(natural_heal_prev_tick, NATURAL_HEAL_INTERVAL, pc_natural_heal);
+    add_timer(gettick() + autosave_interval, pc_autosave);
     return 0;
 }
 

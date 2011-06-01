@@ -3,12 +3,14 @@ BISON = bison
 WARNINGS= @warnings
 CFLAGS = -pipe -g ${WARNINGS}
 CXXFLAGS = ${CFLAGS}
+LDFLAGS = -Wl,--as-needed
 
 # We require some c++0x features, from G++ 4.5
 # * Using local types in template arguments
 # * Undoubtedly other stuff I'll forget to put here
 override CXXFLAGS += -std=c++0x
-
+# for clock_gettime
+override LDLIBS += -lrt
 # works on both x86 and x86_64
 override CXX += -m32
 # Needed for the implicit linking rule

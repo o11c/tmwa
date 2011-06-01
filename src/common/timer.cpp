@@ -4,7 +4,8 @@
 #include <sys/types.h>
 
 #include <sys/socket.h>
-#include <sys/time.h>
+
+#include <time.h>
 
 #include "timer.hpp"
 #include "utils.hpp"
@@ -26,25 +27,15 @@ static uint32_t timer_heap_max = 0;
 static timer_id *timer_heap = NULL;
 
 
-static uint32_t gettick_cache;
-static uint8_t gettick_count = 0;
+tick_t current_tick;
 
-uint32_t gettick_nocache(void)
+void update_current_tick(void)
 {
-    struct timeval tval;
-    // BUG: This will cause strange behavior if the system clock is changed!
-    // it should be reimplemented in terms of clock_gettime(CLOCK_MONOTONIC, )
-    gettimeofday(&tval, NULL);
-    gettick_count = 255;
-    return gettick_cache = tval.tv_sec * 1000 + tval.tv_usec / 1000;
+    struct timespec spec;
+    clock_gettime(CLOCK_MONOTONIC, &spec);
+    current_tick = static_cast<tick_t>(spec.tv_sec) * 1000 + spec.tv_nsec / 1000;
 }
 
-uint32_t gettick(void)
-{
-    if (gettick_count--)
-        return gettick_cache;
-    return gettick_nocache();
-}
 
 static void push_timer_heap(timer_id idx)
 {
@@ -110,7 +101,7 @@ static timer_id pop_timer_heap(void)
     return ret;
 }
 
-timer_id add_timer(tick_t tick, timer_func func, custom_id_t id, custom_data_t data)
+timer_id add_timer_impl(tick_t tick, TimerFunc func, interval_t interval)
 {
     timer_id i;
 
@@ -129,7 +120,7 @@ timer_id add_timer(tick_t tick, timer_func func, custom_id_t id, custom_data_t d
 
     // I have no idea what this is doing
     if (i >= timer_data_num)
-        for (i = timer_data_num; i < timer_data_max && timer_data[i].type; i++)
+        for (i = timer_data_num; i < timer_data_max && timer_data[i].func; i++)
             ;
     if (i >= timer_data_num && i >= timer_data_max)
     {
@@ -148,46 +139,26 @@ timer_id add_timer(tick_t tick, timer_func func, custom_id_t id, custom_data_t d
     }
     timer_data[i].tick = tick;
     timer_data[i].func = func;
-    timer_data[i].id = id;
-    timer_data[i].data = data;
-    timer_data[i].type = TIMER_ONCE_AUTODEL;
-    timer_data[i].interval = 1000;
+    timer_data[i].interval = interval;
     push_timer_heap(i);
     if (i >= timer_data_num)
         timer_data_num = i + 1;
     return i;
 }
 
-timer_id add_timer_interval(tick_t tick, timer_func func, custom_id_t id,
-                             custom_data_t data, interval_t interval)
-{
-    timer_id tid = add_timer(tick, func, id, data);
-    timer_data[tid].type = TIMER_INTERVAL;
-    timer_data[tid].interval = interval;
-    return tid;
-}
-
-void delete_timer(timer_id id, timer_func func)
+void delete_timer(timer_id id)
 {
     if (id == 0 || id >= timer_data_num)
     {
         fprintf(stderr, "delete_timer error : no such timer %d\n", id);
         abort();
     }
-    if (timer_data[id].func != func)
-    {
-        fprintf(stderr, "Timer mismatch\n");
-        abort();
-    }
     // "to let them disappear" - is this just in case?
+    // odd, this *doesn't* actually disabled the timer
+    // I guess it makes sense, since it's a part of the data structure ...
     timer_data[id].func = NULL;
-    timer_data[id].type = TIMER_ONCE_AUTODEL;
-    timer_data[id].tick -= 60 * 60 * 1000;
-}
-
-tick_t addtick_timer(timer_id tid, interval_t tick)
-{
-    return timer_data[tid].tick += tick;
+    timer_data[id].interval = 0;
+    timer_data[id].tick = gettick();
 }
 
 struct TimerData *get_timer(timer_id tid)
@@ -212,42 +183,41 @@ interval_t do_timer(tick_t tick)
             break;
         }
         pop_timer_heap();
-        if (timer_data[i].func)
+        if (!timer_data[i].func)
+            continue;
+        if (DIFF_TICK(timer_data[i].tick, tick) < -1000)
+        {
+            // If we are too far past the requested tick, call with the current tick instead to fix reregistering problems
+            timer_data[i].func(i, tick);
+        }
+        else
+        {
+            timer_data[i].func(i, timer_data[i].tick);
+        }
+
+        if (!timer_data[i].interval)
+        {
+            timer_data[i].func = NULL;
+            if (free_timer_list_pos >= free_timer_list_max)
+            {
+                free_timer_list_max += 256;
+                RECREATE(free_timer_list, uint32_t, free_timer_list_max);
+                memset(free_timer_list + (free_timer_list_max - 256),
+                        0, 256 * sizeof(uint32_t));
+            }
+            free_timer_list[free_timer_list_pos++] = i;
+        }
+        else
         {
             if (DIFF_TICK(timer_data[i].tick, tick) < -1000)
             {
-                // If we are too far past the requested tick, call with the current tick instead to fix reregistering problems
-                timer_data[i].func(i, tick, timer_data[i].id, timer_data[i].data);
+                timer_data[i].tick = tick + timer_data[i].interval;
             }
             else
             {
-                timer_data[i].func(i, timer_data[i].tick, timer_data[i].id, timer_data[i].data);
+                timer_data[i].tick += timer_data[i].interval;
             }
-        }
-        switch (timer_data[i].type)
-        {
-            case TIMER_ONCE_AUTODEL:
-                timer_data[i].type = TIMER_NONE;
-                if (free_timer_list_pos >= free_timer_list_max)
-                {
-                    free_timer_list_max += 256;
-                    RECREATE(free_timer_list, uint32_t, free_timer_list_max);
-                    memset(free_timer_list + (free_timer_list_max - 256),
-                            0, 256 * sizeof(uint32_t));
-                }
-                free_timer_list[free_timer_list_pos++] = i;
-                break;
-            case TIMER_INTERVAL:
-                if (DIFF_TICK(timer_data[i].tick, tick) < -1000)
-                {
-                    timer_data[i].tick = tick + timer_data[i].interval;
-                }
-                else
-                {
-                    timer_data[i].tick += timer_data[i].interval;
-                }
-                push_timer_heap(i);
-                break;
+            push_timer_heap(i);
         }
     }
 

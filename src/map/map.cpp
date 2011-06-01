@@ -573,21 +573,22 @@ void map_foreachobject(void (*func)(struct block_list *, va_list), BlockType typ
 }
 
 /// Delete floor items
-void map_clearflooritem_timer(timer_id tid, tick_t, custom_id_t id, custom_data_t data)
+void map_clearflooritem_timer(timer_id tid, tick_t, uint32_t id)
 {
+    bool flag = tid == -1;
     struct flooritem_data *fitem = reinterpret_cast<struct flooritem_data *>(object[id]);
     if (!fitem || fitem->bl.type != BL_ITEM)
     {
         map_log("%s: error: no such item", __func__);
         return;
     }
-    if (!data.i && fitem->cleartimer != tid)
+    if (!flag && fitem->cleartimer != tid)
     {
         map_log("%s: error: bad data", __func__);
         return;
     }
-    if (data.i)
-        delete_timer(fitem->cleartimer, map_clearflooritem_timer);
+    if (flag)
+        delete_timer(fitem->cleartimer);
     clif_clearflooritem(fitem, -1);
     map_delobject(fitem->bl.id, BL_ITEM);
 }
@@ -700,7 +701,7 @@ int map_addflooritem_any(struct item *item_data, int amount, uint16_t m, uint16_
     fitem->subx = (r & 3) * 3 + 3;
     fitem->suby = ((r >> 2) & 3) * 3 + 3;
     fitem->cleartimer = add_timer(gettick() + lifetime, map_clearflooritem_timer,
-                                   fitem->bl.id, 0);
+                                   fitem->bl.id);
 
     map_addblock(&fitem->bl);
     clif_dropflooritem(fitem);

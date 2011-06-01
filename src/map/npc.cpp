@@ -24,7 +24,7 @@
 #include "skill.hpp"
 #include "../common/socket.hpp"
 
-static void npc_event_timer(timer_id, tick_t, custom_id_t, custom_data_t);
+static void npc_event_timer(timer_id, tick_t, uint32_t, char *);
 static int npc_checknear(struct map_session_data *, int);
 static int npc_parse_mob(char *w1, char *w2, char *w3, char *w4);
 
@@ -163,14 +163,14 @@ int npc_event_dequeue(struct map_session_data *sd)
  * イベントの遅延実行
  *------------------------------------------
  */
-void npc_event_timer(timer_id, tick_t, custom_id_t id, custom_data_t data)
+void npc_event_timer(timer_id, tick_t, uint32_t id, char *data)
 {
     struct map_session_data *sd = map_id2sd(id);
     if (sd == NULL)
         return;
 
-    npc_event(sd, reinterpret_cast<const char *>(data.p), 0);
-    free(data.p);
+    npc_event(sd, data, 0);
+    free(data);
 }
 
 /*==========================================
@@ -257,7 +257,7 @@ int npc_event_do_l(const char *name, int rid, int argc, argrec_t * args)
  * 時計イベント実行
  *------------------------------------------
  */
-static void npc_event_do_clock(timer_id, tick_t, custom_id_t, custom_data_t)
+static void npc_event_do_clock(timer_id, tick_t)
 {
     time_t timer;
     struct tm *t;
@@ -296,7 +296,7 @@ int npc_event_do_oninit(void)
     int c = npc_event_doall("OnInit");
     printf("npc: OnInit Event done. (%d npc)\n", c);
 
-    add_timer_interval(gettick() + 100, npc_event_do_clock, 0, 0, 1000);
+    add_timer_interval(gettick() + 100, 1000, npc_event_do_clock);
 
     return 0;
 }
@@ -309,15 +309,16 @@ static int npc_addeventtimer(struct npc_data *nd, int tick, const char *name)
 {
     int i;
     for (i = 0; i < MAX_EVENTTIMER; i++)
-        if (nd->eventtimer[i] == -1)
+        if (nd->eventtimer[i].tid == -1)
             break;
     if (i < MAX_EVENTTIMER)
     {
         char *evname;
         CREATE(evname, char, 24);
         memcpy(evname, name, 24);
-        nd->eventtimer[i] = add_timer(gettick() + tick, npc_event_timer,
-                                      nd->bl.id, evname);
+        nd->eventtimer[i].tid = add_timer(gettick() + tick, npc_event_timer,
+                                          nd->bl.id, evname);
+        nd->eventtimer[i].name = evname;
     }
     else
         printf("npc_addtimer: event timer is full !\n");
@@ -329,10 +330,10 @@ static int npc_deleventtimer(struct npc_data *nd, const char *name)
 {
     int i;
     for (i = 0; i < MAX_EVENTTIMER; i++)
-        if (nd->eventtimer[i] != -1 && strcmp(reinterpret_cast<char *>(get_timer(nd->eventtimer[i])->data.p), name) == 0)
+        if (nd->eventtimer[i].tid != -1 && strcmp(nd->eventtimer[i].name, name) == 0)
         {
-            delete_timer(nd->eventtimer[i], npc_event_timer);
-            nd->eventtimer[i] = -1;
+            delete_timer(nd->eventtimer[i].tid);
+            nd->eventtimer[i].tid = -1;
             break;
         }
 
@@ -380,7 +381,7 @@ int npc_do_ontimer(int npc_id, struct map_session_data *sd, int option)
  * タイマーイベント実行
  *------------------------------------------
  */
-static void npc_timerevent(timer_id, tick_t tick, custom_id_t id, custom_data_t data)
+static void npc_timerevent(timer_id, tick_t tick, uint32_t id, int data)
 {
     int next, t;
     struct npc_data *nd = reinterpret_cast<struct npc_data *>(map_id2bl(id));
@@ -394,7 +395,7 @@ static void npc_timerevent(timer_id, tick_t tick, custom_id_t id, custom_data_t 
     te = nd->u.scr.timer_event + nd->u.scr.nexttimer;
     nd->u.scr.timerid = -1;
 
-    t = nd->u.scr.timer += data.i;
+    t = nd->u.scr.timer += data;
     nd->u.scr.nexttimer++;
     if (nd->u.scr.timeramount > nd->u.scr.nexttimer)
     {
@@ -449,7 +450,7 @@ int npc_timerevent_stop(struct npc_data *nd)
         nd->u.scr.nexttimer = -1;
         nd->u.scr.timer += gettick() - nd->u.scr.timertick;
         if (nd->u.scr.timerid != -1)
-            delete_timer(nd->u.scr.timerid, npc_timerevent);
+            delete_timer(nd->u.scr.timerid);
         nd->u.scr.timerid = -1;
     }
     return 0;
@@ -1253,7 +1254,7 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
     if (strcmp(w2, "script") == 0)
     {
         // スクリプトの解析
-        CREATE(srcbuf, char, 1);
+        CREATE(srcbuf, char, srcsize);
         if (strchr(first_line, '{'))
         {
             strcpy(srcbuf, strchr(first_line, '{'));

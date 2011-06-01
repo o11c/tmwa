@@ -60,7 +60,7 @@ static void clear_activation_record(cont_activation_record_t * ar)
     }
 }
 
-static void invocation_timer_callback(timer_id, tick_t, custom_id_t id, custom_data_t)
+static void invocation_timer_callback(timer_id, tick_t, uint32_t id)
 {
     invocation_t *invocation = reinterpret_cast<invocation_t *>(map_id2bl(id));
 
@@ -101,7 +101,7 @@ void spell_free_invocation(invocation_t * invocation)
     clear_stack(invocation);
 
     if (invocation->timer)
-        delete_timer(invocation->timer, invocation_timer_callback);
+        delete_timer(invocation->timer);
 
     magic_free_env(invocation->env);
 
@@ -216,17 +216,16 @@ static void char_update(character_t * character)
     entity_warp(&character->bl, character->bl.m, character->bl.x, character->bl.y);
 }
 
-static void timer_callback_effect(timer_id, tick_t, custom_id_t id, custom_data_t data)
+static void timer_callback_effect(timer_id, tick_t, uint32_t id, int data)
 {
     entity_t *target = map_id2bl(id);
     if (target)
-        clif_misceffect(target, data.i);
+        clif_misceffect(target, data);
 }
 
 static void entity_effect(entity_t * entity, int effect_nr, int delay)
 {
-    add_timer(gettick() + delay,
-               &timer_callback_effect, entity->id, effect_nr);
+    add_timer(gettick() + delay, timer_callback_effect, entity->id, effect_nr);
 }
 
 void magic_unshroud(character_t *other_char)
@@ -238,8 +237,7 @@ void magic_unshroud(character_t *other_char)
 //        entity_effect(&other_char->bl, MAGIC_EFFECT_REVEAL);
 }
 
-static void timer_callback_effect_npc_delete(timer_id, tick_t,
-                                  custom_id_t npc_id, custom_data_t)
+static void timer_callback_effect_npc_delete(timer_id, tick_t, uint32_t npc_id)
 {
     struct npc_data *effect_npc = reinterpret_cast<struct npc_data *>(map_id2bl(npc_id));
     npc_free(effect_npc);
@@ -251,11 +249,10 @@ static struct npc_data *local_spell_effect(int m, int x, int y, int effect,
     int delay = 30000;         /* 1 minute should be enough for all interesting spell effects, I hope */
     struct npc_data *effect_npc = npc_spawn_text(m, x, y,
                                                   INVISIBLE_NPC, "", "?");
-    int effect_npc_id = effect_npc->bl.id;
+    uint32_t effect_npc_id = effect_npc->bl.id;
 
     entity_effect(&effect_npc->bl, effect, tdelay);
-    add_timer(gettick() + delay,
-               timer_callback_effect_npc_delete, effect_npc_id, 0);
+    add_timer(gettick() + delay, timer_callback_effect_npc_delete, effect_npc_id);
 
     return effect_npc;
 }
@@ -358,8 +355,7 @@ static int op_message(env_t *, int, val_t * args)
     return 0;
 }
 
-static void timer_callback_kill_npc(timer_id, tick_t, custom_id_t npc_id,
-                         custom_data_t)
+static void timer_callback_kill_npc(timer_id, tick_t, uint32_t npc_id)
 {
     struct npc_data *npc = reinterpret_cast<struct npc_data *>(map_id2bl(npc_id));
     if (npc)
@@ -374,8 +370,7 @@ static int op_messenger_npc(env_t *, int, val_t *args)
     npc = npc_spawn_text(loc->m, loc->x, loc->y,
                           ARGINT(1), ARGSTR(2), ARGSTR(3));
 
-    add_timer(gettick() + ARGINT(4),
-               &timer_callback_kill_npc, npc->bl.id, 0);
+    add_timer(gettick() + ARGINT(4), timer_callback_kill_npc, npc->bl.id);
 
     return 0;
 }
@@ -660,7 +655,7 @@ static int op_spawn(env_t *, int, val_t *args)
                 MOB_MODE_SUMMONED | MOB_MODE_TURNS_AGAINST_BAD_MASTER;
 
             mob->deletetimer = add_timer(gettick() + monster_lifetime,
-                                          mob_timer_delete, mob_id, 0);
+                                          mob_timer_delete, mob_id);
 
             if (owner)
             {
@@ -1511,9 +1506,7 @@ static void spell_execute_d(invocation_t * invocation, int allow_deletion)
                      invocation->timer);
             /* *((int *)0x0) = 0; */
         }
-        invocation->timer = add_timer(gettick() + delta,
-                                       &invocation_timer_callback,
-                                       invocation->bl.id, 0);
+        invocation->timer = add_timer(gettick() + delta, invocation_timer_callback, invocation->bl.id);
     }
 
     /* If 0, the script cleaned itself.  If -1 (wait-for-script), we must wait for the user. */

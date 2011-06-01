@@ -63,7 +63,7 @@ int do_init_mob(void);
 
 int mob_delete(struct mob_data *md);
 int mob_catch_delete(struct mob_data *md);
-void mob_timer_delete(timer_id, tick_t, custom_id_t, custom_data_t);
+void mob_timer_delete(timer_id, tick_t, int);
 
 int mob_counttargeted(struct mob_data *md, struct block_list *src,
                       AttackResult target_lv);

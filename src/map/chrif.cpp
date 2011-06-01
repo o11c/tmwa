@@ -1321,7 +1321,7 @@ static void chrif_parse(int fd)
 }
 
 /// Timer to update the char server with how many and which players we have
-static void send_users_tochar(timer_id, tick_t, custom_id_t, custom_data_t)
+static void send_users_tochar(timer_id, tick_t)
 {
     if (char_fd < 0)
         return;
@@ -1351,7 +1351,7 @@ static void send_users_tochar(timer_id, tick_t, custom_id_t, custom_data_t)
 }
 
 /// Timer to check if we're connected to the char server
-static void check_connect_char_server(timer_id, tick_t, custom_id_t, custom_data_t)
+static void check_connect_char_server(timer_id, tick_t)
 {
     if (char_fd < 0)
     {
@@ -1369,6 +1369,6 @@ static void check_connect_char_server(timer_id, tick_t, custom_id_t, custom_data
 
 void do_init_chrif(void)
 {
-    add_timer_interval(gettick() + 1000, check_connect_char_server, 0, 0, 10 * 1000);
-    add_timer_interval(gettick() + 1000, send_users_tochar, 0, 0, 5 * 1000);
+    add_timer_interval(gettick() + 1000, 10 * 1000, check_connect_char_server);
+    add_timer_interval(gettick() + 1000, 5 * 1000, send_users_tochar);
 }

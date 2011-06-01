@@ -25,15 +25,14 @@ static int party_send_xy_clear(struct party *p);
 
 static struct dbt *party_db;
 
-static void party_send_xyhp_timer(timer_id tid, tick_t tick, custom_id_t id, custom_data_t data);
+static void party_send_xyhp_timer(timer_id tid, tick_t tick);
 
 // 初期化
 void do_init_party(void)
 {
     party_db = numdb_init();
     add_timer_interval(gettick() + PARTY_SEND_XYHP_INVERVAL,
-                        party_send_xyhp_timer, 0, 0,
-                        PARTY_SEND_XYHP_INVERVAL);
+                       PARTY_SEND_XYHP_INVERVAL, party_send_xyhp_timer);
 }
 
 // 検索
@@ -655,7 +654,7 @@ static void party_send_xyhp_timer_sub(db_key_t, db_val_t data, va_list)
 }
 
 // 位置やＨＰ通知
-void party_send_xyhp_timer(timer_id, tick_t tick, custom_id_t, custom_data_t)
+void party_send_xyhp_timer(timer_id, tick_t tick)
 {
     numdb_foreach(party_db, party_send_xyhp_timer_sub, tick);
 }

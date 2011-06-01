@@ -565,7 +565,7 @@ static void mmo_char_sync(void)
 //----------------------------------------------------
 // Function to save (in a periodic way) datas in files
 //----------------------------------------------------
-static void mmo_char_sync_timer(timer_id, tick_t, custom_id_t, custom_data_t)
+static void mmo_char_sync_timer(timer_id, tick_t)
 {
     if (pid && !waitpid(pid, NULL, WNOHANG))
         // still running
@@ -1702,7 +1702,7 @@ static void parse_tologin(int fd)
 }
 
 /// Map-server anti-freeze system
-static void map_anti_freeze_system(timer_id, tick_t, custom_id_t, custom_data_t)
+static void map_anti_freeze_system(timer_id, tick_t)
 {
     for (int i = 0; i < MAX_MAP_SERVERS; i++)
     {
@@ -2644,7 +2644,7 @@ void mapif_send(int fd, const uint8_t *buf, unsigned int len)
 }
 
 /// Report number of users on maps to login server and all map servers
-static void send_users_tologin(timer_id, tick_t, custom_id_t, custom_data_t)
+static void send_users_tologin(timer_id, tick_t)
 {
     int users = count_users();
     uint8_t buf[16];
@@ -2662,7 +2662,7 @@ static void send_users_tologin(timer_id, tick_t, custom_id_t, custom_data_t)
     mapif_sendall(buf, 6);
 }
 
-static void check_connect_login_server(timer_id, tick_t, custom_id_t, custom_data_t)
+static void check_connect_login_server(timer_id, tick_t)
 {
     // can both conditions really happen?
     if (login_fd >= 0 && session[login_fd])
@@ -3073,12 +3073,12 @@ void do_init(int argc, char **argv)
 
     char_fd = make_listen_port(char_port);
 
-    add_timer_interval(gettick() + 1000, check_connect_login_server, 0, 0, 10 * 1000);
-    add_timer_interval(gettick() + 1000, send_users_tologin, 0, 0, 5 * 1000);
-    add_timer_interval(gettick() + autosave_interval, mmo_char_sync_timer, 0, 0, autosave_interval);
+    add_timer_interval(gettick() + 1000, 10 * 1000, check_connect_login_server);
+    add_timer_interval(gettick() + 1000, 5 * 1000, send_users_tologin);
+    add_timer_interval(gettick() + autosave_interval, autosave_interval, mmo_char_sync_timer);
 
     if (anti_freeze_enable)
-        add_timer_interval(gettick() + 1000, map_anti_freeze_system, 0, 0, ANTI_FREEZE_INTERVAL * 1000);
+        add_timer_interval(gettick() + 1000, ANTI_FREEZE_INTERVAL * 1000, map_anti_freeze_system);
 
     char_log("The char-server is ready (Server is listening on the port %d).\n",
               char_port);

@@ -170,7 +170,6 @@ static int buildin_doevent(struct script_state *st);
 static int buildin_donpcevent(struct script_state *st);
 static int buildin_addtimer(struct script_state *st);
 static int buildin_deltimer(struct script_state *st);
-static int buildin_addtimercount(struct script_state *st);
 static int buildin_initnpctimer(struct script_state *st);
 static int buildin_stopnpctimer(struct script_state *st);
 static int buildin_startnpctimer(struct script_state *st);
@@ -344,7 +343,6 @@ struct builtin_function
     {buildin_donpcevent, "donpcevent", "s"},
     {buildin_addtimer, "addtimer", "is"},
     {buildin_deltimer, "deltimer", "s"},
-    {buildin_addtimercount, "addtimercount", "si"},
     {buildin_initnpctimer, "initnpctimer", "*"},
     {buildin_stopnpctimer, "stopnpctimer", "*"},
     {buildin_startnpctimer, "startnpctimer", "*"},
@@ -3688,20 +3686,6 @@ int buildin_deltimer(struct script_state *st)
 }
 
 /*==========================================
- * イベントタイマーのカウント値追加
- *------------------------------------------
- */
-int buildin_addtimercount(struct script_state *st)
-{
-    const char *event;
-    int tick;
-    event = conv_str(st, &(st->stack->stack_data[st->start + 2]));
-    tick = conv_num(st, &(st->stack->stack_data[st->start + 3]));
-    pc_addeventtimercount(script_rid2sd(st), event, tick);
-    return 0;
-}
-
-/*==========================================
  * NPCタイマー初期化
  *------------------------------------------
  */
@@ -4429,9 +4413,7 @@ int buildin_pvpon(struct script_state *st)
             {
                 if (m == pl_sd->bl.m && pl_sd->pvp_timer == -1)
                 {
-                    pl_sd->pvp_timer =
-                        add_timer(gettick() + 200, pc_calc_pvprank_timer,
-                                   pl_sd->bl.id, 0);
+                    pl_sd->pvp_timer = add_timer(gettick() + 200, pc_calc_pvprank_timer, pl_sd->bl.id);
                     pl_sd->pvp_rank = 0;
                     pl_sd->pvp_lastusers = 0;
                     pl_sd->pvp_point = 5;
@@ -4466,8 +4448,7 @@ int buildin_pvpoff(struct script_state *st)
                 {
                     if (pl_sd->pvp_timer != -1)
                     {
-                        delete_timer(pl_sd->pvp_timer,
-                                      pc_calc_pvprank_timer);
+                        delete_timer(pl_sd->pvp_timer);
                         pl_sd->pvp_timer = -1;
                     }
                 }
@@ -6302,8 +6283,7 @@ static int script_save_mapreg(void)
     return 0;
 }
 
-static void script_autosave_mapreg(timer_id, tick_t, custom_id_t,
-                                    custom_data_t)
+static void script_autosave_mapreg(timer_id, tick_t)
 {
     if (mapreg_dirty)
         script_save_mapreg();
@@ -6427,8 +6407,7 @@ int do_init_script(void)
     script_load_mapreg();
 
     add_timer_interval(gettick() + MAPREG_AUTOSAVE_INTERVAL,
-                        script_autosave_mapreg, 0, 0,
-                        MAPREG_AUTOSAVE_INTERVAL);
+                       MAPREG_AUTOSAVE_INTERVAL, script_autosave_mapreg);
 
     scriptlabel_db = strdb_init();
     return 0;

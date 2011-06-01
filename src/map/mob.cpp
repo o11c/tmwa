@@ -43,7 +43,8 @@ struct mob_db mob_db[2001];
  */
 static int distance(int, int, int, int);
 static int mob_makedummymobdb(int);
-static void mob_timer(timer_id, tick_t, custom_id_t, custom_data_t);
+// last argument is actually uint8_t, but is often 0
+static void mob_timer(timer_id, tick_t, uint32_t, int);
 static int mob_unlocktarget(struct mob_data *md, int tick);
 
 /*==========================================
@@ -563,7 +564,7 @@ static int mob_walktoxy_sub(struct mob_data *md);
  * Mob Walk processing
  *------------------------------------------
  */
-static int mob_walk(struct mob_data *md, unsigned int tick, int data)
+static int mob_walk(struct mob_data *md, unsigned int tick, uint8_t data)
 {
     int moveblock;
     int i, ctype;
@@ -642,8 +643,7 @@ static int mob_walk(struct mob_data *md, unsigned int tick, int data)
         i = i >> 1;
         if (i < 1 && md->walkpath.path_half == 0)
             i = 1;
-        md->timer =
-            add_timer(tick + i, mob_timer, md->bl.id, md->walkpath.path_pos);
+        md->timer = add_timer(tick + i, mob_timer, md->bl.id, static_cast<int>(md->walkpath.path_pos));
         md->state.state = MS_WALK;
 
         if (md->walkpath.path_pos >= md->walkpath.path_len)
@@ -797,7 +797,7 @@ int mob_changestate(struct mob_data *md, int state, int type)
     nullpo_ret(md);
 
     if (md->timer != -1)
-        delete_timer(md->timer, mob_timer);
+        delete_timer(md->timer);
     md->timer = -1;
     md->state.state = state;
 
@@ -843,7 +843,7 @@ int mob_changestate(struct mob_data *md, int state, int type)
             clif_foreachclient(mob_stopattacked, md->bl.id);
             skill_status_change_clear(&md->bl, 2); // The abnormalities in status are canceled.
             if (md->deletetimer != -1)
-                delete_timer(md->deletetimer, mob_timer_delete);
+                delete_timer(md->deletetimer);
             md->deletetimer = -1;
             md->hp = md->target_id = md->attacked_id = 0;
             md->state.targettype = NONE_ATTACKABLE;
@@ -858,15 +858,10 @@ int mob_changestate(struct mob_data *md, int state, int type)
  * It branches to a walk and an attack.
  *------------------------------------------
  */
-static void mob_timer(timer_id tid, tick_t tick, custom_id_t id, custom_data_t data)
+static void mob_timer(timer_id tid, tick_t tick, uint32_t id, int data)
 {
     struct mob_data *md;
-    struct block_list *bl;
-
-    if ((bl = map_id2bl(id)) == NULL)
-    {                           //攻撃してきた敵がもういないのは正常のようだ
-        return;
-    }
+    struct block_list *bl = map_id2bl(id);
 
     if (!bl || !bl->type || bl->type != BL_MOB)
         return;
@@ -878,7 +873,7 @@ static void mob_timer(timer_id tid, tick_t tick, custom_id_t id, custom_data_t d
 
     if (md->timer != tid)
     {
-        map_log("mob_timap_logmer %d != %d\n", md->timer, tid);
+        map_log("mob_timer %d != %d\n", md->timer, tid);
         return;
     }
     md->timer = -1;
@@ -890,10 +885,10 @@ static void mob_timer(timer_id tid, tick_t tick, custom_id_t id, custom_data_t d
     {
         case MS_WALK:
             mob_check_attack(md);
-            mob_walk(md, tick, data.i);
+            mob_walk(md, tick, data);
             break;
         case MS_ATTACK:
-            mob_attack(md, tick, data.i);
+            mob_attack(md, tick, data);
             break;
         case MS_DELAY:
             mob_changestate(md, MS_IDLE, 0);
@@ -962,7 +957,7 @@ int mob_walktoxy(struct mob_data *md, int x, int y, int easy)
  * mob spawn with delay(timer function)
  *------------------------------------------
  */
-static void mob_delayspawn(timer_id, tick_t, custom_id_t m, custom_data_t)
+static void mob_delayspawn(timer_id, tick_t, int m)
 {
     mob_spawn(m);
 }
@@ -1018,7 +1013,7 @@ static int mob_setdelayspawn(int id)
         spawntime = spawntime3;
     }
 
-    add_timer(spawntime, mob_delayspawn, id, 0);
+    add_timer(spawntime, mob_delayspawn, id);
     return 0;
 }
 
@@ -1071,9 +1066,7 @@ int mob_spawn(int id)
 
     if (i >= 50)
     {
-//      if (battle_config.error_log==1)
-//          printf("MOB spawn error %d @ %s\n",id,map[md->bl.m].name);
-        add_timer(tick + 5000, mob_delayspawn, id, 0);
+        add_timer(tick + 5000, mob_delayspawn, id);
         return 1;
     }
 
@@ -2047,7 +2040,7 @@ static void mob_ai_sub_foreachclient(struct map_session_data *sd, va_list ap)
  * Serious processing for mob in PC field of view   (interval timer function)
  *------------------------------------------
  */
-static void mob_ai_hard(timer_id, tick_t tick, custom_id_t, custom_data_t)
+static void mob_ai_hard(timer_id, tick_t tick)
 {
     clif_foreachclient(mob_ai_sub_foreachclient, tick);
 }
@@ -2123,7 +2116,7 @@ static void mob_ai_sub_lazy(db_key_t, db_val_t data, va_list app)
  * Negligent processing for mob outside PC field of view   (interval timer function)
  *------------------------------------------
  */
-static void mob_ai_lazy(timer_id, tick_t tick, custom_id_t, custom_data_t)
+static void mob_ai_lazy(timer_id, tick_t tick)
 {
     map_foreachiddb(mob_ai_sub_lazy, tick);
 }
@@ -2152,13 +2145,12 @@ struct delay_item_drop2
  * item drop with delay(timer function)
  *------------------------------------------
  */
-static void mob_delay_item_drop(timer_id, tick_t, custom_id_t, custom_data_t data)
+static void mob_delay_item_drop(timer_id, tick_t, struct delay_item_drop *ditem)
 {
-    struct delay_item_drop *ditem;
     struct item temp_item;
     int flag;
 
-    nullpo_retv(ditem = reinterpret_cast<struct delay_item_drop *>(data.p));
+    nullpo_retv(ditem);
 
     memset(&temp_item, 0, sizeof(temp_item));
     temp_item.nameid = ditem->nameid;
@@ -2190,12 +2182,11 @@ static void mob_delay_item_drop(timer_id, tick_t, custom_id_t, custom_data_t dat
  * item drop(timer function)-lootitem with delay
  *------------------------------------------
  */
-static void mob_delay_item_drop2(timer_id, tick_t, custom_id_t, custom_data_t data)
+static void mob_delay_item_drop2(timer_id, tick_t, struct delay_item_drop2 *ditem)
 {
-    struct delay_item_drop2 *ditem;
     int flag;
 
-    nullpo_retv(ditem = reinterpret_cast<struct delay_item_drop2 *>(data.p));
+    nullpo_retv(ditem);
 
     if (battle_config.item_auto_get == 1)
     {
@@ -2254,7 +2245,7 @@ int mob_catch_delete(struct mob_data *md)
 }
 
 /// Timer for a summoned mob to expire
-void mob_timer_delete(timer_id, tick_t, custom_id_t id, custom_data_t)
+void mob_timer_delete(timer_id, tick_t, int id)
 {
     struct block_list *bl = map_id2bl(id);
     struct mob_data *md;
@@ -2620,7 +2611,7 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
                 ditem->first_sd = mvp_sd;
                 ditem->second_sd = second_sd;
                 ditem->third_sd = third_sd;
-                add_timer(tick + 500 + i, mob_delay_item_drop, 0, ditem);
+                add_timer(tick + 500 + i, mob_delay_item_drop, ditem);
             }
             if (sd && sd->state.attack_type == BF_WEAPON)
             {
@@ -2644,7 +2635,7 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
                     ditem->first_sd = mvp_sd;
                     ditem->second_sd = second_sd;
                     ditem->third_sd = third_sd;
-                    add_timer(tick + 540 + i, mob_delay_item_drop2, 0, ditem);
+                    add_timer(tick + 540 + i, mob_delay_item_drop2, ditem);
                 }
             }
         }
@@ -3222,10 +3213,8 @@ int do_init_mob(void)
     mob_readdb_mobavail();
     mob_read_randommonster();
 
-    add_timer_interval(gettick() + MIN_MOBTHINKTIME, mob_ai_hard, 0, 0,
-                        MIN_MOBTHINKTIME);
-    add_timer_interval(gettick() + MIN_MOBTHINKTIME * 10, mob_ai_lazy, 0, 0,
-                        MIN_MOBTHINKTIME * 10);
+    add_timer_interval(gettick() + MIN_MOBTHINKTIME, MIN_MOBTHINKTIME, mob_ai_hard);
+    add_timer_interval(gettick() + MIN_MOBTHINKTIME * 10, MIN_MOBTHINKTIME * 10, mob_ai_lazy);
 
     return 0;
 }

@@ -3,18 +3,12 @@
 
 # include "sanity.hpp"
 
-enum TIMER_TYPE
-{
-    TIMER_NONE,
-    TIMER_ONCE_AUTODEL,
-    TIMER_INTERVAL,
-};
+# include <functional>
 
 // TODO replace with signed 64-bit to make code more clear and protect from the future
 typedef uint32_t tick_t;
 typedef uint32_t interval_t;
 typedef uint32_t timer_id;
-typedef int32_t custom_id_t;
 
 /// This is needed to produce a signed result when 2 ticks are subtracted
 inline int32_t DIFF_TICK(tick_t a, tick_t b)
@@ -22,49 +16,52 @@ inline int32_t DIFF_TICK(tick_t a, tick_t b)
     return static_cast<int32_t>(a-b);
 }
 
-struct custom_data_t
-{
-    union
-    {
-        void* p;
-        intptr_t i;
-    };
-    custom_data_t(void *ptr) : p(ptr) {}
-    custom_data_t(intptr_t iv) : i(iv) {}
-};
-
-typedef void (*timer_func)(timer_id, tick_t, custom_id_t, custom_data_t);
-
+typedef std::function<void (timer_id, tick_t)> TimerFunc;
 struct TimerData
 {
     /// When it will be triggered
     tick_t tick;
     /// What will be done
-    timer_func func;
-    /// Arbitrary data. WARNING, callers are stupid and put pointers in here
-    // Should we change to void* or intptr_t ?
-    custom_id_t  id;
-    custom_data_t  data;
-    /// Type of timer - 0 initially
-    enum TIMER_TYPE type;
+    TimerFunc func;
     /// Repeat rate
     interval_t interval;
 };
 
+
 /// Server time, in milliseconds, since the epoch,
 /// but use of 32-bit integers means it wraps every 49 days.
-// The only external caller of this function is the core.c main loop, but that makes sense
-// in fact, it might make more sense if gettick() ALWAYS returned that cached value
-tick_t gettick_nocache(void);
-/// This function is called enough that it's worth caching the result for
-/// the next 255 times
-tick_t gettick(void);
+extern tick_t current_tick;
+void update_current_tick();
 
-timer_id add_timer(tick_t, timer_func, custom_id_t, custom_data_t);
-timer_id add_timer_interval(tick_t, timer_func, custom_id_t, custom_data_t, interval_t);
-void delete_timer(timer_id, timer_func);
+inline tick_t gettick_nocache()
+{
+    update_current_tick();
+    return current_tick;
+}
+inline tick_t gettick(void)
+{
+    return current_tick;
+}
 
-tick_t addtick_timer(timer_id, interval_t);
+timer_id add_timer_impl(tick_t, TimerFunc func, interval_t);
+template<class... Args>
+timer_id add_timer_interval(tick_t tick, interval_t interval, void(&func)(timer_id, tick_t, Args...), Args... args)
+{
+    return add_timer_impl(tick,
+                          std::bind(func,
+                                    std::placeholders::_1,
+                                    std::placeholders::_2,
+                                    args...),
+                          interval);
+}
+template<class... Args>
+timer_id add_timer(tick_t tick, void(&func)(timer_id, tick_t, Args...), Args... args)
+{
+    return add_timer_interval(tick, 0, func, args...);
+}
+
+void delete_timer(timer_id);
+
 struct TimerData *get_timer(timer_id tid);
 
 /// Do all timers scheduled before tick, and return the number of milliseconds until the next timer happens

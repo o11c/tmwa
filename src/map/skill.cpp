@@ -21,8 +21,6 @@
 #include "script.hpp"
 #include "../common/socket.hpp"
 
-static void skill_status_change_timer(timer_id, tick_t, custom_id_t, custom_data_t);
-
 struct skill_name_db skill_names[] =
 {
     {NV_EMOTE,          "EMOTE",        "Emote_Skill"},
@@ -137,7 +135,7 @@ int skill_status_change_end(struct block_list *bl, int type, int tid)
     {
 
         if (tid == -1)          // タイマから呼ばれていないならタイマ削除をする
-            delete_timer(sc_data[type].timer, skill_status_change_timer);
+            delete_timer(sc_data[type].timer);
 
         /* 該当の異常を正常に戻す */
         sc_data[type].timer = -1;
@@ -220,9 +218,8 @@ void skill_update_heal_animation(struct map_session_data *sd)
  * ステータス異常終了タイマー
  *------------------------------------------
  */
-void skill_status_change_timer(timer_id tid, tick_t tick, custom_id_t id, custom_data_t data)
+static void skill_status_change_timer(timer_id tid, tick_t tick, uint32_t id, int type)
 {
-    int type = data.i;
     struct block_list *bl;
     struct map_session_data *sd = NULL;
     struct status_change *sc_data;
@@ -281,13 +278,13 @@ void skill_status_change_timer(timer_id tid, tick_t tick, custom_id_t id, custom
                     }
                     sc_data[type].timer =
                         add_timer(1000 + tick, skill_status_change_timer,
-                                   bl->id, data);
+                                   bl->id, type);
                 }
             }
             else
                 sc_data[type].timer =
                     add_timer(2000 + tick, skill_status_change_timer, bl->id,
-                               data);
+                               type);
             break;
 
         case SC_BROKNWEAPON:
@@ -295,7 +292,7 @@ void skill_status_change_timer(timer_id tid, tick_t tick, custom_id_t id, custom
             if (sc_data[type].timer == tid)
                 sc_data[type].timer =
                     add_timer(1000 * 600 + tick, skill_status_change_timer,
-                               bl->id, data);
+                               bl->id, type);
             return;
 
         case SC_FLYING_BACKPACK:
@@ -368,7 +365,7 @@ int skill_status_effect(struct block_list *bl, int type, int val1, int val2,
         if (type == SC_POISON)
             return 0;           /* 継ぎ足しができない状態異常である時は状態異常を行わない */
         (*sc_count)--;
-        delete_timer(sc_data[type].timer, skill_status_change_timer);
+        delete_timer(sc_data[type].timer);
         sc_data[type].timer = -1;
     }
 

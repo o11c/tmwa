@@ -278,7 +278,11 @@ struct map_session_data
     int pvp_point, pvp_rank, pvp_timer, pvp_lastusers;
 
     char eventqueue[MAX_EVENTQUEUE][50];
-    int eventtimer[MAX_EVENTTIMER];
+    struct
+    {
+        timer_id tid;
+        char *name;
+    } eventtimer[MAX_EVENTTIMER];
 
     struct
     {
@@ -347,7 +351,12 @@ struct npc_data
     // ここにメンバを追加してはならない(shop_itemが可変長の為)
 
     char eventqueue[MAX_EVENTQUEUE][50];
-    int eventtimer[MAX_EVENTTIMER];
+    struct
+    {
+        timer_id tid;
+        char *name;
+    } eventtimer[MAX_EVENTTIMER];
+
     short arenaflag;
 };
 
@@ -692,8 +701,11 @@ void map_log(const char *format, ...) __attribute__((format(printf, 1, 2)));
 #define MAP_LOG_PC(sd, fmt, args...) map_log("PC%d %d:%d,%d " fmt, sd->status.char_id, sd->bl.m, sd->bl.x, sd->bl.y, ## args)
 
 // floor item methods
-void map_clearflooritem_timer(timer_id, tick_t, custom_id_t, custom_data_t);
-#define map_clearflooritem(id) map_clearflooritem_timer(0,0,id,1)
+void map_clearflooritem_timer(timer_id, tick_t, uint32_t);
+inline void map_clearflooritem(uint32_t id)
+{
+    map_clearflooritem_timer(-1, 0, id);
+}
 int map_addflooritem_any(struct item *, int amount, uint16_t m, uint16_t x, uint16_t y,
                            struct map_session_data **owners,
                            int *owner_protection,

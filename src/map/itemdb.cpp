@@ -39,16 +39,10 @@ static int itemdb_read_noequip(void);
  *------------------------------------------
  */
 // name = item alias, so we should find items aliases first. if not found then look for "jname" (full name)
-static void itemdb_searchname_sub(db_key_t, db_val_t data, va_list ap)
+static void itemdb_searchname_sub(db_key_t, db_val_t data, const char *str, struct item_data **dst)
 {
     struct item_data *item = reinterpret_cast<struct item_data *>(data.p);
-    struct item_data **dst;
-    char *str;
-    str = va_arg(ap, char *);
-    dst = va_arg(ap, struct item_data **);
-//  if ( strcasecmp(item->name,str)==0 || strcmp(item->jname,str)==0 ||
-//      memcmp(item->name,str,24)==0 || memcmp(item->jname,str,24)==0 )
-    if (strcasecmp(item->name, str) == 0) //by lupus
+    if (strcasecmp(item->name, str) == 0)
         *dst = item;
 }
 

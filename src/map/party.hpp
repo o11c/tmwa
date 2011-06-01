@@ -9,7 +9,7 @@ struct block_list;
 
 void do_init_party(void);
 struct party *party_search(int party_id);
-struct party *party_searchname(char *str);
+struct party *party_searchname(const char *str);
 
 int party_create(struct map_session_data *sd, const char *name);
 int party_created(int account_id, int fail, int party_id, const char *name);

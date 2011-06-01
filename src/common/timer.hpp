@@ -44,8 +44,9 @@ inline tick_t gettick(void)
 }
 
 timer_id add_timer_impl(tick_t, TimerFunc func, interval_t);
+
 template<class... Args>
-timer_id add_timer_interval(tick_t tick, interval_t interval, void(&func)(timer_id, tick_t, Args...), Args... args)
+timer_id add_timer_interval(tick_t tick, interval_t interval, void (&func)(timer_id, tick_t, Args...), Args... args)
 {
     return add_timer_impl(tick,
                           std::bind(func,
@@ -54,8 +55,9 @@ timer_id add_timer_interval(tick_t tick, interval_t interval, void(&func)(timer_
                                     args...),
                           interval);
 }
+
 template<class... Args>
-timer_id add_timer(tick_t tick, void(&func)(timer_id, tick_t, Args...), Args... args)
+timer_id add_timer(tick_t tick, void (&func)(timer_id, tick_t, Args...), Args... args)
 {
     return add_timer_interval(tick, 0, func, args...);
 }

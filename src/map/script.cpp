@@ -1151,8 +1151,9 @@ char *parse_script(char *src, int line)
     }
 
     // 外部用label dbの初期化
-    if (scriptlabel_db != NULL)
-        strdb_final(scriptlabel_db, NULL);
+    if (scriptlabel_db)
+        // not strdb_final
+        db_final(scriptlabel_db);
     scriptlabel_db = strdb_init();
 
     // for error message
@@ -6241,9 +6242,8 @@ static int script_load_mapreg(void)
  * 永続的マップ変数の書き込み
  *------------------------------------------
  */
-static void script_save_mapreg_intsub(db_key_t key, db_val_t data, va_list ap)
+static void script_save_mapreg_intsub(db_key_t key, db_val_t data, FILE *fp)
 {
-    FILE *fp = va_arg(ap, FILE *);
     int num = key.i & 0x00ffffff, i = key.i >> 24;
     const char *name = str_buf + str_data[num].str;
     if (name[1] != '@')
@@ -6255,9 +6255,8 @@ static void script_save_mapreg_intsub(db_key_t key, db_val_t data, va_list ap)
     }
 }
 
-static void script_save_mapreg_strsub(db_key_t key, db_val_t data, va_list ap)
+static void script_save_mapreg_strsub(db_key_t key, db_val_t data, FILE *fp)
 {
-    FILE *fp = va_arg(ap, FILE *);
     int num = key.i & 0x00ffffff, i = key.i >> 24;
     char *name = str_buf + str_data[num].str;
     if (name[1] != '@')
@@ -6361,12 +6360,12 @@ int script_config_read(const char *cfgName)
  *------------------------------------------
  */
 
-static void mapregstr_db_final(db_key_t, db_val_t data, va_list)
+static void mapregstr_db_final(db_key_t, db_val_t data)
 {
     free(data.p);
 }
 
-static void userfunc_db_final(db_key_t key, db_val_t data, va_list)
+static void userfunc_db_final(db_key_t key, db_val_t data)
 {
     free(const_cast<char *>(key.s));
     free(data.p);
@@ -6380,11 +6379,13 @@ int do_final_script(void)
         free(script_buf);
 
     if (mapreg_db)
-        numdb_final(mapreg_db, NULL);
+        // not numdb_final
+        db_final(mapreg_db);
     if (mapregstr_db)
         strdb_final(mapregstr_db, mapregstr_db_final);
     if (scriptlabel_db)
-        strdb_final(scriptlabel_db, NULL);
+        // not strdb_final
+        db_final(scriptlabel_db);
     if (userfunc_db)
         strdb_final(userfunc_db, userfunc_db_final);
 

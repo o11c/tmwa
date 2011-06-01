@@ -41,19 +41,15 @@ struct party *party_search(int party_id)
     return reinterpret_cast<struct party *>(numdb_search(party_db, party_id).p);
 }
 
-static void party_searchname_sub(db_key_t, db_val_t data, va_list ap)
+static void party_searchname_sub(db_key_t, db_val_t data, const char *str, struct party **dst)
 {
     struct party *p = reinterpret_cast<struct party *>(data.p);
-    struct party **dst;
-    char *str;
-    str = va_arg(ap, char *);
-    dst = va_arg(ap, struct party **);
     if (strcasecmp(p->name, str) == 0)
         *dst = p;
 }
 
 // パーティ名検索
-struct party *party_searchname(char *str)
+struct party *party_searchname(const char *str)
 {
     struct party *p = NULL;
     numdb_foreach(party_db, party_searchname_sub, str, &p);
@@ -623,7 +619,7 @@ int party_check_conflict(struct map_session_data *sd)
 }
 
 // 位置やＨＰ通知用
-static void party_send_xyhp_timer_sub(db_key_t, db_val_t data, va_list)
+static void party_send_xyhp_timer_sub(db_key_t, db_val_t data)
 {
     struct party *p = reinterpret_cast<struct party *>(data.p);
     int i;
@@ -654,9 +650,9 @@ static void party_send_xyhp_timer_sub(db_key_t, db_val_t data, va_list)
 }
 
 // 位置やＨＰ通知
-void party_send_xyhp_timer(timer_id, tick_t tick)
+void party_send_xyhp_timer(timer_id, tick_t)
 {
-    numdb_foreach(party_db, party_send_xyhp_timer_sub, tick);
+    numdb_foreach(party_db, party_send_xyhp_timer_sub);
 }
 
 // 位置通知クリア

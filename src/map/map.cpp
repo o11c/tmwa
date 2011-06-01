@@ -942,12 +942,10 @@ struct block_list *map_id2bl(unsigned int id)
 }
 
 /// Run func for whole ID db
-void map_foreachiddb(db_func_t func, ...)
+void map_foreachiddb(DB_Func func)
 {
-    va_list ap;
-    va_start(ap, func);
-    numdb_foreach(id_db, func, ap);
-    va_end(ap);
+    // NOTE not numdb_foreach
+    db_foreach(id_db, func);
 }
 
 /// Add an NPC to a map

@@ -177,23 +177,13 @@ void npc_event_timer(timer_id, tick_t, uint32_t id, char *data)
  * 全てのNPCのOn*イベント実行
  *------------------------------------------
  */
-static void npc_event_doall_sub(db_key_t key, db_val_t data, va_list ap)
+static void npc_event_doall_sub(db_key_t key, db_val_t data, int *c, const char *name, int rid, int argc, argrec_t *argv)
 {
     const char *p = key.s;
-    int rid, argc;
-    argrec_t *argv;
     struct event_data *ev;
-    int *c;
-    const char *name;
 
     nullpo_retv(ev = reinterpret_cast<struct event_data *>(data.p));
-    nullpo_retv(ap);
-    nullpo_retv(c = va_arg(ap, int *));
-
-    name = va_arg(ap, const char *);
-    rid = va_arg(ap, int);
-    argc = va_arg(ap, int);
-    argv = va_arg(ap, argrec_t *);
+    nullpo_retv(c);
 
     if ((p = strchr(p, ':')) && p && strcasecmp(name, p) == 0)
     {
@@ -210,27 +200,17 @@ int npc_event_doall_l(const char *name, int rid, int argc, argrec_t * args)
 
     strncpy(buf + 2, name, sizeof(buf)-3);
     buf[sizeof(buf)-1] = '\0';
-    strdb_foreach(ev_db, npc_event_doall_sub, &c, buf, rid, argc, args);
+    strdb_foreach(ev_db, npc_event_doall_sub, &c, static_cast<const char *>(buf), rid, argc, args);
     return c;
 }
 
-static void npc_event_do_sub(db_key_t key, db_val_t data, va_list ap)
+static void npc_event_do_sub(db_key_t key, db_val_t data, int *c, const char *name, int rid, int argc, argrec_t *argv)
 {
     const char *p = key.s;
     struct event_data *ev;
-    int *c;
-    const char *name;
-    int rid, argc;
-    argrec_t *argv;
 
     nullpo_retv(ev = reinterpret_cast<struct event_data *>(data.p));
-    nullpo_retv(ap);
-    nullpo_retv(c = va_arg(ap, int *));
-
-    name = va_arg(ap, const char *);
-    rid = va_arg(ap, int);
-    argc = va_arg(ap, int);
-    argv = va_arg(ap, argrec_t *);
+    nullpo_retv(c);
 
     if (p && strcasecmp(name, p) == 0)
     {
@@ -340,13 +320,10 @@ static int npc_deleventtimer(struct npc_data *nd, const char *name)
     return 0;
 }
 
-static void npc_do_ontimer_sub(db_key_t key, db_val_t data, va_list ap)
+static void npc_do_ontimer_sub(db_key_t key, db_val_t data, int *c, struct map_session_data *, bool option)
 {
     const char *p = key.s;
     struct event_data *ev = reinterpret_cast<struct event_data *>(data.p);
-    int *c = va_arg(ap, int *);
-//  struct map_session_data *sd=va_arg(ap,struct map_session_data *);
-    int option = va_arg(ap, int);
     int tick = 0;
     char temp[10];
     char event[50];
@@ -371,7 +348,7 @@ static void npc_do_ontimer_sub(db_key_t key, db_val_t data, va_list ap)
     }
 }
 
-int npc_do_ontimer(int npc_id, struct map_session_data *sd, int option)
+int npc_do_ontimer(int npc_id, struct map_session_data *sd, bool option)
 {
     strdb_foreach(ev_db, npc_do_ontimer_sub, &npc_id, sd, option);
     return 0;
@@ -581,12 +558,10 @@ int npc_event(struct map_session_data *sd, const char *eventname,
     return 0;
 }
 
-static void npc_command_sub(db_key_t key, db_val_t data, va_list ap)
+static void npc_command_sub(db_key_t key, db_val_t data, const char *npcname, const char *command)
 {
     const char *p = key.s;
     struct event_data *ev = reinterpret_cast<struct event_data *>(data.p);
-    char *npcname = va_arg(ap, char *);
-    char *command = va_arg(ap, char *);
     char temp[100];
 
     if (strcmp(ev->nd->name, npcname) == 0 && (p = strchr(p, ':')) && p
@@ -1182,17 +1157,15 @@ static int npc_parse_shop(char *w1, char *, char *w3, char *w4)
  * NPCのラベルデータコンバート
  *------------------------------------------
  */
-static void npc_convertlabel_db(db_key_t key, db_val_t data, va_list ap)
+static void npc_convertlabel_db(db_key_t key, db_val_t data, struct npc_data *nd)
 {
     const char *lname = key.s;
     int pos = data.i;
-    struct npc_data *nd;
     struct npc_label_list *lst;
     int num;
     const char *p = strchr(lname, ':');
 
-    nullpo_retv(ap);
-    nullpo_retv(nd = va_arg(ap, struct npc_data *));
+    nullpo_retv(nd);
 
     lst = nd->u.scr.label_list;
     num = nd->u.scr.label_list_num;

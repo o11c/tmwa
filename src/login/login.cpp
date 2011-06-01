@@ -233,7 +233,7 @@ static gm_level_t isGM(account_t account_id)
 static void read_gm_account(void)
 {
     if (gm_account_db)
-        numdb_final(gm_account_db, NULL);
+        db_final(gm_account_db);
     gm_account_db = numdb_init();
 
     FILE *fp = fopen_(GM_account_filename, "r");

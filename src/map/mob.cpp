@@ -2049,23 +2049,17 @@ static void mob_ai_hard(timer_id, tick_t tick)
  * Negligent mode MOB AI(PC is not in near)
  *------------------------------------------
  */
-static void mob_ai_sub_lazy(db_key_t, db_val_t data, va_list app)
+static void mob_ai_sub_lazy(db_key_t, db_val_t data, tick_t tick)
 {
     struct mob_data *md = reinterpret_cast<struct mob_data *>(data.p);
-    unsigned int tick;
-    va_list ap;
 
     nullpo_retv(md);
-    nullpo_retv(app);
-    nullpo_retv(ap = va_arg(app, va_list));
 
     if (md == NULL)
         return;
 
     if (!md->bl.type || md->bl.type != BL_MOB)
         return;
-
-    tick = va_arg(ap, unsigned int);
 
     if (DIFF_TICK(tick, md->last_thinktime) < MIN_MOBTHINKTIME * 10)
         return;
@@ -2118,7 +2112,10 @@ static void mob_ai_sub_lazy(db_key_t, db_val_t data, va_list app)
  */
 static void mob_ai_lazy(timer_id, tick_t tick)
 {
-    map_foreachiddb(mob_ai_sub_lazy, tick);
+    map_foreachiddb(std::bind(mob_ai_sub_lazy,
+                              std::placeholders::_1,
+                              std::placeholders::_2,
+                              tick));
 }
 
 /*==========================================

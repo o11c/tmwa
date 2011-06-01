@@ -5,6 +5,8 @@
 
 # include <stdarg.h>
 
+#include <functional>
+
 /// Number of tree roots
 // Somewhat arbitrary - larger wastes more space but is faster for large trees
 // num % HASH_SIZE minimize collisions even for similar num
@@ -38,7 +40,6 @@ struct db_val_t
     db_val_t(intptr_t iv) : i(iv) {}
 };
 typedef uint32_t hash_t;
-typedef void (*db_func_t)(db_key_t, db_val_t, va_list);
 
 /// DataBase Node
 struct dbn
@@ -66,17 +67,6 @@ struct dbt
     struct dbn *ht[HASH_SIZE];
 };
 
-# define strdb_search(t,k)   db_search((t), static_cast<db_key_t>(k))
-# define strdb_insert(t,k,d) db_insert((t), static_cast<db_key_t>(k), static_cast<db_val_t>(d))
-# define strdb_erase(t,k)    db_erase((t), static_cast<db_key_t>(k))
-# define strdb_foreach       db_foreach
-# define strdb_final         db_final
-# define numdb_search(t,k)   db_search((t), static_cast<db_key_t>(k))
-# define numdb_insert(t,k,d) db_insert((t), static_cast<db_key_t>(k), static_cast<db_val_t>(d))
-# define numdb_erase(t,k)    db_erase((t), static_cast<db_key_t>(k))
-# define numdb_foreach       db_foreach
-# define numdb_final         db_final
-
 /// Create a map from char* to void*, with strings always nul-terminated
 struct dbt *strdb_init();
 /// Create a map from int to void*
@@ -89,10 +79,89 @@ struct dbn *db_insert(struct dbt *table, db_key_t key, db_val_t data);
 /// Remove a key from the table, returning the data
 db_val_t db_erase(struct dbt *table, db_key_t key);
 
+
+typedef std::function<void(db_key_t, db_val_t)> DB_Func;
+
 /// Execute a function for every element, in unspecified order
-void db_foreach(struct dbt *, db_func_t, ...);
+void db_foreach(struct dbt *, DB_Func);
 // opposite of init? Calls release for every element and frees memory
 // This probably isn't really needed: we don't have to free memory while exiting
-void db_final(struct dbt *, db_func_t, ...) __attribute__((deprecated));
+void db_final(struct dbt *, DB_Func = 0); // __attribute__((deprecated));
+
+
+inline db_val_t strdb_search(struct dbt *t, const char *k)
+{
+    return db_search(t, k);
+}
+
+inline struct dbn *strdb_insert(struct dbt *t, const char *k, db_val_t d)
+{
+    return db_insert(t, k, d);
+}
+
+inline db_val_t strdb_erase(struct dbt *t, const char *k)
+{
+    return db_erase(t, k);
+}
+
+template<class... Args>
+inline void strdb_foreach(struct dbt *t, void (&func)(db_key_t, db_val_t, Args...), Args... args)
+{
+    db_foreach(t,
+               std::bind(func,
+                         std::placeholders::_1,
+                         std::placeholders::_2,
+                         args...));
+}
+
+template<class... Args>
+inline void strdb_final(struct dbt *t, void (&func)(db_key_t, db_val_t, Args...), Args... args) __attribute__((deprecated));
+template<class... Args>
+inline void strdb_final(struct dbt *t, void (&func)(db_key_t, db_val_t, Args...), Args... args)
+{
+    db_final(t,
+             std::bind(func,
+                       std::placeholders::_1,
+                       std::placeholders::_2,
+                       args...));
+}
+
+inline db_val_t numdb_search(struct dbt *t, numdb_key_t k)
+{
+    return db_search(t, k);
+}
+
+inline struct dbn *numdb_insert(struct dbt *t, numdb_key_t k, db_val_t d)
+{
+    return db_insert(t, k, d);
+}
+
+inline db_val_t numdb_erase(struct dbt* t, numdb_key_t k)
+{
+    return db_erase(t, k);
+}
+
+template<class... Args>
+inline void numdb_foreach(struct dbt *t, void (&func)(db_key_t, db_val_t, Args...), Args... args)
+{
+    db_foreach(t,
+               std::bind(func,
+                         std::placeholders::_1,
+                         std::placeholders::_2,
+                         args...));
+}
+
+template<class... Args>
+inline void numdb_final(struct dbt *t, void (&func)(db_key_t, db_val_t, Args...), Args... args) __attribute__((deprecated));
+template<class... Args>
+inline void numdb_final(struct dbt *t, void (&func)(db_key_t, db_val_t, Args...), Args... args)
+{
+    db_final(t,
+             std::bind(func,
+                       std::placeholders::_1,
+                       std::placeholders::_2,
+                       args...));
+}
+
 
 #endif

@@ -451,15 +451,12 @@ static inline void db_walk_tree(bool dealloc, struct dbn* p, db_func_t func, va_
 }
 #endif // SMART_WALK_TREE
 
-void db_foreach(struct dbt *table, db_func_t func, ...)
+void db_foreach(struct dbt *table, DB_Func func)
 {
-    va_list ap;
-    va_start(ap, func);
-
     for (int i = 0; i < HASH_SIZE; i++)
     {
 #ifdef SMART_WALK_TREE
-        db_walk_tree(false, table->ht[i], func, ap);
+        db_walk_tree(false, table->ht[i], func);
 #else
         struct dbn *p = table->ht[i];
         if (!p)
@@ -468,7 +465,7 @@ void db_foreach(struct dbt *table, db_func_t func, ...)
         int sp = 0;
         while (1)
         {
-            func(p->key, p->data, ap);
+            func(p->key, p->data);
             struct dbn *pn = p->left;
             if (pn)
             {
@@ -490,19 +487,15 @@ void db_foreach(struct dbt *table, db_func_t func, ...)
         } // while true
 #endif // else ! SMART_WALK_TREE
     } // for i
-    va_end(ap);
 }
 
 // This function is suspiciously similar to the previous
-void db_final(struct dbt *table, db_func_t func, ...)
+void db_final(struct dbt *table, DB_Func func)
 {
-    va_list ap;
-    va_start(ap, func);
-
     for (int i = 0; i < HASH_SIZE; i++)
     {
 #ifdef SMART_WALK_TREE
-        db_walk_tree(true, table->ht[i], func, ap);
+        db_walk_tree(true, table->ht[i], func);
 #else
         struct dbn *p = table->ht[i];
         if (!p)
@@ -512,7 +505,7 @@ void db_final(struct dbt *table, db_func_t func, ...)
         while (1)
         {
             if (func)
-                func(p->key, p->data, ap);
+                func(p->key, p->data);
             struct dbn *pn = p->left;
             if (pn)
             {
@@ -536,5 +529,4 @@ void db_final(struct dbt *table, db_func_t func, ...)
 #endif // else ! SMART_WALK_TREE
     } // for i
     free(table);
-    va_end(ap);
 }

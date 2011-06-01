@@ -41,7 +41,7 @@ void npc_free(struct npc_data *npc);
 void npc_addsrcfile(char *);
 int do_init_npc(void);
 int npc_event_do_oninit(void);
-int npc_do_ontimer(int, struct map_session_data *, int);
+int npc_do_ontimer(int, struct map_session_data *, bool);
 
 struct argrec;
 int npc_event_doall_l(const char *name, int rid, int argc,

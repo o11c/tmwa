@@ -105,9 +105,8 @@ bool inter_party_init(void)
 }
 
 /// Save a party
-static void inter_party_save_sub(db_key_t, db_val_t data, va_list ap)
+static void inter_party_save_sub(db_key_t, db_val_t data, FILE *fp)
 {
-    FILE *fp = va_arg(ap, FILE *);
     inter_party_tofile(fp, static_cast<struct party *>(data.p));
 }
 
@@ -127,11 +126,9 @@ bool inter_party_save(void)
 }
 
 /// Check if a party has the name
-static void search_partyname_sub(db_key_t, db_val_t data, va_list ap)
+static void search_partyname_sub(db_key_t, db_val_t data, const char *str, struct party **dst)
 {
     struct party *p = static_cast<struct party *>(data.p);
-    const char *str = va_arg(ap, const char *);
-    struct party **dst = va_arg(ap, struct party **);
     if (strcasecmp(p->name, str) == 0)
         *dst = p;
 }
@@ -179,13 +176,9 @@ bool party_check_empty(struct party *p)
 }
 
 /// Checks if player is in the party, but only if it isn't the target party
-static void party_check_conflict_sub(db_key_t, db_val_t data, va_list ap)
+static void party_check_conflict_sub(db_key_t, db_val_t data, party_t party_id, account_t account_id, const char *nick)
 {
     struct party *p = static_cast<struct party *>(data.p);
-
-    party_t party_id = va_arg(ap, party_t);
-    account_t account_id = va_arg(ap, account_t);
-    const char *nick = va_arg(ap, const char *);
 
     if (p->party_id == party_id)
         return;
@@ -205,8 +198,7 @@ static void party_check_conflict_sub(db_key_t, db_val_t data, va_list ap)
 /// Make sure the character isn't already in any party
 static void party_check_conflict(party_t party_id, account_t account_id, const char *nick)
 {
-    numdb_foreach(party_db, party_check_conflict_sub, party_id, account_id,
-                   nick);
+    numdb_foreach(party_db, party_check_conflict_sub, party_id, account_id, nick);
 }
 
 

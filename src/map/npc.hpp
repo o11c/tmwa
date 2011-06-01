@@ -55,6 +55,5 @@ int npc_timerevent_start(struct npc_data *nd);
 int npc_timerevent_stop(struct npc_data *nd);
 int npc_gettimerevent_tick(struct npc_data *nd);
 int npc_settimerevent_tick(struct npc_data *nd, int newtimer);
-int npc_delete(struct npc_data *nd);
 
 #endif // NPC_H

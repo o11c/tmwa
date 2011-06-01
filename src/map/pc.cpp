@@ -99,7 +99,7 @@ int pc_isGM(struct map_session_data *sd)
 //  struct gm_account *p;
     int i;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
 /*      p = numdb_search(gm_account_db, sd->status.account_id);
         if (p == NULL)
@@ -116,7 +116,7 @@ int pc_isGM(struct map_session_data *sd)
 int pc_iskiller(struct map_session_data *src,
                  struct map_session_data *target)
 {
-    nullpo_retr(0, src);
+    nullpo_ret(src);
 
     if (src->bl.type != BL_PC)
         return 0;
@@ -177,7 +177,7 @@ static void pc_invincible_timer(timer_id tid, tick_t, custom_id_t id, custom_dat
 
 int pc_setinvincibletimer(struct map_session_data *sd, int val)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->invincible_timer != -1)
         delete_timer(sd->invincible_timer, pc_invincible_timer);
@@ -188,7 +188,7 @@ int pc_setinvincibletimer(struct map_session_data *sd, int val)
 
 int pc_delinvincibletimer(struct map_session_data *sd)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->invincible_timer != -1)
     {
@@ -200,7 +200,7 @@ int pc_delinvincibletimer(struct map_session_data *sd)
 
 int pc_setrestartvalue(struct map_session_data *sd, int type)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     //-----------------------
     // 死亡した
@@ -304,11 +304,7 @@ static int pc_walktoxy_sub(struct map_session_data *);
  */
 int pc_makesavestatus(struct map_session_data *sd)
 {
-    nullpo_retr(0, sd);
-
-    // 服の色は色々弊害が多いので保存対象にはしない
-    if (!battle_config.save_clothcolor)
-        sd->status.clothes_color = 0;
+    nullpo_ret(sd);
 
     // 死亡状態だったのでhpを1、位置をセーブ場所に変更
     if (pc_isdead(sd))
@@ -345,7 +341,7 @@ int pc_makesavestatus(struct map_session_data *sd)
 int pc_setnewpc(struct map_session_data *sd, int account_id, int char_id,
                  int login_id1, int client_tick, int sex, int)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     sd->bl.id = account_id;
     sd->char_id = char_id;
@@ -365,7 +361,7 @@ int pc_setnewpc(struct map_session_data *sd, int account_id, int char_id,
 int pc_equippoint(struct map_session_data *sd, int n)
 {
     int ep = 0;
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (!sd->inventory_data[n])
         return 0;
@@ -379,7 +375,7 @@ static int pc_setinventorydata(struct map_session_data *sd)
 {
     int i, id;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     for (i = 0; i < MAX_INVENTORY; i++)
     {
@@ -391,7 +387,7 @@ static int pc_setinventorydata(struct map_session_data *sd)
 
 static int pc_calcweapontype(struct map_session_data *sd)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->weapontype1 != 0 && sd->weapontype2 == 0)
         sd->status.weapon = sd->weapontype1;
@@ -419,7 +415,7 @@ static int pc_setequipindex(struct map_session_data *sd)
 {
     int i, j;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     for (i = 0; i < 11; i++)
         sd->equip_index[i] = -1;
@@ -469,7 +465,7 @@ int pc_isequip(struct map_session_data *sd, int n)
     struct item_data *item;
     //転生や養子の場合の元の職業を算出する
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     item = sd->inventory_data[n];
 
@@ -670,7 +666,7 @@ int pc_authok(int id, int login_id2, time_t connect_until_time,
 
     // 位置の設定
     pc_setpos(sd, sd->status.last_point.map, sd->status.last_point.x,
-               sd->status.last_point.y, 0);
+              sd->status.last_point.y, BeingRemoveType::ZERO);
 
     // パーティ、ギルドデータの要求
     if (sd->status.party_id > 0
@@ -774,7 +770,7 @@ static int pc_calc_skillpoint(struct map_session_data *sd)
 {
     int i, skill_points = 0;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     for (i = 0; i < skill_pool_skills_size; i++) {
         int lv = sd->status.skill[skill_pool_skills[i]].lv;
@@ -813,7 +809,7 @@ int pc_calcstatus(struct map_session_data *sd, int first)
     int aspd_rate, wele, wele_, def_ele, refinedef = 0;
     int str, dstr, dex;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     b_speed = sd->speed;
     b_max_hp = sd->status.max_hp;
@@ -934,8 +930,8 @@ int pc_calcstatus(struct map_session_data *sd, int first)
         clif_changelook(&sd->bl, LOOK_HEAD_BOTTOM, sd->status.head_bottom);
         clif_changelook(&sd->bl, LOOK_HEAD_TOP, sd->status.head_top);
         clif_changelook(&sd->bl, LOOK_HEAD_MID, sd->status.head_mid);
-        clif_clearchar(&sd->bl, 9);
-        pc_setpos(sd, sd->mapname, sd->bl.x, sd->bl.y, 3);
+        clif_being_remove(&sd->bl, BeingRemoveType::DISGUISE);
+        pc_setpos(sd, sd->mapname, sd->bl.x, sd->bl.y, BeingRemoveType::WARP);
     }
 
     sd->spellpower_bonus_target = 0;
@@ -1473,7 +1469,7 @@ int pc_calcstatus(struct map_session_data *sd, int first)
  */
 int pc_bonus(struct map_session_data *sd, int type, int val)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     switch (type)
     {
@@ -1838,8 +1834,8 @@ int pc_bonus(struct map_session_data *sd, int type, int val)
             if (sd->state.lr_flag != 2 && sd->disguiseflag == 0)
             {
                 sd->disguise = val;
-                clif_clearchar(&sd->bl, 9);
-                pc_setpos(sd, sd->mapname, sd->bl.x, sd->bl.y, 3);
+                clif_being_remove(&sd->bl, BeingRemoveType::DISGUISE);
+                pc_setpos(sd, sd->mapname, sd->bl.x, sd->bl.y, BeingRemoveType::WARP);
             }
             break;
         case SP_UNBREAKABLE:
@@ -1847,9 +1843,6 @@ int pc_bonus(struct map_session_data *sd, int type, int val)
             {
                 sd->unbreakable += val;
             }
-            break;
-        case SP_DEAF:
-            sd->special_state.deaf = 1;
             break;
         default:
             map_log("pc_bonus: map_logunknown type %d %d !\n", type, val);
@@ -1864,7 +1857,7 @@ int pc_bonus(struct map_session_data *sd, int type, int val)
  */
 int pc_skill(struct map_session_data *sd, int id, int level, int flag)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (level > MAX_SKILL_LEVEL)
     {
@@ -1899,7 +1892,7 @@ int pc_checkadditem(struct map_session_data *sd, int nameid, int amount)
 {
     int i;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (itemdb_isequip(nameid))
         return ADDITEM_NEW;
@@ -1927,7 +1920,7 @@ int pc_inventoryblank(struct map_session_data *sd)
 {
     int i, b;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     for (i = 0, b = 0; i < MAX_INVENTORY; i++)
     {
@@ -1946,7 +1939,7 @@ int pc_payzeny(struct map_session_data *sd, int zeny)
 {
     double z;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     z = sd->status.zeny;
     if (sd->status.zeny < zeny || z - zeny > MAX_ZENY)
@@ -1965,7 +1958,7 @@ int pc_getzeny(struct map_session_data *sd, int zeny)
 {
     double z;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     z = sd->status.zeny;
     if (z + zeny > MAX_ZENY)
@@ -2004,7 +1997,7 @@ int pc_count_all_items(struct map_session_data *player, int item_id)
     int i;
     int count = 0;
 
-    nullpo_retr(0, player);
+    nullpo_ret(player);
 
     for (i = 0; i < MAX_INVENTORY; i++)
     {
@@ -2019,7 +2012,7 @@ int pc_remove_items(struct map_session_data *player, int item_id, int count)
 {
     int i;
 
-    nullpo_retr(0, player);
+    nullpo_ret(player);
 
     for (i = 0; i < MAX_INVENTORY && count; i++)
     {
@@ -2218,8 +2211,8 @@ int pc_takeitem(struct map_session_data *sd, struct flooritem_data *fitem)
     unsigned int tick = gettick();
     int can_take;
 
-    nullpo_retr(0, sd);
-    nullpo_retr(0, fitem);
+    nullpo_ret(sd);
+    nullpo_ret(fitem);
 
     /* Sometimes the owners reported to us are buggy: */
 
@@ -2274,7 +2267,7 @@ static int pc_isUseitem(struct map_session_data *sd, int n)
     struct item_data *item;
     int nameid;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     item = sd->inventory_data[n];
     nameid = sd->status.inventory[n].nameid;
@@ -2338,12 +2331,12 @@ int pc_useitem(struct map_session_data *sd, int n)
  *------------------------------------------
  */
 int pc_setpos(struct map_session_data *sd, const char *mapname_org, int x, int y,
-               int clrtype)
+              BeingRemoveType clrtype)
 {
     char mapname[24];
     int m = 0, c = 0, disguise = 0;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->trade_partner)      // 取引を中断する
         trade_tradecancel(sd);
@@ -2359,7 +2352,7 @@ int pc_setpos(struct map_session_data *sd, const char *mapname_org, int x, int y
 
     if (sd->disguise)
     {                           // clear disguises when warping [Valaris]
-        clif_clearchar(&sd->bl, 9);
+        clif_being_remove(&sd->bl, BeingRemoveType::DISGUISE);
         disguise = sd->disguise;
         sd->disguise = 0;
     }
@@ -2380,7 +2373,7 @@ int pc_setpos(struct map_session_data *sd, const char *mapname_org, int x, int y
             in_port_t port;
             if (map_mapname2ipport(mapname, &ip, &port))
             {
-                clif_clearchar(&sd->bl, clrtype & 0xffff);
+                clif_being_remove(&sd->bl, clrtype);
                 map_delblock(&sd->bl);
                 memcpy(sd->mapname, mapname, 24);
                 sd->bl.x = x;
@@ -2422,7 +2415,7 @@ int pc_setpos(struct map_session_data *sd, const char *mapname_org, int x, int y
 
     if (sd->mapname[0] && sd->bl.prev != NULL)
     {
-        clif_clearchar(&sd->bl, clrtype & 0xffff);
+        clif_being_remove(&sd->bl, clrtype);
         map_delblock(&sd->bl);
         clif_changemap(sd, maps[m].name, x, y); // [MouseJstr]
     }
@@ -2450,12 +2443,12 @@ int pc_setpos(struct map_session_data *sd, const char *mapname_org, int x, int y
  * PCのランダムワープ
  *------------------------------------------
  */
-int pc_randomwarp(struct map_session_data *sd, int type)
+int pc_randomwarp(struct map_session_data *sd, BeingRemoveType type)
 {
     int x, y, c, i = 0;
     int m;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     m = sd->bl.m;
 
@@ -2483,7 +2476,7 @@ int pc_can_reach(struct map_session_data *sd, int x, int y)
 {
     struct walkpath_data wpd;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->bl.x == x && sd->bl.y == y) // 同じマス
         return 1;
@@ -2505,7 +2498,7 @@ int pc_can_reach(struct map_session_data *sd, int x, int y)
  */
 static int calc_next_walk_step(struct map_session_data *sd)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->walkpath.path_pos >= sd->walkpath.path_len)
         return -1;
@@ -2666,7 +2659,7 @@ static int pc_walktoxy_sub(struct map_session_data *sd)
 int pc_walktoxy(struct map_session_data *sd, int x, int y)
 {
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     sd->to_x = x;
     sd->to_y = y;
@@ -2694,7 +2687,7 @@ int pc_walktoxy(struct map_session_data *sd, int x, int y)
  */
 int pc_stop_walking(struct map_session_data *sd, int type)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->walktimer != -1)
     {
@@ -2884,7 +2877,7 @@ int pc_attack(struct map_session_data *sd, int target_id, int type)
     struct block_list *bl;
     int d;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     bl = map_id2bl(target_id);
     if (bl == NULL)
@@ -2924,7 +2917,7 @@ int pc_attack(struct map_session_data *sd, int target_id, int type)
  */
 int pc_stopattack(struct map_session_data *sd)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->attacktimer != -1)
     {
@@ -2941,7 +2934,7 @@ int pc_checkbaselevelup(struct map_session_data *sd)
 {
     int next = pc_nextbaseexp(sd);
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->status.base_exp >= next && next > 0)
     {
@@ -2992,7 +2985,7 @@ int pc_checkjoblevelup(struct map_session_data *sd)
 {
     int next = pc_nextjobexp(sd);
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->status.job_exp >= next && next > 0)
     {
@@ -3038,7 +3031,7 @@ int pc_gainexp_reason(struct map_session_data *sd, int base_exp, int job_exp,
                        int reason)
 {
     char output[256];
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->bl.prev == NULL || pc_isdead(sd))
         return 0;
@@ -3110,7 +3103,7 @@ int pc_gainexp_reason(struct map_session_data *sd, int base_exp, int job_exp,
 int pc_extract_healer_exp(struct map_session_data *sd, int max)
 {
     int amount;
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     amount = sd->heal_xp;
     if (max < amount)
@@ -3126,7 +3119,7 @@ int pc_extract_healer_exp(struct map_session_data *sd, int max)
  */
 int pc_nextbaseexp(struct map_session_data *sd)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->status.base_level >= MAX_LEVEL || sd->status.base_level <= 0)
         return 0;
@@ -3154,7 +3147,7 @@ int pc_nextjobexp(struct map_session_data *sd)
  */
 int pc_nextbaseafter(struct map_session_data *sd)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->status.base_level >= MAX_LEVEL || sd->status.base_level <= 0)
         return 0;
@@ -3168,7 +3161,7 @@ int pc_nextbaseafter(struct map_session_data *sd)
  */
 int pc_nextjobafter(struct map_session_data *sd)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->status.job_level >= MAX_LEVEL || sd->status.job_level <= 0)
         return 0;
@@ -3207,7 +3200,7 @@ int pc_statusup(struct map_session_data *sd, int type)
 {
     int need, val = 0;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     switch (type)
     {
@@ -3281,7 +3274,7 @@ int pc_statusup(struct map_session_data *sd, int type)
  */
 int pc_statusup2(struct map_session_data *sd, int type, int val)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (type < SP_STR || type > SP_LUK)
     {
@@ -3360,7 +3353,7 @@ int pc_statusup2(struct map_session_data *sd, int type, int val)
  */
 int pc_skillup(struct map_session_data *sd, int skill_num)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->status.skill[skill_num].id != 0
         && sd->status.skill_point >= sd->status.skill[skill_num].lv
@@ -3388,7 +3381,7 @@ int pc_resetlvl(struct map_session_data *sd, int type)
 {
     int i;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     for (i = 1; i < MAX_SKILL; i++)
     {
@@ -3480,7 +3473,7 @@ int pc_resetstate(struct map_session_data *sd)
 #define sumsp(a) ((a)*((a-2)/10+2) - 5*((a-2)/10)*((a-2)/10) - 6*((a-2)/10) -2)
 //  int add=0; // Removed by Dexity
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
 //  New statpoint table used here - Dexity
     sd->status.status_point = atoi(statp[sd->status.base_level - 1]);
@@ -3531,7 +3524,7 @@ int pc_resetskill(struct map_session_data *sd)
 {
     int i, skill;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     sd->status.skill_point += pc_calc_skillpoint(sd);
 
@@ -3557,7 +3550,7 @@ int pc_damage(struct block_list *src, struct map_session_data *sd,
                int damage)
 {
     int i = 0, j = 0;
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     // 既に死んでいたら無効
     if (pc_isdead(sd))
@@ -3619,7 +3612,7 @@ int pc_damage(struct block_list *src, struct map_session_data *sd,
 
     pc_stop_walking(sd, 0);
     skill_castcancel(&sd->bl);  // 詠唱の中止
-    clif_clearchar(&sd->bl, 1);
+    clif_being_remove(&sd->bl, BeingRemoveType::DEAD);
     pc_setglobalreg(sd, "PC_DIE_COUNTER", ++sd->die_counter);  //死にカウンター書き込み
     skill_status_change_clear(&sd->bl, 0); // ステータス異常を解除する
     clif_updatestatus(sd, SP_HP);
@@ -3766,7 +3759,7 @@ int pc_damage(struct block_list *src, struct map_session_data *sd,
             pc_setstand(sd);
             pc_setrestartvalue(sd, 3);
             pc_setpos(sd, sd->status.save_point.map, sd->status.save_point.x,
-                       sd->status.save_point.y, 0);
+                      sd->status.save_point.y, BeingRemoveType::ZERO);
         }
     }
 
@@ -3799,7 +3792,7 @@ int pc_readparam(struct map_session_data *sd, int type)
 {
     int val = 0;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     switch (type)
     {
@@ -3817,15 +3810,6 @@ int pc_readparam(struct map_session_data *sd, int type)
             break;
         case SP_JOBLEVEL:
             val = sd->status.job_level;
-            break;
-        case SP_CLASS:
-            if (val >= 24 && val < 45)
-                val += 3978;
-            else
-                val = 0; //sd->status.pc_class;
-            break;
-        case SP_UPPER:
-            val = 0; //s_class.upper;
             break;
         case SP_SEX:
             val = sd->sex;
@@ -3894,7 +3878,7 @@ int pc_setparam(struct map_session_data *sd, int type, int val)
 {
     int i = 0, up_level = 50;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     switch (type)
     {
@@ -4025,7 +4009,7 @@ int pc_heal(struct map_session_data *sd, int hp, int sp)
 //  if (battle_config.battle_log)
 //      printf("heal %d %d\n",hp,sp);
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (pc_checkoverhp(sd))
     {
@@ -4144,7 +4128,7 @@ static int pc_itemheal_effect(struct map_session_data *sd, int hp, int sp)
 //  if (battle_config.battle_log)
 //      printf("heal %d %d\n",hp,sp);
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (pc_checkoverhp(sd))
     {
@@ -4198,7 +4182,7 @@ static int pc_itemheal_effect(struct map_session_data *sd, int hp, int sp)
  */
 int pc_percentheal(struct map_session_data *sd, int hp, int sp)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (pc_checkoverhp(sd))
     {
@@ -4267,7 +4251,7 @@ int pc_percentheal(struct map_session_data *sd, int hp, int sp)
  */
 int pc_changelook(struct map_session_data *sd, int type, int val)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     switch (type)
     {
@@ -4289,9 +4273,6 @@ int pc_changelook(struct map_session_data *sd, int type, int val)
         case LOOK_HAIR_COLOR:
             sd->status.hair_color = val;
             break;
-        case LOOK_CLOTHES_COLOR:
-            sd->status.clothes_color = val;
-            break;
         case LOOK_SHIELD:
             sd->status.shield = val;
             break;
@@ -4309,7 +4290,7 @@ int pc_changelook(struct map_session_data *sd, int type, int val)
  */
 int pc_setoption(struct map_session_data *sd, int type)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     sd->status.option = type;
     clif_changeoption(&sd->bl);
@@ -4326,7 +4307,7 @@ int pc_readreg(struct map_session_data *sd, int reg)
 {
     int i;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     for (i = 0; i < sd->reg_num; i++)
         if (sd->reg[i].index == reg)
@@ -4343,7 +4324,7 @@ int pc_setreg(struct map_session_data *sd, int reg, int val)
 {
     int i;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     for (i = 0; i < sd->reg_num; i++)
     {
@@ -4369,7 +4350,7 @@ char *pc_readregstr(struct map_session_data *sd, int reg)
 {
     int i;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     for (i = 0; i < sd->regstr_num; i++)
         if (sd->regstr[i].index == reg)
@@ -4386,7 +4367,7 @@ int pc_setregstr(struct map_session_data *sd, int reg, const char *str)
 {
     int i;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (strlen(str) + 1 > sizeof(sd->regstr[0].data))
     {
@@ -4416,7 +4397,7 @@ int pc_readglobalreg(struct map_session_data *sd, const char *reg)
 {
     int i;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     for (i = 0; i < sd->status.global_reg_num; i++)
     {
@@ -4435,7 +4416,7 @@ int pc_setglobalreg(struct map_session_data *sd, const char *reg, int val)
 {
     int i;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     //PC_DIE_COUNTERがスクリプトなどで変更された時の処理
     if (strcmp(reg, "PC_DIE_COUNTER") == 0 && sd->die_counter != val)
@@ -4486,7 +4467,7 @@ int pc_readaccountreg(struct map_session_data *sd, const char *reg)
 {
     int i;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     for (i = 0; i < sd->status.account_reg_num; i++)
     {
@@ -4505,7 +4486,7 @@ int pc_setaccountreg(struct map_session_data *sd, const char *reg, int val)
 {
     int i;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (val == 0)
     {
@@ -4553,7 +4534,7 @@ int pc_readaccountreg2(struct map_session_data *sd, const char *reg)
 {
     int i;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     for (i = 0; i < sd->status.account_reg2_num; i++)
     {
@@ -4620,7 +4601,7 @@ int pc_percentrefinery(struct map_session_data *, struct item *item)
 {
     int percent;
 
-    nullpo_retr(0, item);
+    nullpo_ret(item);
     percent = percentrefinery[itemdb_wlv(item->nameid)][static_cast<unsigned>(item->refine)];
 
     // 確率の有効範囲チェック
@@ -4671,7 +4652,7 @@ int pc_addeventtimer(struct map_session_data *sd, int tick, const char *name)
 {
     int i;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     for (i = 0; i < MAX_EVENTTIMER; i++)
         if (sd->eventtimer[i] == -1)
@@ -4700,7 +4681,7 @@ int pc_deleventtimer(struct map_session_data *sd, const char *name)
 {
     int i;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     for (i = 0; i < MAX_EVENTTIMER; i++)
         if (sd->eventtimer[i] != -1 && strcmp(reinterpret_cast<char *>(get_timer(sd->eventtimer[i])->data.p), name) == 0)
@@ -4722,7 +4703,7 @@ int pc_addeventtimercount(struct map_session_data *sd, const char *name,
 {
     int i;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     for (i = 0; i < MAX_EVENTTIMER; i++)
         if (sd->eventtimer[i] != -1 && strcmp(reinterpret_cast<char *>(get_timer(sd->eventtimer[i])->data.p), name) == 0)
@@ -4742,7 +4723,7 @@ int pc_cleareventtimer(struct map_session_data *sd)
 {
     int i;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     for (i = 0; i < MAX_EVENTTIMER; i++)
         if (sd->eventtimer[i] != -1)
@@ -4782,7 +4763,7 @@ int pc_equipitem(struct map_session_data *sd, int n, int pos)
     struct item_data *id;
     //ｿｽ]ｿｽｿｽｿｽｿｽｿｽ{ｿｽqｿｽﾌ場合ｿｽﾌ鯉ｿｽｿｽﾌ職ｿｽﾆゑｿｽｿｽZｿｽoｿｽｿｽｿｽｿｽ
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (n < 0 || n >= MAX_INVENTORY)
     {
@@ -4912,7 +4893,7 @@ int pc_equipitem(struct map_session_data *sd, int n, int pos)
  */
 int pc_unequipitem(struct map_session_data *sd, int n, int type)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     map_log("unmap_logequip %d %x:%x\n", n, pc_equippoint(sd, n),
                 sd->status.inventory[n].equip);
@@ -5003,7 +4984,7 @@ int pc_checkitem(struct map_session_data *sd)
     int i, j, k, id, calc_flag = 0;
     struct item_data *it = NULL;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     // 所持品空き詰め
     for (i = j = 0; i < MAX_INVENTORY; i++)
@@ -5063,7 +5044,7 @@ int pc_checkitem(struct map_session_data *sd)
 
 int pc_checkoverhp(struct map_session_data *sd)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->status.hp == sd->status.max_hp)
         return 1;
@@ -5079,7 +5060,7 @@ int pc_checkoverhp(struct map_session_data *sd)
 
 int pc_checkoversp(struct map_session_data *sd)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->status.sp == sd->status.max_sp)
         return 1;
@@ -5117,8 +5098,8 @@ int pc_calc_pvprank(struct map_session_data *sd)
 {
     struct map_data *m;
 
-    nullpo_retr(0, sd);
-    nullpo_retr(0, m = &maps[sd->bl.m]);
+    nullpo_ret(sd);
+    nullpo_ret(m = &maps[sd->bl.m]);
 
     if (!(m->flag.pvp))
         return 0;
@@ -5244,7 +5225,7 @@ static int pc_spheal(struct map_session_data *sd)
 {
     int a;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     a = natural_heal_diff_tick;
     if (pc_issit(sd))
@@ -5261,7 +5242,7 @@ static int pc_hpheal(struct map_session_data *sd)
 {
     int a;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     a = natural_heal_diff_tick;
     if (pc_issit(sd))
@@ -5275,7 +5256,7 @@ static int pc_natural_heal_hp(struct map_session_data *sd)
     int bhp;
     int inc_num, bonus, hp_flag;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (pc_checkoverhp(sd))
     {
@@ -5361,7 +5342,7 @@ static int pc_natural_heal_sp(struct map_session_data *sd)
     int bsp;
     int inc_num, bonus;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (pc_checkoversp(sd))
     {
@@ -5525,7 +5506,7 @@ static void pc_natural_heal(timer_id, tick_t tick, custom_id_t, custom_data_t)
  */
 int pc_setsavepoint(struct map_session_data *sd, const char *mapname, int x, int y)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     strncpy(sd->status.save_point.map, mapname, 23);
     sd->status.save_point.map[23] = '\0';
@@ -5932,7 +5913,7 @@ void pc_invisibility(struct map_session_data *sd, int enabled)
 {
     if (enabled && !(sd->status.option & OPTION_INVISIBILITY))
     {
-        clif_clearchar(&sd->bl, 3);
+        clif_being_remove(&sd->bl, BeingRemoveType::WARP);
         sd->status.option |= OPTION_INVISIBILITY;
         clif_status_change(&sd->bl, CLIF_OPTION_SC_INVISIBILITY, 1);
     }
@@ -5940,7 +5921,7 @@ void pc_invisibility(struct map_session_data *sd, int enabled)
     {
         sd->status.option &= ~OPTION_INVISIBILITY;
         clif_status_change(&sd->bl, CLIF_OPTION_SC_INVISIBILITY, 0);
-        pc_setpos(sd, maps[sd->bl.m].name, sd->bl.x, sd->bl.y, 3);
+        pc_setpos(sd, maps[sd->bl.m].name, sd->bl.x, sd->bl.y, BeingRemoveType::WARP);
     }
 }
 

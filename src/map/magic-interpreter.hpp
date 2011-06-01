@@ -82,7 +82,7 @@ typedef struct area
         struct area *a_union[2];
     } a;
     int size;
-    unsigned char ty;
+    uint8_t ty;
 } area_t;
 
 typedef struct val
@@ -97,7 +97,7 @@ typedef struct val
         struct invocation *v_invocation;    /* Used ONLY during operation/function invocation; otherwise we use v_int */
         struct spell *v_spell;
     } v;
-    unsigned char ty;
+    uint8_t ty;
 } val_t;
 
 /* ----------- */
@@ -135,7 +135,7 @@ typedef struct e_area
         } a_rect;
         struct e_area *a_union[2];
     } a;
-    unsigned char ty;
+    uint8_t ty;
 } e_area_t;
 
 typedef struct expr
@@ -158,7 +158,7 @@ typedef struct expr
             int id;
         } e_field;
     } e;
-    unsigned char ty;
+    uint8_t ty;
 } expr_t;
 
 /* ------- */
@@ -200,7 +200,7 @@ typedef struct effect
             int id;
             expr_t *area;
             struct effect *body;
-            unsigned char filter;
+            uint8_t filter;
         } e_foreach;
         struct
         {
@@ -229,7 +229,7 @@ typedef struct effect
             struct effect *body;
         } e_call;
     } e;
-    unsigned char ty;
+    uint8_t ty;
 } effect_t;
 
 /* ---------- */
@@ -273,7 +273,7 @@ typedef struct spellguard
         struct spellguard *s_alt;   /* either `next' or `s.s_alt' */
         effect_set_t s_effect;
     } s;
-    unsigned char ty;
+    uint8_t ty;
 } spellguard_t;
 
 /* ------ */
@@ -388,7 +388,7 @@ typedef struct cont_activation_record
             val_t *old_actuals;
         } c_proc;
     } c;
-    unsigned char ty;
+    uint8_t ty;
 } cont_activation_record_t;
 
 typedef struct status_change_ref

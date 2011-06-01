@@ -391,7 +391,7 @@ static void entity_warp(entity_t * target, int destm, int destx, int desty)
             {
                 character_t *character = reinterpret_cast<character_t *>(target);
                 char *map_name;
-                clif_clearchar(&character->bl, 3);
+                clif_being_remove(&character->bl, BeingRemoveType::WARP);
                 map_delblock(&character->bl);
                 character->bl.x = destx;
                 character->bl.y = desty;
@@ -403,7 +403,7 @@ static void entity_warp(entity_t * target, int destm, int destx, int desty)
                 map_name = maps[character->bl.m].name;
 
                 // Warp part #1: update relevant data, interrupt trading etc.:
-                pc_setpos(character, map_name, character->bl.x, character->bl.y, 0);
+                pc_setpos(character, map_name, character->bl.x, character->bl.y, BeingRemoveType::ZERO);
                 // Warp part #2: now notify the client
                 clif_changemap(character, map_name,
                                 character->bl.x, character->bl.y);
@@ -1442,7 +1442,7 @@ static int spell_run(invocation_t * invocation, int allow_delete)
                     }
                     else
                         invocation->script_pos = 0;
-                    clif_clearchar_id(invocation->bl.id, 1, caster->fd);
+                    clif_being_remove_id(invocation->bl.id, 1, caster->fd);
                 }
                 REFRESH_INVOCATION(); // Script may have killed the caster
                 break;

@@ -87,7 +87,7 @@ static void mob_init(struct mob_data *md);
  */
 static int mob_spawn_dataset(struct mob_data *md, const char *mobname, int mob_class)
 {
-    nullpo_retr(0, md);
+    nullpo_ret(md);
 
     if (strcmp(mobname, "--en--") == 0)
         memcpy(md->name, mob_db[mob_class].name, 24);
@@ -534,7 +534,7 @@ short mob_get_clothes_color(int mob_class) // Add for player monster dye - Valar
  */
 static int mob_can_move(struct mob_data *md)
 {
-    nullpo_retr(0, md);
+    nullpo_ret(md);
 
     if (md->canmove_tick > gettick() || (md->opt1 > 0 && md->opt1 != 6)
         || md->option & 2)
@@ -548,7 +548,7 @@ static int mob_can_move(struct mob_data *md)
  */
 static int calc_next_walk_step(struct mob_data *md)
 {
-    nullpo_retr(0, md);
+    nullpo_ret(md);
 
     if (md->walkpath.path_pos >= md->walkpath.path_len)
         return -1;
@@ -571,7 +571,7 @@ static int mob_walk(struct mob_data *md, unsigned int tick, int data)
     static int diry[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
     int x, y, dx, dy;
 
-    nullpo_retr(0, md);
+    nullpo_ret(md);
 
     md->state.state = MS_IDLE;
     if (md->walkpath.path_pos >= md->walkpath.path_len
@@ -664,7 +664,7 @@ static int mob_check_attack(struct mob_data *md)
 
     int mode, race, range;
 
-    nullpo_retr(0, md);
+    nullpo_ret(md);
 
     md->min_chase = 13;
     md->state.state = MS_IDLE;
@@ -746,7 +746,7 @@ static int mob_attack(struct mob_data *md, unsigned int tick, int)
 {
     struct block_list *tbl = NULL;
 
-    nullpo_retr(0, md);
+    nullpo_ret(md);
 
     if ((tbl = map_id2bl(md->target_id)) == NULL)
         return 0;
@@ -794,7 +794,7 @@ int mob_changestate(struct mob_data *md, int state, int type)
     unsigned int tick;
     int i;
 
-    nullpo_retr(0, md);
+    nullpo_ret(md);
 
     if (md->timer != -1)
         delete_timer(md->timer, mob_timer);
@@ -914,7 +914,7 @@ static int mob_walktoxy_sub(struct mob_data *md)
 {
     struct walkpath_data wpd;
 
-    nullpo_retr(0, md);
+    nullpo_ret(md);
 
     if (path_search
         (&wpd, md->bl.m, md->bl.x, md->bl.y, md->to_x, md->to_y,
@@ -937,7 +937,7 @@ int mob_walktoxy(struct mob_data *md, int x, int y, int easy)
 {
     struct walkpath_data wpd;
 
-    nullpo_retr(0, md);
+    nullpo_ret(md);
 
     if (md->state.state == MS_WALK
         && path_search(&wpd, md->bl.m, md->bl.x, md->bl.y, x, y, easy))
@@ -1046,7 +1046,7 @@ int mob_spawn(int id)
     md->last_spawntime = tick;
     if (md->bl.prev != NULL)
     {
-//      clif_clearchar(&md->bl,3);
+//      clif_being_remove(&md->bl,3);
         map_delblock(&md->bl);
     }
     else
@@ -1161,7 +1161,7 @@ int mob_stopattack(struct mob_data *md)
  */
 int mob_stop_walking(struct mob_data *md, int type)
 {
-    nullpo_retr(0, md);
+    nullpo_ret(md);
 
     if (md->state.state == MS_WALK || md->state.state == MS_IDLE)
     {
@@ -1213,8 +1213,8 @@ static int mob_can_reach(struct mob_data *md, struct block_list *bl, int range)
     struct walkpath_data wpd;
     int i;
 
-    nullpo_retr(0, md);
-    nullpo_retr(0, bl);
+    nullpo_ret(md);
+    nullpo_ret(bl);
 
     dx = abs(bl->x - md->bl.x);
     dy = abs(bl->y - md->bl.y);
@@ -1272,8 +1272,8 @@ int mob_target(struct mob_data *md, struct block_list *bl, int dist)
     short *option;
     int mode, race;
 
-    nullpo_retr(0, md);
-    nullpo_retr(0, bl);
+    nullpo_ret(md);
+    nullpo_ret(bl);
 
     option = battle_get_option(bl);
     race = mob_db[md->mob_class].race;
@@ -1301,7 +1301,7 @@ int mob_target(struct mob_data *md, struct block_list *bl, int dist)
     {
         if (bl->type == BL_PC)
         {
-            nullpo_retr(0, sd = reinterpret_cast<struct map_session_data *>(bl));
+            nullpo_ret(sd = reinterpret_cast<struct map_session_data *>(bl));
             if (sd->invincible_timer != -1 || pc_isinvisible(sd))
                 return 0;
             if (!(mode & 0x20) && race != 4 && race != 6
@@ -1486,7 +1486,7 @@ static int mob_ai_sub_hard_slavemob(struct mob_data *md, unsigned int tick)
     struct block_list *bl;
     int mode, race, old_dist;
 
-    nullpo_retr(0, md);
+    nullpo_ret(md);
 
     if ((bl = map_id2bl(md->master_id)) != NULL)
         mmd = reinterpret_cast<struct mob_data *>(bl);
@@ -1500,7 +1500,7 @@ static int mob_ai_sub_hard_slavemob(struct mob_data *md, unsigned int tick)
     // Since it is in the map on which the master is not, teleport is carried out and it pursues.
     if (mmd->bl.m != md->bl.m)
     {
-        mob_warp(md, mmd->bl.m, mmd->bl.x, mmd->bl.y, 3);
+        mob_warp(md, mmd->bl.m, mmd->bl.x, mmd->bl.y, BeingRemoveType::WARP);
         md->state.master_check = 1;
         return 0;
     }
@@ -1512,7 +1512,7 @@ static int mob_ai_sub_hard_slavemob(struct mob_data *md, unsigned int tick)
     // Since the master was in near immediately before, teleport is carried out and it pursues.
     if (old_dist < 10 && md->master_dist > 18)
     {
-        mob_warp(md, -1, mmd->bl.x, mmd->bl.y, 3);
+        mob_warp(md, -1, mmd->bl.x, mmd->bl.y, BeingRemoveType::WARP);
         md->state.master_check = 1;
         return 0;
     }
@@ -1627,7 +1627,7 @@ static int mob_ai_sub_hard_slavemob(struct mob_data *md, unsigned int tick)
  */
 static int mob_unlocktarget(struct mob_data *md, int tick)
 {
-    nullpo_retr(0, md);
+    nullpo_ret(md);
 
     md->target_id = 0;
     md->state.targettype = NONE_ATTACKABLE;
@@ -1644,7 +1644,7 @@ static int mob_randomwalk(struct mob_data *md, int tick)
     const int retrycount = 20;
     int speed;
 
-    nullpo_retr(0, md);
+    nullpo_ret(md);
 
     speed = battle_get_speed(&md->bl);
     if (DIFF_TICK(md->next_walktime, tick) < 0)
@@ -2112,7 +2112,7 @@ static void mob_ai_sub_lazy(db_key_t, db_val_t data, va_list app)
             if (MRAND(1000) < MOB_LAZYWARPPERC && md->x_0 <= 0
                 && md->master_id != 0
                 && !(mob_db[md->mob_class].mode & 0x20))
-                mob_warp(md, -1, -1, -1, -1);
+                mob_warp(md, -1, -1, -1, BeingRemoveType::NEGATIVE);
         }
 
         md->next_walktime = tick + MPRAND(5000, 10000);
@@ -2231,10 +2231,10 @@ int mob_delete(struct mob_data *md)
     if (md->bl.prev == NULL)
         return 1;
     mob_changestate(md, MS_DEAD, 0);
-    clif_clearchar(&md->bl, 1);
+    clif_being_remove(&md->bl, BeingRemoveType::DEAD);
     map_delblock(&md->bl);
     if (mob_get_viewclass(md->mob_class) <= 1000)
-        clif_clearchar_delay(gettick() + 3000, &md->bl, 0);
+        clif_being_remove_delay(gettick() + 3000, &md->bl, BeingRemoveType::ZERO);
     mob_deleteslave(md);
     mob_setdelayspawn(md->bl.id);
     return 0;
@@ -2247,7 +2247,7 @@ int mob_catch_delete(struct mob_data *md)
     if (md->bl.prev == NULL)
         return 1;
     mob_changestate(md, MS_DEAD, 0);
-    clif_clearchar(&md->bl, 3);
+    clif_being_remove(&md->bl, BeingRemoveType::WARP);
     map_delblock(&md->bl);
     mob_setdelayspawn(md->bl.id);
     return 0;
@@ -2288,7 +2288,7 @@ static void mob_deleteslave_sub(struct block_list *bl, va_list ap)
  */
 int mob_deleteslave(struct mob_data *md)
 {
-    nullpo_retr(0, md);
+    nullpo_ret(md);
 
     map_foreachinarea(mob_deleteslave_sub, md->bl.m,
                        0, 0, maps[md->bl.m].xs, maps[md->bl.m].ys,
@@ -2322,7 +2322,7 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
         NULL;
     double tdmg;
 
-    nullpo_retr(0, md);        //srcはNULLで呼ばれる場合もあるので、他でチェック
+    nullpo_ret(md);        //srcはNULLで呼ばれる場合もあるので、他でチェック
 
     if (src && src->id == md->master_id
         && md->mode & MOB_MODE_TURNS_AGAINST_BAD_MASTER)
@@ -2355,7 +2355,7 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
         if (md->bl.prev != NULL)
         {
             mob_changestate(md, MS_DEAD, 0);
-            clif_clearchar(&md->bl, 1);
+            clif_being_remove(&md->bl, BeingRemoveType::DEAD);
             map_delblock(&md->bl);
             mob_setdelayspawn(md->bl.id);
         }
@@ -2416,7 +2416,7 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
                             damage);
             }
 
-            nullpo_retr(0, md2);
+            nullpo_ret(md2);
             int i;
             for (i = 0, minpos = 0, mindmg = 0x7fffffff; i < DAMAGELOG_SIZE;
                  i++)
@@ -2678,10 +2678,10 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
             npc_event(sd, md->npc_event, 0);
     }
 
-    clif_clearchar(&md->bl, 1);
+    clif_being_remove(&md->bl, BeingRemoveType::DEAD);
     map_delblock(&md->bl);
     if (mob_get_viewclass(md->mob_class) <= 1000)
-        clif_clearchar_delay(tick + 3000, &md->bl, 0);
+        clif_being_remove_delay(tick + 3000, &md->bl, BeingRemoveType::ZERO);
     mob_deleteslave(md);
     mob_setdelayspawn(md->bl.id);
     map_freeblock_unlock();
@@ -2697,7 +2697,7 @@ int mob_heal(struct mob_data *md, int heal)
 {
     int max_hp = battle_get_max_hp(&md->bl);
 
-    nullpo_retr(0, md);
+    nullpo_ret(md);
 
     md->hp += heal;
     if (max_hp < md->hp)
@@ -2719,7 +2719,7 @@ static void mob_warpslave_sub(struct block_list *bl, va_list ap)
     y = va_arg(ap, int);
     if (md->master_id == id)
     {
-        mob_warp(md, -1, x, y, 2);
+        mob_warp(md, -1, x, y, BeingRemoveType::QUIT);
     }
 }
 
@@ -2741,11 +2741,11 @@ static int mob_warpslave(struct mob_data *md, int x, int y)
  * mobワープ
  *------------------------------------------
  */
-int mob_warp(struct mob_data *md, int m, int x, int y, int type)
+int mob_warp(struct mob_data *md, int m, int x, int y, BeingRemoveType type)
 {
     int i = 0, c, xs = 0, ys = 0, bx = x, by = y;
 
-    nullpo_retr(0, md);
+    nullpo_ret(md);
 
     if (md->bl.prev == NULL)
         return 0;
@@ -2753,11 +2753,11 @@ int mob_warp(struct mob_data *md, int m, int x, int y, int type)
     if (m < 0)
         m = md->bl.m;
 
-    if (type >= 0)
+    if (type != BeingRemoveType::NEGATIVE)
     {
         if (maps[md->bl.m].flag.monster_noteleport)
             return 0;
-        clif_clearchar(&md->bl, type);
+        clif_being_remove(&md->bl, type);
     }
     map_delblock(&md->bl);
 
@@ -2790,7 +2790,7 @@ int mob_warp(struct mob_data *md, int m, int x, int y, int type)
     else
     {
         m = md->bl.m;
-        map_log("MOB %dmap_log warp failed, mob_class = %d\n", md->bl.id, md->mob_class);
+        map_log("MOB %d warp failed, mob_class = %d\n", md->bl.id, md->mob_class);
     }
 
     md->target_id = 0;          // タゲを解除する
@@ -2798,14 +2798,14 @@ int mob_warp(struct mob_data *md, int m, int x, int y, int type)
     md->attacked_id = 0;
     mob_changestate(md, MS_IDLE, 0);
 
-    if (type > 0 && i == 1000)
+    if (type != BeingRemoveType::NEGATIVE && type != BeingRemoveType::ZERO && i == 1000)
     {
-        map_log("MOB %dmap_log warp to (%d,%d), mob_class = %d\n", md->bl.id, x, y,
+        map_log("MOB %d warp to (%d,%d), mob_class = %d\n", md->bl.id, x, y,
                 md->mob_class);
     }
 
     map_addblock(&md->bl);
-    if (type > 0)
+    if (type != BeingRemoveType::NEGATIVE && type != BeingRemoveType::ZERO)
     {
         clif_spawnmob(md);
         mob_warpslave(md, md->bl.x, md->bl.y);
@@ -2856,7 +2856,7 @@ int mob_counttargeted(struct mob_data *md, struct block_list *src,
 {
     int c = 0;
 
-    nullpo_retr(0, md);
+    nullpo_ret(md);
 
     map_foreachinarea(mob_counttargeted_sub, md->bl.m,
                        md->bl.x - AREA_SIZE, md->bl.y - AREA_SIZE,

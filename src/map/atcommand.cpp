@@ -105,7 +105,6 @@ ATCOMMAND_FUNC(charzeny);
 ATCOMMAND_FUNC(mapexit);
 ATCOMMAND_FUNC(idsearch);
 ATCOMMAND_FUNC(mapinfo);
-ATCOMMAND_FUNC(dye);
 ATCOMMAND_FUNC(hair_style);
 ATCOMMAND_FUNC(hair_color);
 ATCOMMAND_FUNC(all_stats);
@@ -175,7 +174,7 @@ static AtCommandInfo atcommand_info[] = {
     {"@goto", 20,       atcommand_goto,         ATCC_SELF,
     "charname",         "Warp yourself to a player."},
     {"@model", 20,      atcommand_model,        ATCC_SELF,
-    "hairstyle haircolor clothescolor",
+    "hairstyle haircolor",
                         "Change your appearance."},
     {"@disguise", 20,   atcommand_disguise,     ATCC_SELF,
     "name|ID",          "Disguise yourself as a monster."},
@@ -203,10 +202,6 @@ static AtCommandInfo atcommand_info[] = {
     "[1-1000]",         "Set your walk speed delay in milliseconds. Default is 150."},
     {"@memo", 40,       atcommand_memo,         ATCC_SELF,
     "[pos]",            "Set a memo point (list points if no location specified)."},
-    {"@dye", 40,        atcommand_dye,          ATCC_SELF,
-    "",                 "Change your appearance. Unimplemented."},
-    {"@ccolor", 40,     atcommand_dye,          ATCC_SELF,
-    "",                 "Change your appearance. Unimplemented."},
     {"@hairstyle", 40,  atcommand_hair_style,   ATCC_SELF,
     "",                 "Change your hairstyle."},
     {"@haircolor", 40,  atcommand_hair_color,   ATCC_SELF,
@@ -282,7 +277,7 @@ static AtCommandInfo atcommand_info[] = {
     {"@charstatsall", 40, atcommand_character_stats_all, ATCC_CHAR,
     "",                 "display stats of all characters"},
     {"@charmodel", 50,  atcommand_charmodel,    ATCC_CHAR,
-    "hairstyle haircolor clothescolor charname",
+    "hairstyle haircolor charname",
                         "Change a player's appearance."},
     {"@charwarp", 60,   atcommand_charwarp,     ATCC_CHAR,
     "map x y charname", "Warp a player to a location on any map (random x,y if unspecified)."},
@@ -702,7 +697,7 @@ int atcommand_charwarp(int fd, struct map_session_data *sd,
         clif_displaymessage(fd, "You are not authorised to warp this player from its current map.");
         return -1;
     }
-    if (pc_setpos(pl_sd, map_name, x, y, 3) == 0)
+    if (pc_setpos(pl_sd, map_name, x, y, BeingRemoveType::WARP) == 0)
     {
         clif_displaymessage(pl_sd->fd, "Warped.");
         clif_displaymessage(fd, "Player warped");
@@ -749,7 +744,7 @@ int atcommand_warp(int fd, struct map_session_data *sd,
         return -1;
     }
 
-    if (pc_setpos(sd, map_name, x, y, 3) == 0)
+    if (pc_setpos(sd, map_name, x, y, BeingRemoveType::WARP) == 0)
         clif_displaymessage(fd, "Warped.");
     else
     {
@@ -813,7 +808,7 @@ int atcommand_goto(int fd, struct map_session_data *sd,
         clif_displaymessage(fd, "You are not authorised to warp from your current map.");
         return -1;
     }
-    pc_setpos(sd, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y, 3);
+    pc_setpos(sd, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y, BeingRemoveType::WARP);
 
     char output[200];
     sprintf(output, "Jump to %s", character);
@@ -842,7 +837,7 @@ int atcommand_jump(int fd, struct map_session_data *sd,
         return -1;
     }
 
-    pc_setpos(sd, sd->mapname, x, y, 3);
+    pc_setpos(sd, sd->mapname, x, y, BeingRemoveType::WARP);
 
     char output[200];
     sprintf(output, "Jump to %d %d", x, y);
@@ -1174,7 +1169,7 @@ int atcommand_load(int fd, struct map_session_data *sd,
     }
 
     pc_setpos(sd, sd->status.save_point.map, sd->status.save_point.x,
-               sd->status.save_point.y, 0);
+              sd->status.save_point.y, BeingRemoveType::ZERO);
     clif_displaymessage(fd, "Warping to respawn point.");
 
     return 0;
@@ -1834,40 +1829,17 @@ int atcommand_model(int fd, struct map_session_data *sd,
 {
     if (!message || !*message)
         return -1;
-    unsigned int hair_style, hair_color, cloth_color;
-    if (sscanf(message, "%u %u %u", &hair_style, &hair_color, &cloth_color) < 3)
+    unsigned int hair_style, hair_color;
+    if (sscanf(message, "%u %u", &hair_style, &hair_color) < 2)
         return -1;
 
-    if (hair_style >= NUM_HAIR_STYLES || hair_color >= NUM_HAIR_COLORS || cloth_color >= NUM_CLOTHES_COLORS)
+    if (hair_style >= NUM_HAIR_STYLES || hair_color >= NUM_HAIR_COLORS)
     {
         clif_displaymessage(fd, "An invalid number was specified.");
         return -1;
     }
     pc_changelook(sd, LOOK_HAIR, hair_style);
     pc_changelook(sd, LOOK_HAIR_COLOR, hair_color);
-    pc_changelook(sd, LOOK_CLOTHES_COLOR, cloth_color);
-    clif_displaymessage(fd, "Appearance changed.");
-
-    return 0;
-}
-
-/// Change clothing color (unimplemented in the Mana client)
-int atcommand_dye(int fd, struct map_session_data *sd,
-                   const char *, const char *message)
-{
-    if (!message || !*message)
-        return -1;
-    unsigned int cloth_color;
-    if (sscanf(message, "%u", &cloth_color) < 1)
-        return -1;
-
-    if (cloth_color >= NUM_CLOTHES_COLORS)
-    {
-        clif_displaymessage(fd, "An invalid number was specified.");
-        return -1;
-    }
-
-    pc_changelook(sd, LOOK_CLOTHES_COLOR, cloth_color);
     clif_displaymessage(fd, "Appearance changed.");
 
     return 0;
@@ -2350,7 +2322,7 @@ int atcommand_recall(int fd, struct map_session_data *sd,
         clif_displaymessage(fd, "You are not authorised to warp from this player's current map.");
         return -1;
     }
-    pc_setpos(pl_sd, sd->mapname, sd->bl.x, sd->bl.y, 2);
+    pc_setpos(pl_sd, sd->mapname, sd->bl.x, sd->bl.y, BeingRemoveType::QUIT);
     char output[200];
     sprintf(output, "%s recalled!", character);
     clif_displaymessage(fd, output);
@@ -3260,9 +3232,9 @@ int atcommand_charmodel(int fd, struct map_session_data *,
 {
     if (!message || !*message)
         return -1;
-    unsigned int hair_style = 0, hair_color = 0, cloth_color = 0;
+    unsigned int hair_style, hair_color;
     char character[100];
-    if (sscanf(message, "%u %u %u %99[^\n]", &hair_style, &hair_color, &cloth_color, character) < 4)
+    if (sscanf(message, "%u %u %99[^\n]", &hair_style, &hair_color, character) < 3)
         return -1;
 
     struct map_session_data *pl_sd = map_nick2sd(character);
@@ -3271,20 +3243,19 @@ int atcommand_charmodel(int fd, struct map_session_data *,
         clif_displaymessage(fd, "Character not found.");
         return -1;
     }
-    if (hair_style >= NUM_HAIR_STYLES || hair_color >= NUM_HAIR_COLORS || cloth_color >= NUM_CLOTHES_COLORS)
+    if (hair_style >= NUM_HAIR_STYLES || hair_color >= NUM_HAIR_COLORS)
     {
         clif_displaymessage(fd, "An invalid number was specified.");
         return -1;
     }
     pc_changelook(pl_sd, LOOK_HAIR, hair_style);
     pc_changelook(pl_sd, LOOK_HAIR_COLOR, hair_color);
-    pc_changelook(pl_sd, LOOK_CLOTHES_COLOR, cloth_color);
     clif_displaymessage(fd, "Appearance changed.");
 
     return 0;
 }
 
-/// Adjust someone's skill points'
+/// Adjust someone's skill points
 int atcommand_charskpoint(int fd, struct map_session_data *,
                            const char *, const char *message)
 {
@@ -3431,7 +3402,7 @@ int atcommand_recallall(int fd, struct map_session_data *sd,
         if (maps[pl_sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd))
             count++;
         else
-            pc_setpos(pl_sd, sd->mapname, sd->bl.x, sd->bl.y, 2);
+            pc_setpos(pl_sd, sd->mapname, sd->bl.x, sd->bl.y, BeingRemoveType::QUIT);
     }
 
     clif_displaymessage(fd, "All characters recalled!");
@@ -3486,7 +3457,7 @@ int atcommand_partyrecall(int fd, struct map_session_data *sd,
         if (maps[pl_sd->bl.m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd))
             count++;
         else
-            pc_setpos(pl_sd, sd->mapname, sd->bl.x, sd->bl.y, 2);
+            pc_setpos(pl_sd, sd->mapname, sd->bl.x, sd->bl.y, BeingRemoveType::QUIT);
     }
     char output[200];
     sprintf(output, "All online characters of the %s party are near you.", p->name);
@@ -3756,7 +3727,7 @@ int atcommand_disguise(int fd, struct map_session_data *sd,
     // (is it *really* necessary?)
     sd->disguiseflag = 1;
     sd->disguise = mob_id;
-    pc_setpos(sd, sd->mapname, sd->bl.x, sd->bl.y, 3);
+    pc_setpos(sd, sd->mapname, sd->bl.x, sd->bl.y, BeingRemoveType::WARP);
     clif_displaymessage(fd, "Disguise applied.");
 
     return 0;
@@ -3771,9 +3742,9 @@ int atcommand_undisguise(int fd, struct map_session_data *sd,
         clif_displaymessage(fd, "You're not disguised.");
         return -1;
     }
-    clif_clearchar(&sd->bl, 9);
+    clif_being_remove(&sd->bl, BeingRemoveType::DISGUISE);
     sd->disguise = 0;
-    pc_setpos(sd, sd->mapname, sd->bl.x, sd->bl.y, 3);
+    pc_setpos(sd, sd->mapname, sd->bl.x, sd->bl.y, BeingRemoveType::WARP);
     clif_displaymessage(fd, "Undisguise applied.");
 
     return 0;
@@ -3847,7 +3818,7 @@ int atcommand_chardisguise(int fd, struct map_session_data *sd,
     // (is it *really* necessary?)
     pl_sd->disguiseflag = 1;
     pl_sd->disguise = mob_id;
-    pc_setpos(pl_sd, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y, 3);
+    pc_setpos(pl_sd, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y, BeingRemoveType::WARP);
     clif_displaymessage(fd, "Character's disguise applied.");
 
     return 0;
@@ -3879,9 +3850,9 @@ int atcommand_charundisguise(int fd, struct map_session_data *sd,
         clif_displaymessage(fd, "Character is not disguised.");
         return -1;
     }
-    clif_clearchar(&pl_sd->bl, 9);
+    clif_being_remove(&pl_sd->bl, BeingRemoveType::DISGUISE);
     pl_sd->disguise = 0;
-    pc_setpos(pl_sd, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y, 3);
+    pc_setpos(pl_sd, pl_sd->mapname, pl_sd->bl.x, pl_sd->bl.y, BeingRemoveType::WARP);
     clif_displaymessage(fd, "Character's undisguise applied.");
 
     return 0;
@@ -4572,8 +4543,8 @@ int atcommand_visible(int, struct map_session_data *sd,
 
 /// Implementation for the player iterators
 static int atcommand_jump_iterate(int fd, struct map_session_data *sd,
-                                   struct map_session_data *(*get_start) (void),
-                                   struct map_session_data *(*get_next) (struct map_session_data* current))
+                                   struct map_session_data *(*get_start)(void),
+                                   struct map_session_data *(*get_next)(struct map_session_data* current))
 {
     char output[200];
 
@@ -4605,7 +4576,7 @@ static int atcommand_jump_iterate(int fd, struct map_session_data *sd,
         clif_displaymessage(fd, "You are not authorised to warp you from your actual map.");
         return -1;
     }
-    pc_setpos(sd, maps[pl_sd->bl.m].name, pl_sd->bl.x, pl_sd->bl.y, 3);
+    pc_setpos(sd, maps[pl_sd->bl.m].name, pl_sd->bl.x, pl_sd->bl.y, BeingRemoveType::WARP);
     sprintf(output, "Jump to %s", pl_sd->status.name);
     clif_displaymessage(fd, output);
 

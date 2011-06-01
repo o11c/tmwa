@@ -998,7 +998,7 @@ static void x2716(int fd, int id)
 // uint16_t packet, uint16_t len, char gm_pass[len]
 static void x2720(int fd, int id)
 {
-    unsigned char buf[10];
+    uint8_t buf[10];
     account_t acc = RFIFOL(fd, 4);
     WBUFW(buf, 0) = 0x2721;
     WBUFL(buf, 2) = acc;
@@ -1115,7 +1115,7 @@ static void x2724(int fd, int id)
     auth->state = state;
     if (!state)
         return;
-    unsigned char buf[11];
+    uint8_t buf[11];
     WBUFW(buf, 0) = 0x2731;
     WBUFL(buf, 2) = acc;
     // 0: change of state, 1: ban
@@ -1167,7 +1167,7 @@ static void x2725(int fd, int id)
     }
     login_log("Char-server '%s': Ban request (account: %d, new final date of banishment: %ld (%s), ip: %s).\n",
                server[id].name, acc, static_cast<long>(timestamp), stamp_time(timestamp, "no banishment"), ip_of(fd));
-    unsigned char buf[11];
+    uint8_t buf[11];
     WBUFW(buf, 0) = 0x2731;
     WBUFL(buf, 2) = auth->account_id;
     // 0: change of state, 1: ban
@@ -1203,7 +1203,7 @@ static void x2727(int fd, int id)
                    server[id].name, acc, ip_of(fd));
         return;
     }
-    unsigned char buf[16];
+    uint8_t buf[16];
     login_log("Char-server '%s': change sex of %u to %c (ip: %s).\n",
                server[id].name, acc, sex_to_char(auth->sex), ip_of(fd));
     for (int j = 0; j < AUTH_FIFO_SIZE; j++)
@@ -1614,7 +1614,7 @@ static void x7932(int fd)
         return;
     }
     // Char-server is notified of deletion (for characters deletion).
-    unsigned char buf[6];
+    uint8_t buf[6];
     WBUFW(buf, 0) = 0x2730;
     WBUFL(buf, 2) = auth->account_id;
     charif_sendallwos(-1, buf, 6);
@@ -1697,7 +1697,7 @@ static void x7936(int fd)
                     auth->userid, status, ip_of(fd));
     if (auth->state == 0)
     {
-        unsigned char buf[16];
+        uint8_t buf[16];
         WBUFW(buf, 0) = 0x2731;
         WBUFL(buf, 2) = auth->account_id;
         WBUFB(buf, 6) = 0; // 0: change of state, 1: ban
@@ -1813,7 +1813,7 @@ static void x793c(int fd)
     login_log("'ladmin': Modification of a sex (account: %s, new sex: %c, ip: %s)\n",
                auth->userid, sex_to_char(sex), ip_of(fd));
     // send to all char-server the change
-    unsigned char buf[7];
+    uint8_t buf[7];
     WBUFW(buf, 0) = 0x2723;
     WBUFL(buf, 2) = auth->account_id;
     WBUFB(buf, 6) = static_cast<uint8_t>(auth->sex);
@@ -2159,7 +2159,7 @@ static void x794c(int fd)
     auth->ban_until_time = timestamp;
     if (!timestamp)
         return;
-    unsigned char buf[11];
+    uint8_t buf[11];
     WBUFW(buf, 0) = 0x2731;
     WBUFL(buf, 2) = auth->account_id;
     WBUFB(buf, 6) = 1; // 0: change of status, 1: ban

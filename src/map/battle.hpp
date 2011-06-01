@@ -132,7 +132,6 @@ extern struct Battle_Config
     int max_sp;
     int max_lv;
     int max_parameter;
-    int save_clothcolor;
     int undead_detect_type;
     int agi_penaly_type;
     int agi_penaly_count;
@@ -184,10 +183,6 @@ extern struct Battle_Config
 
     int hack_info_GM_level;
     int any_warp_GM_min_level;
-
-    int max_hair_style;
-    int max_hair_color;
-    int max_cloth_color;
 
     int area_size;
 

@@ -271,7 +271,7 @@ static void mapif_party_memberadded(int fd, party_t party_id, account_t account_
 static void mapif_party_optionchanged(int fd, struct party *p, account_t account_id,
                                 uint8_t flag)
 {
-    unsigned char buf[15];
+    uint8_t buf[15];
 
     WBUFW(buf, 0) = 0x3823;
     WBUFL(buf, 2) = p->party_id;
@@ -290,7 +290,7 @@ static void mapif_party_optionchanged(int fd, struct party *p, account_t account
 /// Inform all map servers that someone left a party
 static void mapif_party_left(party_t party_id, account_t account_id, const char *name)
 {
-    unsigned char buf[34];
+    uint8_t buf[34];
     WBUFW(buf, 0) = 0x3824;
     WBUFL(buf, 2) = party_id;
     WBUFL(buf, 6) = account_id;
@@ -315,7 +315,7 @@ static void mapif_party_membermoved(struct party *p, int idx)
 /// Inform all map servers that a party dissolved
 void mapif_party_broken(party_t party_id, uint8_t flag)
 {
-    unsigned char buf[7];
+    uint8_t buf[7];
     WBUFW(buf, 0) = 0x3826;
     WBUFL(buf, 2) = party_id;
     WBUFB(buf, 6) = flag;

@@ -5,6 +5,9 @@
 #include "map.hpp"
 
 #include "../common/timer.hpp"
+
+#include "clif.hpp"
+
 #define MAX_RANDOMMONSTER 3
 
 struct mob_db
@@ -65,6 +68,6 @@ void mob_timer_delete(timer_id, tick_t, custom_id_t, custom_data_t);
 int mob_counttargeted(struct mob_data *md, struct block_list *src,
                       AttackResult target_lv);
 
-int mob_warp(struct mob_data *md, int m, int x, int y, int type);
+int mob_warp(struct mob_data *md, int m, int x, int y, BeingRemoveType type);
 
 #endif // MOB_H

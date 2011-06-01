@@ -135,7 +135,7 @@ static struct block_list bl_head;
 /// link a new block
 bool map_addblock(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->prev)
     {
@@ -177,7 +177,7 @@ if (bl->m >= map_num || bl->x >= maps[bl->m].xs || bl->y >= maps[bl->m].ys)
 // prev shouldn't be NULL
 int map_delblock(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     // not in the blocklist
     if (!bl->prev)
@@ -232,7 +232,7 @@ int map_delblock(struct block_list *bl)
 
 /// Runs a function for every block in the area
 // if type is 0, all types, else BL_MOB, BL_PC, BL_SKILL, etc
-void map_foreachinarea(void (*func) (struct block_list *, va_list), int m,
+void map_foreachinarea(void (*func)(struct block_list *, va_list), int m,
                         int x_0, int y_0, int x_1, int y_1, BlockType type, ...)
 {
     if (m < 0)
@@ -330,7 +330,7 @@ void map_foreachinarea(void (*func) (struct block_list *, va_list), int m,
 // once with original location and ds (outsight)
 // then with the new location and -ds (insight)
 
-void map_foreachinmovearea(void (*func) (struct block_list *, va_list), int m,
+void map_foreachinmovearea(void (*func)(struct block_list *, va_list), int m,
                             int x_0, int y_0, int x_1, int y_1, int dx, int dy,
                             BlockType type, ...)
 {
@@ -540,7 +540,7 @@ void map_delobject(obj_id_t id, BlockType type)
 }
 
 /// Execute a function for each temporary object of the given type
-void map_foreachobject(void (*func) (struct block_list *, va_list), BlockType type,
+void map_foreachobject(void (*func)(struct block_list *, va_list), BlockType type,
                         ...)
 {
     int blockcount = bl_list_count;
@@ -588,7 +588,7 @@ void map_clearflooritem_timer(timer_id tid, tick_t, custom_id_t id, custom_data_
     }
     if (data.i)
         delete_timer(fitem->cleartimer, map_clearflooritem_timer);
-    clif_clearflooritem(fitem, 0);
+    clif_clearflooritem(fitem, -1);
     map_delobject(fitem->bl.id, BL_ITEM);
 }
 
@@ -652,7 +652,7 @@ int map_addflooritem_any(struct item *item_data, int amount, uint16_t m, uint16_
                           uint16_t y, struct map_session_data **owners,
                           int *owner_protection, int lifetime, int dispersal)
 {
-    nullpo_retr(0, item_data);
+    nullpo_ret(item_data);
 
     uint32_t xy = map_searchrandfreecell(m, x, y, dispersal);
     if (xy == -1)
@@ -790,7 +790,7 @@ void map_quit(struct map_session_data *sd)
 
     pc_calcstatus(sd, 4);
 
-    clif_clearchar(&sd->bl, 2);
+    clif_being_remove(&sd->bl, BeingRemoveType::QUIT);
 
     if (pc_isdead(sd))
         pc_setrestartvalue(sd, 2);
@@ -970,7 +970,7 @@ int map_addnpc(int m, struct npc_data *nd)
         maps[m].npc_num++;
     }
 
-    nullpo_retr(0, nd);
+    nullpo_ret(nd);
 
     maps[m].npc[i] = nd;
     nd->n = i;

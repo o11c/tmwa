@@ -60,7 +60,7 @@ static uint8_t filehash(const char *fname)
     uint32_t hash = 0;
     while (*fname)
     {
-        hash = (hash << 1) + (hash >> 7) * 9 + static_cast<unsigned char>(*fname);
+        hash = (hash << 1) + (hash >> 7) * 9 + static_cast<uint8_t>(*fname);
         fname++;
     }
     return hash;

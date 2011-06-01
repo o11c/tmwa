@@ -69,13 +69,13 @@ int skill_get_max_raise(int id)
  */
 int skill_castcancel(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->type == BL_PC)
     {
         struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(bl);
         unsigned long tick = gettick();
-        nullpo_retr(0, sd);
+        nullpo_ret(sd);
         sd->canact_tick = tick;
         sd->canmove_tick = tick;
 
@@ -101,14 +101,14 @@ int skill_status_change_active(struct block_list *bl, int type)
 {
     struct status_change *sc_data;
 
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
     if (bl->type != BL_PC && bl->type != BL_MOB)
     {
         map_log("%s: neither MOB nor PC !\n", __func__);
         return 0;
     }
 
-    nullpo_retr(0, sc_data = battle_get_sc_data(bl));
+    nullpo_ret(sc_data = battle_get_sc_data(bl));
 
     return sc_data[type].timer != -1;
 }
@@ -119,18 +119,18 @@ int skill_status_change_end(struct block_list *bl, int type, int tid)
     int opt_flag = 0, calc_flag = 0;
     short *sc_count, *option, *opt1, *opt2, *opt3;
 
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
     if (bl->type != BL_PC && bl->type != BL_MOB)
     {
         map_log("%s: neither MOB nor PC !\n", __func__);
         return 0;
     }
-    nullpo_retr(0, sc_data = battle_get_sc_data(bl));
-    nullpo_retr(0, sc_count = battle_get_sc_count(bl));
-    nullpo_retr(0, option = battle_get_option(bl));
-    nullpo_retr(0, opt1 = battle_get_opt1(bl));
-    nullpo_retr(0, opt2 = battle_get_opt2(bl));
-    nullpo_retr(0, opt3 = battle_get_opt3(bl));
+    nullpo_ret(sc_data = battle_get_sc_data(bl));
+    nullpo_ret(sc_count = battle_get_sc_count(bl));
+    nullpo_ret(option = battle_get_option(bl));
+    nullpo_ret(opt1 = battle_get_opt1(bl));
+    nullpo_ret(opt2 = battle_get_opt2(bl));
+    nullpo_ret(opt3 = battle_get_opt3(bl));
 
     if ((*sc_count) > 0 && sc_data[type].timer != -1
         && (sc_data[type].timer == tid || tid == -1))
@@ -195,25 +195,25 @@ int skill_status_change_end(struct block_list *bl, int type, int tid)
     return 0;
 }
 
-int skill_update_heal_animation(struct map_session_data *sd)
+void skill_update_heal_animation(struct map_session_data *sd)
 {
     const int mask = 0x100;
     int was_active;
     int is_active;
 
-    nullpo_retr(0, sd);
+    nullpo_retv(sd);
     was_active = sd->opt2 & mask;
     is_active = sd->quick_regeneration_hp.amount > 0;
 
     if ((was_active && is_active) || (!was_active && !is_active))
-        return 0;               // no update
+        return;               // no update
 
     if (is_active)
         sd->opt2 |= mask;
     else
         sd->opt2 &= ~mask;
 
-    return clif_changeoption(&sd->bl);
+    clif_changeoption(&sd->bl);
 }
 
 /*==========================================
@@ -330,13 +330,13 @@ int skill_status_effect(struct block_list *bl, int type, int val1, int val2,
         0;
     int scdef = 0;
 
-    nullpo_retr(0, bl);
-    nullpo_retr(0, sc_data = battle_get_sc_data(bl));
-    nullpo_retr(0, sc_count = battle_get_sc_count(bl));
-    nullpo_retr(0, option = battle_get_option(bl));
-    nullpo_retr(0, opt1 = battle_get_opt1(bl));
-    nullpo_retr(0, opt2 = battle_get_opt2(bl));
-    nullpo_retr(0, opt3 = battle_get_opt3(bl));
+    nullpo_ret(bl);
+    nullpo_ret(sc_data = battle_get_sc_data(bl));
+    nullpo_ret(sc_count = battle_get_sc_count(bl));
+    nullpo_ret(option = battle_get_option(bl));
+    nullpo_ret(opt1 = battle_get_opt1(bl));
+    nullpo_ret(opt2 = battle_get_opt2(bl));
+    nullpo_ret(opt3 = battle_get_opt3(bl));
 
     switch (type)
     {
@@ -477,13 +477,13 @@ int skill_status_change_clear(struct block_list *bl, int type)
     short *sc_count, *option, *opt1, *opt2, *opt3;
     int i;
 
-    nullpo_retr(0, bl);
-    nullpo_retr(0, sc_data = battle_get_sc_data(bl));
-    nullpo_retr(0, sc_count = battle_get_sc_count(bl));
-    nullpo_retr(0, option = battle_get_option(bl));
-    nullpo_retr(0, opt1 = battle_get_opt1(bl));
-    nullpo_retr(0, opt2 = battle_get_opt2(bl));
-    nullpo_retr(0, opt3 = battle_get_opt3(bl));
+    nullpo_ret(bl);
+    nullpo_ret(sc_data = battle_get_sc_data(bl));
+    nullpo_ret(sc_count = battle_get_sc_count(bl));
+    nullpo_ret(option = battle_get_option(bl));
+    nullpo_ret(opt1 = battle_get_opt1(bl));
+    nullpo_ret(opt2 = battle_get_opt2(bl));
+    nullpo_ret(opt3 = battle_get_opt3(bl));
 
     if (*sc_count == 0)
         return 0;

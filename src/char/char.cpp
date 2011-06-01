@@ -224,8 +224,8 @@ static void mmo_char_tofile(FILE *fp, struct mmo_charstatus *p)
              p->name,           0/*pc_class*/, p->base_level, p->job_level,
              p->base_exp, p->job_exp, p->zeny,  p->hp, p->max_hp, p->sp, p->max_sp,
              p->str, p->agi, p->vit, p->int_, p->dex, p->luk,
-             p->status_point, p->skill_point,   p->option, p->karma, p->manner,
-             p->party_id, 0, 0,         p->hair, p->hair_color, p->clothes_color,
+             p->status_point, p->skill_point,   p->option, 0/*p->karma*/, 0/*p->manner*/,
+             p->party_id, 0, 0,         p->hair, p->hair_color, 0/*p->clothes_color*/,
              p->weapon, p->shield, p->head_top, p->head_mid, p->head_bottom,
              p->last_point.map, p->last_point.x, p->last_point.y,
              p->save_point.map, p->save_point.x, p->save_point.y, p->partner_id);
@@ -282,8 +282,8 @@ static int mmo_char_fromstr(char *str, struct mmo_charstatus *p)
                       "%[^\t]\t"        "%u,%hhu,%hhu\t"
                       "%d,%d,%d\t"      "%d,%d,%d,%d\t"
                       "%hd,%hd,%hd,%hd,%hd,%hd\t"
-                      "%hd,%hd\t"       "%hd,%hd,%hd\t"
-                      "%d,%d,%d\t"      "%hd,%hd,%hd\t"
+                      "%hd,%hd\t"       "%hd,%d,%d\t"
+                      "%d,%d,%d\t"      "%hd,%hd,%d\t"
                       "%hd,%hd,%hd,%hd,%hd\t"
                       "%[^,],%hd,%hd\t"
                       "%[^,],%hd,%hd,%d" "%n",
@@ -291,8 +291,8 @@ static int mmo_char_fromstr(char *str, struct mmo_charstatus *p)
                       p->name,          &ign/*pc_class*/, &p->base_level, &p->job_level,
                       &p->base_exp, &p->job_exp, &p->zeny,      &p->hp, &p->max_hp, &p->sp, &p->max_sp,
                       &p->str, &p->agi, &p->vit, &p->int_, &p->dex, &p->luk,
-                      &p->status_point, &p->skill_point,        &p->option, &p->karma, &p->manner,
-                      &p->party_id, &ign/*guild_id*/, &ign/*pet_id*/,   &p->hair, &p->hair_color, &p->clothes_color,
+                      &p->status_point, &p->skill_point,        &p->option, &ign/*karma*/, &ign/*manner*/,
+                      &p->party_id, &ign/*guild_id*/, &ign/*pet_id*/,   &p->hair, &p->hair_color, &ign/*clothes_color*/,
                       &p->weapon, &p->shield, &p->head_top, &p->head_mid, &p->head_bottom,
                       p->last_point.map, &p->last_point.x, &p->last_point.y,
                       p->save_point.map, &p->save_point.x, &p->save_point.y,
@@ -766,12 +766,9 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
     chardat->status_point = 0;
     chardat->skill_point = 0;
     chardat->option = 0;
-    chardat->karma = 0;
-    chardat->manner = 0;
     chardat->party_id = 0;
     chardat->hair = dat.hair_style;
     chardat->hair_color = dat.hair_color;
-    chardat->clothes_color = 0;
     // Knife
     chardat->inventory[0].nameid = start_weapon;
     chardat->inventory[0].amount = 1;
@@ -1133,8 +1130,8 @@ static void mmo_char_send006b(int fd, struct char_session_data *sd)
         WFIFOW(fd, j + 26) = find_equip_view(p, 0x0010);  // 12: misc1
         WFIFOL(fd, j + 28) = p->option;
 
-        WFIFOL(fd, j + 32) = p->karma;
-        WFIFOL(fd, j + 36) = p->manner;
+        WFIFOL(fd, j + 32) = 0;//p->karma;
+        WFIFOL(fd, j + 36) = 0;//p->manner;
 
         WFIFOW(fd, j + 40) = p->status_point;
         WFIFOW(fd, j + 42) = MIN(p->hp, 0x7fff);
@@ -1261,7 +1258,7 @@ static void char_delete(struct mmo_charstatus *cs)
 
     /// Force the character to leave all map servers
     // BUG: it shouldn't have to kick another character of the same account
-    unsigned char buf[6];
+    uint8_t buf[6];
     WBUFW(buf, 0) = 0x2afe;
     WBUFL(buf, 2) = cs->account_id;
     mapif_sendall(buf, 6);
@@ -1777,7 +1774,7 @@ static void parse_frommap(int fd)
                 else
                 {
                     // Transmitting maps information to the other map-servers
-                    unsigned char buf[j * 16 + 10];
+                    uint8_t buf[j * 16 + 10];
                     WBUFW(buf, 0) = 0x2b04;
                     WBUFW(buf, 2) = j * 16 + 10;
                     WBUFL(buf, 4) = server[id].ip;
@@ -2425,8 +2422,8 @@ static void parse_char(int fd)
             WFIFOW(fd, 2 + 26) = find_equip_view(chardat, 0x0010);  // 12: misc1
 
             WFIFOL(fd, 2 + 28) = chardat->option;
-            WFIFOL(fd, 2 + 32) = chardat->karma;
-            WFIFOL(fd, 2 + 36) = chardat->manner;
+            WFIFOL(fd, 2 + 32) = 0;//chardat->karma;
+            WFIFOL(fd, 2 + 36) = 0;//chardat->manner;
             // This used to send 0x30, which is wrong
             WFIFOW(fd, 2 + 40) = chardat->status_point;
 

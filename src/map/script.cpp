@@ -43,7 +43,7 @@ static struct str_data_t
     int str;
     int backpatch;
     int label;
-    int (*func) (struct script_state *);
+    int (*func)(struct script_state *);
     int val;
     int next;
 }   *str_data;
@@ -210,7 +210,6 @@ static int buildin_getequipcardcnt(struct script_state *st);
 static int buildin_successremovecards(struct script_state *st);
 static int buildin_failedremovecards(struct script_state *st);
 static int buildin_marriage(struct script_state *st);
-static int buildin_wedding_effect(struct script_state *st);
 static int buildin_divorce(struct script_state *st);
 static int buildin_getitemname(struct script_state *st);
 static int buildin_getspellinvocation(struct script_state *st);  // [Fate]
@@ -262,7 +261,7 @@ static int mapreg_setregstr(int num, const char *str);
 
 struct builtin_function
 {
-    int (*func) (struct script_state *);
+    int (*func)(struct script_state *);
     const char *name;
     const char *arg;
 } buildin_func[] =
@@ -385,7 +384,6 @@ struct builtin_function
     {buildin_successremovecards, "successremovecards", "i"},
     {buildin_failedremovecards, "failedremovecards", "ii"},
     {buildin_marriage, "marriage", "s"},
-    {buildin_wedding_effect, "wedding", ""},
     {buildin_divorce, "divorce", "i"},
     {buildin_getitemname, "getitemname", "*"},
     {buildin_getspellinvocation, "getspellinvocation", "s"},
@@ -446,7 +444,7 @@ enum
  * 文字列のハッシュを計算
  *------------------------------------------
  */
-static int calc_hash(const unsigned char *p)
+static int calc_hash(const uint8_t *p)
 {
     int h = 0;
     while (*p)
@@ -465,7 +463,7 @@ static int calc_hash(const unsigned char *p)
 static int search_str(const char *p)
 {
     int i;
-    i = str_hash[calc_hash(sign_cast<const unsigned char *>(p))];
+    i = str_hash[calc_hash(sign_cast<const uint8_t *>(p))];
     while (i)
     {
         if (strcmp(str_buf + str_data[i].str, p) == 0)
@@ -497,7 +495,7 @@ static int add_str(const char *p)
     }
     free(lowcase);
 
-    i = calc_hash(sign_cast<const unsigned char *>(p));
+    i = calc_hash(sign_cast<const uint8_t *>(p));
     if (str_hash[i] == 0)
     {
         str_hash[i] = str_num;
@@ -1862,14 +1860,14 @@ int buildin_warp(struct script_state *st)
     x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     y = conv_num(st, &(st->stack->stack_data[st->start + 4]));
     if (strcmp(str, "Random") == 0)
-        pc_randomwarp(sd, 3);
+        pc_randomwarp(sd, BeingRemoveType::WARP);
     else if (strcmp(str, "SavePoint") == 0)
     {
         if (maps[sd->bl.m].flag.noreturn)    // 蝶禁止
             return 0;
 
         pc_setpos(sd, sd->status.save_point.map,
-                   sd->status.save_point.x, sd->status.save_point.y, 3);
+                  sd->status.save_point.x, sd->status.save_point.y, BeingRemoveType::WARP);
     }
     else if (strcmp(str, "Save") == 0)
     {
@@ -1877,10 +1875,10 @@ int buildin_warp(struct script_state *st)
             return 0;
 
         pc_setpos(sd, sd->status.save_point.map,
-                   sd->status.save_point.x, sd->status.save_point.y, 3);
+                  sd->status.save_point.x, sd->status.save_point.y, BeingRemoveType::WARP);
     }
     else
-        pc_setpos(sd, str, x, y, 0);
+        pc_setpos(sd, str, x, y, BeingRemoveType::ZERO);
     return 0;
 }
 
@@ -1896,9 +1894,9 @@ static void buildin_areawarp_sub(struct block_list *bl, va_list ap)
     x = va_arg(ap, int);
     y = va_arg(ap, int);
     if (strcmp(map, "Random") == 0)
-        pc_randomwarp(reinterpret_cast<struct map_session_data *>(bl), 3);
+        pc_randomwarp(reinterpret_cast<struct map_session_data *>(bl), BeingRemoveType::WARP);
     else
-        pc_setpos(reinterpret_cast<struct map_session_data *>(bl), map, x, y, 0);
+        pc_setpos(reinterpret_cast<struct map_session_data *>(bl), map, x, y, BeingRemoveType::ZERO);
 }
 
 int buildin_areawarp(struct script_state *st)
@@ -3976,9 +3974,10 @@ static void buildin_getareadropitem_sub_anddelete(struct block_list *bl, va_list
     int *amount = va_arg(ap, int *);
     struct flooritem_data *drop = reinterpret_cast<struct flooritem_data *>(bl);
 
-    if (drop->item_data.nameid == item) {
+    if (drop->item_data.nameid == item)
+    {
         (*amount) += drop->item_data.amount;
-        clif_clearflooritem(drop, 0);
+        clif_clearflooritem(drop, -1);
         map_delobject(drop->bl.id, drop->bl.type);
     }
 }
@@ -4770,16 +4769,6 @@ int buildin_marriage(struct script_state *st)
     return 0;
 }
 
-int buildin_wedding_effect(struct script_state *st)
-{
-    struct map_session_data *sd = script_rid2sd(st);
-
-    if (sd == NULL)
-        return 0;
-    clif_wedding_effect(&sd->bl);
-    return 0;
-}
-
 int buildin_divorce(struct script_state *st)
 {
     struct map_session_data *sd = script_rid2sd(st);
@@ -5458,9 +5447,6 @@ int buildin_getlook(struct script_state *st)
         case LOOK_HAIR_COLOR:  //6
             val = sd->status.hair_color;
             break;
-        case LOOK_CLOTHES_COLOR:   //7
-            val = sd->status.clothes_color;
-            break;
         case LOOK_SHIELD:      //8
             val = sd->status.shield;
             break;
@@ -5684,7 +5670,7 @@ static int get_num(char *script, int *pos)
     int i, j;
     i = 0;
     j = 0;
-    while (static_cast<unsigned char>(script[*pos]) >= 0xc0)
+    while (static_cast<uint8_t>(script[*pos]) >= 0xc0)
     {
         i += (script[(*pos)++] & 0x7f) << j;
         j += 6;

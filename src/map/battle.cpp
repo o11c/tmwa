@@ -50,7 +50,7 @@ struct Battle_Config battle_config;
 /// Count the number of beings attacking this being, that are at least the given level
 static int battle_counttargeted(struct block_list *bl, struct block_list *src, AttackResult target_lv)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->type == BL_PC)
         return pc_counttargeted(reinterpret_cast<struct map_session_data *>(bl), src, target_lv);
@@ -74,7 +74,7 @@ Direction battle_get_dir(struct block_list *bl)
 /// Get the (base) level of this being
 int battle_get_lv(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
         return reinterpret_cast<struct mob_data *>(bl)->stats[MOB_LV];
@@ -86,7 +86,7 @@ int battle_get_lv(struct block_list *bl)
 /// Get the maximum attack distance of this being
 int battle_get_range(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
         return mob_db[reinterpret_cast<struct mob_data *>(bl)->mob_class].range;
@@ -125,7 +125,7 @@ int battle_get_max_hp(struct block_list *bl)
 /// Get strength of a being
 int battle_get_str(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
         return std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_STR]));
@@ -137,7 +137,7 @@ int battle_get_str(struct block_list *bl)
 /// Get agility of a being
 int battle_get_agi(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
     if (bl->type == BL_MOB)
         std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_AGI]));
     if (bl->type == BL_PC)
@@ -148,7 +148,7 @@ int battle_get_agi(struct block_list *bl)
 /// Get vitality of a being
 int battle_get_vit(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
     if (bl->type == BL_MOB)
         std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_VIT]));
     if (bl->type == BL_PC)
@@ -159,7 +159,7 @@ int battle_get_vit(struct block_list *bl)
 /// Get intelligence of a being
 int battle_get_int(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
     if (bl->type == BL_MOB)
         std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_INT]));
     if (bl->type == BL_PC)
@@ -170,7 +170,7 @@ int battle_get_int(struct block_list *bl)
 /// Get dexterity of a being
 int battle_get_dex(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
     if (bl->type == BL_MOB)
         std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_DEX]));
     if (bl->type == BL_PC)
@@ -181,7 +181,7 @@ int battle_get_dex(struct block_list *bl)
 /// Get luck of a being
 int battle_get_luk(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
     if (bl->type == BL_MOB)
         std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_LUK]));
     if (bl->type == BL_PC)
@@ -272,7 +272,7 @@ int battle_get_baseatk(struct block_list *bl)
 /// Get minimum attack strength of a PC's main weapon
 int battle_get_atk(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->type == BL_PC)
         return std::max(0, static_cast<int>(reinterpret_cast<struct map_session_data *>(bl)->watk));
@@ -284,7 +284,7 @@ int battle_get_atk(struct block_list *bl)
 /// Get minimum attack strength of a PC's second weapon
 static int battle_get_atk_(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->type == BL_PC)
         return reinterpret_cast<struct map_session_data *>(bl)->watk_;
@@ -294,7 +294,7 @@ static int battle_get_atk_(struct block_list *bl)
 /// Get maximum attack strength of a PC's main weapon
 int battle_get_atk2(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->type == BL_PC)
         return reinterpret_cast<struct map_session_data *>(bl)->watk2;
@@ -306,7 +306,7 @@ int battle_get_atk2(struct block_list *bl)
 /// Get maximum attack strength of a PC's second weapon
 static int battle_get_atk_2(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->type == BL_PC)
         return reinterpret_cast<struct map_session_data *>(bl)->watk_2;
@@ -316,7 +316,7 @@ static int battle_get_atk_2(struct block_list *bl)
 /// Get a being's defense
 int battle_get_def(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     int def = 0;
     if (bl->type == BL_PC)
@@ -340,7 +340,7 @@ int battle_get_def(struct block_list *bl)
 /// Get a being's magical defense
 int battle_get_mdef(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     int mdef = 0;
     if (bl->type == BL_PC)
@@ -453,7 +453,7 @@ int battle_get_amotion(struct block_list *bl)
 /// Being's defense motion rate?
 int battle_get_dmotion(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
     {
@@ -487,7 +487,7 @@ int battle_get_element(struct block_list *bl)
 /// Get a PC's (secondary?) attack element (TODO rewrite element system)
 int battle_get_attack_element(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->type == BL_PC)
         return reinterpret_cast<struct map_session_data *>(bl)->atk_ele;
@@ -497,7 +497,7 @@ int battle_get_attack_element(struct block_list *bl)
 /// Get a PC's (secondary?) attack element
 int battle_get_attack_element2(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->type == BL_PC)
         return reinterpret_cast<struct map_session_data *>(bl)->atk_ele_;
@@ -507,7 +507,7 @@ int battle_get_attack_element2(struct block_list *bl)
 /// Return a party ID (or fake one) for a being
 int battle_get_party_id(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
     if (bl->type == BL_PC)
         return reinterpret_cast<struct map_session_data *>(bl)->status.party_id;
     if (bl->type == BL_MOB)
@@ -525,7 +525,7 @@ int battle_get_party_id(struct block_list *bl)
 /// Get a being's race
 int battle_get_race(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
         return mob_db[reinterpret_cast<struct mob_data *>(bl)->mob_class].race;
@@ -604,7 +604,7 @@ short *battle_get_sc_count(struct block_list *bl)
 /// Get a pointer to a being's "opt1" field
 short *battle_get_opt1(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
         return &reinterpret_cast<struct mob_data *>(bl)->opt1;
@@ -618,7 +618,7 @@ short *battle_get_opt1(struct block_list *bl)
 /// Get a pointer to a being's "opt2" field
 short *battle_get_opt2(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
         return &reinterpret_cast<struct mob_data *>(bl)->opt2;
@@ -632,7 +632,7 @@ short *battle_get_opt2(struct block_list *bl)
 /// Get a pointer to a being's "opt3" field
 short *battle_get_opt3(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
     if (bl->type == BL_MOB)
         return &reinterpret_cast<struct mob_data *>(bl)->opt3;
     if (bl->type == BL_PC)
@@ -645,7 +645,7 @@ short *battle_get_opt3(struct block_list *bl)
 /// Get a pointer to a being's "option" field
 short *battle_get_option(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
         return &reinterpret_cast<struct mob_data *>(bl)->option;
@@ -662,7 +662,7 @@ short *battle_get_option(struct block_list *bl)
 // if trying to damage by a negative amount, heal instead
 int battle_damage(struct block_list *src, struct block_list *target, int damage)
 {
-    nullpo_retr(0, target);
+    nullpo_ret(target);
     // src may be NULL for programmatic damage
 
     if (!damage)
@@ -692,7 +692,7 @@ int battle_damage(struct block_list *src, struct block_list *target, int damage)
 // if hp is negative, do damage and ignore sp
 int battle_heal(struct block_list *src, struct block_list *target, int hp, int sp)
 {
-    nullpo_retr(0, target);
+    nullpo_ret(target);
     // src may be NULL for programmatic healing
 
     if (target->type == BL_PC && pc_isdead(reinterpret_cast<struct map_session_data *>(target)))
@@ -713,7 +713,7 @@ int battle_heal(struct block_list *src, struct block_list *target, int hp, int s
 /// A being should stop attacking its target
 int battle_stopattack(struct block_list *bl)
 {
-    nullpo_retr(0, bl);
+    nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
         return mob_stopattack(reinterpret_cast<struct mob_data *>(bl));
@@ -742,7 +742,7 @@ int battle_attr_fix(int damage, int atk_elem, int def_elem)
 /// Calculate the damage of attacking
 int battle_calc_damage(struct block_list *target, int damage, int div_, int flag)
 {
-    nullpo_retr(0, target);
+    nullpo_ret(target);
 
     if (battle_config.skill_min_damage || flag & BF_MISC)
     {
@@ -1512,8 +1512,8 @@ AttackResult battle_weapon_attack(struct block_list *src, struct block_list *tar
 /// Is a target an enemy?
 bool battle_check_target(struct block_list *src, struct block_list *target)
 {
-    nullpo_retr(0, src);
-    nullpo_retr(0, target);
+    nullpo_ret(src);
+    nullpo_ret(target);
     if (src == target)
         return 0;
     // The master (if a mob)
@@ -1584,8 +1584,8 @@ bool battle_check_target(struct block_list *src, struct block_list *target)
 // range 0 = unlimited
 bool battle_check_range(struct block_list *src, struct block_list *bl, int range)
 {
-    nullpo_retr(0, src);
-    nullpo_retr(0, bl);
+    nullpo_ret(src);
+    nullpo_ret(bl);
 
     if (src->m != bl->m)
         return 0;
@@ -1672,7 +1672,6 @@ int battle_config_read(const char *cfgName)
         battle_config.max_sp = 32500;
         battle_config.max_lv = 99;  // [MouseJstr]
         battle_config.max_parameter = 99;
-        battle_config.save_clothcolor = 0;
         battle_config.undead_detect_type = 0;
         battle_config.agi_penaly_type = 0;
         battle_config.agi_penaly_count = 3;
@@ -1715,9 +1714,6 @@ int battle_config_read(const char *cfgName)
         battle_config.multi_level_up = 0;   // [Valaris]
         battle_config.hack_info_GM_level = 60;  // added by [Yor] (default: 60, GM level)
         battle_config.any_warp_GM_min_level = 20;   // added by [Yor]
-        battle_config.max_hair_style = 20;
-        battle_config.max_hair_color = 9;
-        battle_config.max_cloth_color = 4;
 
         battle_config.area_size = 14;
 
@@ -1787,7 +1783,6 @@ int battle_config_read(const char *cfgName)
             {"max_sp", &battle_config.max_sp},
             {"max_lv", &battle_config.max_lv},
             {"max_parameter", &battle_config.max_parameter},
-            {"save_clothcolor", &battle_config.save_clothcolor},
             {"undead_detect_type", &battle_config.undead_detect_type},
             {"agi_penaly_type", &battle_config.agi_penaly_type},
             {"agi_penaly_count", &battle_config.agi_penaly_count},
@@ -1828,9 +1823,6 @@ int battle_config_read(const char *cfgName)
             {"multi_level_up", &battle_config.multi_level_up},   // [Valaris]
             {"hack_info_GM_level", &battle_config.hack_info_GM_level},   // added by [Yor]
             {"any_warp_GM_min_level", &battle_config.any_warp_GM_min_level}, // added by [Yor]
-            {"max_hair_style", &battle_config.max_hair_style},   // added by [MouseJstr]
-            {"max_hair_color", &battle_config.max_hair_color},   // added by [MouseJstr]
-            {"max_cloth_color", &battle_config.max_cloth_color}, // added by [MouseJstr]
             {"area_size", &battle_config.area_size}, // added by [MouseJstr]
             {"chat_lame_penalty", &battle_config.chat_lame_penalty},
             {"chat_spam_threshold", &battle_config.chat_spam_threshold},

@@ -42,9 +42,9 @@ struct socket_data *session[FD_SETSIZE];
 /// Discard all input
 static void null_parse(int fd);
 /// Default parser for new connections
-static void (*default_func_parse) (int) = null_parse;
+static void (*default_func_parse)(int) = null_parse;
 
-void set_defaultparse(void (*defaultparse) (int))
+void set_defaultparse(void (*defaultparse)(int))
 {
     default_func_parse = defaultparse;
 }

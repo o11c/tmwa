@@ -105,8 +105,8 @@ struct square;
 struct quick_regeneration
 {                               // [Fate]
     int amount;                // Amount of HP/SP left to regenerate
-    unsigned char speed;        // less is faster (number of half-second ticks to wait between updates)
-    unsigned char tickdelay;    // number of ticks to next update
+    uint8_t speed;        // less is faster (number of half-second ticks to wait between updates)
+    uint8_t tickdelay;    // number of ticks to next update
 };
 
 struct map_session_data
@@ -145,10 +145,9 @@ struct map_session_data
         unsigned no_gemstone:1;
         unsigned unbreakable_weapon:1;
         unsigned unbreakable_armor:1;
-        unsigned deaf:1;
     } special_state;
     int char_id, login_id1, login_id2, sex;
-    unsigned char tmw_version;  // tmw client version
+    uint8_t tmw_version;  // tmw client version
     struct mmo_charstatus status;
     struct item_data *inventory_data[MAX_INVENTORY];
     short equip_index[11];
@@ -271,8 +270,6 @@ struct map_session_data
 
     int party_sended, party_invite, party_invite_account;
     int party_hp, party_x, party_y;
-
-    int partyspy;              // [Syrus22]
 
     char message[80];
 
@@ -507,79 +504,160 @@ struct flooritem_data
     struct item item_data;
 };
 
-enum
+enum SP
 {
-    SP_SPEED, SP_BASEEXP, SP_JOBEXP, SP_KARMA, SP_MANNER, SP_HP, SP_MAXHP, SP_SP,   // 0-7
-    SP_MAXSP, SP_STATUSPOINT, SP_0a, SP_BASELEVEL, SP_SKILLPOINT, SP_STR, SP_AGI, SP_VIT,   // 8-15
-    SP_INT, SP_DEX, SP_LUK, SP_CLASS, SP_ZENY, SP_SEX, SP_NEXTBASEEXP, SP_NEXTJOBEXP,   // 16-23
-    SP_WEIGHT, SP_MAXWEIGHT, SP_1a, SP_1b, SP_1c, SP_1d, SP_1e, SP_1f,  // 24-31
-    SP_USTR, SP_UAGI, SP_UVIT, SP_UINT, SP_UDEX, SP_ULUK, SP_26, SP_27, // 32-39
-    SP_28, SP_ATK1, SP_ATK2, SP_MATK1, SP_MATK2, SP_DEF1, SP_DEF2, SP_MDEF1,    // 40-47
-    SP_MDEF2, SP_HIT, SP_FLEE1, SP_FLEE2, SP_CRITICAL, SP_ASPD, SP_36, SP_JOBLEVEL, // 48-55
-    SP_UPPER, SP_PARTNER, SP_3a, SP_FAME, SP_UNBREAKABLE, //56-58
-    SP_DEAF = 70,
+    SP_SPEED            = 0,
+    SP_BASEEXP          = 1,
+    SP_JOBEXP           = 2,
+
+    SP_HP               = 5,
+    SP_MAXHP            = 6,
+    SP_SP               = 7,
+    SP_MAXSP            = 8,
+    SP_STATUSPOINT      = 9,
+    SP_BASELEVEL        = 11,
+    SP_SKILLPOINT       = 12,
+    SP_STR              = 13,
+    SP_AGI              = 14,
+    SP_VIT              = 15,
+    SP_INT              = 16,
+    SP_DEX              = 17,
+    SP_LUK              = 18,
+
+    SP_ZENY             = 20,
+    SP_SEX              = 21,
+    SP_NEXTBASEEXP      = 22,
+    SP_NEXTJOBEXP       = 23,
+    SP_WEIGHT           = 24,
+    SP_MAXWEIGHT        = 25,
+
+    SP_USTR             = 32,
+    SP_UAGI             = 33,
+    SP_UVIT             = 34,
+    SP_UINT             = 35,
+    SP_UDEX             = 36,
+    SP_ULUK             = 37,
+
+    SP_ATK1             = 41,
+    SP_ATK2             = 42,
+    SP_MATK1            = 43,
+    SP_MATK2            = 44,
+    SP_DEF1             = 45,
+    SP_DEF2             = 46,
+    SP_MDEF1            = 47,
+    SP_MDEF2            = 48,
+    SP_HIT              = 49,
+    SP_FLEE1            = 50,
+    SP_FLEE2            = 51,
+    SP_CRITICAL         = 52,
+    SP_ASPD             = 53,
+
+    SP_JOBLEVEL         = 55,
+
+    SP_FAME             = 59,
+    SP_UNBREAKABLE      = 60,
+
     SP_GM = 500,
 
-    // original 1000-
-    SP_ATTACKRANGE = 1000, SP_ATKELE, SP_DEFELE,    // 1000-1002
-    SP_CASTRATE, SP_MAXHPRATE, SP_MAXSPRATE, SP_SPRATE, // 1003-1006
-    SP_ADDELE, SP_ADDRACE, SP_ADDSIZE, SP_SUBELE, SP_SUBRACE,   // 1007-1011
-    SP_ADDEFF, SP_RESEFF,       // 1012-1013
-    SP_BASE_ATK, SP_ASPD_RATE, SP_HP_RECOV_RATE, SP_SP_RECOV_RATE, SP_SPEED_RATE,   // 1014-1018
-    SP_CRITICAL_DEF, SP_NEAR_ATK_DEF, SP_LONG_ATK_DEF,  // 1019-1021
-    SP_DOUBLE_RATE, SP_DOUBLE_ADD_RATE, SP_MATK, SP_MATK_RATE,  // 1022-1025
-    SP_IGNORE_DEF_ELE, SP_IGNORE_DEF_RACE,  // 1026-1027
-    SP_ATK_RATE, SP_SPEED_ADDRATE, SP_ASPD_ADDRATE, // 1028-1030
-    SP_MAGIC_ATK_DEF, SP_MISC_ATK_DEF,  // 1031-1032
-    SP_IGNORE_MDEF_ELE, SP_IGNORE_MDEF_RACE,    // 1033-1034
-    SP_MAGIC_ADDELE, SP_MAGIC_ADDRACE, SP_MAGIC_SUBRACE,    // 1035-1037
-    SP_PERFECT_HIT_RATE, SP_PERFECT_HIT_ADD_RATE, SP_CRITICAL_RATE, SP_GET_ZENY_NUM, SP_ADD_GET_ZENY_NUM,   // 1038-1042
-    SP_ADD_DAMAGE_CLASS, SP_ADD_MAGIC_DAMAGE_CLASS, SP_ADD_DEF_CLASS, SP_ADD_MDEF_CLASS,    // 1043-1046
-    SP_ADD_MONSTER_DROP_ITEM, SP_DEF_RATIO_ATK_ELE, SP_DEF_RATIO_ATK_RACE, SP_ADD_SPEED,    // 1047-1050
-    SP_HIT_RATE, SP_FLEE_RATE, SP_FLEE2_RATE, SP_DEF_RATE, SP_DEF2_RATE, SP_MDEF_RATE, SP_MDEF2_RATE,   // 1051-1057
-    SP_SPLASH_RANGE, SP_SPLASH_ADD_RANGE, SP_1060, SP_1061, SP_1062, // 1058-1062
-    SP_SHORT_WEAPON_DAMAGE_RETURN, SP_LONG_WEAPON_DAMAGE_RETURN, SP_WEAPON_COMA_ELE, SP_WEAPON_COMA_RACE,   // 1063-1066
-    SP_ADDEFF2, SP_BREAK_WEAPON_RATE, SP_BREAK_ARMOR_RATE, SP_ADD_STEAL_RATE,   // 1067-1070
-    SP_MAGIC_DAMAGE_RETURN, SP_RANDOM_ATTACK_INCREASE, SP_ALL_STATS, SP_AGI_VIT, SP_AGI_DEX_STR, SP_PERFECT_HIDE,   // 1071-1077
-    SP_DISGUISE,                // 1077
+    SP_ATTACKRANGE      = 1000,
+    SP_ATKELE           = 1001,
+    SP_DEFELE           = 1002,
+    SP_CASTRATE         = 1003,
+    SP_MAXHPRATE        = 1004,
+    SP_MAXSPRATE        = 1005,
+    SP_SPRATE           = 1006,
 
-    SP_RESTART_FULL_RECORVER = 2000, SP_NO_CASTCANCEL, SP_2002, SP_NO_MAGIC_DAMAGE, SP_NO_WEAPON_DAMAGE, SP_NO_GEMSTONE,  // 2000-2005
-    SP_NO_CASTCANCEL2, SP_INFINITE_ENDURE_, SP_UNBREAKABLE_WEAPON, SP_UNBREAKABLE_ARMOR  // 2006-2009
+    SP_BASE_ATK         = 1014,
+    SP_ASPD_RATE        = 1015,
+    SP_HP_RECOV_RATE    = 1016,
+    SP_SP_RECOV_RATE    = 1017,
+    SP_SPEED_RATE       = 1018,
+    SP_CRITICAL_DEF     = 1019,
+    SP_NEAR_ATK_DEF     = 1020,
+    SP_LONG_ATK_DEF     = 1021,
+    SP_DOUBLE_RATE      = 1022,
+    SP_DOUBLE_ADD_RATE  = 1023,
+    SP_MATK             = 1024,
+    SP_MATK_RATE        = 1025,
+    SP_IGNORE_DEF_ELE   = 1026,
+    SP_IGNORE_DEF_RACE  = 1027,
+    SP_ATK_RATE         = 1028,
+    SP_SPEED_ADDRATE    = 1029,
+    SP_ASPD_ADDRATE     = 1030,
+    SP_MAGIC_ATK_DEF    = 1031,
+    SP_MISC_ATK_DEF     = 1032,
+    SP_IGNORE_MDEF_ELE  = 1033,
+    SP_IGNORE_MDEF_RACE = 1034,
+
+    SP_PERFECT_HIT_RATE = 1038,
+    SP_PERFECT_HIT_ADD_RATE     = 1039,
+    SP_CRITICAL_RATE    = 1040,
+    SP_GET_ZENY_NUM     = 1041,
+    SP_ADD_GET_ZENY_NUM = 1042,
+
+    SP_DEF_RATIO_ATK_ELE        = 1048,
+    SP_DEF_RATIO_ATK_RACE       = 1049,
+    SP_ADD_SPEED        = 1050,
+    SP_HIT_RATE         = 1051,
+    SP_FLEE_RATE        = 1052,
+    SP_FLEE2_RATE       = 1053,
+    SP_DEF_RATE         = 1054,
+    SP_DEF2_RATE        = 1055,
+    SP_MDEF_RATE        = 1056,
+    SP_MDEF2_RATE       = 1057,
+    SP_SPLASH_RANGE     = 1058,
+    SP_SPLASH_ADD_RANGE = 1059,
+
+    SP_SHORT_WEAPON_DAMAGE_RETURN       = 1063,
+    SP_LONG_WEAPON_DAMAGE_RETURN        = 1064,
+
+    SP_MAGIC_DAMAGE_RETURN      = 1071,
+
+    SP_ALL_STATS        = 1073,
+    SP_AGI_VIT          = 1074,
+    SP_AGI_DEX_STR      = 1075,
+    SP_PERFECT_HIDE     = 1076,
+    SP_DISGUISE         = 1077,
+
+    SP_RESTART_FULL_RECORVER = 2000,
+    SP_NO_CASTCANCEL    = 2001,
+
+    SP_NO_MAGIC_DAMAGE  = 2003,
+    SP_NO_WEAPON_DAMAGE = 2004,
+    SP_NO_GEMSTONE      = 2005,
+    SP_NO_CASTCANCEL2   = 2006,
 };
 
-enum
+enum LOOK
 {
-    LOOK_BASE,
-    LOOK_HAIR,
-    LOOK_WEAPON,
-    LOOK_HEAD_BOTTOM,
-    LOOK_HEAD_TOP,
-    LOOK_HEAD_MID,
-    LOOK_HAIR_COLOR,
-    LOOK_CLOTHES_COLOR,
-    LOOK_SHIELD,
-    LOOK_SHOES,                 /* 9 */
-    LOOK_GLOVES,
-    LOOK_CAPE,
-    LOOK_MISC1,
-    LOOK_MISC2
+    LOOK_BASE = 0,
+    LOOK_HAIR = 1,
+    LOOK_WEAPON = 2,
+    LOOK_HEAD_BOTTOM = 3,
+    LOOK_HEAD_TOP = 4,
+    LOOK_HEAD_MID = 5,
+    LOOK_HAIR_COLOR = 6,
+
+    LOOK_SHIELD = 8,
+    LOOK_SHOES = 9,
+    LOOK_GLOVES = 10,
+    LOOK_CAPE = 11,
+    LOOK_MISC1 = 12,
+    LOOK_MISC2 = 13,
+    LOOK_LAST = LOOK_MISC2
 };
 
-enum
+enum EQUIP
 {
     EQUIP_SHIELD = 8,
     EQUIP_WEAPON = 9
 };
-
-#define LOOK_LAST LOOK_MISC2
 
 extern struct map_data maps[];
 extern int map_num;
 extern int autosave_interval;
 
 extern char motd_txt[];
-
-extern char talkie_mes[];
 
 extern char whisper_server_name[24];
 

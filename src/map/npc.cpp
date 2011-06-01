@@ -112,7 +112,7 @@ int npc_enable(const char *name, int flag)
     else
     {                           // 無効化
         nd->flag |= 1;
-        clif_clearchar(&nd->bl, 0);
+        clif_being_remove(&nd->bl, BeingRemoveType::ZERO);
     }
     if (flag & 3 && (nd->u.scr.xs > 0 || nd->u.scr.ys > 0))
         map_foreachinarea(npc_enable_sub, nd->bl.m, nd->bl.x - nd->u.scr.xs,
@@ -137,7 +137,7 @@ struct npc_data *npc_name2id(const char *name)
  */
 int npc_event_dequeue(struct map_session_data *sd)
 {
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     sd->npc_id = 0;
 
@@ -156,18 +156,6 @@ int npc_event_dequeue(struct map_session_data *sd)
         return 1;
     }
 
-    return 0;
-}
-
-int npc_delete(struct npc_data *nd)
-{
-    nullpo_retr(1, nd);
-
-    if (nd->bl.prev == NULL)
-        return 1;
-
-    clif_clearchar(&nd->bl, 1);
-    map_delblock(&nd->bl);
     return 0;
 }
 
@@ -425,7 +413,7 @@ int npc_timerevent_start(struct npc_data *nd)
 {
     int j, n, next;
 
-    nullpo_retr(0, nd);
+    nullpo_ret(nd);
 
     n = nd->u.scr.timeramount;
     if (nd->u.scr.nexttimer >= 0 || n == 0)
@@ -454,7 +442,7 @@ int npc_timerevent_start(struct npc_data *nd)
  */
 int npc_timerevent_stop(struct npc_data *nd)
 {
-    nullpo_retr(0, nd);
+    nullpo_ret(nd);
 
     if (nd->u.scr.nexttimer >= 0)
     {
@@ -475,7 +463,7 @@ int npc_gettimerevent_tick(struct npc_data *nd)
 {
     int tick;
 
-    nullpo_retr(0, nd);
+    nullpo_ret(nd);
 
     tick = nd->u.scr.timer;
 
@@ -492,7 +480,7 @@ int npc_settimerevent_tick(struct npc_data *nd, int newtimer)
 {
     int flag;
 
-    nullpo_retr(0, nd);
+    nullpo_ret(nd);
 
     flag = nd->u.scr.nexttimer;
 
@@ -671,7 +659,7 @@ int npc_touch_areanpc(struct map_session_data *sd, int m, int x, int y)
     {
         case WARP:
             pc_setpos(sd, maps[m].npc[i]->u.warp.name,
-                       maps[m].npc[i]->u.warp.x, maps[m].npc[i]->u.warp.y, 0);
+                      maps[m].npc[i]->u.warp.x, maps[m].npc[i]->u.warp.y, BeingRemoveType::ZERO);
             break;
         case MESSAGE:
         case SCRIPT:
@@ -700,7 +688,7 @@ int npc_checknear(struct map_session_data *sd, int id)
 {
     struct npc_data *nd;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     nd = reinterpret_cast<struct npc_data *>(map_id2bl(id));
     if (nd == NULL || nd->bl.type != BL_NPC)
@@ -1902,7 +1890,7 @@ static void npc_propagate_update(struct npc_data *nd)
 
 void npc_free(struct npc_data *nd)
 {
-    clif_clearchar(&nd->bl, 0);
+    clif_being_remove(&nd->bl, BeingRemoveType::ZERO);
     npc_propagate_update(nd);
     map_deliddb(&nd->bl);
     map_delblock(&nd->bl);

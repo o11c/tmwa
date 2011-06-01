@@ -47,7 +47,7 @@ int skill_status_change_active(struct block_list *bl, int type);  // [fate]
 int skill_status_change_end(struct block_list *bl, int type, int tid);
 int skill_status_change_clear(struct block_list *bl, int type);
 
-int skill_update_heal_animation(struct map_session_data *sd); // [Fate]  Check whether the healing flag must be updated, do so if needed
+void skill_update_heal_animation(struct map_session_data *sd); // [Fate]  Check whether the healing flag must be updated, do so if needed
 
 enum
 {

@@ -2,6 +2,7 @@
 #define PC_H
 
 #include "map.hpp"
+#include "clif.hpp"
 
 #define OPTION_MASK 0xd7b8
 
@@ -42,9 +43,9 @@ int pc_checkequip(struct map_session_data *sd, int pos);
 
 int pc_walktoxy(struct map_session_data *, int, int);
 int pc_stop_walking(struct map_session_data *, int);
-int pc_setpos(struct map_session_data *, const char *, int, int, int);
+int pc_setpos(struct map_session_data *, const char *, int, int, BeingRemoveType);
 int pc_setsavepoint(struct map_session_data *, const char *, int, int);
-int pc_randomwarp(struct map_session_data *sd, int type);
+int pc_randomwarp(struct map_session_data *sd, BeingRemoveType type);
 
 int pc_checkadditem(struct map_session_data *, int, int);
 int pc_inventoryblank(struct map_session_data *);

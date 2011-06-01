@@ -106,7 +106,7 @@ static int calc_cost(struct tmp_path *p, int x_1, int y_1)
 {
     int xd, yd;
 
-    nullpo_retr(0, p);
+    nullpo_ret(p);
 
     xd = x_1 - p->x;
     if (xd < 0)
@@ -126,8 +126,8 @@ static int add_path(int *heap, struct tmp_path *tp, int x, int y, int dist,
 {
     int i;
 
-    nullpo_retr(0, heap);
-    nullpo_retr(0, tp);
+    nullpo_ret(heap);
+    nullpo_ret(tp);
 
     i = calc_index(x, y);
 
@@ -172,7 +172,7 @@ static int can_place(struct map_data *m, int x, int y, int flag)
 {
     int c;
 
-    nullpo_retr(0, m);
+    nullpo_ret(m);
 
     c = read_gatp(m, x, y);
 
@@ -190,7 +190,7 @@ static int can_place(struct map_data *m, int x, int y, int flag)
 static int can_move(struct map_data *m, int x_0, int y_0, int x_1, int y_1,
                      int flag)
 {
-    nullpo_retr(0, m);
+    nullpo_ret(m);
 
     if (x_0 - x_1 < -1 || x_0 - x_1 > 1 || y_0 - y_1 < -1 || y_0 - y_1 > 1)
         return 0;
@@ -269,7 +269,7 @@ int path_search(struct walkpath_data *wpd, int m, int x_0, int y_0, int x_1,
     struct map_data *md;
     int dx, dy;
 
-    nullpo_retr(0, wpd);
+    nullpo_ret(wpd);
 
     if (!maps[m].gat)
         return -1;

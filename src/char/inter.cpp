@@ -306,7 +306,7 @@ void inter_init(const char *file)
 // length of mes is actually only len-4 - it includes the header
 static void mapif_GMmessage(const char *mes, int len)
 {
-    unsigned char buf[len];
+    uint8_t buf[len];
 
     WBUFW(buf, 0) = 0x3800;
     WBUFW(buf, 2) = len;
@@ -318,7 +318,7 @@ extern int server_fd[];
 /// Transmit a whisper to all map servers
 static void mapif_whis_message(struct WhisperData *wd)
 {
-    unsigned char buf[56 + wd->len];
+    uint8_t buf[56 + wd->len];
 
     WBUFW(buf, 0) = 0x3801;
     WBUFW(buf, 2) = 56 + wd->len;
@@ -338,7 +338,7 @@ static void mapif_whis_message(struct WhisperData *wd)
 /// Transmit the result of a whisper back to the map-server that requested it
 static void mapif_whis_end(struct WhisperData *wd, uint8_t flag)
 {
-    unsigned char buf[27];
+    uint8_t buf[27];
 
     WBUFW(buf, 0) = 0x3802;
     STRZCPY2(sign_cast<char *>(WBUFP(buf, 2)), wd->src);
@@ -444,7 +444,7 @@ static void mapif_parse_WhisRequest(int fd)
     struct mmo_charstatus *character = character_by_name(sign_cast<const char *>(RFIFOP(fd, 28)));
     if (!character)
     {
-        unsigned char buf[27];
+        uint8_t buf[27];
         WBUFW(buf, 0) = 0x3802;
         memcpy(WBUFP(buf, 2), RFIFOP(fd, 4), 24);
         // flag: 0: success, 1: target not logged in, 2: ignored
@@ -459,7 +459,7 @@ static void mapif_parse_WhisRequest(int fd)
     // if source is destination, don't ask other servers.
     if (strcmp(sign_cast<const char *>(RFIFOP(fd, 4)), character_name) == 0)
     {
-        unsigned char buf[27];
+        uint8_t buf[27];
         WBUFW(buf, 0) = 0x3802;
         strzcpy(sign_cast<char *>(WBUFP(buf, 2)), sign_cast<const char *>(RFIFOP(fd, 4)), 24);
         // flag: 0: success, 1: target not logged in, 2: ignored

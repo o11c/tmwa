@@ -35,8 +35,6 @@
 // # define MAX_CLOTH_COLOR battle_config.max_cloth_color
 # define NUM_HAIR_STYLES 20
 # define NUM_HAIR_COLORS 12
-// unused
-# define NUM_CLOTHES_COLORS 5
 
 // for produce
 # define MIN_ATTRIBUTE 0
@@ -99,8 +97,8 @@ struct mmo_charstatus
 
     short status_point, skill_point;
     int hp, max_hp, sp, max_sp;
-    short option, karma, manner;
-    short hair, hair_color, clothes_color;
+    short option;
+    short hair, hair_color;
     party_t party_id;
 
     short weapon, shield;
@@ -109,7 +107,7 @@ struct mmo_charstatus
     char name[24];
     level_t base_level, job_level;
     short str, agi, vit, int_, dex, luk;
-    unsigned char char_num, sex;
+    uint8_t char_num, sex;
 
     in_addr_t mapip;
     in_port_t mapport;

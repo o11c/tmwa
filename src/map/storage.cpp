@@ -95,7 +95,7 @@ int storage_delete(int account_id)
 int storage_storageopen(struct map_session_data *sd)
 {
     struct storage *stor;
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     if (sd->state.storage_flag)
         return 1;               //Already open?
@@ -197,8 +197,8 @@ int storage_storageadd(struct map_session_data *sd, int idx, int amount)
 {
     struct storage *stor;
 
-    nullpo_retr(0, sd);
-    nullpo_retr(0, stor = account2storage2(sd->status.account_id));
+    nullpo_ret(sd);
+    nullpo_ret(stor = account2storage2(sd->status.account_id));
 
     if ((stor->storage_amount > MAX_STORAGE) || !stor->storage_status)
         return 0;               // storage full / storage closed
@@ -232,8 +232,8 @@ int storage_storageget(struct map_session_data *sd, int idx, int amount)
     struct storage *stor;
     int flag;
 
-    nullpo_retr(0, sd);
-    nullpo_retr(0, stor = account2storage2(sd->status.account_id));
+    nullpo_ret(sd);
+    nullpo_ret(stor = account2storage2(sd->status.account_id));
 
     if (idx < 0 || idx >= MAX_STORAGE)
         return 0;
@@ -260,8 +260,8 @@ int storage_storageclose(struct map_session_data *sd)
 {
     struct storage *stor;
 
-    nullpo_retr(0, sd);
-    nullpo_retr(0, stor = account2storage2(sd->status.account_id));
+    nullpo_ret(sd);
+    nullpo_ret(stor = account2storage2(sd->status.account_id));
 
     clif_storageclose(sd);
     if (stor->storage_status)
@@ -288,7 +288,7 @@ int storage_storage_quit(struct map_session_data *sd)
 {
     struct storage *stor;
 
-    nullpo_retr(0, sd);
+    nullpo_ret(sd);
 
     stor = account2storage2(sd->status.account_id);
     if (stor)

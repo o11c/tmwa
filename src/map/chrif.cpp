@@ -907,16 +907,11 @@ static void mapif_parse_WhisperToGM(int fd)
     char message[len];
     STRZCPY(message, sign_cast<const char *>(RFIFOP(fd, 30)));
 
-    for (int i = 0; i < fd_max; i++)
+    for (struct map_session_data *pl_sd : sessions)
     {
-        if (!session[i])
-            continue;
-        struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
-        if (!pl_sd || !pl_sd->state.auth)
-            continue;
         if (pc_isGM(pl_sd) < min_gm_level)
             continue;
-        clif_whisper_message(i, whisper_name, message, len);
+        clif_whisper_message(pl_sd->fd, whisper_name, message, len);
     }
 }
 
@@ -1329,13 +1324,8 @@ static void send_users_tochar(timer_id, tick_t)
     WFIFOW(char_fd, 0) = 0x2aff;
 
     int users = 0;
-    for (int i = 0; i < fd_max; i++)
+    for (struct map_session_data *sd : sessions)
     {
-        if (!session[i])
-            continue;
-        struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
-        if (!sd || !sd->state.auth)
-            continue;
         if ((battle_config.hide_GM_session
                 || sd->state.shroud_active
                 || (sd->status.option & OPTION_HIDE)

@@ -4395,9 +4395,8 @@ int buildin_removemapflag(struct script_state *st)
 
 int buildin_pvpon(struct script_state *st)
 {
-    int m, i;
+    int m;
     const char *str;
-    struct map_session_data *pl_sd = NULL;
 
     str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
     m = map_mapname2mapid(str);
@@ -4407,18 +4406,14 @@ int buildin_pvpon(struct script_state *st)
         if (battle_config.pk_mode)  // disable ranking functions if pk_mode is on [Valaris]
             return 0;
 
-        for (i = 0; i < fd_max; i++)
-        {                       //人数分ループ
-            if (session[i] && (pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data))
-                && pl_sd->state.auth)
+        for (struct map_session_data *pl_sd : sessions)
+        {
+            if (m == pl_sd->bl.m && pl_sd->pvp_timer == -1)
             {
-                if (m == pl_sd->bl.m && pl_sd->pvp_timer == -1)
-                {
-                    pl_sd->pvp_timer = add_timer(gettick() + 200, pc_calc_pvprank_timer, pl_sd->bl.id);
-                    pl_sd->pvp_rank = 0;
-                    pl_sd->pvp_lastusers = 0;
-                    pl_sd->pvp_point = 5;
-                }
+                pl_sd->pvp_timer = add_timer(gettick() + 200, pc_calc_pvprank_timer, pl_sd->bl.id);
+                pl_sd->pvp_rank = 0;
+                pl_sd->pvp_lastusers = 0;
+                pl_sd->pvp_point = 5;
             }
         }
     }
@@ -4428,9 +4423,8 @@ int buildin_pvpon(struct script_state *st)
 
 int buildin_pvpoff(struct script_state *st)
 {
-    int m, i;
+    int m;
     const char *str;
-    struct map_session_data *pl_sd = NULL;
 
     str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
     m = map_mapname2mapid(str);
@@ -4440,18 +4434,14 @@ int buildin_pvpoff(struct script_state *st)
         if (battle_config.pk_mode)  // disable ranking options if pk_mode is on [Valaris]
             return 0;
 
-        for (i = 0; i < fd_max; i++)
-        {                       //人数分ループ
-            if (session[i] && (pl_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data))
-                && pl_sd->state.auth)
+        for (struct map_session_data *pl_sd : sessions)
+        {
+            if (m == pl_sd->bl.m)
             {
-                if (m == pl_sd->bl.m)
+                if (pl_sd->pvp_timer != -1)
                 {
-                    if (pl_sd->pvp_timer != -1)
-                    {
-                        delete_timer(pl_sd->pvp_timer);
-                        pl_sd->pvp_timer = -1;
-                    }
+                    delete_timer(pl_sd->pvp_timer);
+                    pl_sd->pvp_timer = -1;
                 }
             }
         }

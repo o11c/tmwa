@@ -7,7 +7,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "../common/socket.hpp"
+
 #include "map.hpp"
+
+#include <iterator>
 
 /// What the client uses to connect to us
 void clif_setip(const char *);
@@ -151,8 +155,50 @@ void clif_message(struct block_list *bl, const char *msg);
 
 void clif_GM_kick(struct map_session_data *sd, struct map_session_data *tsd, int type);
 
-void clif_foreachclient(void (*)(struct map_session_data *, va_list), ...);
-
 void do_init_clif (void);
+
+class SessionIterator
+{
+    int i;
+public:
+    SessionIterator(int fd) : i(fd) {}
+    SessionIterator& operator ++()
+    {
+        do
+        {
+            ++i;
+        } while (i < fd_max
+                && (!session[i]
+                        || !session[i]->session_data
+                        || !reinterpret_cast<struct map_session_data *>(session[i]->session_data)->state.auth
+                    ));
+        return *this;
+    }
+    struct map_session_data* operator *() const
+    {
+        return reinterpret_cast<struct map_session_data *>(session[i]->session_data);
+    }
+    bool operator != (const SessionIterator& o) const
+    {
+        return i != o.i;
+    }
+};
+
+class Sessions
+{
+public:
+    SessionIterator begin()
+    {
+        SessionIterator out(-1);
+        ++out;
+        return out;
+    }
+    SessionIterator end()
+    {
+        return SessionIterator(fd_max);
+    }
+};
+
+extern Sessions sessions;
 
 #endif // CLIF_H

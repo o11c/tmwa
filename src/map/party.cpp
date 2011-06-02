@@ -123,35 +123,28 @@ void party_request_info(int party_id)
 // 所属キャラの確認
 static int party_check_member(const struct party *p)
 {
-    int i;
-    struct map_session_data *sd;
-
     nullpo_ret(p);
 
-    for (i = 0; i < fd_max; i++)
+    for (struct map_session_data *sd : sessions)
     {
-        if (session[i] && (sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data)) && sd->state.auth)
+        if (sd->status.party_id != p->party_id)
+            continue;
+        bool f = 1;
+        for (int j = 0; j < MAX_PARTY; j++)
         {
-            if (sd->status.party_id == p->party_id)
+            if (p->member[j].account_id == sd->status.account_id)
             {
-                int j, f = 1;
-                for (j = 0; j < MAX_PARTY; j++)
-                {               // パーティにデータがあるか確認
-                    if (p->member[j].account_id == sd->status.account_id)
-                    {
-                        if (strcmp(p->member[j].name, sd->status.name) == 0)
-                            f = 0;  // データがある
-//                         else
-//                             p->member[j].sd = NULL; // 同垢別キャラだった
-                    }
-                }
-                if (f)
-                {
-                    sd->status.party_id = 0;
-                    map_log("party: check_member %d[%s] is not member\n",
-                            sd->status.account_id, sd->status.name);
-                }
+                if (strcmp(p->member[j].name, sd->status.name) == 0)
+                    f = 0;
+//              else
+//                  p->member[j].sd = NULL;
             }
+        }
+        if (f)
+        {
+            sd->status.party_id = 0;
+            map_log("party: check_member %d[%s] is not member\n",
+                    sd->status.account_id, sd->status.name);
         }
     }
     return 0;
@@ -160,15 +153,10 @@ static int party_check_member(const struct party *p)
 // 情報所得失敗（そのIDのキャラを全部未所属にする）
 int party_recv_noinfo(int party_id)
 {
-    int i;
-    struct map_session_data *sd;
-    for (i = 0; i < fd_max; i++)
+    for (struct map_session_data *sd : sessions)
     {
-        if (session[i] && (sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data)) && sd->state.auth)
-        {
-            if (sd->status.party_id == party_id)
-                sd->status.party_id = 0;
-        }
+        if (sd->status.party_id == party_id)
+            sd->status.party_id = 0;
     }
     return 0;
 }

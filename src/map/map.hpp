@@ -111,6 +111,8 @@ struct quick_regeneration
 
 struct map_session_data
 {
+    map_session_data(map_session_data&) = delete;
+
     struct block_list bl;
     struct
     {

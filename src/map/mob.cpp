@@ -774,13 +774,10 @@ static int mob_attack(struct mob_data *md, unsigned int tick, int)
  * The callback function of clif_foreachclient
  *------------------------------------------
  */
-static void mob_stopattacked(struct map_session_data *sd, va_list ap)
+static void mob_stopattacked(struct map_session_data *sd, uint32_t id)
 {
-    int id;
-
     nullpo_retv(sd);
 
-    id = va_arg(ap, int);
     if (sd->attacktarget == id)
         pc_stopattack(sd);
 }
@@ -840,7 +837,8 @@ int mob_changestate(struct mob_data *md, int state, int type)
             skill_castcancel(&md->bl);
             md->last_deadtime = gettick();
             // Since it died, all aggressors' attack to this mob is stopped.
-            clif_foreachclient(mob_stopattacked, md->bl.id);
+            for (struct map_session_data *sd : sessions)
+                mob_stopattacked(sd, md->bl.id);
             skill_status_change_clear(&md->bl, 2); // The abnormalities in status are canceled.
             if (md->deletetimer != -1)
                 delete_timer(md->deletetimer);
@@ -2024,12 +2022,10 @@ static void mob_ai_sub_hard(struct block_list *bl, va_list ap)
  * Serious processing for mob in PC field of view(foreachclient)
  *------------------------------------------
  */
-static void mob_ai_sub_foreachclient(struct map_session_data *sd, va_list ap)
+static void mob_ai_sub_foreachclient(struct map_session_data *sd, tick_t tick)
 {
-    unsigned int tick;
     nullpo_retv(sd);
 
-    tick = va_arg(ap, unsigned int);
     map_foreachinarea(mob_ai_sub_hard, sd->bl.m,
                        sd->bl.x - AREA_SIZE * 2, sd->bl.y - AREA_SIZE * 2,
                        sd->bl.x + AREA_SIZE * 2, sd->bl.y + AREA_SIZE * 2,
@@ -2042,7 +2038,8 @@ static void mob_ai_sub_foreachclient(struct map_session_data *sd, va_list ap)
  */
 static void mob_ai_hard(timer_id, tick_t tick)
 {
-    clif_foreachclient(mob_ai_sub_foreachclient, tick);
+    for (struct map_session_data *sd : sessions)
+        mob_ai_sub_foreachclient(sd, tick);
 }
 
 /*==========================================
@@ -2647,17 +2644,12 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
                 sd = mvp_sd;
             else
             {
-                struct map_session_data *tmp_sd;
-                for (int i = 0; i < fd_max; i++)
+                for (struct map_session_data *tmp_sd : sessions)
                 {
-                    if (session[i] && (tmp_sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data))
-                        && tmp_sd->state.auth)
+                    if (md->bl.m == tmp_sd->bl.m)
                     {
-                        if (md->bl.m == tmp_sd->bl.m)
-                        {
-                            sd = tmp_sd;
-                            break;
-                        }
+                        sd = tmp_sd;
+                        break;
                     }
                 }
             }

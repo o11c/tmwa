@@ -5404,7 +5404,7 @@ static int pc_quickregenerate_effect(struct quick_regeneration *quick_regen,
     return 0;
 }
 
-static void pc_natural_heal_sub(struct map_session_data *sd, va_list)
+static void pc_natural_heal_sub(struct map_session_data *sd)
 {
     nullpo_retv(sd);
 
@@ -5471,9 +5471,9 @@ static void pc_natural_heal_sub(struct map_session_data *sd, va_list)
 static void pc_natural_heal(timer_id, tick_t tick)
 {
     natural_heal_tick = tick;
-    natural_heal_diff_tick =
-        DIFF_TICK(natural_heal_tick, natural_heal_prev_tick);
-    clif_foreachclient(pc_natural_heal_sub);
+    natural_heal_diff_tick = DIFF_TICK(natural_heal_tick, natural_heal_prev_tick);
+    for (struct map_session_data *sd : sessions)
+        pc_natural_heal_sub(sd);
 
     natural_heal_prev_tick = tick;
 }
@@ -5499,7 +5499,7 @@ int pc_setsavepoint(struct map_session_data *sd, const char *mapname, int x, int
  *------------------------------------------
  */
 static int last_save_fd, save_flag;
-static void pc_autosave_sub(struct map_session_data *sd, va_list)
+static void pc_autosave_sub(struct map_session_data *sd)
 {
     nullpo_retv(sd);
 
@@ -5522,7 +5522,8 @@ static void pc_autosave(timer_id, tick_t)
     int interval;
 
     save_flag = 0;
-    clif_foreachclient(pc_autosave_sub);
+    for (struct map_session_data *sd : sessions)
+        pc_autosave_sub(sd);
     if (save_flag == 0)
         last_save_fd = 0;
 

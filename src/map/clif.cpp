@@ -326,13 +326,8 @@ in_port_t clif_getport(void)
 unsigned clif_countusers(void)
 {
     unsigned int users = 0;
-    for (int i = 0; i < fd_max; i++)
+    for (struct map_session_data *sd : sessions)
     {
-        if (!session[i])
-            continue;
-        struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
-        if (!sd || !sd->state.auth)
-            continue;
         if (battle_config.hide_GM_session && pc_isGM(sd))
             continue;
         users++;
@@ -340,21 +335,7 @@ unsigned clif_countusers(void)
     return users;
 }
 
-/// Execute a callback for each client
-void clif_foreachclient(void (*func)(struct map_session_data *, va_list), ...)
-{
-    va_list ap;
-    va_start(ap, func);
-    for (int i = 0; i < fd_max; i++)
-    {
-        if (!session[i])
-            continue;
-        struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
-        if (sd && sd->state.auth)
-            func(sd, ap);
-    }
-    va_end(ap);
-}
+Sessions sessions;
 
 static uint8_t *clif_validate_chat(struct map_session_data *sd, int type,
                                    char **message, size_t *message_len);
@@ -437,31 +418,20 @@ static void clif_send(uint8_t *buf, int len, struct block_list *bl, Whom type)
     switch (type)
     {
     case Whom::ALL_CLIENT:
-        for (int i = 0; i < fd_max; i++)
+        for (struct map_session_data *sd : sessions)
         {
-            if (!session[i])
-                continue;
-            struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
-            if (!sd || !sd->state.auth)
-                continue;
-
-            memcpy(WFIFOP(i, 0), buf, len);
-            WFIFOSET(i, len);
+            memcpy(WFIFOP(sd->fd, 0), buf, len);
+            WFIFOSET(sd->fd, len);
         }
         break;
     case Whom::ALL_SAMEMAP:
-        for (int i = 0; i < fd_max; i++)
+        for (struct map_session_data *sd : sessions)
         {
-            if (!session[i])
-                continue;
-            struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
-            if (!sd || !sd->state.auth)
-                continue;
             if (sd->bl.m != bl->m)
                 continue;
 
-            memcpy(WFIFOP(i, 0), buf, len);
-            WFIFOSET(i, len);
+            memcpy(WFIFOP(sd->fd, 0), buf, len);
+            WFIFOSET(sd->fd, len);
         }
         break;
     case Whom::AREA:
@@ -3281,12 +3251,9 @@ void clif_specialeffect(struct block_list *bl, int type, int flag)
 
     if (flag == 2)
     {
-        struct map_session_data *sd = NULL;
-        int i;
-        for (i = 0; i < fd_max; i++)
+        for (struct map_session_data *sd : sessions)
         {
-            if (session[i] && (sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data)) != NULL
-                && sd->state.auth && sd->bl.m == bl->m)
+            if (sd->bl.m == bl->m)
                 clif_specialeffect(&sd->bl, type, 1);
         }
     }

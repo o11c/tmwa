@@ -817,14 +817,9 @@ void map_quit(struct map_session_data *sd)
 // I think it might be a charid_t but I'm not sure
 struct map_session_data *map_id2sd(unsigned int id)
 {
-    for (int i = 0; i < fd_max; i++)
-    {
-        if (!session[i])
-            continue;
-        struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(session[i]->session_data);
-        if (sd && sd->bl.id == id)
+    for (struct map_session_data *sd : sessions)
+        if (sd->bl.id == id)
             return sd;
-    }
     return NULL;
 }
 
@@ -907,22 +902,16 @@ struct map_session_data *map_nick2sd(const char *nick)
     int quantity = 0;
     struct map_session_data *sd = NULL;
 
-    for (int i = 0; i < fd_max; i++)
+    for (struct map_session_data *pl_sd : sessions)
     {
-        if (!session[i])
-            continue;
-        struct map_session_data *pl_sd = static_cast<struct map_session_data *>(session[i]->session_data);
-        if (pl_sd && pl_sd->state.auth)
+        // Without case sensitive check (increase the number of similar character names found)
+        if (strncasecmp(pl_sd->status.name, nick, nicklen) == 0)
         {
-            // Without case sensitive check (increase the number of similar character names found)
-            if (strncasecmp(pl_sd->status.name, nick, nicklen) == 0)
-            {
-                // Strict comparison (if found, we finish the function immediatly with correct value)
-                if (strcmp(pl_sd->status.name, nick) == 0)
-                    return pl_sd;
-                quantity++;
-                sd = pl_sd;
-            }
+            // Strict comparison (if found, we finish the function immediatly with correct value)
+            if (strcmp(pl_sd->status.name, nick) == 0)
+                return pl_sd;
+            quantity++;
+            sd = pl_sd;
         }
     }
     // Here, the exact character name is not found

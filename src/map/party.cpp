@@ -664,17 +664,10 @@ int party_send_xy_clear(struct party *p)
 }
 
 // HP通知の必要性検査用（map_foreachinmoveareaから呼ばれる）
-void party_send_hp_check(struct block_list *bl, va_list ap)
+void party_send_hp_check(struct block_list *bl, party_t party_id, bool *flag)
 {
-    int party_id;
-    int *flag;
-    struct map_session_data *sd;
-
     nullpo_retv(bl);
-    nullpo_retv(sd = reinterpret_cast<struct map_session_data *>(bl));
-
-    party_id = va_arg(ap, int);
-    flag = va_arg(ap, int *);
+    struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(bl);
 
     if (sd->status.party_id == party_id)
     {
@@ -700,55 +693,4 @@ int party_exp_share(struct party *p, int map, int base_exp, int job_exp)
         if ((sd = p->member[i].sd) != NULL && sd->bl.m == map)
             pc_gainexp(sd, base_exp / c + 1, job_exp / c + 1);
     return 0;
-}
-
-// 同じマップのパーティメンバー全体に処理をかける
-// type==0 同じマップ
-//     !=0 画面内
-void party_foreachsamemap(void (*func)(struct block_list *, va_list),
-                           struct map_session_data *sd, int type, ...)
-{
-    struct party *p;
-    va_list ap;
-    int i;
-    int x_0, y_0, x_1, y_1;
-    struct block_list *list[MAX_PARTY];
-    int blockcount = 0;
-
-    nullpo_retv(sd);
-
-    if ((p = party_search(sd->status.party_id)) == NULL)
-        return;
-
-    x_0 = sd->bl.x - AREA_SIZE;
-    y_0 = sd->bl.y - AREA_SIZE;
-    x_1 = sd->bl.x + AREA_SIZE;
-    y_1 = sd->bl.y + AREA_SIZE;
-
-    va_start(ap, type);
-
-    for (i = 0; i < MAX_PARTY; i++)
-    {
-        struct party_member *m = &p->member[i];
-        if (m->sd != NULL)
-        {
-            if (sd->bl.m != m->sd->bl.m)
-                continue;
-            if (type != 0 &&
-                (m->sd->bl.x < x_0 || m->sd->bl.y < y_0 ||
-                 m->sd->bl.x > x_1 || m->sd->bl.y > y_1))
-                continue;
-            list[blockcount++] = &m->sd->bl;
-        }
-    }
-
-    map_freeblock_lock();      // メモリからの解放を禁止する
-
-    for (i = 0; i < blockcount; i++)
-        if (list[i]->prev)      // 有効かどうかチェック
-            func(list[i], ap);
-
-    map_freeblock_unlock();    // 解放を許可する
-
-    va_end(ap);
 }

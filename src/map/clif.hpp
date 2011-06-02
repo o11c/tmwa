@@ -109,10 +109,10 @@ void clif_storageitemremoved(struct map_session_data *sd, int index,
 void clif_storageclose(struct map_session_data *sd);
 
 // map_forallinmovearea callbacks
-void clif_pcinsight(struct block_list *, va_list);
-void clif_pcoutsight(struct block_list *, va_list);
-void clif_mobinsight(struct block_list *, va_list);
-void clif_moboutsight(struct block_list *, va_list);
+void clif_pcinsight(struct block_list *, struct map_session_data *);
+void clif_pcoutsight(struct block_list *, struct map_session_data *);
+void clif_mobinsight(struct block_list *, struct mob_data *);
+void clif_moboutsight(struct block_list *, struct mob_data *);
 
 void clif_skillinfoblock(struct map_session_data *sd);
 void clif_skillup(struct map_session_data *sd, int skill_num);

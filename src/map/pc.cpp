@@ -248,19 +248,12 @@ int pc_setrestartvalue(struct map_session_data *sd, int type)
  * 自分をロックしているMOBの数を数える(foreachclient)
  *------------------------------------------
  */
-static void pc_counttargeted_sub(struct block_list *bl, va_list ap)
+static void pc_counttargeted_sub(struct block_list *bl, uint32_t id, int *c,
+                                 struct block_list *src, AttackResult target_lv)
 {
-    int id, *c;
-    struct block_list *src;
-
     nullpo_retv(bl);
+    nullpo_retv(c);
 
-    id = va_arg(ap, int);
-
-    nullpo_retv(c = va_arg(ap, int *));
-
-    src = va_arg(ap, struct block_list *);
-    AttackResult target_lv = static_cast<AttackResult>(va_arg(ap, int));
     if (id == bl->id || (src && id == src->id))
         return;
     if (bl->type == BL_PC)
@@ -286,9 +279,9 @@ int pc_counttargeted(struct map_session_data *sd, struct block_list *src,
 {
     int c = 0;
     map_foreachinarea(pc_counttargeted_sub, sd->bl.m,
-                       sd->bl.x - AREA_SIZE, sd->bl.y - AREA_SIZE,
-                       sd->bl.x + AREA_SIZE, sd->bl.y + AREA_SIZE, BL_NUL,
-                       sd->bl.id, &c, src, target_lv);
+                      sd->bl.x - AREA_SIZE, sd->bl.y - AREA_SIZE,
+                      sd->bl.x + AREA_SIZE, sd->bl.y + AREA_SIZE, BL_NUL,
+                      sd->bl.id, &c, src, target_lv);
     return c;
 }
 
@@ -2575,8 +2568,8 @@ static void pc_walk(timer_id tid, tick_t tick, uint32_t id, uint8_t data)
 
         sd->walktimer = 1;
         map_foreachinmovearea(clif_pcoutsight, sd->bl.m, x - AREA_SIZE,
-                               y - AREA_SIZE, x + AREA_SIZE, y + AREA_SIZE,
-                               dx, dy, BL_NUL, sd);
+                              y - AREA_SIZE, x + AREA_SIZE, y + AREA_SIZE,
+                              dx, dy, BL_NUL, sd);
 
         x += dx;
         y += dy;
@@ -2589,8 +2582,8 @@ static void pc_walk(timer_id tid, tick_t tick, uint32_t id, uint8_t data)
             map_addblock(&sd->bl);
 
         map_foreachinmovearea(clif_pcinsight, sd->bl.m, x - AREA_SIZE,
-                               y - AREA_SIZE, x + AREA_SIZE, y + AREA_SIZE,
-                               -dx, -dy, BL_NUL, sd);
+                              y - AREA_SIZE, x + AREA_SIZE, y + AREA_SIZE,
+                              -dx, -dy, BL_NUL, sd);
         sd->walktimer = -1;
 
         if (sd->status.party_id > 0)
@@ -2598,11 +2591,11 @@ static void pc_walk(timer_id tid, tick_t tick, uint32_t id, uint8_t data)
             struct party *p = party_search(sd->status.party_id);
             if (p != NULL)
             {
-                int p_flag = 0;
+                bool p_flag = 0;
                 map_foreachinmovearea(party_send_hp_check, sd->bl.m,
-                                       x - AREA_SIZE, y - AREA_SIZE,
-                                       x + AREA_SIZE, y + AREA_SIZE, -dx, -dy,
-                                       BL_PC, sd->status.party_id, &p_flag);
+                                      x - AREA_SIZE, y - AREA_SIZE,
+                                      x + AREA_SIZE, y + AREA_SIZE, -dx, -dy,
+                                      BL_PC, sd->status.party_id, &p_flag);
                 if (p_flag)
                     sd->party_hp = -1;
             }
@@ -5056,13 +5049,13 @@ int pc_checkoversp(struct map_session_data *sd)
  * PVP順位計算用(foreachinarea)
  *------------------------------------------
  */
-static void pc_calc_pvprank_sub(struct block_list *bl, va_list ap)
+static void pc_calc_pvprank_sub(struct block_list *bl, struct map_session_data *sd2)
 {
-    struct map_session_data *sd1, *sd2 = NULL;
+    struct map_session_data *sd1;
 
     nullpo_retv(bl);
     nullpo_retv(sd1 = reinterpret_cast<struct map_session_data *>(bl));
-    nullpo_retv(sd2 = va_arg(ap, struct map_session_data *));
+    nullpo_retv(sd2);
 
     if (sd1->pvp_point > sd2->pvp_point)
         sd2->pvp_rank++;
@@ -5083,7 +5076,7 @@ int pc_calc_pvprank(struct map_session_data *sd)
         return 0;
     sd->pvp_rank = 1;
     map_foreachinarea(pc_calc_pvprank_sub, sd->bl.m, 0, 0, m->xs, m->ys,
-                       BL_PC, sd);
+                      BL_PC, sd);
     return sd->pvp_rank;
 }
 

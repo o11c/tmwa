@@ -553,10 +553,8 @@ AtCommandInfo *atcommand(gm_level_t level, const char *message)
 }
 
 /// Kill an individual monster (with or without loot)
-static void atkillmonster_sub(struct block_list *bl, va_list ap)
+static void atkillmonster_sub(struct block_list *bl, bool flag)
 {
-    bool flag = static_cast<bool>(va_arg(ap, int));
-
     nullpo_retv(bl);
     struct mob_data *md = reinterpret_cast<struct mob_data *>(bl);
     if (flag)
@@ -1943,7 +1941,7 @@ static void atcommand_killmonster_sub(int fd, struct map_session_data *sd,
     }
 
     map_foreachinarea(atkillmonster_sub, map_id, 0, 0, maps[map_id].xs,
-                       maps[map_id].ys, BL_MOB, drop);
+                      maps[map_id].ys, BL_MOB, drop);
 
     clif_displaymessage(fd, "All monsters killed!");
 }
@@ -1957,14 +1955,13 @@ int atcommand_killmonster(int fd, struct map_session_data *sd,
 }
 
 /// Print a nearby player
-static void atlist_nearby_sub(struct block_list *bl, va_list ap)
+static void atlist_nearby_sub(struct block_list *bl, int fd)
 {
     nullpo_retv(bl);
 
     char buf[32];
     sprintf(buf, " - \"%s\"", reinterpret_cast<struct map_session_data *>(bl)->status.name);
 
-    int fd = va_arg(ap, int);
     clif_displaymessage(fd, buf);
 }
 
@@ -1974,7 +1971,7 @@ int atcommand_list_nearby(int fd, struct map_session_data *sd,
 {
     clif_displaymessage(fd, "Nearby players:");
     map_foreachinarea(atlist_nearby_sub, sd->bl.m, sd->bl.x - 1,
-                       sd->bl.y - 1, sd->bl.x + 1, sd->bl.x + 1, BL_PC, fd);
+                      sd->bl.y - 1, sd->bl.x + 1, sd->bl.x + 1, BL_PC, fd);
     return 0;
 }
 

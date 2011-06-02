@@ -1885,13 +1885,8 @@ int buildin_warp(struct script_state *st)
  * エリア指定ワープ
  *------------------------------------------
  */
-static void buildin_areawarp_sub(struct block_list *bl, va_list ap)
+static void buildin_areawarp_sub(struct block_list *bl, const char *map, int x, int y)
 {
-    int x, y;
-    char *map;
-    map = va_arg(ap, char *);
-    x = va_arg(ap, int);
-    y = va_arg(ap, int);
     if (strcmp(map, "Random") == 0)
         pc_randomwarp(reinterpret_cast<struct map_session_data *>(bl), BeingRemoveType::WARP);
     else
@@ -1918,7 +1913,7 @@ int buildin_areawarp(struct script_state *st)
         return 0;
 
     map_foreachinarea(buildin_areawarp_sub,
-                       m, x_0, y_0, x_1, y_1, BL_PC, str, x, y);
+                      m, x_0, y_0, x_1, y_1, BL_PC, str, x, y);
     return 0;
 }
 
@@ -3582,11 +3577,8 @@ int buildin_areamonster(struct script_state *st)
  * モンスター削除
  *------------------------------------------
  */
-static void buildin_killmonster_sub(struct block_list *bl, va_list ap)
+static void buildin_killmonster_sub(struct block_list *bl, const char *event, bool allflag)
 {
-    char *event = va_arg(ap, char *);
-    int allflag = va_arg(ap, int);
-
     struct mob_data *md = reinterpret_cast<struct mob_data *>(bl);
     if (!allflag)
     {
@@ -3594,7 +3586,7 @@ static void buildin_killmonster_sub(struct block_list *bl, va_list ap)
             mob_delete(md);
         return;
     }
-    else if (allflag)
+    else
     {
         if (md->spawndelay_1 == -1 && md->spawndelay2 == -1)
             mob_delete(md);
@@ -3605,20 +3597,19 @@ static void buildin_killmonster_sub(struct block_list *bl, va_list ap)
 int buildin_killmonster(struct script_state *st)
 {
     const char *mapname, *event;
-    int m, allflag = 0;
+    int m;
     mapname = conv_str(st, &(st->stack->stack_data[st->start + 2]));
     event = conv_str(st, &(st->stack->stack_data[st->start + 3]));
-    if (strcmp(event, "All") == 0)
-        allflag = 1;
+    bool allflag = strcmp(event, "All") == 0;
 
     if ((m = map_mapname2mapid(mapname)) < 0)
         return 0;
     map_foreachinarea(buildin_killmonster_sub,
-                       m, 0, 0, maps[m].xs, maps[m].ys, BL_MOB, event, allflag);
+                      m, 0, 0, maps[m].xs, maps[m].ys, BL_MOB, event, allflag);
     return 0;
 }
 
-static void buildin_killmonsterall_sub(struct block_list *bl, va_list)
+static void buildin_killmonsterall_sub(struct block_list *bl)
 {
     mob_delete(reinterpret_cast<struct mob_data *>(bl));
 }
@@ -3632,7 +3623,7 @@ int buildin_killmonsterall(struct script_state *st)
     if ((m = map_mapname2mapid(mapname)) < 0)
         return 0;
     map_foreachinarea(buildin_killmonsterall_sub,
-                       m, 0, 0, maps[m].xs, maps[m].ys, BL_MOB);
+                      m, 0, 0, maps[m].xs, maps[m].ys, BL_MOB);
     return 0;
 }
 
@@ -3815,13 +3806,8 @@ int buildin_announce(struct script_state *st)
  * 天の声アナウンス（特定マップ）
  *------------------------------------------
  */
-static void buildin_mapannounce_sub(struct block_list *bl, va_list ap)
+static void buildin_mapannounce_sub(struct block_list *bl, const char *str, size_t len, int flag)
 {
-    char *str;
-    int len, flag;
-    str = va_arg(ap, char *);
-    len = va_arg(ap, int);
-    flag = va_arg(ap, int);
     clif_GMmessage(bl, str, len, flag | 3);
 }
 
@@ -3837,8 +3823,8 @@ int buildin_mapannounce(struct script_state *st)
     if ((m = map_mapname2mapid(mapname)) < 0)
         return 0;
     map_foreachinarea(buildin_mapannounce_sub,
-                       m, 0, 0, maps[m].xs, maps[m].ys, BL_PC, str,
-                       strlen(str) + 1, flag & 0x10);
+                      m, 0, 0, maps[m].xs, maps[m].ys, BL_PC, str,
+                      strlen(str) + 1, flag & 0x10);
     return 0;
 }
 
@@ -3864,8 +3850,8 @@ int buildin_areaannounce(struct script_state *st)
         return 0;
 
     map_foreachinarea(buildin_mapannounce_sub,
-                       m, x_0, y_0, x_1, y_1, BL_PC, str, strlen(str) + 1,
-                       flag & 0x10);
+                      m, x_0, y_0, x_1, y_1, BL_PC, str, strlen(str) + 1,
+                      flag & 0x10);
     return 0;
 }
 
@@ -3913,10 +3899,9 @@ int buildin_getmapusers(struct script_state *st)
  * エリア指定ユーザー数所得
  *------------------------------------------
  */
-static void buildin_getareausers_sub(struct block_list *, va_list ap)
+static void buildin_getareausers_sub(struct block_list *, int *users)
 {
-    int *users = va_arg(ap, int *);
-    (*users)++;
+    ++*users;
 }
 
 int buildin_getareausers(struct script_state *st)
@@ -3934,7 +3919,7 @@ int buildin_getareausers(struct script_state *st)
         return 0;
     }
     map_foreachinarea(buildin_getareausers_sub,
-                       m, x_0, y_0, x_1, y_1, BL_PC, &users);
+                      m, x_0, y_0, x_1, y_1, BL_PC, &users);
     push_val(st->stack, C_INT, users);
     return 0;
 }
@@ -3943,20 +3928,16 @@ int buildin_getareausers(struct script_state *st)
  * エリア指定ドロップアイテム数所得
  *------------------------------------------
  */
-static void buildin_getareadropitem_sub(struct block_list *bl, va_list ap)
+static void buildin_getareadropitem_sub(struct block_list *bl, int item, int *amount)
 {
-    int item = va_arg(ap, int);
-    int *amount = va_arg(ap, int *);
     struct flooritem_data *drop = reinterpret_cast<struct flooritem_data *>(bl);
 
     if (drop->item_data.nameid == item)
         (*amount) += drop->item_data.amount;
 }
 
-static void buildin_getareadropitem_sub_anddelete(struct block_list *bl, va_list ap)
+static void buildin_getareadropitem_sub_anddelete(struct block_list *bl, int item, int *amount)
 {
-    int item = va_arg(ap, int);
-    int *amount = va_arg(ap, int *);
     struct flooritem_data *drop = reinterpret_cast<struct flooritem_data *>(bl);
 
     if (drop->item_data.nameid == item)
@@ -4002,10 +3983,10 @@ int buildin_getareadropitem(struct script_state *st)
     }
     if (delitems)
         map_foreachinarea(buildin_getareadropitem_sub_anddelete,
-                           m, x_0, y_0, x_1, y_1, BL_ITEM, item, &amount);
+                          m, x_0, y_0, x_1, y_1, BL_ITEM, item, &amount);
     else
         map_foreachinarea(buildin_getareadropitem_sub,
-                           m, x_0, y_0, x_1, y_1, BL_ITEM, item, &amount);
+                          m, x_0, y_0, x_1, y_1, BL_ITEM, item, &amount);
 
     push_val(st->stack, C_INT, amount);
     return 0;
@@ -4662,7 +4643,7 @@ int buildin_mapwarp(struct script_state *st)   // Added by RoVeRT
         return 0;
 
     map_foreachinarea(buildin_areawarp_sub,
-                       m, x_0, y_0, x_1, y_1, BL_PC, str, x, y);
+                      m, x_0, y_0, x_1, y_1, BL_PC, str, x, y);
     return 0;
 }
 
@@ -4697,13 +4678,10 @@ int buildin_stoptimer(struct script_state *st) // Added by RoVeRT
     return 0;
 }
 
-static void buildin_mobcount_sub(struct block_list *bl, va_list ap)    // Added by RoVeRT
+static void buildin_mobcount_sub(struct block_list *bl, const char *event, int *c)    // Added by RoVeRT
 {
-    char *event = va_arg(ap, char *);
-    int *c = va_arg(ap, int *);
-
     if (strcmp(event, reinterpret_cast<struct mob_data *>(bl)->npc_event) == 0)
-        (*c)++;
+        ++*c;
 }
 
 int buildin_mobcount(struct script_state *st)  // Added by RoVeRT
@@ -4719,7 +4697,7 @@ int buildin_mobcount(struct script_state *st)  // Added by RoVeRT
         return 0;
     }
     map_foreachinarea(buildin_mobcount_sub,
-                       m, 0, 0, maps[m].xs, maps[m].ys, BL_MOB, event, &c);
+                      m, 0, 0, maps[m].xs, maps[m].ys, BL_MOB, event, &c);
 
     push_val(st->stack, C_INT, (c - 1));
 
@@ -5467,12 +5445,8 @@ int buildin_getsavepoint(struct script_state *st)
  *     areatimer
  *------------------------------------------
  */
-static void buildin_areatimer_sub(struct block_list *bl, va_list ap)
+static void buildin_areatimer_sub(struct block_list *bl, int tick, const char *event)
 {
-    int tick;
-    char *event;
-    tick = va_arg(ap, int);
-    event = va_arg(ap, char *);
     pc_addeventtimer(reinterpret_cast<struct map_session_data *>(bl), tick, event);
 }
 
@@ -5495,7 +5469,7 @@ int buildin_areatimer(struct script_state *st)
         return 0;
 
     map_foreachinarea(buildin_areatimer_sub,
-                       m, x_0, y_0, x_1, y_1, BL_PC, tick, event);
+                      m, x_0, y_0, x_1, y_1, BL_PC, tick, event);
     return 0;
 }
 

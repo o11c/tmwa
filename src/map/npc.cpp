@@ -61,19 +61,17 @@ static struct tm ev_tm_b;       // 時計イベント用
  * npc_enable_sub 有効時にOnTouchイベントを実行
  *------------------------------------------
  */
-static void npc_enable_sub(struct block_list *bl, va_list ap)
+static void npc_enable_sub(struct block_list *bl, struct npc_data *nd)
 {
-    struct map_session_data *sd;
-    struct npc_data *nd;
+    nullpo_retv(bl);
+    nullpo_retv(nd);
+
     char *name;
     CREATE(name, char, 50);
 
-    nullpo_retv(bl);
-    nullpo_retv(ap);
-    nullpo_retv(nd = va_arg(ap, struct npc_data *));
-    if (bl->type == BL_PC && (sd = reinterpret_cast<struct map_session_data *>(bl)))
+    if (bl->type == BL_PC)
     {
-
+        struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(bl);
         if (nd->flag & 1)       // 無効化されている
             return;
 
@@ -115,9 +113,10 @@ int npc_enable(const char *name, int flag)
         clif_being_remove(&nd->bl, BeingRemoveType::ZERO);
     }
     if (flag & 3 && (nd->u.scr.xs > 0 || nd->u.scr.ys > 0))
-        map_foreachinarea(npc_enable_sub, nd->bl.m, nd->bl.x - nd->u.scr.xs,
-                           nd->bl.y - nd->u.scr.ys, nd->bl.x + nd->u.scr.xs,
-                           nd->bl.y + nd->u.scr.ys, BL_PC, nd);
+        map_foreachinarea(npc_enable_sub, nd->bl.m,
+                          nd->bl.x - nd->u.scr.xs, nd->bl.y - nd->u.scr.ys,
+                          nd->bl.x + nd->u.scr.xs, nd->bl.y + nd->u.scr.ys,
+                          BL_PC, nd);
 
     return 0;
 }
@@ -1855,11 +1854,10 @@ static void npc_free_internal(struct npc_data *nd)
 
 static void npc_propagate_update(struct npc_data *nd)
 {
-    map_foreachinarea(npc_enable_sub,
-                       nd->bl.m,
-                       nd->bl.x - nd->u.scr.xs, nd->bl.y - nd->u.scr.ys,
-                       nd->bl.x + nd->u.scr.xs, nd->bl.y + nd->u.scr.ys,
-                       BL_PC, nd);
+    map_foreachinarea(npc_enable_sub, nd->bl.m,
+                      nd->bl.x - nd->u.scr.xs, nd->bl.y - nd->u.scr.ys,
+                      nd->bl.x + nd->u.scr.xs, nd->bl.y + nd->u.scr.ys,
+                      BL_PC, nd);
 }
 
 void npc_free(struct npc_data *nd)

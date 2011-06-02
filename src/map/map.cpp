@@ -232,8 +232,8 @@ int map_delblock(struct block_list *bl)
 
 /// Runs a function for every block in the area
 // if type is 0, all types, else BL_MOB, BL_PC, BL_SKILL, etc
-void map_foreachinarea(void (*func)(struct block_list *, va_list), int m,
-                        int x_0, int y_0, int x_1, int y_1, BlockType type, ...)
+void map_foreachinarea_impl(MapForEachFunc func, int m,
+                            int x_0, int y_0, int x_1, int y_1, BlockType type)
 {
     if (m < 0)
         return;
@@ -303,13 +303,10 @@ void map_foreachinarea(void (*func)(struct block_list *, va_list), int m,
     // why does this matter?
     map_freeblock_lock();
 
-    va_list ap;
-    va_start(ap, type);
     for (int i = blockcount; i < bl_list_count; i++)
         // Check valid list elements only
         if (bl_list[i]->prev)
-            func(bl_list[i], ap);
-    va_end(ap);
+            func(bl_list[i]);
 
     // actually unlink the blocks
     map_freeblock_unlock();
@@ -330,9 +327,9 @@ void map_foreachinarea(void (*func)(struct block_list *, va_list), int m,
 // once with original location and ds (outsight)
 // then with the new location and -ds (insight)
 
-void map_foreachinmovearea(void (*func)(struct block_list *, va_list), int m,
-                            int x_0, int y_0, int x_1, int y_1, int dx, int dy,
-                            BlockType type, ...)
+void map_foreachinmovearea_impl(MapForEachFunc func, int m,
+                                int x_0, int y_0, int x_1, int y_1,
+                                int dx, int dy, BlockType type)
 {
     int blockcount = bl_list_count;
 
@@ -462,15 +459,10 @@ void map_foreachinmovearea(void (*func)(struct block_list *, va_list), int m,
     // prevent freeing blocks
     map_freeblock_lock();
 
-    va_list ap;
-    va_start(ap, type);
-
     for (int i = blockcount; i < bl_list_count; i++)
         // only act on valid blocks
         if (bl_list[i]->prev)
-            func(bl_list[i], ap);
-
-    va_end(ap);
+            func(bl_list[i]);
 
     // free the blocks
     map_freeblock_unlock();
@@ -540,8 +532,7 @@ void map_delobject(obj_id_t id, BlockType type)
 }
 
 /// Execute a function for each temporary object of the given type
-void map_foreachobject(void (*func)(struct block_list *, va_list), BlockType type,
-                        ...)
+void map_foreachobject_impl(MapForEachFunc func)
 {
     int blockcount = bl_list_count;
 
@@ -549,8 +540,6 @@ void map_foreachobject(void (*func)(struct block_list *, va_list), BlockType typ
     {
         if (object[i])
         {
-            if (type && object[i]->type != type)
-                continue;
             if (bl_list_count >= BL_LIST_MAX)
                 map_log("%s: too many block !", __func__);
             else
@@ -559,14 +548,9 @@ void map_foreachobject(void (*func)(struct block_list *, va_list), BlockType typ
     }
 
     map_freeblock_lock();
-
-    va_list ap;
-    va_start(ap, type);
     for (int i = blockcount; i < bl_list_count; i++)
         if (bl_list[i]->prev || bl_list[i]->next)
-            func(bl_list[i], ap);
-    va_end(ap);
-
+            func(bl_list[i]);
     map_freeblock_unlock();
 
     bl_list_count = blockcount;

@@ -1,6 +1,8 @@
 #ifndef PARTY_H
 #define PARTY_H
 
+#include "../common/mmo.hpp"
+
 #include <stdarg.h>
 
 struct party;
@@ -37,11 +39,8 @@ int party_send_logout(struct map_session_data *sd);
 int party_send_message(struct map_session_data *sd, char *mes, int len);
 int party_recv_message(int party_id, int account_id, const char *mes, int len);
 
-void party_send_hp_check(struct block_list *bl, va_list ap);
+void party_send_hp_check(struct block_list *bl, party_t, bool *);
 
 int party_exp_share(struct party *p, int map, int base_exp, int job_exp);
-
-void party_foreachsamemap(void (*func)(struct block_list *, va_list),
-                          struct map_session_data *sd, int type, ...);
 
 #endif // PARTY_H

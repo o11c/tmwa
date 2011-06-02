@@ -1018,13 +1018,12 @@ static cont_activation_record_t *add_stack_entry(invocation_t * invocation,
     return ar;
 }
 
-static void find_entities_in_area_c(entity_t * target, va_list va)
+static void find_entities_in_area_c(entity_t * target,
+                                    int *entities_allocd_p,
+                                    int *entities_nr_p,
+                                    int **entities_p,
+                                    int filter)
 {
-    int *entities_allocd_p = va_arg(va, int *);
-    int *entities_nr_p = va_arg(va, int *);
-    int **entities_p = va_arg(va, int **);
-    int filter = va_arg(va, int);
-
 /* The following macro adds an entity to the result list: */
 #define ADD_ENTITY(e)                                                   \
         if (*entities_nr_p == *entities_allocd_p) {                     \
@@ -1109,10 +1108,10 @@ static void find_entities_in_area(area_t * area, int *entities_allocd_p,
             int m, x, y, width, height;
             magic_area_rect(&m, &x, &y, &width, &height, area);
             map_foreachinarea(find_entities_in_area_c,
-                               m, x, y, x + width, y + height,
-                               BL_NUL /* filter elsewhere */ ,
-                               entities_allocd_p, entities_nr_p, entities_p,
-                               filter);
+                              m, x, y, x + width, y + height,
+                              BL_NUL /* filter elsewhere */ ,
+                              entities_allocd_p, entities_nr_p, entities_p,
+                              filter);
         }
     }
 }

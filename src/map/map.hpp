@@ -14,6 +14,8 @@
 #include "script.hpp"
 #include "battle.hpp"
 
+#include <functional>
+
 #ifndef MAX
 #  define MAX(x,y) (((x)>(y)) ? (x) : (y))
 #endif
@@ -682,16 +684,38 @@ int map_freeblock_unlock(void);
 // block related
 bool map_addblock(struct block_list *);
 int map_delblock(struct block_list *);
-void map_foreachinarea(void (*)(struct block_list *, va_list), int, int, int,
-                       int, int, BlockType, ...);
-void map_foreachinmovearea(void (*)(struct block_list *, va_list), int, int,
-                           int, int, int, int, int, BlockType, ...);
+typedef std::function<void (struct block_list *)> MapForEachFunc;
+void map_foreachinarea_impl(MapForEachFunc, int, int, int, int, int, BlockType);
+template<class... Args>
+void map_foreachinarea(void (&func)(struct block_list *, Args...), int m,
+                       int x_0, int y_0, int x_1, int y_1, BlockType type,
+                       Args... args)
+{
+    map_foreachinarea_impl(std::bind(func, std::placeholders::_1, args...),
+                           m, x_0, y_0, x_1, y_1, type);
+}
+
+void map_foreachinmovearea_impl(MapForEachFunc, int, int, int, int, int, int, int, BlockType);
+template<class... Args>
+void map_foreachinmovearea(void (&func)(struct block_list *, Args...), int m,
+                           int x_0, int y_0, int x_1, int y_1, int dx, int dy,
+                           BlockType type, Args... args)
+{
+    map_foreachinmovearea_impl(std::bind(func, std::placeholders::_1, args...),
+                           m, x_0, y_0, x_1, y_1, dx, dy, type);
+}
 
 /// Temporary objects (loot, etc)
 typedef uint32_t obj_id_t;
 obj_id_t map_addobject(struct block_list *);
 void map_delobject(obj_id_t, BlockType type);
-void map_foreachobject(void (*)(struct block_list *, va_list), BlockType, ...);
+
+void map_foreachobject_impl(MapForEachFunc);
+template<class... Args>
+void map_foreachobject(void (&func)(struct block_list *, Args...), Args... args)
+{
+    map_foreachobject_impl(std::bind(func, std::placeholders::_1, args...));
+}
 
 void map_quit(struct map_session_data *);
 // npc

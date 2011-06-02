@@ -584,8 +584,8 @@ static void ladmin_itemfrob_fix_item(int source, int dest, struct item *item)
     }
 }
 
-static void ladmin_itemfrob_c2(struct block_list *bl, int source_id,
-                               int dest_id)
+static void ladmin_itemfrob_c(struct block_list *bl, int source_id,
+                              int dest_id)
 {
 #define IFIX(v) if (v == source_id) {v = dest_id; }
 #define FIX(item) ladmin_itemfrob_fix_item(source_id, dest_id, &item)
@@ -646,13 +646,6 @@ static void ladmin_itemfrob_c2(struct block_list *bl, int source_id,
 #undef IFIX
 }
 
-static void ladmin_itemfrob_c(struct block_list *bl, va_list va_args)
-{
-    int source_id = va_arg(va_args, int);
-    int dest_id = va_arg(va_args, int);
-    ladmin_itemfrob_c2(bl, source_id, dest_id);
-}
-
 static void ladmin_itemfrob(int fd)
 {
     int source_id = RFIFOL(fd, 2);
@@ -660,12 +653,12 @@ static void ladmin_itemfrob(int fd)
     struct block_list *bl = reinterpret_cast<struct block_list *>(map_get_first_session());
 
     // flooritems
-    map_foreachobject(ladmin_itemfrob_c, BL_NUL, source_id, dest_id);
+    map_foreachobject(ladmin_itemfrob_c, source_id, dest_id);
 
     // player characters
     while (bl->next)
     {
-        ladmin_itemfrob_c2(bl, source_id, dest_id);
+        ladmin_itemfrob_c(bl, source_id, dest_id);
         bl = bl->next;
     }
 }

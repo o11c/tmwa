@@ -342,17 +342,17 @@ static uint8_t *clif_validate_chat(struct map_session_data *sd, int type,
 
 /// Subfunction that checks if the given target is included in the Whom
 // (only called for PCs in the area)
-static void clif_send_sub(struct block_list *bl, va_list ap)
+static void clif_send_sub(struct block_list *bl,
+                          uint8_t *buf,
+                          int len,
+                          struct block_list *src_bl,
+                          Whom type)
 {
     nullpo_retv(bl);
 
     struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(bl);
 
-    uint8_t *buf = va_arg(ap, uint8_t *);
-    int len = va_arg(ap, int);
-    struct block_list *src_bl;
-    nullpo_retv(src_bl = va_arg(ap, struct block_list *));
-    Whom type = static_cast<Whom>(va_arg(ap, int));
+    nullpo_retv(src_bl);
 
     switch (type)
     {
@@ -2545,13 +2545,9 @@ static void clif_getareachar_item(struct map_session_data *sd,
  *
  *------------------------------------------
  */
-static void clif_getareachar(struct block_list *bl, va_list ap)
+static void clif_getareachar(struct block_list *bl, struct map_session_data *sd)
 {
-    struct map_session_data *sd;
-
     nullpo_retv(bl);
-
-    sd = va_arg(ap, struct map_session_data *);
 
     switch (bl->type)
     {
@@ -2579,13 +2575,12 @@ static void clif_getareachar(struct block_list *bl, va_list ap)
  *
  *------------------------------------------
  */
-void clif_pcoutsight(struct block_list *bl, va_list ap)
+void clif_pcoutsight(struct block_list *bl, struct map_session_data *sd)
 {
-    struct map_session_data *sd, *dstsd;
+    struct map_session_data *dstsd;
 
     nullpo_retv(bl);
-    nullpo_retv(ap);
-    nullpo_retv(sd = va_arg(ap, struct map_session_data *));
+    nullpo_retv(sd);
 
     switch (bl->type)
     {
@@ -2614,13 +2609,12 @@ void clif_pcoutsight(struct block_list *bl, va_list ap)
  *
  *------------------------------------------
  */
-void clif_pcinsight(struct block_list *bl, va_list ap)
+void clif_pcinsight(struct block_list *bl, struct map_session_data *sd)
 {
-    struct map_session_data *sd, *dstsd;
+    struct map_session_data *dstsd;
 
     nullpo_retv(bl);
-    nullpo_retv(ap);
-    nullpo_retv(sd = va_arg(ap, struct map_session_data *));
+    nullpo_retv(sd);
 
     switch (bl->type)
     {
@@ -2648,17 +2642,14 @@ void clif_pcinsight(struct block_list *bl, va_list ap)
  *
  *------------------------------------------
  */
-void clif_moboutsight(struct block_list *bl, va_list ap)
+void clif_moboutsight(struct block_list *bl, struct mob_data *md)
 {
-    struct map_session_data *sd;
-    struct mob_data *md;
-
     nullpo_retv(bl);
-    nullpo_retv(ap);
-    nullpo_retv(md = va_arg(ap, struct mob_data *));
+    nullpo_retv(md);
 
-    if (bl->type == BL_PC && (sd = reinterpret_cast<struct map_session_data *>(bl)))
+    if (bl->type == BL_PC)
     {
+        struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(bl);
         clif_being_remove_id(md->bl.id, 0, sd->fd);
     }
 }
@@ -2667,17 +2658,13 @@ void clif_moboutsight(struct block_list *bl, va_list ap)
  *
  *------------------------------------------
  */
-void clif_mobinsight(struct block_list *bl, va_list ap)
+void clif_mobinsight(struct block_list *bl, struct mob_data *md)
 {
-    struct map_session_data *sd;
-    struct mob_data *md;
-
     nullpo_retv(bl);
-    nullpo_retv(ap);
 
-    md = va_arg(ap, struct mob_data *);
-    if (bl->type == BL_PC && (sd = reinterpret_cast<struct map_session_data *>(bl)))
+    if (bl->type == BL_PC)
     {
+        struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(bl);
         clif_getareachar_mob(sd, md);
     }
 }
@@ -3415,8 +3402,8 @@ static void clif_parse_LoadEndAck(int, struct map_session_data *sd)
 //        clif_changelook_accessories(sd, NULL);
 
     map_foreachinarea(clif_getareachar, sd->bl.m, sd->bl.x - AREA_SIZE,
-                       sd->bl.y - AREA_SIZE, sd->bl.x + AREA_SIZE,
-                       sd->bl.y + AREA_SIZE, BL_NUL, sd);
+                      sd->bl.y - AREA_SIZE, sd->bl.x + AREA_SIZE,
+                      sd->bl.y + AREA_SIZE, BL_NUL, sd);
 }
 
 /*==========================================

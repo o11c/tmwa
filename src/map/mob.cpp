@@ -618,8 +618,8 @@ static int mob_walk(struct mob_data *md, unsigned int tick, uint8_t data)
 
         md->state.state = MS_WALK;
         map_foreachinmovearea(clif_moboutsight, md->bl.m, x - AREA_SIZE,
-                               y - AREA_SIZE, x + AREA_SIZE, y + AREA_SIZE,
-                               dx, dy, BL_PC, md);
+                              y - AREA_SIZE, x + AREA_SIZE, y + AREA_SIZE,
+                              dx, dy, BL_PC, md);
 
         x += dx;
         y += dy;
@@ -634,8 +634,8 @@ static int mob_walk(struct mob_data *md, unsigned int tick, uint8_t data)
             map_addblock(&md->bl);
 
         map_foreachinmovearea(clif_mobinsight, md->bl.m, x - AREA_SIZE,
-                               y - AREA_SIZE, x + AREA_SIZE, y + AREA_SIZE,
-                               -dx, -dy, BL_PC, md);
+                              y - AREA_SIZE, x + AREA_SIZE, y + AREA_SIZE,
+                              -dx, -dy, BL_PC, md);
         md->state.state = MS_IDLE;
     }
     if ((i = calc_next_walk_step(md)) > 0)
@@ -1316,15 +1316,15 @@ int mob_target(struct mob_data *md, struct block_list *bl, int dist)
  * The ?? routine of an active monster
  *------------------------------------------
  */
-static void mob_ai_sub_hard_activesearch(struct block_list *bl, va_list ap)
+static void mob_ai_sub_hard_activesearch(struct block_list *bl, struct mob_data *smd, int *pcc)
 {
     struct map_session_data *tsd = NULL;
-    struct mob_data *smd, *tmd = NULL;
-    int mode, race, dist, *pcc;
+    struct mob_data *tmd = NULL;
+    int mode, race, dist;
 
     nullpo_retv(bl);
-    nullpo_retv(smd = va_arg(ap, struct mob_data *));
-    nullpo_retv(pcc = va_arg(ap, int *));
+    nullpo_retv(smd);
+    nullpo_retv(pcc);
 
     if (bl->type == BL_PC)
         tsd = reinterpret_cast<struct map_session_data *>(bl);
@@ -1389,14 +1389,15 @@ static void mob_ai_sub_hard_activesearch(struct block_list *bl, va_list ap)
  * loot monster item search
  *------------------------------------------
  */
-static void mob_ai_sub_hard_lootsearch(struct block_list *bl, va_list ap)
+static void mob_ai_sub_hard_lootsearch(struct block_list *bl,
+                                       struct mob_data *md,
+                                       int *itc)
 {
-    struct mob_data *md;
-    int mode, dist, *itc;
+    int mode, dist;
 
     nullpo_retv(bl);
-    nullpo_retv(md = va_arg(ap, struct mob_data *));
-    nullpo_retv(itc = va_arg(ap, int *));
+    nullpo_retv(md);
+    nullpo_retv(itc);
 
     if (!md->mode)
     {
@@ -1431,16 +1432,15 @@ static void mob_ai_sub_hard_lootsearch(struct block_list *bl, va_list ap)
  * The ?? routine of a link monster
  *------------------------------------------
  */
-static void mob_ai_sub_hard_linksearch(struct block_list *bl, va_list ap)
+static void mob_ai_sub_hard_linksearch(struct block_list *bl,
+                                       struct mob_data *md,
+                                       struct block_list *target)
 {
-    struct mob_data *tmd;
-    struct mob_data *md;
-    struct block_list *target;
 
     nullpo_retv(bl);
-    nullpo_retv(tmd = reinterpret_cast<struct mob_data *>(bl));
-    nullpo_retv(md = va_arg(ap, struct mob_data *));
-    nullpo_retv(target = va_arg(ap, struct block_list *));
+    struct mob_data *tmd = reinterpret_cast<struct mob_data *>(bl);
+    nullpo_retv(md);
+    nullpo_retv(target);
 
     // same family free in a range at a link monster -- it will be made to lock if MOB is
 /*      if ( (md->target_id > 0 && md->state.targettype == ATTACKABLE) && mob_db[md->mob_class].mode&0x08){
@@ -1683,21 +1683,18 @@ static int mob_randomwalk(struct mob_data *md, int tick)
  * AI of MOB whose is near a Player
  *------------------------------------------
  */
-static void mob_ai_sub_hard(struct block_list *bl, va_list ap)
+static void mob_ai_sub_hard(struct block_list *bl, tick_t tick)
 {
     struct mob_data *md, *tmd = NULL;
     struct map_session_data *tsd = NULL;
     struct block_list *tbl = NULL;
     struct flooritem_data *fitem;
-    unsigned int tick;
     int i, dx, dy, ret, dist;
     int attack_type = 0;
     int mode, race;
 
     nullpo_retv(bl);
     nullpo_retv(md = reinterpret_cast<struct mob_data *>(bl));
-
-    tick = va_arg(ap, unsigned int);
 
     if (DIFF_TICK(tick, md->last_thinktime) < MIN_MOBTHINKTIME)
         return;
@@ -1732,9 +1729,9 @@ static void mob_ai_sub_hard(struct block_list *bl, va_list ap)
             if (asd->invincible_timer == -1 && !pc_isinvisible(asd))
             {
                 map_foreachinarea(mob_ai_sub_hard_linksearch, md->bl.m,
-                                   md->bl.x - 13, md->bl.y - 13,
-                                   md->bl.x + 13, md->bl.y + 13,
-                                   BL_MOB, md, &asd->bl);
+                                  md->bl.x - 13, md->bl.y - 13,
+                                  md->bl.x + 13, md->bl.y + 13,
+                                  BL_MOB, md, &asd->bl);
             }
         }
     }
@@ -1783,18 +1780,18 @@ static void mob_ai_sub_hard(struct block_list *bl, va_list ap)
         if (md->state.special_mob_ai)
         {
             map_foreachinarea(mob_ai_sub_hard_activesearch, md->bl.m,
-                               md->bl.x - AREA_SIZE * 2,
-                               md->bl.y - AREA_SIZE * 2,
-                               md->bl.x + AREA_SIZE * 2,
-                               md->bl.y + AREA_SIZE * 2, BL_NUL, md, &i);
+                              md->bl.x - AREA_SIZE * 2,
+                              md->bl.y - AREA_SIZE * 2,
+                              md->bl.x + AREA_SIZE * 2,
+                              md->bl.y + AREA_SIZE * 2, BL_NUL, md, &i);
         }
         else
         {
             map_foreachinarea(mob_ai_sub_hard_activesearch, md->bl.m,
-                               md->bl.x - AREA_SIZE * 2,
-                               md->bl.y - AREA_SIZE * 2,
-                               md->bl.x + AREA_SIZE * 2,
-                               md->bl.y + AREA_SIZE * 2, BL_PC, md, &i);
+                              md->bl.x - AREA_SIZE * 2,
+                              md->bl.y - AREA_SIZE * 2,
+                              md->bl.x + AREA_SIZE * 2,
+                              md->bl.y + AREA_SIZE * 2, BL_PC, md, &i);
         }
     }
 
@@ -1803,9 +1800,9 @@ static void mob_ai_sub_hard(struct block_list *bl, va_list ap)
     {
         i = 0;
         map_foreachinarea(mob_ai_sub_hard_lootsearch, md->bl.m,
-                           md->bl.x - AREA_SIZE * 2, md->bl.y - AREA_SIZE * 2,
-                           md->bl.x + AREA_SIZE * 2, md->bl.y + AREA_SIZE * 2,
-                           BL_ITEM, md, &i);
+                          md->bl.x - AREA_SIZE * 2, md->bl.y - AREA_SIZE * 2,
+                          md->bl.x + AREA_SIZE * 2, md->bl.y + AREA_SIZE * 2,
+                          BL_ITEM, md, &i);
     }
 
     // It will attack, if the candidate for an attack is.
@@ -2027,9 +2024,9 @@ static void mob_ai_sub_foreachclient(struct map_session_data *sd, tick_t tick)
     nullpo_retv(sd);
 
     map_foreachinarea(mob_ai_sub_hard, sd->bl.m,
-                       sd->bl.x - AREA_SIZE * 2, sd->bl.y - AREA_SIZE * 2,
-                       sd->bl.x + AREA_SIZE * 2, sd->bl.y + AREA_SIZE * 2,
-                       BL_MOB, tick);
+                      sd->bl.x - AREA_SIZE * 2, sd->bl.y - AREA_SIZE * 2,
+                      sd->bl.x + AREA_SIZE * 2, sd->bl.y + AREA_SIZE * 2,
+                      BL_MOB, tick);
 }
 
 /*==========================================
@@ -2254,15 +2251,11 @@ void mob_timer_delete(timer_id, tick_t, int id)
  *
  *------------------------------------------
  */
-static void mob_deleteslave_sub(struct block_list *bl, va_list ap)
+static void mob_deleteslave_sub(struct block_list *bl, uint32_t id)
 {
-    struct mob_data *md;
-    int id;
-
     nullpo_retv(bl);
-    nullpo_retv(md = reinterpret_cast<struct mob_data *>(bl));
+    struct mob_data *md = reinterpret_cast<struct mob_data *>(bl);
 
-    id = va_arg(ap, int);
     if (md->master_id > 0 && md->master_id == id)
         mob_damage(NULL, md, md->hp, 1);
 }
@@ -2276,8 +2269,8 @@ int mob_deleteslave(struct mob_data *md)
     nullpo_ret(md);
 
     map_foreachinarea(mob_deleteslave_sub, md->bl.m,
-                       0, 0, maps[md->bl.m].xs, maps[md->bl.m].ys,
-                       BL_MOB, md->bl.id);
+                      0, 0, maps[md->bl.m].xs, maps[md->bl.m].ys,
+                      BL_MOB, md->bl.id);
     return 0;
 }
 
@@ -2690,13 +2683,9 @@ int mob_heal(struct mob_data *md, int heal)
  * Added by RoVeRT
  *------------------------------------------
  */
-static void mob_warpslave_sub(struct block_list *bl, va_list ap)
+static void mob_warpslave_sub(struct block_list *bl, uint32_t id, uint16_t x, uint16_t y)
 {
     struct mob_data *md = reinterpret_cast<struct mob_data *>(bl);
-    int id, x, y;
-    id = va_arg(ap, int);
-    x = va_arg(ap, int);
-    y = va_arg(ap, int);
     if (md->master_id == id)
     {
         mob_warp(md, -1, x, y, BeingRemoveType::QUIT);
@@ -2711,9 +2700,9 @@ static int mob_warpslave(struct mob_data *md, int x, int y)
 {
 //printf("warp slave\n");
     map_foreachinarea(mob_warpslave_sub, md->bl.m,
-                       x - AREA_SIZE, y - AREA_SIZE,
-                       x + AREA_SIZE, y + AREA_SIZE, BL_MOB,
-                       md->bl.id, md->bl.x, md->bl.y);
+                      x - AREA_SIZE, y - AREA_SIZE,
+                      x + AREA_SIZE, y + AREA_SIZE, BL_MOB,
+                      md->bl.id, md->bl.x, md->bl.y);
     return 0;
 }
 
@@ -2798,17 +2787,11 @@ int mob_warp(struct mob_data *md, int m, int x, int y, BeingRemoveType type)
  * 自分をロックしているPCの数を数える(foreachclient)
  *------------------------------------------
  */
-static void mob_counttargeted_sub(struct block_list *bl, va_list ap)
+static void mob_counttargeted_sub(struct block_list *bl, uint32_t id, int *c,
+                                  struct block_list *src, AttackResult target_lv)
 {
-    int id, *c;
-    struct block_list *src;
-
-    id = va_arg(ap, int);
     nullpo_retv(bl);
-    nullpo_retv(c = va_arg(ap, int *));
 
-    src = va_arg(ap, struct block_list *);
-    AttackResult target_lv = static_cast<AttackResult>(va_arg(ap, int));
     if (id == bl->id || (src && id == src->id))
         return;
     if (bl->type == BL_PC)
@@ -2839,9 +2822,9 @@ int mob_counttargeted(struct mob_data *md, struct block_list *src,
     nullpo_ret(md);
 
     map_foreachinarea(mob_counttargeted_sub, md->bl.m,
-                       md->bl.x - AREA_SIZE, md->bl.y - AREA_SIZE,
-                       md->bl.x + AREA_SIZE, md->bl.y + AREA_SIZE, BL_NUL,
-                       md->bl.id, &c, src, target_lv);
+                      md->bl.x - AREA_SIZE, md->bl.y - AREA_SIZE,
+                      md->bl.x + AREA_SIZE, md->bl.y + AREA_SIZE, BL_NUL,
+                      md->bl.id, &c, src, target_lv);
     return c;
 }
 

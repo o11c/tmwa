@@ -72,23 +72,6 @@ struct mmo_char_server
     uint32_t is_new;
 };
 
-/// Reason a login can fail
-// Note - packet 0x6a uses one less than this (no AUTH_OK)
-enum auth_failure
-{
-    AUTH_OK = 0,
-    AUTH_UNREGISTERED_ID = 1,
-    AUTH_INVALID_PASSWORD = 2,
-    AUTH_EXPIRED = 3,
-    AUTH_REJECTED_BY_SERVER = 4,
-    AUTH_BLOCKED_BY_GM = 5,
-    AUTH_CLIENT_TOO_OLD = 6,
-    AUTH_BANNED_TEMPORARILY = 7,
-    AUTH_SERVER_OVERPOPULATED = 8,
-    AUTH_ALREADY_EXISTS = 10,
-    AUTH_ID_ERASED = 100,
-};
-
 enum passwd_failure
 {
     PASSWD_NO_ACCOUNT = 0,

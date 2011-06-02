@@ -134,7 +134,10 @@ obj/webserver/main: obj/webserver/main.o \
 map.deps: src/map/magic-interpreter-parser.cpp src/map/magic-interpreter-lexer.cpp
 %.deps: src/%/
 	for F in `find $< -name '*.cpp' | sort`; do \
-	    ${CXX} -MM "$$F" -MT "$$(sed 's/src/obj/;s/\.cpp/.o/' <<< "$$F")"; \
+	    ${CXX} -MM "$$F" -MT "$$(sed 's/src/obj/;s/\.cpp/.o/' <<< "$$F")" \
+	        | sed 's/[^\]$$/& \\/;s/\([^:]\) \([^\]\)/\1 \\\n \2/g;s_/[a-z]\+/../_/_g' \
+	        | sort -u; \
+	    echo; \
 	done > $@
 
 include common.deps login.deps char.deps map.deps ladmin.deps

@@ -19,21 +19,21 @@ tags:
 	ctags -R src/
 
 # All this duplication is required because make handles pattern rules specially
-obj/char/%.o: src/char/%.cpp | obj/char/
+obj/char/%.o:           src/char/%.cpp          warnings        | obj/char/
 	$(COMPILE.cpp) -o $@ $<
-obj/common/%.o: src/common/%.cpp | obj/common/
+obj/common/%.o:         src/common/%.cpp        warnings        | obj/common/
 	$(COMPILE.cpp) -o $@ $<
-obj/ladmin/%.o: src/ladmin/%.cpp | obj/ladmin/
+obj/ladmin/%.o:         src/ladmin/%.cpp        warnings        | obj/ladmin/
 	$(COMPILE.cpp) -o $@ $<
-obj/login/%.o: src/login/%.cpp | obj/login/
+obj/login/%.o:          src/login/%.cpp         warnings        | obj/login/
 	$(COMPILE.cpp) -o $@ $<
-obj/map/%.o: src/map/%.cpp | obj/map/
+obj/map/%.o:            src/map/%.cpp           warnings        | obj/map/
 	$(COMPILE.cpp) -o $@ $<
-obj/tool/%.o: src/tool/%.cpp | obj/tool/
+obj/tool/%.o:           src/tool/%.cpp          warnings        | obj/tool/
 	$(COMPILE.cpp) -o $@ $<
-obj/webserver/%.o: src/webserver/%.cpp | obj/webserver/
+obj/webserver/%.o:      src/webserver/%.cpp     warnings        | obj/webserver/
 	$(COMPILE.cpp) -o $@ $<
-obj/webserver/pages/%.o: src/webserver/pages/%.cpp | obj/webserver/pages/
+obj/webserver/pages/%.o: src/webserver/pages/%.cpp warnings     | obj/webserver/pages/
 	$(COMPILE.cpp) -o $@ $<
 
 PROGS = login-server char-server map-server ladmin eathena-monitor webserver
@@ -152,3 +152,6 @@ obj/tool/eathena-monitor.o \
 obj/map/magic-interpreter-lexer.o \
 obj/map/magic-interpreter-parser.o \
 : override WARNINGS+=-Wno-error=old-style-cast
+
+warnings: warnings.commented
+	grep -v '^#' $< > $@

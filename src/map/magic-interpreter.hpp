@@ -72,7 +72,8 @@ typedef struct area
         struct
         {
             location_t loc;
-            int width, depth, dir;
+            int width, depth;
+            Direction dir;
         } a_bar;
         struct
         {

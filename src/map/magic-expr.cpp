@@ -1357,7 +1357,7 @@ static area_t *eval_area(env_t * env, e_area_t * expr)
 
             area->a.a_bar.width = width.v.v_int;
             area->a.a_bar.depth = depth.v.v_int;
-            area->a.a_bar.dir = dir.v.v_int;
+            area->a.a_bar.dir = static_cast<Direction>(dir.v.v_int);
 
             if (CHECK_TYPE(&width, TY_INT)
                 && CHECK_TYPE(&depth, TY_INT)

@@ -1,6 +1,16 @@
+# Because gcc's @argfile syntax doesn't allow comments directly
+# TODO remove cruft from before the C++ conversion
+# Also comment everything
+
+# Make all warnings into errors, by default
+# Some are explicitly -Werror=foo
 -Werror
+
+# Fix later
 -Wno-error=deprecated-declarations
+# Really annoying
 -Wno-error=missing-field-initializers
+# Unavoidable, but it's still nice to know
 -Wno-error=vla
 -Wno-error=stack-protector
 
@@ -48,3 +58,6 @@
 -Woverloaded-virtual
 -Wno-pmf-conversions
 -Wsign-promo
+
+# Bug in prerelease GCC 4.6.1 (shipped by debian) regarding scoped enum in switch
+-Wno-error=abi

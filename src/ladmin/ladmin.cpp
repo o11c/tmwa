@@ -2787,21 +2787,19 @@ static void parse_fromlogin(int fd)
             {
                 Iprintf("  Login-Server [%s:%d]\n", loginserverip,
                         loginserverport);
-                const Version *server_version = reinterpret_cast<const Version *>(RFIFOP(login_fd, 2));
-                if (!(server_version->what_server & ATHENA_SERVER_LOGIN))
+                const Version& server_version = *reinterpret_cast<const Version *>(RFIFOP(login_fd, 2));
+                if (!(server_version.what_server & ATHENA_SERVER_LOGIN))
                 {
                     ladmin_log("Not a login server!");
                     abort();
                 }
                 Iprintf("tmwAthena %d.%d.%d (%s build, flags: %d) mod %d\n",
-                         server_version->major, server_version->minor,
-                         server_version->rev,
-                         server_version->dev_flag ? "dev" : "stable",
-                         server_version->info_flags,
-                        server_version->mod_version);
-                if (server_version->major != tmwAthenaVersion.major
-                    || server_version->minor != tmwAthenaVersion.minor
-                   || server_version->rev != tmwAthenaVersion.rev)
+                        server_version.major, server_version.minor,
+                        server_version.rev,
+                        server_version.dev_flag ? "dev" : "stable",
+                        server_version.info_flags,
+                        server_version.mod_version);
+                if (server_version != tmwAthenaVersion)
                 {
                     ladmin_log("Version mismatch! trouble possible");
                 }

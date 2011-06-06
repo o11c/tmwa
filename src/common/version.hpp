@@ -23,6 +23,47 @@ struct Version
     /// Custom modification count. 0 for all official tmwA releases.
     // OTOH, this is the only number changed for eA releases
     uint16_t mod_version;
+
+    bool operator == (const Version& rhs) const
+    {
+        return major == rhs.major && minor == rhs.minor && rev == rhs.rev;
+    }
+    bool operator != (const Version& rhs) const
+    {
+        return major != rhs.major || minor != rhs.minor || rev != rhs.rev;
+    }
+    bool operator < (const Version& rhs) const
+    {
+       if (major < rhs.major) return true;
+       if (major > rhs.major) return false;
+       if (minor < rhs.minor) return true;
+       if (minor > rhs.minor) return false;
+       return rev < rhs.rev;
+    }
+    bool operator <= (const Version& rhs) const
+    {
+       if (major < rhs.major) return true;
+       if (major > rhs.major) return false;
+       if (minor < rhs.minor) return true;
+       if (minor > rhs.minor) return false;
+       return rev <= rhs.rev;
+    }
+    bool operator > (const Version& rhs) const
+    {
+       if (major > rhs.major) return true;
+       if (major < rhs.major) return false;
+       if (minor > rhs.minor) return true;
+       if (minor < rhs.minor) return false;
+       return rev > rhs.rev;
+    }
+    bool operator >= (const Version& rhs) const
+    {
+       if (major > rhs.major) return true;
+       if (major < rhs.major) return false;
+       if (minor > rhs.minor) return true;
+       if (minor < rhs.minor) return false;
+       return rev >= rhs.rev;
+    }
 };
 
 const Version tmwAthenaVersion =

@@ -1071,20 +1071,18 @@ static void chrif_parse(int fd)
             if (RFIFOREST(fd) < 10)
                 return;
         {
-            const Version *server_version = reinterpret_cast<const Version *>(RFIFOP(fd, 2));
-            if (!(server_version->what_server & ATHENA_SERVER_CHAR))
+            const Version& server_version = *reinterpret_cast<const Version *>(RFIFOP(fd, 2));
+            if (!(server_version.what_server & ATHENA_SERVER_CHAR))
             {
                 map_log("Not a char server!");
                 abort();
             }
-            if (!(server_version->what_server & ATHENA_SERVER_INTER))
+            if (!(server_version.what_server & ATHENA_SERVER_INTER))
             {
                 map_log("Not an inter server!");
                 abort();
             }
-            if (server_version->major != tmwAthenaVersion.major
-                || server_version->minor != tmwAthenaVersion.minor
-                || server_version->rev != tmwAthenaVersion.rev)
+            if (server_version != tmwAthenaVersion)
             {
                 map_log("Version mismatch!");
                 abort();

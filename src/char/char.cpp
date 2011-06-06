@@ -1514,15 +1514,13 @@ static void parse_tologin(int fd)
             if (RFIFOREST(fd) < 10)
                 return;
         {
-            const Version *server_version = reinterpret_cast<const Version *>(RFIFOP(login_fd, 2));
-            if (!(server_version->what_server & ATHENA_SERVER_LOGIN))
+            const Version& server_version = *reinterpret_cast<const Version *>(RFIFOP(login_fd, 2));
+            if (!(server_version.what_server & ATHENA_SERVER_LOGIN))
             {
                 char_log("Not a login server!");
                 abort();
             }
-            if (server_version->major != tmwAthenaVersion.major
-                || server_version->minor != tmwAthenaVersion.minor
-                || server_version->rev != tmwAthenaVersion.rev)
+            if (server_version != tmwAthenaVersion)
             {
                 char_log("Version mismatch!");
                 abort();

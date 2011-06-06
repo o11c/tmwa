@@ -61,3 +61,7 @@
 
 # Bug in prerelease GCC 4.6.1 (shipped by debian) regarding scoped enum in switch
 -Wno-error=abi
+# Because I *really* don't want to initialize all members in the constructor's list
+# But the other warnings are actually useful
+-Wno-error=effc++
+

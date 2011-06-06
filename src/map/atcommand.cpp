@@ -35,7 +35,7 @@
 
 #define STATE_BLIND 0x10
 
-#define ATCOMMAND_FUNC(x) static int atcommand_##x(int fd, struct map_session_data* sd, const char* command, const char* message)
+#define ATCOMMAND_FUNC(x) static int atcommand_##x(int fd, MapSessionData* sd, const char* command, const char* message)
 ATCOMMAND_FUNC(setup);
 ATCOMMAND_FUNC(broadcast);
 ATCOMMAND_FUNC(localbroadcast);
@@ -430,7 +430,7 @@ static AtCommandInfo atcommand_info[] = {
 };
 
 /// Log an atcommand
-static void log_atcommand(struct map_session_data *sd, const char *cmd, const char *arg)
+static void log_atcommand(MapSessionData *sd, const char *cmd, const char *arg)
 {
     gm_log("%s(%d,%d) %s(%d) : %s %s", maps[sd->bl.m].name, sd->bl.x,
                 sd->bl.y, sd->status.name, sd->status.account_id, cmd, arg);
@@ -489,7 +489,7 @@ void gm_log(const char *fmt, ...)
 static void atcommand_help_long(int fd, const AtCommandInfo& info);
 static AtCommandInfo *atcommand(gm_level_t level, const char *message);
 
-bool is_atcommand(int fd, struct map_session_data *sd, const char *message,
+bool is_atcommand(int fd, MapSessionData *sd, const char *message,
                    gm_level_t gmlvl)
 {
     nullpo_ret(sd);
@@ -611,7 +611,7 @@ void atcommand_config_read(const char *cfgName)
 
 /// @setup - Safely set a chars levels and warp them to a special place
 // from TAW, unused by TMW
-int atcommand_setup(int fd, struct map_session_data *sd,
+int atcommand_setup(int fd, MapSessionData *sd,
                      const char *, const char *message)
 {
     char character[100];
@@ -649,7 +649,7 @@ int atcommand_setup(int fd, struct map_session_data *sd,
 }
 
 /// Warp player to another map
-int atcommand_charwarp(int fd, struct map_session_data *sd,
+int atcommand_charwarp(int fd, MapSessionData *sd,
                         const char *, const char *message)
 {
     char map_name[100];
@@ -664,7 +664,7 @@ int atcommand_charwarp(int fd, struct map_session_data *sd,
     if (strstr(map_name, ".gat") == NULL && strlen(map_name) < 13)   // 16 - 4 (.gat)
         strcat(map_name, ".gat");
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -710,7 +710,7 @@ int atcommand_charwarp(int fd, struct map_session_data *sd,
 }
 
 /// Warp yourself to another map
-int atcommand_warp(int fd, struct map_session_data *sd,
+int atcommand_warp(int fd, MapSessionData *sd,
                     const char *, const char *message)
 {
     char map_name[100];
@@ -754,7 +754,7 @@ int atcommand_warp(int fd, struct map_session_data *sd,
 }
 
 /// Find location of a character (or yourself)
-int atcommand_where(int fd, struct map_session_data *sd,
+int atcommand_where(int fd, MapSessionData *sd,
                      const char *, const char *message)
 {
     char character[100];
@@ -763,7 +763,7 @@ int atcommand_where(int fd, struct map_session_data *sd,
     if (sscanf(message, "%99[^\n]", character) < 1)
         strcpy(character, sd->status.name);
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd || (
             (battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE))
             && pc_isGM(pl_sd) > pc_isGM(sd) ) )
@@ -779,7 +779,7 @@ int atcommand_where(int fd, struct map_session_data *sd,
 }
 
 /// warp to a player
-int atcommand_goto(int fd, struct map_session_data *sd,
+int atcommand_goto(int fd, MapSessionData *sd,
                     const char *, const char *message)
 {
     char character[100];
@@ -787,7 +787,7 @@ int atcommand_goto(int fd, struct map_session_data *sd,
     if (!message || !*message || sscanf(message, "%99[^\n]", character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -815,7 +815,7 @@ int atcommand_goto(int fd, struct map_session_data *sd,
 }
 
 /// warp, but within a map
-int atcommand_jump(int fd, struct map_session_data *sd,
+int atcommand_jump(int fd, MapSessionData *sd,
                     const char *, const char *message)
 {
     int x = 0, y = 0;
@@ -845,7 +845,7 @@ int atcommand_jump(int fd, struct map_session_data *sd,
 }
 
 /// List online players with location
-int atcommand_who(int fd, struct map_session_data *sd,
+int atcommand_who(int fd, MapSessionData *sd,
                    const char *, const char *message)
 {
     char match_text[100];
@@ -855,7 +855,7 @@ int atcommand_who(int fd, struct map_session_data *sd,
 
     int count = 0;
     gm_level_t gm_level = pc_isGM(sd);
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         gm_level_t pl_gm_level = pc_isGM(pl_sd);
         if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE))
@@ -892,7 +892,7 @@ int atcommand_who(int fd, struct map_session_data *sd,
 }
 
 /// List online players with party name
-int atcommand_whogroup(int fd, struct map_session_data *sd,
+int atcommand_whogroup(int fd, MapSessionData *sd,
                         const char *, const char *message)
 {
     char match_text[100];
@@ -901,7 +901,7 @@ int atcommand_whogroup(int fd, struct map_session_data *sd,
 
     int count = 0;
     gm_level_t gm_level = pc_isGM(sd);
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         gm_level_t pl_gm_level = pc_isGM(pl_sd);
         if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE))
@@ -942,7 +942,7 @@ int atcommand_whogroup(int fd, struct map_session_data *sd,
 }
 
 /// List online players on map, with location
-int atcommand_whomap(int fd, struct map_session_data *sd,
+int atcommand_whomap(int fd, MapSessionData *sd,
                       const char *, const char *message)
 {
     int map_id = sd->bl.m;
@@ -959,7 +959,7 @@ int atcommand_whomap(int fd, struct map_session_data *sd,
 
     int count = 0;
     gm_level_t gm_level = pc_isGM(sd);
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         if (pl_sd->bl.m != map_id)
             continue;
@@ -997,7 +997,7 @@ int atcommand_whomap(int fd, struct map_session_data *sd,
 }
 
 /// List online players on map, with party
-int atcommand_whomapgroup(int fd, struct map_session_data *sd,
+int atcommand_whomapgroup(int fd, MapSessionData *sd,
                            const char *, const char *message)
 {
     int map_id = sd->bl.m;
@@ -1014,7 +1014,7 @@ int atcommand_whomapgroup(int fd, struct map_session_data *sd,
 
     int count = 0;
     gm_level_t gm_level = pc_isGM(sd);
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         gm_level_t pl_gm_level = pc_isGM(pl_sd);
         if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE))
@@ -1053,7 +1053,7 @@ int atcommand_whomapgroup(int fd, struct map_session_data *sd,
 }
 
 /// List online GMs, with various info
-int atcommand_whogm(int fd, struct map_session_data *sd,
+int atcommand_whogm(int fd, MapSessionData *sd,
                      const char *, const char *message)
 {
     char match_text[100];
@@ -1063,7 +1063,7 @@ int atcommand_whogm(int fd, struct map_session_data *sd,
 
     int count = 0;
     gm_level_t gm_level = pc_isGM(sd);
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         gm_level_t pl_gm_level = pc_isGM(pl_sd);
         if (!pl_gm_level)
@@ -1106,7 +1106,7 @@ int atcommand_whogm(int fd, struct map_session_data *sd,
 }
 
 /// Set savepoint at your current location
-int atcommand_save(int fd, struct map_session_data *sd,
+int atcommand_save(int fd, MapSessionData *sd,
                     const char *, const char *)
 {
     nullpo_retr(-1, sd);
@@ -1120,7 +1120,7 @@ int atcommand_save(int fd, struct map_session_data *sd,
 }
 
 /// Warp to your savepoint
-int atcommand_load(int fd, struct map_session_data *sd,
+int atcommand_load(int fd, MapSessionData *sd,
                     const char *, const char *)
 {
     int m = map_mapname2mapid(sd->status.save_point.map);
@@ -1145,7 +1145,7 @@ int atcommand_load(int fd, struct map_session_data *sd,
 }
 
 /// Set your walk delay
-int atcommand_speed(int fd, struct map_session_data *sd,
+int atcommand_speed(int fd, MapSessionData *sd,
                      const char *, const char *message)
 {
     if (!message || !*message)
@@ -1163,7 +1163,7 @@ int atcommand_speed(int fd, struct map_session_data *sd,
 }
 
 /// Open your storage from anywhere
-int atcommand_storage(int fd, struct map_session_data *sd,
+int atcommand_storage(int fd, MapSessionData *sd,
                        const char *, const char *)
 {
     nullpo_retr(-1, sd);
@@ -1187,7 +1187,7 @@ int atcommand_storage(int fd, struct map_session_data *sd,
 }
 
 /// Set display options (mostly unused)
-int atcommand_option(int fd, struct map_session_data *sd,
+int atcommand_option(int fd, MapSessionData *sd,
                       const char *, const char *message)
 {
     int param1 = 0, param2 = 0, param3 = 0;
@@ -1212,7 +1212,7 @@ int atcommand_option(int fd, struct map_session_data *sd,
 }
 
 /// Hide from monsters and scripts
-int atcommand_hide(int fd, struct map_session_data *sd,
+int atcommand_hide(int fd, MapSessionData *sd,
                     const char *, const char *)
 {
     if (sd->status.option & OPTION_HIDE)
@@ -1231,7 +1231,7 @@ int atcommand_hide(int fd, struct map_session_data *sd,
 }
 
 /// Suicide so you can respawn
-int atcommand_die(int fd, struct map_session_data *sd,
+int atcommand_die(int fd, MapSessionData *sd,
                    const char *, const char *)
 {
     pc_damage(NULL, sd, sd->status.hp);
@@ -1241,7 +1241,7 @@ int atcommand_die(int fd, struct map_session_data *sd,
 }
 
 /// Kill another player
-int atcommand_kill(int fd, struct map_session_data *sd,
+int atcommand_kill(int fd, MapSessionData *sd,
                     const char *, const char *message)
 {
     char character[100];
@@ -1251,7 +1251,7 @@ int atcommand_kill(int fd, struct map_session_data *sd,
     if (sscanf(message, "%99[^\n]", character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd  = map_nick2sd(character);
+    MapSessionData *pl_sd  = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -1269,7 +1269,7 @@ int atcommand_kill(int fd, struct map_session_data *sd,
 }
 
 /// revive yourself from being dead
-int atcommand_alive(int fd, struct map_session_data *sd,
+int atcommand_alive(int fd, MapSessionData *sd,
                      const char *, const char *)
 {
     sd->status.hp = sd->status.max_hp;
@@ -1286,7 +1286,7 @@ int atcommand_alive(int fd, struct map_session_data *sd,
 }
 
 /// Do a global announcement
-int atcommand_kami(int, struct map_session_data *,
+int atcommand_kami(int, MapSessionData *,
                     const char *, const char *message)
 {
     if (!message || !*message)
@@ -1300,7 +1300,7 @@ int atcommand_kami(int, struct map_session_data *,
 }
 
 /// Recover HP and SP
-int atcommand_heal(int fd, struct map_session_data *sd,
+int atcommand_heal(int fd, MapSessionData *sd,
                     const char *, const char *message)
 {
     int hp = 0, sp = 0;
@@ -1347,7 +1347,7 @@ int atcommand_heal(int fd, struct map_session_data *sd,
 }
 
 /// Spawn items in your inventory
-int atcommand_item(int fd, struct map_session_data *sd,
+int atcommand_item(int fd, MapSessionData *sd,
                     const char *, const char *message)
 {
     char item_name[100];
@@ -1394,7 +1394,7 @@ int atcommand_item(int fd, struct map_session_data *sd,
 }
 
 /// Remove all of your items
-int atcommand_itemreset(int fd, struct map_session_data *sd,
+int atcommand_itemreset(int fd, MapSessionData *sd,
                          const char *, const char *)
 {
 
@@ -1409,7 +1409,7 @@ int atcommand_itemreset(int fd, struct map_session_data *sd,
 }
 
 /// Check whether your items are valid
-int atcommand_itemcheck(int, struct map_session_data *sd,
+int atcommand_itemcheck(int, MapSessionData *sd,
                          const char *, const char *)
 {
     pc_checkitem(sd);
@@ -1418,7 +1418,7 @@ int atcommand_itemcheck(int, struct map_session_data *sd,
 }
 
 /// Gain levels
-int atcommand_baselevelup(int fd, struct map_session_data *sd,
+int atcommand_baselevelup(int fd, MapSessionData *sd,
                            const char *, const char *message)
 {
     if (!message || !*message)
@@ -1478,7 +1478,7 @@ int atcommand_baselevelup(int fd, struct map_session_data *sd,
 }
 
 /// Increase job level
-int atcommand_joblevelup(int fd, struct map_session_data *sd,
+int atcommand_joblevelup(int fd, MapSessionData *sd,
                           const char *, const char *message)
 {
     if (!message || !*message)
@@ -1606,7 +1606,7 @@ static void atcommand_help_cat(int fd, gm_level_t gm_level, AtCommandCategory ca
 }
 
 /// Show help for a command or a category
-int atcommand_help(int fd, struct map_session_data *sd,
+int atcommand_help(int fd, MapSessionData *sd,
                     const char *, const char *message)
 {
     gm_level_t gm_level = pc_isGM(sd);
@@ -1698,7 +1698,7 @@ int atcommand_help(int fd, struct map_session_data *sd,
 }
 
 /// Become a GM (not usable by GMs), level controlled by level_new_gm in login_athena.conf
-int atcommand_gm(int fd, struct map_session_data *sd,
+int atcommand_gm(int fd, MapSessionData *sd,
                   const char *, const char *message)
 {
     char password[100];
@@ -1720,7 +1720,7 @@ int atcommand_gm(int fd, struct map_session_data *sd,
 }
 
 /// disable PvP on the current map
-int atcommand_pvpoff(int fd, struct map_session_data *sd,
+int atcommand_pvpoff(int fd, MapSessionData *sd,
                       const char *, const char *)
 {
     if (battle_config.pk_mode)
@@ -1735,7 +1735,7 @@ int atcommand_pvpoff(int fd, struct map_session_data *sd,
         return -1;
     }
     maps[sd->bl.m].flag.pvp = 0;
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         if (sd->bl.m != pl_sd->bl.m)
             continue;
@@ -1750,7 +1750,7 @@ int atcommand_pvpoff(int fd, struct map_session_data *sd,
 }
 
 /// Enable PvP on the current map
-int atcommand_pvpon(int fd, struct map_session_data *sd,
+int atcommand_pvpon(int fd, MapSessionData *sd,
                      const char *, const char *)
 {
     if (battle_config.pk_mode)
@@ -1770,7 +1770,7 @@ int atcommand_pvpon(int fd, struct map_session_data *sd,
         return -1;
     }
     maps[sd->bl.m].flag.pvp = 1;
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         if (sd->bl.m != pl_sd->bl.m || pl_sd->pvp_timer == -1)
             continue;
@@ -1785,7 +1785,7 @@ int atcommand_pvpon(int fd, struct map_session_data *sd,
 }
 
 /// Change your appearance (hairstyle, hair color, clothes color (unused))
-int atcommand_model(int fd, struct map_session_data *sd,
+int atcommand_model(int fd, MapSessionData *sd,
                      const char *, const char *message)
 {
     if (!message || !*message)
@@ -1807,7 +1807,7 @@ int atcommand_model(int fd, struct map_session_data *sd,
 }
 
 /// Change hair style
-int atcommand_hair_style(int fd, struct map_session_data *sd,
+int atcommand_hair_style(int fd, MapSessionData *sd,
                           const char *, const char *message)
 {
     if (!message || !*message)
@@ -1829,7 +1829,7 @@ int atcommand_hair_style(int fd, struct map_session_data *sd,
 
 
 /// Change hair color
-int atcommand_hair_color(int fd, struct map_session_data *sd,
+int atcommand_hair_color(int fd, MapSessionData *sd,
                           const char *, const char *message)
 {
     if (!message || !*message)
@@ -1851,7 +1851,7 @@ int atcommand_hair_color(int fd, struct map_session_data *sd,
 }
 
 /// Create monsters
-int atcommand_spawn(int fd, struct map_session_data *sd,
+int atcommand_spawn(int fd, MapSessionData *sd,
                      const char *command, const char *message)
 {
     if (!message || !*message)
@@ -1925,7 +1925,7 @@ int atcommand_spawn(int fd, struct map_session_data *sd,
 }
 
 /// Kill a monster, optionally dropping loot
-static void atcommand_killmonster_sub(int fd, struct map_session_data *sd,
+static void atcommand_killmonster_sub(int fd, MapSessionData *sd,
                                        const char *message, bool drop)
 {
     int map_id = sd->bl.m;
@@ -1947,7 +1947,7 @@ static void atcommand_killmonster_sub(int fd, struct map_session_data *sd,
 }
 
 /// Kill monsters, with loot
-int atcommand_killmonster(int fd, struct map_session_data *sd,
+int atcommand_killmonster(int fd, MapSessionData *sd,
                            const char *, const char *message)
 {
     atcommand_killmonster_sub(fd, sd, message, 1);
@@ -1960,13 +1960,13 @@ static void atlist_nearby_sub(struct block_list *bl, int fd)
     nullpo_retv(bl);
 
     char buf[32];
-    sprintf(buf, " - \"%s\"", reinterpret_cast<struct map_session_data *>(bl)->status.name);
+    sprintf(buf, " - \"%s\"", reinterpret_cast<MapSessionData *>(bl)->status.name);
 
     clif_displaymessage(fd, buf);
 }
 
 /// Print all nearby players
-int atcommand_list_nearby(int fd, struct map_session_data *sd,
+int atcommand_list_nearby(int fd, MapSessionData *sd,
                            const char *, const char *)
 {
     clif_displaymessage(fd, "Nearby players:");
@@ -1976,7 +1976,7 @@ int atcommand_list_nearby(int fd, struct map_session_data *sd,
 }
 
 /// Kill monsters, without loot
-int atcommand_killmonster2(int fd, struct map_session_data *sd,
+int atcommand_killmonster2(int fd, MapSessionData *sd,
                             const char *, const char *message)
 {
     atcommand_killmonster_sub(fd, sd, message, 0);
@@ -1984,7 +1984,7 @@ int atcommand_killmonster2(int fd, struct map_session_data *sd,
 }
 
 /// Display memo points
-static void atcommand_memo_sub(struct map_session_data *sd)
+static void atcommand_memo_sub(MapSessionData *sd)
 {
     clif_displaymessage(sd->fd, "Your actual memo positions are:");
     for (int i = 0; i <= 2; i++)
@@ -2001,7 +2001,7 @@ static void atcommand_memo_sub(struct map_session_data *sd)
 }
 
 /// Set a memo point
-int atcommand_memo(int fd, struct map_session_data *sd,
+int atcommand_memo(int fd, MapSessionData *sd,
                     const char *, const char *message)
 {
     int position;
@@ -2039,7 +2039,7 @@ int atcommand_memo(int fd, struct map_session_data *sd,
 }
 
 /// print the collision of the map around you
-int atcommand_gat(int fd, struct map_session_data *sd,
+int atcommand_gat(int fd, MapSessionData *sd,
                    const char *, const char *)
 {
     char output[200];
@@ -2063,7 +2063,7 @@ int atcommand_gat(int fd, struct map_session_data *sd,
 }
 
 /// modify number of status points
-int atcommand_statuspoint(int fd, struct map_session_data *sd,
+int atcommand_statuspoint(int fd, MapSessionData *sd,
                            const char *, const char *message)
 {
     if (!message || !*message)
@@ -2094,7 +2094,7 @@ int atcommand_statuspoint(int fd, struct map_session_data *sd,
 }
 
 /// Modify number of skill points
-int atcommand_skillpoint(int fd, struct map_session_data *sd,
+int atcommand_skillpoint(int fd, MapSessionData *sd,
                           const char *, const char *message)
 {
     if (!message || !*message)
@@ -2125,7 +2125,7 @@ int atcommand_skillpoint(int fd, struct map_session_data *sd,
 }
 
 /// Change your amount of gold
-int atcommand_zeny(int fd, struct map_session_data *sd,
+int atcommand_zeny(int fd, MapSessionData *sd,
                     const char *, const char *message)
 {
     if (!message || !*message)
@@ -2156,7 +2156,7 @@ int atcommand_zeny(int fd, struct map_session_data *sd,
 }
 
 /// Set a stat (str, agi, vit ...)
-int atcommand_param(int fd, struct map_session_data *sd,
+int atcommand_param(int fd, MapSessionData *sd,
                      const char *command, const char *message)
 {
     if (!message || !*message)
@@ -2202,7 +2202,7 @@ int atcommand_param(int fd, struct map_session_data *sd,
 }
 
 /// Add points to *all* status
-int atcommand_all_stats(int fd, struct map_session_data *sd,
+int atcommand_all_stats(int fd, MapSessionData *sd,
                          const char *, const char *message)
 {
     short *status[] =
@@ -2251,7 +2251,7 @@ int atcommand_all_stats(int fd, struct map_session_data *sd,
 }
 
 /// Summon a player to you
-int atcommand_recall(int fd, struct map_session_data *sd,
+int atcommand_recall(int fd, MapSessionData *sd,
                       const char *, const char *message)
 {
     if (!message || !*message)
@@ -2260,7 +2260,7 @@ int atcommand_recall(int fd, struct map_session_data *sd,
     if (sscanf(message, "%99[^\n]", character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
 
     if (!pl_sd)
     {
@@ -2291,7 +2291,7 @@ int atcommand_recall(int fd, struct map_session_data *sd,
 }
 
 /// Resurrect someone else
-int atcommand_revive(int fd, struct map_session_data *sd,
+int atcommand_revive(int fd, MapSessionData *sd,
                       const char *, const char *message)
 {
     if (!message || !*message)
@@ -2300,7 +2300,7 @@ int atcommand_revive(int fd, struct map_session_data *sd,
     if (sscanf(message, "%99[^\n]", character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -2319,7 +2319,7 @@ int atcommand_revive(int fd, struct map_session_data *sd,
 }
 
 /// Show stats of another character
-int atcommand_character_stats(int fd, struct map_session_data *,
+int atcommand_character_stats(int fd, MapSessionData *,
                                const char *, const char *message)
 {
     if (!message || !*message)
@@ -2328,7 +2328,7 @@ int atcommand_character_stats(int fd, struct map_session_data *,
     if (sscanf(message, "%99[^\n]", character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -2368,11 +2368,11 @@ int atcommand_character_stats(int fd, struct map_session_data *,
 }
 
 /// All stats of characters
-int atcommand_character_stats_all(int fd, struct map_session_data *,
+int atcommand_character_stats_all(int fd, MapSessionData *,
                                    const char *, const char *)
 {
     int count = 0;
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         char gmlevel[1024] = "";
         if (pc_isGM(pl_sd))
@@ -2415,7 +2415,7 @@ int atcommand_character_stats_all(int fd, struct map_session_data *,
 }
 
 /// Change display options of a character
-int atcommand_character_option(int fd, struct map_session_data *sd,
+int atcommand_character_option(int fd, MapSessionData *sd,
                                 const char *, const char *message)
 {
     if (!message || !*message)
@@ -2426,7 +2426,7 @@ int atcommand_character_option(int fd, struct map_session_data *sd,
             || opt1 < 0 || opt2 < 0 || opt3 < 0)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
 
     if (!pl_sd)
     {
@@ -2449,7 +2449,7 @@ int atcommand_character_option(int fd, struct map_session_data *sd,
 }
 
 /// Toggle a character's sex
-int atcommand_char_change_sex(int fd, struct map_session_data *sd,
+int atcommand_char_change_sex(int fd, MapSessionData *sd,
                                const char *, const char *message)
 {
     if (!message || !*message)
@@ -2474,7 +2474,7 @@ int atcommand_char_change_sex(int fd, struct map_session_data *sd,
 }
 
 /// Block the account a character indefinitely
-int atcommand_char_block(int fd, struct map_session_data *sd,
+int atcommand_char_block(int fd, MapSessionData *sd,
                           const char *, const char *message)
 {
     if (!message || !*message)
@@ -2512,7 +2512,7 @@ int atcommand_char_block(int fd, struct map_session_data *sd,
  * <example> @ban +1m-2mn1s-6y test_player
  *           this example adds 1 month and 1 second, and substracts 2 minutes and 6 years at the same time.
  */
-int atcommand_char_ban(int fd, struct map_session_data *sd,
+int atcommand_char_ban(int fd, MapSessionData *sd,
                         const char *, const char *message)
 {
     if (!message || !*message)
@@ -2591,7 +2591,7 @@ int atcommand_char_ban(int fd, struct map_session_data *sd,
 }
 
 /// Remove an indefinite block
-int atcommand_char_unblock(int fd, struct map_session_data *sd,
+int atcommand_char_unblock(int fd, MapSessionData *sd,
                             const char *, const char *message)
 {
     if (!message || !*message)
@@ -2616,7 +2616,7 @@ int atcommand_char_unblock(int fd, struct map_session_data *sd,
 }
 
 /// Remove a temporary ban
-int atcommand_char_unban(int fd, struct map_session_data *sd,
+int atcommand_char_unban(int fd, MapSessionData *sd,
                           const char *, const char *message)
 {
     if (!message || !*message)
@@ -2641,7 +2641,7 @@ int atcommand_char_unban(int fd, struct map_session_data *sd,
 }
 
 /// Set save point for a character
-int atcommand_character_save(int fd, struct map_session_data *sd,
+int atcommand_character_save(int fd, MapSessionData *sd,
                               const char *, const char *message)
 {
     if (!message || !*message)
@@ -2656,7 +2656,7 @@ int atcommand_character_save(int fd, struct map_session_data *sd,
     if (strstr(map_name, ".gat") == NULL && strlen(map_name) < 13)   // 16 - 4 (.gat)
         strcat(map_name, ".gat");
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
 
     if (!pl_sd)
     {
@@ -2686,10 +2686,10 @@ int atcommand_character_save(int fd, struct map_session_data *sd,
 }
 
 /// Kill everybody
-int atcommand_doom(int fd, struct map_session_data *sd,
+int atcommand_doom(int fd, MapSessionData *sd,
                     const char *, const char *)
 {
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         if (sd == pl_sd)
             continue;
@@ -2705,10 +2705,10 @@ int atcommand_doom(int fd, struct map_session_data *sd,
 }
 
 /// Kill everybody on the current map
-int atcommand_doommap(int fd, struct map_session_data *sd,
+int atcommand_doommap(int fd, MapSessionData *sd,
                        const char *, const char *)
 {
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         if (sd == pl_sd)
             continue;
@@ -2725,7 +2725,7 @@ int atcommand_doommap(int fd, struct map_session_data *sd,
 }
 
 /// Resurrect a character
-static void atcommand_raise_sub(struct map_session_data *sd)
+static void atcommand_raise_sub(MapSessionData *sd)
 {
     if (sd && sd->state.auth && pc_isdead(sd))
     {
@@ -2740,10 +2740,10 @@ static void atcommand_raise_sub(struct map_session_data *sd)
 }
 
 /// Resurrect all characters
-int atcommand_raise(int fd, struct map_session_data *,
+int atcommand_raise(int fd, MapSessionData *,
                      const char *, const char *)
 {
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         atcommand_raise_sub(pl_sd);
     }
@@ -2753,10 +2753,10 @@ int atcommand_raise(int fd, struct map_session_data *,
 }
 
 /// Raise all characters on a map
-int atcommand_raisemap(int fd, struct map_session_data *sd,
+int atcommand_raisemap(int fd, MapSessionData *sd,
                         const char *, const char *)
 {
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         if (sd->bl.m != pl_sd->bl.m)
             continue;
@@ -2768,7 +2768,7 @@ int atcommand_raisemap(int fd, struct map_session_data *sd,
 }
 
 /// Give a character levels
-int atcommand_character_baselevel(int fd, struct map_session_data *sd,
+int atcommand_character_baselevel(int fd, MapSessionData *sd,
                                    const char *, const char *message)
 {
     if (!message || !*message)
@@ -2778,7 +2778,7 @@ int atcommand_character_baselevel(int fd, struct map_session_data *sd,
     if (sscanf(message, "%d %99[^\n]", &level, character) < 2 || level == 0)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -2833,7 +2833,7 @@ int atcommand_character_baselevel(int fd, struct map_session_data *sd,
 }
 
 /// Raise a character's job level
-int atcommand_character_joblevel(int fd, struct map_session_data *sd,
+int atcommand_character_joblevel(int fd, MapSessionData *sd,
                                   const char *, const char *message)
 {
     if (!message || !*message)
@@ -2843,7 +2843,7 @@ int atcommand_character_joblevel(int fd, struct map_session_data *sd,
     if (sscanf(message, "%d %99[^\n]", &level, character) < 2 || level == 0)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -2890,7 +2890,7 @@ int atcommand_character_joblevel(int fd, struct map_session_data *sd,
 }
 
 /// Disconnect a player
-int atcommand_kick(int fd, struct map_session_data *sd,
+int atcommand_kick(int fd, MapSessionData *sd,
                     const char *, const char *message)
 {
     if (!message || !*message)
@@ -2899,7 +2899,7 @@ int atcommand_kick(int fd, struct map_session_data *sd,
     if (sscanf(message, "%99[^\n]", character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -2916,10 +2916,10 @@ int atcommand_kick(int fd, struct map_session_data *sd,
 }
 
 /// Disconnect all players
-int atcommand_kickall(int fd, struct map_session_data *sd,
+int atcommand_kickall(int fd, MapSessionData *sd,
                        const char *, const char *)
 {
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         if (sd == pl_sd)
             continue;
@@ -2934,7 +2934,7 @@ int atcommand_kickall(int fd, struct map_session_data *sd,
 }
 
 /// Create a new party, even if you don't have the party skill
-int atcommand_party(int, struct map_session_data *sd,
+int atcommand_party(int, MapSessionData *sd,
                      const char *, const char *message)
 {
     if (!message || !*message)
@@ -2948,7 +2948,7 @@ int atcommand_party(int, struct map_session_data *sd,
 }
 
 /// Kick all players, then shutdown the map server
-int atcommand_mapexit(int, struct map_session_data *sd,
+int atcommand_mapexit(int, MapSessionData *sd,
                        const char *, const char *)
 {
     atcommand_kickall(-1, sd, NULL, NULL);
@@ -2958,7 +2958,7 @@ int atcommand_mapexit(int, struct map_session_data *sd,
 }
 
 /// Search for items including the name
-int atcommand_idsearch(int fd, struct map_session_data *,
+int atcommand_idsearch(int fd, MapSessionData *,
                         const char *, const char *message)
 {
     if (!message || !*message)
@@ -2991,7 +2991,7 @@ int atcommand_idsearch(int fd, struct map_session_data *,
 }
 
 /// Reset a characters's skills
-int atcommand_charskreset(int fd, struct map_session_data *sd,
+int atcommand_charskreset(int fd, MapSessionData *sd,
                            const char *, const char *message)
 {
     if (!message || !*message)
@@ -3000,7 +3000,7 @@ int atcommand_charskreset(int fd, struct map_session_data *sd,
     if (sscanf(message, "%99[^\n]", character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -3020,7 +3020,7 @@ int atcommand_charskreset(int fd, struct map_session_data *sd,
 }
 
 /// Reset someone's stats
-int atcommand_charstreset(int fd, struct map_session_data *sd,
+int atcommand_charstreset(int fd, MapSessionData *sd,
                            const char *, const char *message)
 {
     if (!message || !*message)
@@ -3029,7 +3029,7 @@ int atcommand_charstreset(int fd, struct map_session_data *sd,
     if (sscanf(message, "%99[^\n]", character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -3049,7 +3049,7 @@ int atcommand_charstreset(int fd, struct map_session_data *sd,
 }
 
 /// More-or-less completely reset character
-int atcommand_charreset(int fd, struct map_session_data *sd,
+int atcommand_charreset(int fd, MapSessionData *sd,
                          const char *, const char *message)
 {
     if (!message || !*message)
@@ -3058,7 +3058,7 @@ int atcommand_charreset(int fd, struct map_session_data *sd,
     if (sscanf(message, "%99[^\n]", character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -3086,7 +3086,7 @@ int atcommand_charreset(int fd, struct map_session_data *sd,
 }
 
 /// (Try to) completely reset a character
-int atcommand_char_wipe(int fd, struct map_session_data *sd,
+int atcommand_char_wipe(int fd, MapSessionData *sd,
                          const char *, const char *message)
 {
     if (!message || !*message)
@@ -3095,7 +3095,7 @@ int atcommand_char_wipe(int fd, struct map_session_data *sd,
     if (sscanf(message, "%99[^\n]", character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -3160,7 +3160,7 @@ int atcommand_char_wipe(int fd, struct map_session_data *sd,
 }
 
 /// Change another player's appearance
-int atcommand_charmodel(int fd, struct map_session_data *,
+int atcommand_charmodel(int fd, MapSessionData *,
                          const char *, const char *message)
 {
     if (!message || !*message)
@@ -3170,7 +3170,7 @@ int atcommand_charmodel(int fd, struct map_session_data *,
     if (sscanf(message, "%u %u %99[^\n]", &hair_style, &hair_color, character) < 3)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -3189,7 +3189,7 @@ int atcommand_charmodel(int fd, struct map_session_data *,
 }
 
 /// Adjust someone's skill points
-int atcommand_charskpoint(int fd, struct map_session_data *,
+int atcommand_charskpoint(int fd, MapSessionData *,
                            const char *, const char *message)
 {
     if (!message || !*message)
@@ -3199,7 +3199,7 @@ int atcommand_charskpoint(int fd, struct map_session_data *,
     if (sscanf(message, "%d %99[^\n]", &points, character) < 2 || points == 0)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -3230,7 +3230,7 @@ int atcommand_charskpoint(int fd, struct map_session_data *,
 }
 
 /// Adjust someone's status points
-int atcommand_charstpoint(int fd, struct map_session_data *,
+int atcommand_charstpoint(int fd, MapSessionData *,
                            const char *, const char *message)
 {
     if (!message || !*message)
@@ -3240,7 +3240,7 @@ int atcommand_charstpoint(int fd, struct map_session_data *,
     if (sscanf(message, "%d %99[^\n]", &points, character) < 2 || points == 0)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -3270,7 +3270,7 @@ int atcommand_charstpoint(int fd, struct map_session_data *,
 }
 
 /// Give somebody zeny
-int atcommand_charzeny(int fd, struct map_session_data *,
+int atcommand_charzeny(int fd, MapSessionData *,
                         const char *, const char *message)
 {
     if (!message || !*message)
@@ -3280,7 +3280,7 @@ int atcommand_charzeny(int fd, struct map_session_data *,
     if (sscanf(message, "%d %99[^\n]", &zeny, character) < 2 || zeny == 0)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -3310,7 +3310,7 @@ int atcommand_charzeny(int fd, struct map_session_data *,
 }
 
 /// Warp all online characters to your location
-int atcommand_recallall(int fd, struct map_session_data *sd,
+int atcommand_recallall(int fd, MapSessionData *sd,
                          const char *, const char *)
 {
     if (maps[sd->bl.m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd))
@@ -3320,7 +3320,7 @@ int atcommand_recallall(int fd, struct map_session_data *sd,
     }
 
     int count = 0;
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         if (sd->status.account_id != pl_sd->status.account_id)
             continue;
@@ -3347,7 +3347,7 @@ int atcommand_recallall(int fd, struct map_session_data *sd,
 }
 
 /// Warp all members of a party to your location
-int atcommand_partyrecall(int fd, struct map_session_data *sd,
+int atcommand_partyrecall(int fd, MapSessionData *sd,
                            const char *, const char *message)
 {
     if (!message || !*message)
@@ -3370,7 +3370,7 @@ int atcommand_partyrecall(int fd, struct map_session_data *sd,
         return -1;
     }
     int count = 0;
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         if (sd->status.account_id == pl_sd->status.account_id)
             continue;
@@ -3402,7 +3402,7 @@ int atcommand_partyrecall(int fd, struct map_session_data *sd,
  * 1 = Show users in that map and their location
  * 2 = Shows NPCs in that map
  */
-int atcommand_mapinfo(int fd, struct map_session_data *sd,
+int atcommand_mapinfo(int fd, MapSessionData *sd,
                        const char *, const char *message)
 {
     int list = 0;
@@ -3465,7 +3465,7 @@ int atcommand_mapinfo(int fd, struct map_session_data *sd,
     {
     case 1:
         clif_displaymessage(fd, "----- Players in Map -----");
-        for (struct map_session_data *pl_sd : sessions)
+        for (MapSessionData *pl_sd : sessions)
         {
             if (pl_sd->bl.m != m_id)
                 continue;
@@ -3503,7 +3503,7 @@ int atcommand_mapinfo(int fd, struct map_session_data *sd,
 }
 
 /// Enable an NPC
-int atcommand_enablenpc(int fd, struct map_session_data *,
+int atcommand_enablenpc(int fd, MapSessionData *,
                          const char *, const char *message)
 {
     if (!message || !*message)
@@ -3524,7 +3524,7 @@ int atcommand_enablenpc(int fd, struct map_session_data *,
 }
 
 /// Disable an NPC
-int atcommand_disablenpc(int fd, struct map_session_data *,
+int atcommand_disablenpc(int fd, MapSessionData *,
                           const char *, const char *message)
 {
     if (!message || !*message)
@@ -3545,7 +3545,7 @@ int atcommand_disablenpc(int fd, struct map_session_data *,
 }
 
 /// Display the date/time of the server (should be UTC)
-int atcommand_servertime(int fd, struct map_session_data *,
+int atcommand_servertime(int fd, MapSessionData *,
                           const char *, const char *)
 {
     time_t time_server = time(&time_server);
@@ -3563,7 +3563,7 @@ int atcommand_servertime(int fd, struct map_session_data *,
  * removes <quantity> item from a character
  * item can be equipped or not.
  */
-int atcommand_chardelitem(int fd, struct map_session_data *sd,
+int atcommand_chardelitem(int fd, MapSessionData *sd,
                            const char *, const char *message)
 {
     if (!message || !*message)
@@ -3584,7 +3584,7 @@ int atcommand_chardelitem(int fd, struct map_session_data *sd,
     }
     int item_id = item_data->nameid;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -3622,7 +3622,7 @@ int atcommand_chardelitem(int fd, struct map_session_data *sd,
 }
 
 /// Make yourself appear as a monster to all other players
-int atcommand_disguise(int fd, struct map_session_data *sd,
+int atcommand_disguise(int fd, MapSessionData *sd,
                         const char *, const char *message)
 {
 
@@ -3651,7 +3651,7 @@ int atcommand_disguise(int fd, struct map_session_data *sd,
 }
 
 /// Appear as yourself again
-int atcommand_undisguise(int fd, struct map_session_data *sd,
+int atcommand_undisguise(int fd, MapSessionData *sd,
                           const char *, const char *)
 {
     if (!sd->disguise)
@@ -3668,7 +3668,7 @@ int atcommand_undisguise(int fd, struct map_session_data *sd,
 }
 
 /// Broadcast a message, including name, to all map servers
-int atcommand_broadcast(int, struct map_session_data *sd,
+int atcommand_broadcast(int, MapSessionData *sd,
                          const char *, const char *message)
 {
     if (!message || !*message)
@@ -3683,7 +3683,7 @@ int atcommand_broadcast(int, struct map_session_data *sd,
 }
 
 /// Broadcast a message, including name, on the current map server
-int atcommand_localbroadcast(int, struct map_session_data *sd,
+int atcommand_localbroadcast(int, MapSessionData *sd,
                               const char *, const char *message)
 {
     if (!message || !*message)
@@ -3699,7 +3699,7 @@ int atcommand_localbroadcast(int, struct map_session_data *sd,
 }
 
 /// Make someone appear to everyone else as a monster
-int atcommand_chardisguise(int fd, struct map_session_data *sd,
+int atcommand_chardisguise(int fd, MapSessionData *sd,
                             const char *, const char *message)
 {
     if (!message || !*message)
@@ -3720,7 +3720,7 @@ int atcommand_chardisguise(int fd, struct map_session_data *sd,
         return -1;
     }
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -3742,7 +3742,7 @@ int atcommand_chardisguise(int fd, struct map_session_data *sd,
 }
 
 /// Remove someone's disguise
-int atcommand_charundisguise(int fd, struct map_session_data *sd,
+int atcommand_charundisguise(int fd, MapSessionData *sd,
                               const char *, const char *message)
 {
     if (!message || !*message)
@@ -3751,7 +3751,7 @@ int atcommand_charundisguise(int fd, struct map_session_data *sd,
     if (sscanf(message, "%99[^\n]", character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -3777,7 +3777,7 @@ int atcommand_charundisguise(int fd, struct map_session_data *sd,
 
 /// Change an account's recorded email address
 // Note that we can't guaranteed the address actually points to somebody
-int atcommand_email(int fd, struct map_session_data *sd,
+int atcommand_email(int fd, MapSessionData *sd,
                      const char *, const char *message)
 {
     if (!message || !*message)
@@ -3817,7 +3817,7 @@ int atcommand_email(int fd, struct map_session_data *sd,
 }
 
 /// Display an effect on yourself
-int atcommand_effect(int fd, struct map_session_data *sd,
+int atcommand_effect(int fd, MapSessionData *sd,
                       const char *, const char *message)
 {
     int type = 0, flag = 0;
@@ -3830,7 +3830,7 @@ int atcommand_effect(int fd, struct map_session_data *sd,
         clif_displaymessage(fd, "Your effect has changed.");
         return 0;
     }
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         clif_specialeffect(&pl_sd->bl, type, flag);
         clif_displaymessage(pl_sd->fd, "Your effect has changed.");
@@ -3840,7 +3840,7 @@ int atcommand_effect(int fd, struct map_session_data *sd,
 }
 
 /// List someone's inventory
-int atcommand_character_item_list(int fd, struct map_session_data *sd,
+int atcommand_character_item_list(int fd, MapSessionData *sd,
                                    const char *, const char *message)
 {
     if (!message || !*message)
@@ -3849,7 +3849,7 @@ int atcommand_character_item_list(int fd, struct map_session_data *sd,
     if (sscanf(message, "%99[^\n]", character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -3970,7 +3970,7 @@ int atcommand_character_item_list(int fd, struct map_session_data *sd,
 }
 
 /// List someone's storage
-int atcommand_character_storage_list(int fd, struct map_session_data *sd,
+int atcommand_character_storage_list(int fd, MapSessionData *sd,
                                   const char *, const char *message)
 {
     if (!message || !*message)
@@ -3979,7 +3979,7 @@ int atcommand_character_storage_list(int fd, struct map_session_data *sd,
     if (sscanf(message, "%99[^\n]", character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -4068,7 +4068,7 @@ int atcommand_character_storage_list(int fd, struct map_session_data *sd,
 
 /// Toggle whether you can kill players out of PvP
 // (there is no @charkiller command)
-int atcommand_killer(int fd, struct map_session_data *sd,
+int atcommand_killer(int fd, MapSessionData *sd,
                       const char *, const char *)
 {
     sd->special_state.killer = !sd->special_state.killer;
@@ -4082,7 +4082,7 @@ int atcommand_killer(int fd, struct map_session_data *sd,
 }
 
 /// Allow players to attack you out of PvP
-int atcommand_killable(int fd, struct map_session_data *sd,
+int atcommand_killable(int fd, MapSessionData *sd,
                         const char *, const char *)
 {
     sd->special_state.killable = !sd->special_state.killable;
@@ -4096,13 +4096,13 @@ int atcommand_killable(int fd, struct map_session_data *sd,
 }
 
 /// Allow a player to be attacked outside of PvP
-int atcommand_charkillable(int fd, struct map_session_data *,
+int atcommand_charkillable(int fd, MapSessionData *,
                             const char *, const char *message)
 {
     if (!message || !*message)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(message);
+    MapSessionData *pl_sd = map_nick2sd(message);
     if (!pl_sd)
         return -1;
 
@@ -4117,7 +4117,7 @@ int atcommand_charkillable(int fd, struct map_session_data *,
 }
 
 /// Move an NPC
-int atcommand_npcmove(int, struct map_session_data *sd,
+int atcommand_npcmove(int, MapSessionData *sd,
                        const char *, const char *message)
 {
     if (!sd)
@@ -4144,7 +4144,7 @@ int atcommand_npcmove(int, struct map_session_data *sd,
 }
 
 /// Create a new semipermanent warp (a type of NPC)
-int atcommand_addwarp(int fd, struct map_session_data *sd,
+int atcommand_addwarp(int fd, MapSessionData *sd,
                        const char *, const char *message)
 {
     if (!message || !*message)
@@ -4171,7 +4171,7 @@ int atcommand_addwarp(int fd, struct map_session_data *sd,
 }
 
 /// Apply a visual effect on a player (is this useful?)
-int atcommand_chareffect(int fd, struct map_session_data *,
+int atcommand_chareffect(int fd, MapSessionData *,
                           const char *, const char *message)
 {
     if (!message || !*message)
@@ -4181,7 +4181,7 @@ int atcommand_chareffect(int fd, struct map_session_data *,
     if (sscanf(message, "%d %255s", &type, target) != 2)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(target);
+    MapSessionData *pl_sd = map_nick2sd(target);
     if (!pl_sd)
         return -1;
 
@@ -4192,7 +4192,7 @@ int atcommand_chareffect(int fd, struct map_session_data *,
 }
 
 /// Put everything into storage to simplify your inventory. Intended as a debugging aid
-int atcommand_storeall(int fd, struct map_session_data *sd,
+int atcommand_storeall(int fd, MapSessionData *sd,
                         const char *, const char *)
 {
     nullpo_retr(-1, sd);
@@ -4221,7 +4221,7 @@ int atcommand_storeall(int fd, struct map_session_data *sd,
 }
 
 /// lookup a skill by name
-int atcommand_skillid(int fd, struct map_session_data *,
+int atcommand_skillid(int fd, MapSessionData *,
                    const char *, const char *message)
 {
     if (!message || !*message)
@@ -4241,7 +4241,7 @@ int atcommand_skillid(int fd, struct map_session_data *,
 }
 
 /// Summon monsters
-int atcommand_summon(int, struct map_session_data *sd,
+int atcommand_summon(int, MapSessionData *sd,
                       const char *, const char *message)
 {
     nullpo_retr(-1, sd);
@@ -4277,7 +4277,7 @@ int atcommand_summon(int, struct map_session_data *sd,
 }
 
 /// Temporarily adjust the GM level required to use a GM command for testing
-int atcommand_adjcmdlvl(int fd, struct map_session_data *,
+int atcommand_adjcmdlvl(int fd, MapSessionData *,
                          const char *, const char *message)
 {
     if (!message || !*message)
@@ -4300,7 +4300,7 @@ int atcommand_adjcmdlvl(int fd, struct map_session_data *,
 }
 
 /// Temporarily grant GM powers (for testing)
-int atcommand_adjgmlvl(int, struct map_session_data *,
+int atcommand_adjgmlvl(int, MapSessionData *,
                         const char *, const char *message)
 {
     if (!message || !*message)
@@ -4310,7 +4310,7 @@ int atcommand_adjgmlvl(int, struct map_session_data *,
     if (sscanf(message, "%d %99s", &newlev, user) != 2)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(user);
+    MapSessionData *pl_sd = map_nick2sd(user);
     if (!pl_sd)
         return -1;
 
@@ -4320,12 +4320,12 @@ int atcommand_adjgmlvl(int, struct map_session_data *,
 }
 
 /// Open a trade window with a player without being on the same map
-int atcommand_trade(int, struct map_session_data *sd,
+int atcommand_trade(int, MapSessionData *sd,
                      const char *, const char *message)
 {
     if (!message || !*message)
         return -1;
-    struct map_session_data *pl_sd = map_nick2sd(message);
+    MapSessionData *pl_sd = map_nick2sd(message);
     if (!pl_sd)
         return -1;
     trade_traderequest(sd, pl_sd->bl.id);
@@ -4345,7 +4345,7 @@ static const char *magic_skill_names[] =
     "astral" };
 
 /// Display magic info for a character
-int atcommand_magic_info(int fd, struct map_session_data *,
+int atcommand_magic_info(int fd, MapSessionData *,
                           const char *, const char *message)
 {
     if (!message || !*message)
@@ -4354,7 +4354,7 @@ int atcommand_magic_info(int fd, struct map_session_data *,
     if (sscanf(message, "%99s", character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -4375,14 +4375,14 @@ int atcommand_magic_info(int fd, struct map_session_data *,
     return 0;
 }
 
-static void set_skill(struct map_session_data *sd, int i, int level)
+static void set_skill(MapSessionData *sd, int i, int level)
 {
     sd->status.skill[i].id = level ? i : 0;
     sd->status.skill[i].lv = level;
 }
 
 /// Grant somebody some magic skills
-int atcommand_set_magic(int fd, struct map_session_data *,
+int atcommand_set_magic(int fd, MapSessionData *,
                          const char *, const char *message)
 {
     if (!message || !*message)
@@ -4406,7 +4406,7 @@ int atcommand_set_magic(int fd, struct map_session_data *,
         return -1;
     }
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -4423,14 +4423,14 @@ int atcommand_set_magic(int fd, struct map_session_data *,
 }
 
 /// @commands are logged anyway, this function doesn't need to do anything
-int atcommand_log(int, struct map_session_data *,
+int atcommand_log(int, MapSessionData *,
                    const char *, const char *)
 {
     return 0;
 }
 
 /// say something in chat, that is also recorded in the GM log
-int atcommand_tee(int, struct map_session_data *sd,
+int atcommand_tee(int, MapSessionData *sd,
                    const char *, const char *message)
 {
     clif_message(&sd->bl, message);
@@ -4438,7 +4438,7 @@ int atcommand_tee(int, struct map_session_data *sd,
 }
 
 /// Become completely undetectable to players
-int atcommand_invisible(int, struct map_session_data *sd,
+int atcommand_invisible(int, MapSessionData *sd,
                          const char *, const char *)
 {
     pc_invisibility(sd, 1);
@@ -4446,7 +4446,7 @@ int atcommand_invisible(int, struct map_session_data *sd,
 }
 
 /// Become detectable to players again
-int atcommand_visible(int, struct map_session_data *sd,
+int atcommand_visible(int, MapSessionData *sd,
                        const char *, const char *)
 {
     pc_invisibility(sd, 0);
@@ -4454,15 +4454,15 @@ int atcommand_visible(int, struct map_session_data *sd,
 }
 
 /// Implementation for the player iterators
-static int atcommand_jump_iterate(int fd, struct map_session_data *sd,
-                                   struct map_session_data *(*get_start)(void),
-                                   struct map_session_data *(*get_next)(struct map_session_data* current))
+static int atcommand_jump_iterate(int fd, MapSessionData *sd,
+                                   MapSessionData *(*get_start)(void),
+                                   MapSessionData *(*get_next)(MapSessionData* current))
 {
     char output[200];
 
     memset(output, '\0', sizeof(output));
 
-    struct map_session_data *pl_sd = reinterpret_cast<struct map_session_data *>(map_id2bl(sd->followtarget));
+    MapSessionData *pl_sd = reinterpret_cast<MapSessionData *>(map_id2bl(sd->followtarget));
 
     if (pl_sd)
         pl_sd = get_next(pl_sd);
@@ -4498,21 +4498,21 @@ static int atcommand_jump_iterate(int fd, struct map_session_data *sd,
 }
 
 /// Warp to next player
-int atcommand_iterate_forward_over_players(int fd, struct map_session_data *sd,
+int atcommand_iterate_forward_over_players(int fd, MapSessionData *sd,
                                             const char *, const char *)
 {
     return atcommand_jump_iterate(fd, sd, map_get_first_session, map_get_next_session);
 }
 
 /// Warp to previous player
-int atcommand_iterate_backwards_over_players(int fd, struct map_session_data *sd,
+int atcommand_iterate_backwards_over_players(int fd, MapSessionData *sd,
                                               const char *, const char *)
 {
     return atcommand_jump_iterate(fd, sd, map_get_last_session, map_get_prev_session);
 }
 
 /// Report something to all GMs
-int atcommand_wgm(int fd, struct map_session_data *sd,
+int atcommand_wgm(int fd, MapSessionData *sd,
                    const char *, const char *message)
 {
     tmw_GmHackMsg("%s: %s", sd->status.name, message);
@@ -4523,7 +4523,7 @@ int atcommand_wgm(int fd, struct map_session_data *sd,
 }
 
 /// Display a character's skill pool use
-int atcommand_skillpool_info(int fd, struct map_session_data *,
+int atcommand_skillpool_info(int fd, MapSessionData *,
                               const char *, const char *message)
 {
     if (!message || !*message)
@@ -4532,7 +4532,7 @@ int atcommand_skillpool_info(int fd, struct map_session_data *,
     if (sscanf(message, "%99s", character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -4569,7 +4569,7 @@ int atcommand_skillpool_info(int fd, struct map_session_data *,
 }
 
 /// Focus somebody on a skill
-int atcommand_skillpool_focus(int fd, struct map_session_data *,
+int atcommand_skillpool_focus(int fd, MapSessionData *,
                                const char *, const char *message)
 {
     if (!message || !*message)
@@ -4579,7 +4579,7 @@ int atcommand_skillpool_focus(int fd, struct map_session_data *,
     if (sscanf(message, "%d %99[^\n]", &skill, character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -4594,7 +4594,7 @@ int atcommand_skillpool_focus(int fd, struct map_session_data *,
 }
 
 /// Unfocus somebody's skill
-int atcommand_skillpool_unfocus(int fd, struct map_session_data *,
+int atcommand_skillpool_unfocus(int fd, MapSessionData *,
                                  const char *, const char *message)
 {
     if (!message || !*message)
@@ -4604,7 +4604,7 @@ int atcommand_skillpool_unfocus(int fd, struct map_session_data *,
     if (sscanf(message, "%d %99[^\n]", &skill, character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -4619,7 +4619,7 @@ int atcommand_skillpool_unfocus(int fd, struct map_session_data *,
 }
 
 /// Learn a skill
-int atcommand_skill_learn(int fd, struct map_session_data *,
+int atcommand_skill_learn(int fd, MapSessionData *,
                            const char *, const char *message)
 {
     if (!message || !*message)
@@ -4629,7 +4629,7 @@ int atcommand_skill_learn(int fd, struct map_session_data *,
     if (sscanf(message, "%d %d %99[^\n]", &skill, &level, character) < 1)
         return -1;
 
-    struct map_session_data *pl_sd = map_nick2sd(character);
+    MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -4642,7 +4642,7 @@ int atcommand_skill_learn(int fd, struct map_session_data *,
 }
 
 /// Check what players are from the same IP
-int atcommand_ipcheck(int fd, struct map_session_data *,
+int atcommand_ipcheck(int fd, MapSessionData *,
                        const char *, const char *message)
 {
     char character[25];
@@ -4650,7 +4650,7 @@ int atcommand_ipcheck(int fd, struct map_session_data *,
     if (sscanf(message, "%24[^\n]", character) < 1)
         return -1;
 
-    struct map_session_data *sd1 = map_nick2sd(character);
+    MapSessionData *sd1 = map_nick2sd(character);
     if (!sd1)
     {
         clif_displaymessage(fd, "Character not found.");
@@ -4659,7 +4659,7 @@ int atcommand_ipcheck(int fd, struct map_session_data *,
 
     in_addr_t ip = session[sd1->fd]->client_addr.sin_addr.s_addr;
 
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         if (ip != session[pl_sd->fd]->client_addr.sin_addr.s_addr)
             continue;

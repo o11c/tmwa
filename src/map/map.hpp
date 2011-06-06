@@ -10,6 +10,7 @@
 #include "../common/mmo.hpp"
 #include "../common/timer.hpp"
 #include "../common/db.hpp"
+#include "../common/socket.hpp"
 
 #include "script.hpp"
 #include "battle.hpp"
@@ -111,10 +112,9 @@ struct quick_regeneration
     uint8_t tickdelay;    // number of ticks to next update
 };
 
-struct map_session_data
+class MapSessionData : public SessionData
 {
-    map_session_data(map_session_data&) = delete;
-
+public:
     struct block_list bl;
     struct
     {
@@ -717,7 +717,7 @@ void map_foreachobject(void (&func)(struct block_list *, Args...), Args... args)
     map_foreachobject_impl(std::bind(func, std::placeholders::_1, args...));
 }
 
-void map_quit(struct map_session_data *);
+void map_quit(MapSessionData *);
 // npc
 int map_addnpc(int, struct npc_data *);
 
@@ -733,18 +733,18 @@ inline void map_clearflooritem(uint32_t id)
     map_clearflooritem_timer(-1, 0, id);
 }
 int map_addflooritem_any(struct item *, int amount, uint16_t m, uint16_t x, uint16_t y,
-                           struct map_session_data **owners,
+                           MapSessionData **owners,
                            int *owner_protection,
                           int lifetime, int dispersal);
 int map_addflooritem(struct item *, int amount, uint16_t m, uint16_t x, uint16_t y,
-                       struct map_session_data *, struct map_session_data *,
-                      struct map_session_data *);
+                       MapSessionData *, MapSessionData *,
+                      MapSessionData *);
 
 // mappings between character id and names
 void map_addchariddb(charid_t charid, const char *name);
 const char *map_charid2nick(charid_t);
 
-struct map_session_data *map_id2sd(unsigned int);
+MapSessionData *map_id2sd(unsigned int);
 struct block_list *map_id2bl(unsigned int);
 int map_mapname2mapid(const char *);
 bool map_mapname2ipport(const char *, in_addr_t *, in_port_t *);
@@ -754,16 +754,16 @@ void map_addiddb(struct block_list *);
 void map_deliddb(struct block_list *bl);
 void map_foreachiddb(DB_Func func);
 
-void map_addnickdb(struct map_session_data *);
-int map_scriptcont(struct map_session_data *sd, int id);  /* Continues a script either on a spell or on an NPC */
-struct map_session_data *map_nick2sd(const char *);
+void map_addnickdb(MapSessionData *);
+int map_scriptcont(MapSessionData *sd, int id);  /* Continues a script either on a spell or on an NPC */
+MapSessionData *map_nick2sd(const char *);
 int compare_item(struct item *a, struct item *b);
 
 // iterate over players
-struct map_session_data *map_get_first_session(void);
-struct map_session_data *map_get_last_session(void);
-struct map_session_data *map_get_next_session(struct map_session_data *current);
-struct map_session_data *map_get_prev_session(struct map_session_data *current);
+MapSessionData *map_get_first_session(void);
+MapSessionData *map_get_last_session(void);
+MapSessionData *map_get_next_session(MapSessionData *current);
+MapSessionData *map_get_prev_session(MapSessionData *current);
 
 // edit the gat data
 uint8_t map_getcell(int, int, int);

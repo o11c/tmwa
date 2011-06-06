@@ -271,7 +271,7 @@ void delete_session(int fd)
     {
         free(session[fd]->rdata);
         free(session[fd]->wdata);
-        free(session[fd]->session_data);
+        delete session[fd]->session_data;
         free(session[fd]);
     }
     session[fd] = NULL;

@@ -27,7 +27,7 @@ struct skill_name_db
 extern struct skill_name_db skill_names[];
 
 struct block_list;
-struct map_session_data;
+class MapSessionData;
 
 void do_init_skill(void);
 
@@ -47,7 +47,7 @@ int skill_status_change_active(struct block_list *bl, int type);  // [fate]
 int skill_status_change_end(struct block_list *bl, int type, int tid);
 int skill_status_change_clear(struct block_list *bl, int type);
 
-void skill_update_heal_animation(struct map_session_data *sd); // [Fate]  Check whether the healing flag must be updated, do so if needed
+void skill_update_heal_animation(MapSessionData *sd); // [Fate]  Check whether the healing flag must be updated, do so if needed
 
 enum
 {
@@ -112,14 +112,14 @@ extern int skill_pool_skills[MAX_POOL_SKILLS];  // All pool skills
 extern int skill_pool_skills_size;  // Number of entries in skill_pool_skills
 
 void skill_pool_register(int id);   // [Fate] Remember that a certain skill ID belongs to a pool skill
-int skill_pool(struct map_session_data *sd, int *skills); // Yields all active skills in the skill pool; no more than MAX_SKILL_POOL.  Return is number of skills.
-int skill_pool_max(struct map_session_data *sd);  // Max. number of pool skills
-int skill_pool_activate(struct map_session_data *sd, int skill);  // Skill into skill pool.  Return is zero iff okay.
-int skill_pool_is_activated(struct map_session_data *sd, int skill);  // Skill into skill pool.  Return is zero when activated.
-int skill_pool_deactivate(struct map_session_data *sd, int skill);    // Skill out of skill pool.  Return is zero iff okay.
+int skill_pool(MapSessionData *sd, int *skills); // Yields all active skills in the skill pool; no more than MAX_SKILL_POOL.  Return is number of skills.
+int skill_pool_max(MapSessionData *sd);  // Max. number of pool skills
+int skill_pool_activate(MapSessionData *sd, int skill);  // Skill into skill pool.  Return is zero iff okay.
+int skill_pool_is_activated(MapSessionData *sd, int skill);  // Skill into skill pool.  Return is zero when activated.
+int skill_pool_deactivate(MapSessionData *sd, int skill);    // Skill out of skill pool.  Return is zero iff okay.
 const char *skill_name(int skill);   // Yield configurable skill name
 int skill_stat(int skill);    // Yields the stat associated with a skill.  Returns zero if none, or SP_STR, SP_VIT, ... otherwise
-int skill_power(struct map_session_data *sd, int skill);  // Yields the power of a skill.  This is zero if the skill is unknown or if it's a pool skill that is outside of the skill pool,
+int skill_power(MapSessionData *sd, int skill);  // Yields the power of a skill.  This is zero if the skill is unknown or if it's a pool skill that is outside of the skill pool,
                              // otherwise a value from 0 to 255 (with 200 being the `normal maximum')
 int skill_power_bl(struct block_list *bl, int skill); // Yields the power of a skill.  This is zero if the skill is unknown or if it's a pool skill that is outside of the skill pool,
                              // otherwise a value from 0 to 255 (with 200 being the `normal maximum')

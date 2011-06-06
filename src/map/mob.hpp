@@ -36,10 +36,10 @@ extern struct mob_db mob_db[];
 
 int mobdb_searchname(const char *str);
 int mobdb_checkid(const int id);
-int mob_once_spawn(struct map_session_data *sd, const char *mapname,
+int mob_once_spawn(MapSessionData *sd, const char *mapname,
                      int x, int y, const char *mobname, int class_, int amount,
                     const char *event);
-int mob_once_spawn_area(struct map_session_data *sd, const char *mapname, int x_0,
+int mob_once_spawn_area(MapSessionData *sd, const char *mapname, int x_0,
                           int y_0, int x_1, int y_1, const char *mobname,
                          int class_, int amount, const char *event);
 

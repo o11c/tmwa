@@ -23,7 +23,7 @@
 int skill_pool_skills[MAX_POOL_SKILLS];
 int skill_pool_skills_size = 0;
 
-static int skill_pool_size(struct map_session_data *sd);
+static int skill_pool_size(MapSessionData *sd);
 
 void skill_pool_register(int id)
 {
@@ -45,7 +45,7 @@ const char *skill_name(int skill)
         return NULL;
 }
 
-int skill_pool(struct map_session_data *sd, int *skills)
+int skill_pool(MapSessionData *sd, int *skills)
 {
     int i, count = 0;
 
@@ -63,17 +63,17 @@ int skill_pool(struct map_session_data *sd, int *skills)
     return count;
 }
 
-int skill_pool_size(struct map_session_data *sd)
+int skill_pool_size(MapSessionData *sd)
 {
     return skill_pool(sd, NULL);
 }
 
-int skill_pool_max(struct map_session_data *sd)
+int skill_pool_max(MapSessionData *sd)
 {
     return sd->status.skill[TMW_SKILLPOOL].lv;
 }
 
-int skill_pool_activate(struct map_session_data *sd, int skill_id)
+int skill_pool_activate(MapSessionData *sd, int skill_id)
 {
     if (sd->status.skill[skill_id].flags & SKILL_POOL_ACTIVATED)
         return 0;               // Already there
@@ -91,12 +91,12 @@ int skill_pool_activate(struct map_session_data *sd, int skill_id)
     return 1;                   // failed
 }
 
-int skill_pool_is_activated(struct map_session_data *sd, int skill_id)
+int skill_pool_is_activated(MapSessionData *sd, int skill_id)
 {
     return sd->status.skill[skill_id].flags & SKILL_POOL_ACTIVATED;
 }
 
-int skill_pool_deactivate(struct map_session_data *sd, int skill_id)
+int skill_pool_deactivate(MapSessionData *sd, int skill_id)
 {
     if (sd->status.skill[skill_id].flags & SKILL_POOL_ACTIVATED)
     {
@@ -114,7 +114,7 @@ int skill_stat(int skill_id)
     return skill_db[skill_id].stat;
 }
 
-int skill_power(struct map_session_data *sd, int skill_id)
+int skill_power(MapSessionData *sd, int skill_id)
 {
     int stat = skill_stat(skill_id);
     int stat_value, skill_value;
@@ -139,7 +139,7 @@ int skill_power(struct map_session_data *sd, int skill_id)
 int skill_power_bl(struct block_list *bl, int skill)
 {
     if (bl->type == BL_PC)
-        return skill_power(reinterpret_cast<struct map_session_data *>(bl), skill);
+        return skill_power(reinterpret_cast<MapSessionData *>(bl), skill);
     else
         return 0;
 }

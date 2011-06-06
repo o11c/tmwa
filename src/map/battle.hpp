@@ -40,7 +40,7 @@ struct Damage
 /// Elemental damage modifiers (read in pc.cpp)
 extern int attr_fix_table[4][10][10];
 
-struct map_session_data;
+class MapSessionData;
 struct mob_data;
 struct block_list;
 

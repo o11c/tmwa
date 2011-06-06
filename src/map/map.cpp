@@ -634,7 +634,7 @@ static uint32_t map_searchrandfreecell(uint16_t m, uint16_t x, uint16_t y, int r
 // after lifetime it disapeears
 // dispersal: the actual range over which they may be scattered
 int map_addflooritem_any(struct item *item_data, int amount, uint16_t m, uint16_t x,
-                          uint16_t y, struct map_session_data **owners,
+                          uint16_t y, MapSessionData **owners,
                           int *owner_protection, int lifetime, int dispersal)
 {
     nullpo_ret(item_data);
@@ -695,11 +695,11 @@ int map_addflooritem_any(struct item *item_data, int amount, uint16_t m, uint16_
 
 /// Add an item such that only the given players can pick it up, at first
 int map_addflooritem(struct item *item_data, int amount, uint16_t m, uint16_t x, uint16_t y,
-                      struct map_session_data *first_sd,
-                      struct map_session_data *second_sd,
-                      struct map_session_data *third_sd)
+                      MapSessionData *first_sd,
+                      MapSessionData *second_sd,
+                      MapSessionData *third_sd)
 {
-    struct map_session_data *owners[3] = { first_sd, second_sd, third_sd };
+    MapSessionData *owners[3] = { first_sd, second_sd, third_sd };
     int owner_protection[3];
 
     owner_protection[0] = battle_config.item_first_get_time;
@@ -745,14 +745,14 @@ void map_deliddb(struct block_list *bl)
 }
 
 /// Add mapping name to session
-void map_addnickdb(struct map_session_data *sd)
+void map_addnickdb(MapSessionData *sd)
 {
     nullpo_retv(sd);
     strdb_insert(nick_db, sd->status.name, static_cast<void *>(sd));
 }
 
 /// A player quits from the map server
-void map_quit(struct map_session_data *sd)
+void map_quit(MapSessionData *sd)
 {
     nullpo_retv(sd);
 
@@ -799,9 +799,9 @@ void map_quit(struct map_session_data *sd)
 // return the session of the given id
 // TODO figure out what kind of ID it is and use a typedef
 // I think it might be a charid_t but I'm not sure
-struct map_session_data *map_id2sd(unsigned int id)
+MapSessionData *map_id2sd(unsigned int id)
 {
-    for (struct map_session_data *sd : sessions)
+    for (MapSessionData *sd : sessions)
         if (sd->bl.id == id)
             return sd;
     return NULL;
@@ -819,23 +819,23 @@ const char *map_charid2nick(charid_t id)
 
 /// Operations to iterate over active map sessions
 
-static struct map_session_data *map_get_session(int i)
+static MapSessionData *map_get_session(int i)
 {
     if (i < 0 || i > fd_max || !session[i])
         return NULL;
-    struct map_session_data *d = static_cast<struct map_session_data *>(session[i]->session_data);
+    MapSessionData *d = static_cast<MapSessionData *>(session[i]->session_data);
     if (d && d->state.auth)
         return d;
 
     return NULL;
 }
 
-static struct map_session_data *map_get_session_forward(int start)
+static MapSessionData *map_get_session_forward(int start)
 {
     // this loop usually isn't traversed many times
     for (int i = start; i < fd_max; i++)
     {
-        struct map_session_data *d = map_get_session(i);
+        MapSessionData *d = map_get_session(i);
         if (d)
             return d;
     }
@@ -843,12 +843,12 @@ static struct map_session_data *map_get_session_forward(int start)
     return NULL;
 }
 
-static struct map_session_data *map_get_session_backward(int start)
+static MapSessionData *map_get_session_backward(int start)
 {
     // this loop usually isn't traversed many times
     for (int i = start; i >= 0; i--)
     {
-        struct map_session_data *d = map_get_session(i);
+        MapSessionData *d = map_get_session(i);
         if (d)
             return d;
     }
@@ -856,37 +856,37 @@ static struct map_session_data *map_get_session_backward(int start)
     return NULL;
 }
 
-struct map_session_data *map_get_first_session(void)
+MapSessionData *map_get_first_session(void)
 {
     return map_get_session_forward(0);
 }
 
-struct map_session_data *map_get_next_session(struct map_session_data *d)
+MapSessionData *map_get_next_session(MapSessionData *d)
 {
     return map_get_session_forward(d->fd + 1);
 }
 
-struct map_session_data *map_get_last_session(void)
+MapSessionData *map_get_last_session(void)
 {
     return map_get_session_backward(fd_max);
 }
 
-struct map_session_data *map_get_prev_session(struct map_session_data *d)
+MapSessionData *map_get_prev_session(MapSessionData *d)
 {
     return map_get_session_backward(d->fd - 1);
 }
 
 /// get session by name
-struct map_session_data *map_nick2sd(const char *nick)
+MapSessionData *map_nick2sd(const char *nick)
 {
     if (!nick)
         return NULL;
     size_t nicklen = strlen(nick);
 
     int quantity = 0;
-    struct map_session_data *sd = NULL;
+    MapSessionData *sd = NULL;
 
-    for (struct map_session_data *pl_sd : sessions)
+    for (MapSessionData *pl_sd : sessions)
     {
         // Without case sensitive check (increase the number of similar character names found)
         if (strncasecmp(pl_sd->status.name, nick, nicklen) == 0)
@@ -1419,7 +1419,7 @@ void do_init(int argc, char *argv[])
             map_port);
 }
 
-int map_scriptcont(struct map_session_data *sd, int id)
+int map_scriptcont(MapSessionData *sd, int id)
 {
     struct block_list *bl = map_id2bl(id);
 

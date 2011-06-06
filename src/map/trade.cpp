@@ -16,9 +16,9 @@
  * 取引要請を相手に送る
  *------------------------------------------
  */
-void trade_traderequest(struct map_session_data *sd, int target_id)
+void trade_traderequest(MapSessionData *sd, int target_id)
 {
-    struct map_session_data *target_sd;
+    MapSessionData *target_sd;
 
     nullpo_retv(sd);
 
@@ -70,9 +70,9 @@ void trade_traderequest(struct map_session_data *sd, int target_id)
  * 取引要請
  *------------------------------------------
  */
-void trade_tradeack(struct map_session_data *sd, int type)
+void trade_tradeack(MapSessionData *sd, int type)
 {
-    struct map_session_data *target_sd;
+    MapSessionData *target_sd;
     nullpo_retv(sd);
 
     if ((target_sd = map_id2sd(sd->trade_partner)) != NULL)
@@ -101,9 +101,9 @@ void trade_tradeack(struct map_session_data *sd, int type)
  * アイテム追加
  *------------------------------------------
  */
-void trade_tradeadditem(struct map_session_data *sd, int idx, int amount)
+void trade_tradeadditem(MapSessionData *sd, int idx, int amount)
 {
-    struct map_session_data *target_sd;
+    MapSessionData *target_sd;
     struct item_data *id;
     int trade_i;
     int trade_weight = 0;
@@ -224,9 +224,9 @@ void trade_tradeadditem(struct map_session_data *sd, int idx, int amount)
  * アイテム追加完了(ok押し)
  *------------------------------------------
  */
-void trade_tradeok(struct map_session_data *sd)
+void trade_tradeok(MapSessionData *sd)
 {
-    struct map_session_data *target_sd;
+    MapSessionData *target_sd;
     int trade_i;
 
     nullpo_retv(sd);
@@ -256,9 +256,9 @@ void trade_tradeok(struct map_session_data *sd)
  * 取引キャンセル
  *------------------------------------------
  */
-void trade_tradecancel(struct map_session_data *sd)
+void trade_tradecancel(MapSessionData *sd)
 {
-    struct map_session_data *target_sd;
+    MapSessionData *target_sd;
     int trade_i;
 
     nullpo_retv(sd);
@@ -308,9 +308,9 @@ void trade_tradecancel(struct map_session_data *sd)
  * 取引許諾(trade押し)
  *------------------------------------------
  */
-void trade_tradecommit(struct map_session_data *sd)
+void trade_tradecommit(MapSessionData *sd)
 {
-    struct map_session_data *target_sd;
+    MapSessionData *target_sd;
     int trade_i;
 
     nullpo_retv(sd);
@@ -412,9 +412,9 @@ void trade_tradecommit(struct map_session_data *sd)
 // This is called when a char's zeny is changed
 // This helps prevent money duplication and other problems
 // [Jaxad0127]
-void trade_verifyzeny(struct map_session_data *sd)
+void trade_verifyzeny(MapSessionData *sd)
 {
-    struct map_session_data *target_sd;
+    MapSessionData *target_sd;
 
     nullpo_retv(sd);
 

@@ -25,7 +25,7 @@
 #include "../common/socket.hpp"
 
 static void npc_event_timer(timer_id, tick_t, uint32_t, char *);
-static int npc_checknear(struct map_session_data *, int);
+static int npc_checknear(MapSessionData *, int);
 static int npc_parse_mob(char *w1, char *w2, char *w3, char *w4);
 
 
@@ -71,7 +71,7 @@ static void npc_enable_sub(struct block_list *bl, struct npc_data *nd)
 
     if (bl->type == BL_PC)
     {
-        struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(bl);
+        MapSessionData *sd = reinterpret_cast<MapSessionData *>(bl);
         if (nd->flag & 1)       // 無効化されている
             return;
 
@@ -134,7 +134,7 @@ struct npc_data *npc_name2id(const char *name)
  * イベントキューのイベント処理
  *------------------------------------------
  */
-int npc_event_dequeue(struct map_session_data *sd)
+int npc_event_dequeue(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
@@ -164,7 +164,7 @@ int npc_event_dequeue(struct map_session_data *sd)
  */
 void npc_event_timer(timer_id, tick_t, uint32_t id, char *data)
 {
-    struct map_session_data *sd = map_id2sd(id);
+    MapSessionData *sd = map_id2sd(id);
     if (sd == NULL)
         return;
 
@@ -319,7 +319,7 @@ static int npc_deleventtimer(struct npc_data *nd, const char *name)
     return 0;
 }
 
-static void npc_do_ontimer_sub(db_key_t key, db_val_t data, int *c, struct map_session_data *, bool option)
+static void npc_do_ontimer_sub(db_key_t key, db_val_t data, int *c, MapSessionData *, bool option)
 {
     const char *p = key.s;
     struct event_data *ev = reinterpret_cast<struct event_data *>(data.p);
@@ -347,7 +347,7 @@ static void npc_do_ontimer_sub(db_key_t key, db_val_t data, int *c, struct map_s
     }
 }
 
-int npc_do_ontimer(int npc_id, struct map_session_data *sd, bool option)
+int npc_do_ontimer(int npc_id, MapSessionData *sd, bool option)
 {
     strdb_foreach(ev_db, npc_do_ontimer_sub, &npc_id, sd, option);
     return 0;
@@ -472,7 +472,7 @@ int npc_settimerevent_tick(struct npc_data *nd, int newtimer)
  * イベント型のNPC処理
  *------------------------------------------
  */
-int npc_event(struct map_session_data *sd, const char *eventname,
+int npc_event(MapSessionData *sd, const char *eventname,
                int mob_kill)
 {
     struct event_data *ev = reinterpret_cast<struct event_data *>(strdb_search(ev_db, eventname).p);
@@ -573,7 +573,7 @@ static void npc_command_sub(db_key_t key, db_val_t data, const char *npcname, co
     }
 }
 
-int npc_command(struct map_session_data *, const char *npcname, const char *command)
+int npc_command(MapSessionData *, const char *npcname, const char *command)
 {
     strdb_foreach(ev_db, npc_command_sub, npcname, command);
 
@@ -584,7 +584,7 @@ int npc_command(struct map_session_data *, const char *npcname, const char *comm
  * 接触型のNPC処理
  *------------------------------------------
  */
-int npc_touch_areanpc(struct map_session_data *sd, int m, int x, int y)
+int npc_touch_areanpc(MapSessionData *sd, int m, int x, int y)
 {
     int i, f = 1;
     int xs, ys;
@@ -659,7 +659,7 @@ int npc_touch_areanpc(struct map_session_data *sd, int m, int x, int y)
  * 近くかどうかの判定
  *------------------------------------------
  */
-int npc_checknear(struct map_session_data *sd, int id)
+int npc_checknear(MapSessionData *sd, int id)
 {
     struct npc_data *nd;
 
@@ -690,7 +690,7 @@ int npc_checknear(struct map_session_data *sd, int id)
  * クリック時のNPC処理
  *------------------------------------------
  */
-int npc_click(struct map_session_data *sd, int id)
+int npc_click(MapSessionData *sd, int id)
 {
     struct npc_data *nd;
 
@@ -738,7 +738,7 @@ int npc_click(struct map_session_data *sd, int id)
  *
  *------------------------------------------
  */
-int npc_scriptcont(struct map_session_data *sd, int id)
+int npc_scriptcont(MapSessionData *sd, int id)
 {
     struct npc_data *nd;
 
@@ -769,7 +769,7 @@ int npc_scriptcont(struct map_session_data *sd, int id)
  *
  *------------------------------------------
  */
-int npc_buysellsel(struct map_session_data *sd, int id, int type)
+int npc_buysellsel(MapSessionData *sd, int id, int type)
 {
     struct npc_data *nd;
 
@@ -804,7 +804,7 @@ int npc_buysellsel(struct map_session_data *sd, int id, int type)
  *
  *------------------------------------------
  */
-int npc_buylist(struct map_session_data *sd, int n,
+int npc_buylist(MapSessionData *sd, int n,
                 const unsigned short *item_list)
 {
     struct npc_data *nd;
@@ -896,7 +896,7 @@ int npc_buylist(struct map_session_data *sd, int n,
  *
  *------------------------------------------
  */
-int npc_selllist(struct map_session_data *sd, int n,
+int npc_selllist(MapSessionData *sd, int n,
                  const unsigned short *item_list)
 {
     double z;

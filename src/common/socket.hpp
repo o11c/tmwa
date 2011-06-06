@@ -12,6 +12,14 @@
 # include <time.h>
 
 // Struct declaration
+class SessionData
+{
+    SessionData(SessionData&) = delete;
+protected:
+    SessionData() {}
+public:
+    virtual ~SessionData() {}
+};
 
 struct socket_data
 {
@@ -46,8 +54,7 @@ struct socket_data
     /// Can be set explicitly or via set_defaultparse
     void (*func_parse)(int);
     /// Server-specific data type
-    // TODO make this into a type-safe-but-generic struct session_data *
-    void *session_data;
+    SessionData *session_data;
 
     // used when forwarding a packet with different ID
     void rfifo_change_packet(uint16_t newpacket)

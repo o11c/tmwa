@@ -108,9 +108,17 @@ bool add_to_unlimited_account = 0;
 // Starting additional sec from now for the limited time at creation of accounts (-1: unlimited time, 0 or more: additional sec from now)
 int start_limited_time = -1;
 
-/// some random data to be MD5'ed?
-struct login_session_data
+/// some random data to be MD5'ed
+// only used for ladmin
+class LoginSessionData : public SessionData
 {
+public:
+    LoginSessionData() : md5keylen(MPRAND(12, 4))
+    {
+        // Create coding key of length [12, 16)
+        for (int i = 0; i < md5keylen; i++)
+            md5key[i] = MPRAND(1, 255);
+    }
     int md5keylen;
     char md5key[20];
 };
@@ -2811,15 +2819,10 @@ static void x791a(int fd)
         session[fd]->eof = 1;
         return;
     }
-    struct login_session_data *ld;
-    CREATE(ld, struct login_session_data, 1);
+    LoginSessionData *ld = new LoginSessionData;
     session[fd]->session_data = ld;
     login_log("'ladmin': Sending request of the coding key (ip: %s)\n",
                ip_of(fd));
-    // Create coding key of length [12, 16)
-    ld->md5keylen = MPRAND(12, 4);
-    for (int i = 0; i < ld->md5keylen; i++)
-        ld->md5key[i] = MPRAND(1, 255);
 
     WFIFOW(fd, 0) = 0x01dc;
     WFIFOW(fd, 2) = 4 + ld->md5keylen;
@@ -2921,7 +2924,7 @@ static void x7918(int fd)
                    ip_of(fd));
         return;
     }
-    struct login_session_data *ld = static_cast<struct login_session_data *>(session[fd]->session_data);
+    LoginSessionData *ld = static_cast<LoginSessionData *>(session[fd]->session_data);
     if (RFIFOW(fd, 2) == 0)
     {
         login_log("'ladmin'-login: Connection in administration mode refused: not encrypted (ip: %s).\n",

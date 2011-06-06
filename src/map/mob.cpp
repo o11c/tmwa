@@ -332,7 +332,7 @@ static void mob_init(struct mob_data *md)
  * The MOB appearance for one time(for scripts)
  *------------------------------------------
  */
-int mob_once_spawn(struct map_session_data *sd, const char *mapname,
+int mob_once_spawn(MapSessionData *sd, const char *mapname,
                     int x, int y, const char *mobname, int mob_class, int amount,
                     const char *event)
 {
@@ -429,7 +429,7 @@ int mob_once_spawn(struct map_session_data *sd, const char *mapname,
  * The MOB appearance for one time(& area specification for scripts)
  *------------------------------------------
  */
-int mob_once_spawn_area(struct map_session_data *sd, const char *mapname,
+int mob_once_spawn_area(MapSessionData *sd, const char *mapname,
                          int x_0, int y_0, int x_1, int y_1,
                          const char *mobname, int mob_class, int amount,
                          const char *event)
@@ -659,7 +659,7 @@ static int mob_walk(struct mob_data *md, unsigned int tick, uint8_t data)
 static int mob_check_attack(struct mob_data *md)
 {
     struct block_list *tbl = NULL;
-    struct map_session_data *tsd = NULL;
+    MapSessionData *tsd = NULL;
     struct mob_data *tmd = NULL;
 
     int mode, race, range;
@@ -680,7 +680,7 @@ static int mob_check_attack(struct mob_data *md)
     }
 
     if (tbl->type == BL_PC)
-        tsd = reinterpret_cast<struct map_session_data *>(tbl);
+        tsd = reinterpret_cast<MapSessionData *>(tbl);
     else if (tbl->type == BL_MOB)
         tmd = reinterpret_cast<struct mob_data *>(tbl);
     else
@@ -774,7 +774,7 @@ static int mob_attack(struct mob_data *md, unsigned int tick, int)
  * The callback function of clif_foreachclient
  *------------------------------------------
  */
-static void mob_stopattacked(struct map_session_data *sd, uint32_t id)
+static void mob_stopattacked(MapSessionData *sd, uint32_t id)
 {
     nullpo_retv(sd);
 
@@ -837,7 +837,7 @@ int mob_changestate(struct mob_data *md, int state, int type)
             skill_castcancel(&md->bl);
             md->last_deadtime = gettick();
             // Since it died, all aggressors' attack to this mob is stopped.
-            for (struct map_session_data *sd : sessions)
+            for (MapSessionData *sd : sessions)
                 mob_stopattacked(sd, md->bl.id);
             skill_status_change_clear(&md->bl, 2); // The abnormalities in status are canceled.
             if (md->deletetimer != -1)
@@ -1212,8 +1212,8 @@ static int mob_can_reach(struct mob_data *md, struct block_list *bl, int range)
 
     if (bl && bl->type == BL_PC && battle_config.monsters_ignore_gm == 1)
     {                           // option to have monsters ignore GMs [Valaris]
-        struct map_session_data *sd;
-        if ((sd = reinterpret_cast<struct map_session_data *>(bl)) != NULL && pc_isGM(sd))
+        MapSessionData *sd = reinterpret_cast<MapSessionData *>(bl);
+        if (sd && pc_isGM(sd))
             return 0;
     }
 
@@ -1259,7 +1259,7 @@ static int mob_can_reach(struct mob_data *md, struct block_list *bl, int range)
  */
 int mob_target(struct mob_data *md, struct block_list *bl, int dist)
 {
-    struct map_session_data *sd;
+    MapSessionData *sd;
     short *option;
     int mode, race;
 
@@ -1292,7 +1292,7 @@ int mob_target(struct mob_data *md, struct block_list *bl, int dist)
     {
         if (bl->type == BL_PC)
         {
-            nullpo_ret(sd = reinterpret_cast<struct map_session_data *>(bl));
+            nullpo_ret(sd = reinterpret_cast<MapSessionData *>(bl));
             if (sd->invincible_timer != -1 || pc_isinvisible(sd))
                 return 0;
             if (!(mode & 0x20) && race != 4 && race != 6
@@ -1318,7 +1318,7 @@ int mob_target(struct mob_data *md, struct block_list *bl, int dist)
  */
 static void mob_ai_sub_hard_activesearch(struct block_list *bl, struct mob_data *smd, int *pcc)
 {
-    struct map_session_data *tsd = NULL;
+    MapSessionData *tsd = NULL;
     struct mob_data *tmd = NULL;
     int mode, race, dist;
 
@@ -1327,7 +1327,7 @@ static void mob_ai_sub_hard_activesearch(struct block_list *bl, struct mob_data 
     nullpo_retv(pcc);
 
     if (bl->type == BL_PC)
-        tsd = reinterpret_cast<struct map_session_data *>(bl);
+        tsd = reinterpret_cast<MapSessionData *>(bl);
     else if (bl->type == BL_MOB)
         tmd = reinterpret_cast<struct mob_data *>(bl);
     else
@@ -1571,7 +1571,7 @@ static int mob_ai_sub_hard_slavemob(struct mob_data *md, unsigned int tick)
     if ((mmd->target_id > 0 && mmd->state.targettype == ATTACKABLE)
         && (!md->target_id || md->state.targettype == NONE_ATTACKABLE))
     {
-        struct map_session_data *sd = map_id2sd(mmd->target_id);
+        MapSessionData *sd = map_id2sd(mmd->target_id);
         if (sd != NULL && !pc_isdead(sd) && sd->invincible_timer == -1
             && !pc_isinvisible(sd))
         {
@@ -1593,7 +1593,7 @@ static int mob_ai_sub_hard_slavemob(struct mob_data *md, unsigned int tick)
 
     // There is the master, the master locks a target and he does not lock.
 /*      if ( (md->target_id>0 && mmd->state.targettype == ATTACKABLE) && (!mmd->target_id || mmd->state.targettype == NONE_ATTACKABLE) ){
-                struct map_session_data *sd=map_id2sd(md->target_id);
+                MapSessionData *sd=map_id2sd(md->target_id);
                 if (sd!=NULL && !pc_isdead(sd) && sd->invincible_timer == -1 && !pc_isinvisible(sd)){
 
                         race=mob_db[mmd->mob_class].race;
@@ -1686,7 +1686,7 @@ static int mob_randomwalk(struct mob_data *md, int tick)
 static void mob_ai_sub_hard(struct block_list *bl, tick_t tick)
 {
     struct mob_data *md, *tmd = NULL;
-    struct map_session_data *tsd = NULL;
+    MapSessionData *tsd = NULL;
     struct block_list *tbl = NULL;
     struct flooritem_data *fitem;
     int i, dx, dy, ret, dist;
@@ -1723,7 +1723,7 @@ static void mob_ai_sub_hard(struct block_list *bl, tick_t tick)
 
     if (md->attacked_id > 0 && mode & 0x08)
     {                           // Link monster
-        struct map_session_data *asd = map_id2sd(md->attacked_id);
+        MapSessionData *asd = map_id2sd(md->attacked_id);
         if (asd)
         {
             if (asd->invincible_timer == -1 && !pc_isinvisible(asd))
@@ -1742,11 +1742,11 @@ static void mob_ai_sub_hard(struct block_list *bl, tick_t tick)
             || (mode & 0x04 && MRAND(100) < 25)))
     {
         struct block_list *abl = map_id2bl(md->attacked_id);
-        struct map_session_data *asd = NULL;
+        MapSessionData *asd = NULL;
         if (abl)
         {
             if (abl->type == BL_PC)
-                asd = reinterpret_cast<struct map_session_data *>(abl);
+                asd = reinterpret_cast<MapSessionData *>(abl);
             if (asd == NULL || md->bl.m != abl->m || abl->prev == NULL
                 || asd->invincible_timer != -1 || pc_isinvisible(asd)
                 || (dist =
@@ -1811,7 +1811,7 @@ static void mob_ai_sub_hard(struct block_list *bl, tick_t tick)
         if ((tbl = map_id2bl(md->target_id)))
         {
             if (tbl->type == BL_PC)
-                tsd = reinterpret_cast<struct map_session_data *>(tbl);
+                tsd = reinterpret_cast<MapSessionData *>(tbl);
             else if (tbl->type == BL_MOB)
                 tmd = reinterpret_cast<struct mob_data *>(tbl);
             if (tsd || tmd)
@@ -2019,7 +2019,7 @@ static void mob_ai_sub_hard(struct block_list *bl, tick_t tick)
  * Serious processing for mob in PC field of view(foreachclient)
  *------------------------------------------
  */
-static void mob_ai_sub_foreachclient(struct map_session_data *sd, tick_t tick)
+static void mob_ai_sub_foreachclient(MapSessionData *sd, tick_t tick)
 {
     nullpo_retv(sd);
 
@@ -2035,7 +2035,7 @@ static void mob_ai_sub_foreachclient(struct map_session_data *sd, tick_t tick)
  */
 static void mob_ai_hard(timer_id, tick_t tick)
 {
-    for (struct map_session_data *sd : sessions)
+    for (MapSessionData *sd : sessions)
         mob_ai_sub_foreachclient(sd, tick);
 }
 
@@ -2122,14 +2122,14 @@ struct delay_item_drop
 {
     int m, x, y;
     int nameid, amount;
-    struct map_session_data *first_sd, *second_sd, *third_sd;
+    MapSessionData *first_sd, *second_sd, *third_sd;
 };
 
 struct delay_item_drop2
 {
     int m, x, y;
     struct item item_data;
-    struct map_session_data *first_sd, *second_sd, *third_sd;
+    MapSessionData *first_sd, *second_sd, *third_sd;
 };
 
 /*==========================================
@@ -2287,7 +2287,7 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
                 int type)
 {
     int minpos, mindmg;
-    struct map_session_data *sd = NULL, *tmpsd[DAMAGELOG_SIZE];
+    MapSessionData *sd = NULL, *tmpsd[DAMAGELOG_SIZE];
     struct
     {
         struct party *p;
@@ -2296,7 +2296,7 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
     int pnum = 0;
     int max_hp;
     unsigned int tick = gettick();
-    struct map_session_data *mvp_sd = NULL, *second_sd = NULL, *third_sd =
+    MapSessionData *mvp_sd = NULL, *second_sd = NULL, *third_sd =
         NULL;
     double tdmg;
 
@@ -2316,7 +2316,7 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
 
     if (src && src->type == BL_PC)
     {
-        sd = reinterpret_cast<struct map_session_data *>(src);
+        sd = reinterpret_cast<MapSessionData *>(src);
         mvp_sd = sd;
     }
 
@@ -2388,7 +2388,7 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
             struct block_list *master_bl = map_id2bl(md2->master_id);
             if (master_bl && master_bl->type == BL_PC)
             {
-                MAP_LOG_PC(reinterpret_cast<struct map_session_data *>(master_bl),
+                MAP_LOG_PC(reinterpret_cast<MapSessionData *>(master_bl),
                             "MOB-TO-MOB-DMG FROM MOB%d %d TO MOB%d %d FOR %d",
                             md2->bl.id, md2->mob_class, md->bl.id, md->mob_class,
                             damage);
@@ -2637,7 +2637,7 @@ int mob_damage(struct block_list *src, struct mob_data *md, int damage,
                 sd = mvp_sd;
             else
             {
-                for (struct map_session_data *tmp_sd : sessions)
+                for (MapSessionData *tmp_sd : sessions)
                 {
                     if (md->bl.m == tmp_sd->bl.m)
                     {
@@ -2796,7 +2796,7 @@ static void mob_counttargeted_sub(struct block_list *bl, uint32_t id, int *c,
         return;
     if (bl->type == BL_PC)
     {
-        struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(bl);
+        MapSessionData *sd = reinterpret_cast<MapSessionData *>(bl);
         if (sd && sd->attacktarget == id && sd->attacktimer != -1
             && sd->attacktarget_lv >= target_lv)
             (*c)++;

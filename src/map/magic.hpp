@@ -7,7 +7,7 @@
 #define MAGIC_CONFIG_FILE "conf/magic.conf"
 int magic_init(const char *conffile);   // must be called after itemdb initialisation
 
-typedef struct map_session_data character_t;
+typedef MapSessionData character_t;
 typedef struct block_list entity_t;
 
 struct invocation;              /* Spell invocation */

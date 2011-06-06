@@ -9,15 +9,15 @@
 #define WARP_CLASS 45
 #define INVISIBLE_CLASS 32767
 
-int npc_event_dequeue(struct map_session_data *sd);
-int npc_event(struct map_session_data *sd, const char *npcname, int);
-int npc_command(struct map_session_data *sd, const char *npcname, const char *command);
-int npc_touch_areanpc(struct map_session_data *, int, int, int);
-int npc_click(struct map_session_data *, int);
-int npc_scriptcont(struct map_session_data *, int);
-int npc_buysellsel(struct map_session_data *, int, int);
-int npc_buylist(struct map_session_data *, int, const unsigned short *);
-int npc_selllist(struct map_session_data *, int, const unsigned short *);
+int npc_event_dequeue(MapSessionData *sd);
+int npc_event(MapSessionData *sd, const char *npcname, int);
+int npc_command(MapSessionData *sd, const char *npcname, const char *command);
+int npc_touch_areanpc(MapSessionData *, int, int, int);
+int npc_click(MapSessionData *, int);
+int npc_scriptcont(MapSessionData *, int);
+int npc_buysellsel(MapSessionData *, int, int);
+int npc_buylist(MapSessionData *, int, const unsigned short *);
+int npc_selllist(MapSessionData *, int, const unsigned short *);
 int npc_parse_warp(char *w1, const char *w2, char *w3, char *w4);
 
 int npc_enable(const char *name, int flag);
@@ -41,7 +41,7 @@ void npc_free(struct npc_data *npc);
 void npc_addsrcfile(char *);
 int do_init_npc(void);
 int npc_event_do_oninit(void);
-int npc_do_ontimer(int, struct map_session_data *, bool);
+int npc_do_ontimer(int, MapSessionData *, bool);
 
 struct argrec;
 int npc_event_doall_l(const char *name, int rid, int argc,

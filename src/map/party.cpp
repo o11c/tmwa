@@ -18,7 +18,7 @@
 
 #define PARTY_SEND_XYHP_INVERVAL        1000    // 座標やＨＰ送信の間隔
 
-static int party_check_conflict(struct map_session_data *sd);
+static int party_check_conflict(MapSessionData *sd);
 static int party_send_xy_clear(struct party *p);
 
 
@@ -57,7 +57,7 @@ struct party *party_searchname(const char *str)
 }
 
 /* Process a party creation request. */
-int party_create(struct map_session_data *sd, const char *name)
+int party_create(MapSessionData *sd, const char *name)
 {
     char pname[24];
     nullpo_ret(sd);
@@ -82,7 +82,7 @@ int party_create(struct map_session_data *sd, const char *name)
 /* Relay the result of a party creation request. */
 int party_created(int account_id, int fail, int party_id, const char *name)
 {
-    struct map_session_data *sd;
+    MapSessionData *sd;
     sd = map_id2sd(account_id);
 
     nullpo_ret(sd);
@@ -125,7 +125,7 @@ static int party_check_member(const struct party *p)
 {
     nullpo_ret(p);
 
-    for (struct map_session_data *sd : sessions)
+    for (MapSessionData *sd : sessions)
     {
         if (sd->status.party_id != p->party_id)
             continue;
@@ -153,7 +153,7 @@ static int party_check_member(const struct party *p)
 // 情報所得失敗（そのIDのキャラを全部未所属にする）
 int party_recv_noinfo(int party_id)
 {
-    for (struct map_session_data *sd : sessions)
+    for (MapSessionData *sd : sessions)
     {
         if (sd->status.party_id == party_id)
             sd->status.party_id = 0;
@@ -181,7 +181,7 @@ int party_recv_info(const struct party *sp)
 
     for (i = 0; i < MAX_PARTY; i++)
     {                           // sdの設定
-        struct map_session_data *sd = map_id2sd(p->member[i].account_id);
+        MapSessionData *sd = map_id2sd(p->member[i].account_id);
         p->member[i].sd = (sd != NULL
                            && sd->status.party_id == p->party_id) ? sd : NULL;
     }
@@ -190,8 +190,8 @@ int party_recv_info(const struct party *sp)
 
     for (i = 0; i < MAX_PARTY; i++)
     {                           // 設定情報の送信
-//      struct map_session_data *sd = map_id2sd(p->member[i].account_id);
-        struct map_session_data *sd = p->member[i].sd;
+//      MapSessionData *sd = map_id2sd(p->member[i].account_id);
+        MapSessionData *sd = p->member[i].sd;
         if (sd != NULL && sd->party_sended == 0)
         {
             clif_party_option(p, sd, 0x100);
@@ -203,9 +203,9 @@ int party_recv_info(const struct party *sp)
 }
 
 /* Process party invitation from sd to account_id. */
-int party_invite(struct map_session_data *sd, int account_id)
+int party_invite(MapSessionData *sd, int account_id)
 {
-    struct map_session_data *tsd = map_id2sd(account_id);
+    MapSessionData *tsd = map_id2sd(account_id);
     struct party *p = party_search(sd->status.party_id);
     int i;
     int full = 1; /* Indicates whether or not there's room for one more. */
@@ -267,7 +267,7 @@ int party_invite(struct map_session_data *sd, int account_id)
 }
 
 /* Process response to party invitation. */
-int party_reply_invite(struct map_session_data *sd, int account_id, int flag)
+int party_reply_invite(MapSessionData *sd, int account_id, int flag)
 {
     nullpo_ret(sd);
 
@@ -289,7 +289,7 @@ int party_reply_invite(struct map_session_data *sd, int account_id, int flag)
     else
     {
         /* This is the player who sent the invitation. */
-        struct map_session_data *tsd = NULL;
+        MapSessionData *tsd = NULL;
 
         sd->party_invite = 0;
         sd->party_invite_account = 0;
@@ -303,7 +303,7 @@ int party_reply_invite(struct map_session_data *sd, int account_id, int flag)
 // パーティが追加された
 int party_member_added(int party_id, int account_id, int flag)
 {
-    struct map_session_data *sd = map_id2sd(account_id), *sd2;
+    MapSessionData *sd = map_id2sd(account_id), *sd2;
     struct party *p = party_search(party_id);
 
     if (sd == NULL)
@@ -350,7 +350,7 @@ int party_member_added(int party_id, int account_id, int flag)
 }
 
 // パーティ除名要求
-int party_removemember(struct map_session_data *sd, int account_id, const char *)
+int party_removemember(MapSessionData *sd, int account_id, const char *)
 {
     struct party *p;
     int i;
@@ -379,7 +379,7 @@ int party_removemember(struct map_session_data *sd, int account_id, const char *
 }
 
 // パーティ脱退要求
-int party_leave(struct map_session_data *sd)
+int party_leave(MapSessionData *sd)
 {
     struct party *p;
     int i;
@@ -403,7 +403,7 @@ int party_leave(struct map_session_data *sd)
 // パーティメンバが脱退した
 int party_member_left(int party_id, int account_id, const char *name)
 {
-    struct map_session_data *sd = map_id2sd(account_id);
+    MapSessionData *sd = map_id2sd(account_id);
     struct party *p = party_search(party_id);
     if (p != NULL)
     {
@@ -448,7 +448,7 @@ int party_broken(int party_id)
 }
 
 // パーティの設定変更要求
-int party_changeoption(struct map_session_data *sd, int exp, int item)
+int party_changeoption(MapSessionData *sd, int exp, int item)
 {
     struct party *p;
 
@@ -467,7 +467,7 @@ int party_optionchanged(int party_id, int account_id, int exp, int item,
                          int flag)
 {
     struct party *p;
-    struct map_session_data *sd = map_id2sd(account_id);
+    MapSessionData *sd = map_id2sd(account_id);
     if ((p = party_search(party_id)) == NULL)
         return 0;
 
@@ -511,7 +511,7 @@ int party_recv_movemap(int party_id, int account_id, const char *map, int online
 
     for (i = 0; i < MAX_PARTY; i++)
     {                           // sd再設定
-        struct map_session_data *sd = map_id2sd(p->member[i].account_id);
+        MapSessionData *sd = map_id2sd(p->member[i].account_id);
         p->member[i].sd = (sd != NULL
                            && sd->status.party_id == p->party_id) ? sd : NULL;
     }
@@ -523,7 +523,7 @@ int party_recv_movemap(int party_id, int account_id, const char *map, int online
 }
 
 // パーティメンバの移動
-int party_send_movemap(struct map_session_data *sd)
+int party_send_movemap(MapSessionData *sd)
 {
     struct party *p;
 
@@ -555,7 +555,7 @@ int party_send_movemap(struct map_session_data *sd)
 }
 
 // パーティメンバのログアウト
-int party_send_logout(struct map_session_data *sd)
+int party_send_logout(MapSessionData *sd)
 {
     struct party *p;
 
@@ -577,7 +577,7 @@ int party_send_logout(struct map_session_data *sd)
 }
 
 // パーティメッセージ送信
-int party_send_message(struct map_session_data *sd, char *mes, int len)
+int party_send_message(MapSessionData *sd, char *mes, int len)
 {
     if (sd->status.party_id == 0)
         return 0;
@@ -597,7 +597,7 @@ int party_recv_message(int party_id, int account_id, const char *mes, int len)
 }
 
 // パーティ競合確認
-int party_check_conflict(struct map_session_data *sd)
+int party_check_conflict(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
@@ -616,7 +616,7 @@ static void party_send_xyhp_timer_sub(db_key_t, db_val_t data)
 
     for (i = 0; i < MAX_PARTY; i++)
     {
-        struct map_session_data *sd;
+        MapSessionData *sd;
         if ((sd = p->member[i].sd) != NULL)
         {
             // 座標通知
@@ -652,7 +652,7 @@ int party_send_xy_clear(struct party *p)
 
     for (i = 0; i < MAX_PARTY; i++)
     {
-        struct map_session_data *sd;
+        MapSessionData *sd;
         if ((sd = p->member[i].sd) != NULL)
         {
             sd->party_x = -1;
@@ -667,7 +667,7 @@ int party_send_xy_clear(struct party *p)
 void party_send_hp_check(struct block_list *bl, party_t party_id, bool *flag)
 {
     nullpo_retv(bl);
-    struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(bl);
+    MapSessionData *sd = reinterpret_cast<MapSessionData *>(bl);
 
     if (sd->status.party_id == party_id)
     {
@@ -679,7 +679,7 @@ void party_send_hp_check(struct block_list *bl, party_t party_id, bool *flag)
 // 経験値公平分配
 int party_exp_share(struct party *p, int map, int base_exp, int job_exp)
 {
-    struct map_session_data *sd;
+    MapSessionData *sd;
     int i, c;
 
     nullpo_ret(p);

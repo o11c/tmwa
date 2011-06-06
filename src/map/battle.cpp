@@ -53,7 +53,7 @@ static int battle_counttargeted(struct block_list *bl, struct block_list *src, A
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
-        return pc_counttargeted(reinterpret_cast<struct map_session_data *>(bl), src, target_lv);
+        return pc_counttargeted(reinterpret_cast<MapSessionData *>(bl), src, target_lv);
     if (bl->type == BL_MOB)
         return mob_counttargeted(reinterpret_cast<struct mob_data *>(bl), src, target_lv);
     return 0;
@@ -67,7 +67,7 @@ Direction battle_get_dir(struct block_list *bl)
     if (bl->type == BL_MOB)
         return reinterpret_cast<struct mob_data *>(bl)->dir;
     if (bl->type == BL_PC)
-        return reinterpret_cast<struct map_session_data *>(bl)->dir;
+        return reinterpret_cast<MapSessionData *>(bl)->dir;
     return Direction::S;
 }
 
@@ -79,7 +79,7 @@ int battle_get_lv(struct block_list *bl)
     if (bl->type == BL_MOB)
         return reinterpret_cast<struct mob_data *>(bl)->stats[MOB_LV];
     if (bl->type == BL_PC)
-        return reinterpret_cast<struct map_session_data *>(bl)->status.base_level;
+        return reinterpret_cast<MapSessionData *>(bl)->status.base_level;
     return 0;
 }
 
@@ -91,7 +91,7 @@ int battle_get_range(struct block_list *bl)
     if (bl->type == BL_MOB)
         return mob_db[reinterpret_cast<struct mob_data *>(bl)->mob_class].range;
     if (bl->type == BL_PC)
-        return reinterpret_cast<struct map_session_data *>(bl)->attackrange;
+        return reinterpret_cast<MapSessionData *>(bl)->attackrange;
     return 0;
 }
 
@@ -103,7 +103,7 @@ int battle_get_hp(struct block_list *bl)
     if (bl->type == BL_MOB)
         return reinterpret_cast<struct mob_data *>(bl)->hp;
     if (bl->type == BL_PC)
-        return reinterpret_cast<struct map_session_data *>(bl)->status.hp;
+        return reinterpret_cast<MapSessionData *>(bl)->status.hp;
     return 1;
 }
 
@@ -113,7 +113,7 @@ int battle_get_max_hp(struct block_list *bl)
     nullpo_retr(1, bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<struct map_session_data *>(bl)->status.max_hp;
+        return reinterpret_cast<MapSessionData *>(bl)->status.max_hp;
     if (bl->type != BL_MOB)
         return 1;
 
@@ -130,7 +130,7 @@ int battle_get_str(struct block_list *bl)
     if (bl->type == BL_MOB)
         return std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_STR]));
     if (bl->type == BL_PC)
-        return std::max(0, static_cast<int>(reinterpret_cast<struct map_session_data *>(bl)->paramc[0]));
+        return std::max(0, static_cast<int>(reinterpret_cast<MapSessionData *>(bl)->paramc[0]));
     return 0;
 }
 
@@ -141,7 +141,7 @@ int battle_get_agi(struct block_list *bl)
     if (bl->type == BL_MOB)
         std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_AGI]));
     if (bl->type == BL_PC)
-        std::max(0, static_cast<int>(reinterpret_cast<struct map_session_data *>(bl)->paramc[1]));
+        std::max(0, static_cast<int>(reinterpret_cast<MapSessionData *>(bl)->paramc[1]));
     return 0;
 }
 
@@ -152,7 +152,7 @@ int battle_get_vit(struct block_list *bl)
     if (bl->type == BL_MOB)
         std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_VIT]));
     if (bl->type == BL_PC)
-        std::max(0, static_cast<int>(reinterpret_cast<struct map_session_data *>(bl)->paramc[2]));
+        std::max(0, static_cast<int>(reinterpret_cast<MapSessionData *>(bl)->paramc[2]));
     return 0;
 }
 
@@ -163,7 +163,7 @@ int battle_get_int(struct block_list *bl)
     if (bl->type == BL_MOB)
         std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_INT]));
     if (bl->type == BL_PC)
-        std::max(0, static_cast<int>(reinterpret_cast<struct map_session_data *>(bl)->paramc[3]));
+        std::max(0, static_cast<int>(reinterpret_cast<MapSessionData *>(bl)->paramc[3]));
     return 0;
 }
 
@@ -174,7 +174,7 @@ int battle_get_dex(struct block_list *bl)
     if (bl->type == BL_MOB)
         std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_DEX]));
     if (bl->type == BL_PC)
-        std::max(0, static_cast<int>(reinterpret_cast<struct map_session_data *>(bl)->paramc[4]));
+        std::max(0, static_cast<int>(reinterpret_cast<MapSessionData *>(bl)->paramc[4]));
     return 0;
 }
 
@@ -185,7 +185,7 @@ int battle_get_luk(struct block_list *bl)
     if (bl->type == BL_MOB)
         std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_LUK]));
     if (bl->type == BL_PC)
-        std::max(0, static_cast<int>(reinterpret_cast<struct map_session_data *>(bl)->paramc[5]));
+        std::max(0, static_cast<int>(reinterpret_cast<MapSessionData *>(bl)->paramc[5]));
     return 0;
 }
 
@@ -196,7 +196,7 @@ int battle_get_flee(struct block_list *bl)
 
     int flee;
     if (bl->type == BL_PC)
-        flee = reinterpret_cast<struct map_session_data *>(bl)->flee;
+        flee = reinterpret_cast<MapSessionData *>(bl)->flee;
     else
         flee = battle_get_agi(bl) + battle_get_lv(bl);
 
@@ -215,7 +215,7 @@ int battle_get_hit(struct block_list *bl)
 
     int hit;
     if (bl->type == BL_PC)
-        hit = reinterpret_cast<struct map_session_data *>(bl)->hit;
+        hit = reinterpret_cast<MapSessionData *>(bl)->hit;
     else
         hit = battle_get_dex(bl) + battle_get_lv(bl);
 
@@ -233,7 +233,7 @@ int battle_get_flee2(struct block_list *bl)
 
     int flee2;
     if (bl->type == BL_PC)
-        flee2 = reinterpret_cast<struct map_session_data *>(bl)->flee2;
+        flee2 = reinterpret_cast<MapSessionData *>(bl)->flee2;
     else
         flee2 = battle_get_luk(bl) + 1;
 
@@ -252,7 +252,7 @@ static int battle_get_critical(struct block_list *bl)
 
     if (bl->type == BL_PC)
         // FIXME was this intended?
-        return std::max(1, reinterpret_cast<struct map_session_data *>(bl)->critical - battle_get_luk(bl));
+        return std::max(1, reinterpret_cast<MapSessionData *>(bl)->critical - battle_get_luk(bl));
     return battle_get_luk(bl) * 3 + 1;
 }
 
@@ -262,7 +262,7 @@ int battle_get_baseatk(struct block_list *bl)
     nullpo_retr(1, bl);
 
     if (bl->type == BL_PC)
-        return std::max(1, static_cast<int>(reinterpret_cast<struct map_session_data *>(bl)->base_atk));
+        return std::max(1, static_cast<int>(reinterpret_cast<MapSessionData *>(bl)->base_atk));
 
     int str = battle_get_str(bl);
     int dstr = str / 10;
@@ -275,7 +275,7 @@ int battle_get_atk(struct block_list *bl)
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
-        return std::max(0, static_cast<int>(reinterpret_cast<struct map_session_data *>(bl)->watk));
+        return std::max(0, static_cast<int>(reinterpret_cast<MapSessionData *>(bl)->watk));
     if (bl->type == BL_MOB)
         return std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_ATK1]));
     return 0;
@@ -287,7 +287,7 @@ static int battle_get_atk_(struct block_list *bl)
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<struct map_session_data *>(bl)->watk_;
+        return reinterpret_cast<MapSessionData *>(bl)->watk_;
     return 0;
 }
 
@@ -297,7 +297,7 @@ int battle_get_atk2(struct block_list *bl)
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<struct map_session_data *>(bl)->watk2;
+        return reinterpret_cast<MapSessionData *>(bl)->watk2;
     if (bl->type != BL_MOB)
         return 0;
     return std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_ATK2]));
@@ -309,7 +309,7 @@ static int battle_get_atk_2(struct block_list *bl)
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<struct map_session_data *>(bl)->watk_2;
+        return reinterpret_cast<MapSessionData *>(bl)->watk_2;
     return 0;
 }
 
@@ -321,7 +321,7 @@ int battle_get_def(struct block_list *bl)
     int def = 0;
     if (bl->type == BL_PC)
     {
-        def = reinterpret_cast<struct map_session_data *>(bl)->def;
+        def = reinterpret_cast<MapSessionData *>(bl)->def;
     }
     if (bl->type == BL_MOB)
     {
@@ -344,7 +344,7 @@ int battle_get_mdef(struct block_list *bl)
 
     int mdef = 0;
     if (bl->type == BL_PC)
-        mdef = reinterpret_cast<struct map_session_data *>(bl)->mdef;
+        mdef = reinterpret_cast<MapSessionData *>(bl)->mdef;
     if (bl->type == BL_MOB)
         mdef = reinterpret_cast<struct mob_data *>(bl)->stats[MOB_MDEF];
 
@@ -368,7 +368,7 @@ int battle_get_def2(struct block_list *bl)
 
     int def2 = 1;
     if (bl->type == BL_PC)
-        def2 = reinterpret_cast<struct map_session_data *>(bl)->def2;
+        def2 = reinterpret_cast<MapSessionData *>(bl)->def2;
     if (bl->type == BL_MOB)
         def2 = reinterpret_cast<struct mob_data *>(bl)->stats[MOB_VIT];
 
@@ -387,7 +387,7 @@ int battle_get_speed(struct block_list *bl)
     nullpo_retr(1000, bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<struct map_session_data *>(bl)->speed;
+        return reinterpret_cast<MapSessionData *>(bl)->speed;
 
     int speed = 1000;
     if (bl->type == BL_MOB)
@@ -401,7 +401,7 @@ int battle_get_adelay(struct block_list *bl)
     nullpo_retr(4000, bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<struct map_session_data *>(bl)->aspd << 1;
+        return reinterpret_cast<MapSessionData *>(bl)->aspd << 1;
 
     struct status_change *sc_data = battle_get_sc_data(bl);
     int adelay = 4000;
@@ -430,7 +430,7 @@ int battle_get_amotion(struct block_list *bl)
     nullpo_retr(2000, bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<struct map_session_data *>(bl)->amotion;
+        return reinterpret_cast<MapSessionData *>(bl)->amotion;
     struct status_change *sc_data = battle_get_sc_data(bl);
     int amotion = 2000, aspd_rate = 100;
     if (bl->type == BL_MOB && reinterpret_cast<struct mob_data *>(bl))
@@ -463,7 +463,7 @@ int battle_get_dmotion(struct block_list *bl)
     }
     if (bl->type == BL_PC)
     {
-        int ret = reinterpret_cast<struct map_session_data *>(bl)->dmotion;
+        int ret = reinterpret_cast<MapSessionData *>(bl)->dmotion;
         percent_adjust(ret, battle_config.pc_damage_delay_rate);
         return ret;
     }
@@ -479,7 +479,7 @@ int battle_get_element(struct block_list *bl)
         return reinterpret_cast<struct mob_data *>(bl)->def_ele;
     if (bl->type == BL_PC)
         // This adds 1 level ...
-        return 20 + reinterpret_cast<struct map_session_data *>(bl)->def_ele;
+        return 20 + reinterpret_cast<MapSessionData *>(bl)->def_ele;
     // 20 = level 1 neutral
     return 20;
 }
@@ -490,7 +490,7 @@ int battle_get_attack_element(struct block_list *bl)
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<struct map_session_data *>(bl)->atk_ele;
+        return reinterpret_cast<MapSessionData *>(bl)->atk_ele;
     return 0;
 }
 
@@ -500,7 +500,7 @@ int battle_get_attack_element2(struct block_list *bl)
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<struct map_session_data *>(bl)->atk_ele_;
+        return reinterpret_cast<MapSessionData *>(bl)->atk_ele_;
     return 0;
 }
 
@@ -509,7 +509,7 @@ int battle_get_party_id(struct block_list *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_PC)
-        return reinterpret_cast<struct map_session_data *>(bl)->status.party_id;
+        return reinterpret_cast<MapSessionData *>(bl)->status.party_id;
     if (bl->type == BL_MOB)
     {
         struct mob_data *md = reinterpret_cast<struct mob_data *>(bl);
@@ -585,7 +585,7 @@ struct status_change *battle_get_sc_data(struct block_list *bl)
     if (bl->type == BL_MOB)
         return reinterpret_cast<struct mob_data *>(bl)->sc_data;
     if (bl->type == BL_PC)
-        return reinterpret_cast<struct map_session_data *>(bl)->sc_data;
+        return reinterpret_cast<MapSessionData *>(bl)->sc_data;
     return NULL;
 }
 
@@ -597,7 +597,7 @@ short *battle_get_sc_count(struct block_list *bl)
     if (bl->type == BL_MOB)
         return &reinterpret_cast<struct mob_data *>(bl)->sc_count;
     if (bl->type == BL_PC)
-        return &reinterpret_cast<struct map_session_data *>(bl)->sc_count;
+        return &reinterpret_cast<MapSessionData *>(bl)->sc_count;
     return NULL;
 }
 
@@ -608,8 +608,8 @@ short *battle_get_opt1(struct block_list *bl)
 
     if (bl->type == BL_MOB)
         return &reinterpret_cast<struct mob_data *>(bl)->opt1;
-    if (bl->type == BL_PC && reinterpret_cast<struct map_session_data *>(bl))
-        return &reinterpret_cast<struct map_session_data *>(bl)->opt1;
+    if (bl->type == BL_PC && reinterpret_cast<MapSessionData *>(bl))
+        return &reinterpret_cast<MapSessionData *>(bl)->opt1;
     if (bl->type == BL_NPC && reinterpret_cast<struct npc_data *>(bl))
         return &reinterpret_cast<struct npc_data *>(bl)->opt1;
     return 0;
@@ -623,7 +623,7 @@ short *battle_get_opt2(struct block_list *bl)
     if (bl->type == BL_MOB)
         return &reinterpret_cast<struct mob_data *>(bl)->opt2;
     if (bl->type == BL_PC)
-        return &reinterpret_cast<struct map_session_data *>(bl)->opt2;
+        return &reinterpret_cast<MapSessionData *>(bl)->opt2;
     if (bl->type == BL_NPC)
         return &reinterpret_cast<struct npc_data *>(bl)->opt2;
     return 0;
@@ -636,7 +636,7 @@ short *battle_get_opt3(struct block_list *bl)
     if (bl->type == BL_MOB)
         return &reinterpret_cast<struct mob_data *>(bl)->opt3;
     if (bl->type == BL_PC)
-        return &reinterpret_cast<struct map_session_data *>(bl)->opt3;
+        return &reinterpret_cast<MapSessionData *>(bl)->opt3;
     if (bl->type == BL_NPC)
         return &reinterpret_cast<struct npc_data *>(bl)->opt3;
     return 0;
@@ -650,7 +650,7 @@ short *battle_get_option(struct block_list *bl)
     if (bl->type == BL_MOB)
         return &reinterpret_cast<struct mob_data *>(bl)->option;
     if (bl->type == BL_PC)
-        return &reinterpret_cast<struct map_session_data *>(bl)->status.option;
+        return &reinterpret_cast<MapSessionData *>(bl)->status.option;
     if (bl->type == BL_NPC)
         return &reinterpret_cast<struct npc_data *>(bl)->option;
     return 0;
@@ -682,7 +682,7 @@ int battle_damage(struct block_list *src, struct block_list *target, int damage)
     }
     if (target->type == BL_PC)
     {
-        struct map_session_data *tsd = reinterpret_cast<struct map_session_data *>(target);
+        MapSessionData *tsd = reinterpret_cast<MapSessionData *>(target);
         return pc_damage(src, tsd, damage);
     }
     return 0;
@@ -695,7 +695,7 @@ int battle_heal(struct block_list *src, struct block_list *target, int hp, int s
     nullpo_ret(target);
     // src may be NULL for programmatic healing
 
-    if (target->type == BL_PC && pc_isdead(reinterpret_cast<struct map_session_data *>(target)))
+    if (target->type == BL_PC && pc_isdead(reinterpret_cast<MapSessionData *>(target)))
         return 0;
     if (!hp && !sp)
         return 0;
@@ -706,7 +706,7 @@ int battle_heal(struct block_list *src, struct block_list *target, int hp, int s
     if (target->type == BL_MOB)
         return mob_heal(reinterpret_cast<struct mob_data *>(target), hp);
     if (target->type == BL_PC)
-        return pc_heal(reinterpret_cast<struct map_session_data *>(target), hp, sp);
+        return pc_heal(reinterpret_cast<MapSessionData *>(target), hp, sp);
     return 0;
 }
 
@@ -718,7 +718,7 @@ int battle_stopattack(struct block_list *bl)
     if (bl->type == BL_MOB)
         return mob_stopattack(reinterpret_cast<struct mob_data *>(bl));
     if (bl->type == BL_PC)
-        return pc_stopattack(reinterpret_cast<struct map_session_data *>(bl));
+        return pc_stopattack(reinterpret_cast<MapSessionData *>(bl));
     return 0;
 }
 
@@ -772,9 +772,9 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
     wd.div_ = 1;                   // single attack
     wd.damage = 0;
 
-    struct map_session_data *tsd = NULL;
+    MapSessionData *tsd = NULL;
     if (target->type == BL_PC)
-        tsd = reinterpret_cast<struct map_session_data *>(target);
+        tsd = reinterpret_cast<MapSessionData *>(target);
     struct mob_data *tmd = NULL;
     if (target->type == BL_MOB)
         tmd = reinterpret_cast<struct mob_data *>(target);
@@ -934,12 +934,12 @@ int battle_is_unarmed(struct block_list *bl)
 {
     if (!bl || bl->type != BL_PC)
         return 0;
-    struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(bl);
+    MapSessionData *sd = reinterpret_cast<MapSessionData *>(bl);
     return sd->equip_index[EQUIP_SHIELD] == -1 && sd->equip_index[EQUIP_WEAPON] == -1;
 }
 
 /// A PC attacks another being
-static struct Damage battle_calc_pc_weapon_attack(struct map_session_data *sd,
+static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
                                                   struct block_list *target)
 {
     struct Damage wd = {};
@@ -962,9 +962,9 @@ static struct Damage battle_calc_pc_weapon_attack(struct map_session_data *sd,
     int t_ele = battle_get_element(target) % 10;
     int t_mode = battle_get_mode(target);
 
-    struct map_session_data *tsd = NULL;
+    MapSessionData *tsd = NULL;
     if (target->type == BL_PC)
-        tsd = reinterpret_cast<struct map_session_data *>(target);
+        tsd = reinterpret_cast<MapSessionData *>(target);
     struct mob_data *tmd = NULL;
     if (target->type == BL_MOB)
         tmd = reinterpret_cast<struct mob_data *>(target);
@@ -1328,11 +1328,11 @@ struct Damage battle_calc_weapon_attack(struct block_list *src, struct block_lis
     nullpo_retr(wd, src);
     nullpo_retr(wd, target);
 
-    struct map_session_data *sd = NULL;
+    MapSessionData *sd = NULL;
     struct mob_data *md = NULL;
     if (src->type == BL_PC)
     {
-        sd = reinterpret_cast<struct map_session_data *>(src);
+        sd = reinterpret_cast<MapSessionData *>(src);
         wd = battle_calc_pc_weapon_attack(sd, target);
     }
     else if (src->type == BL_MOB)
@@ -1368,7 +1368,7 @@ struct Damage battle_calc_weapon_attack(struct block_list *src, struct block_lis
             breakrate *= 2;
         if (breakrate >= 10000 || MRAND(10000) < breakrate * battle_config.equipment_break_rate / 100)
         {
-            pc_breakarmor(reinterpret_cast<struct map_session_data *>(target));
+            pc_breakarmor(reinterpret_cast<MapSessionData *>(target));
         }
     }
 
@@ -1381,17 +1381,17 @@ AttackResult battle_weapon_attack(struct block_list *src, struct block_list *tar
     nullpo_retr(AttackResult::ZERO, src);
     nullpo_retr(AttackResult::ZERO, target);
 
-    struct map_session_data *sd = NULL;
+    MapSessionData *sd = NULL;
     if (src->type == BL_PC)
-        sd = reinterpret_cast<struct map_session_data *>(src);
+        sd = reinterpret_cast<MapSessionData *>(src);
 
     if (src->prev == NULL || target->prev == NULL)
         return AttackResult::ZERO;
     if (sd && pc_isdead(sd))
         return AttackResult::ZERO;
-    struct map_session_data *tsd = NULL;
+    MapSessionData *tsd = NULL;
     if (target->type == BL_PC)
-        tsd = reinterpret_cast<struct map_session_data *>(target);
+        tsd = reinterpret_cast<MapSessionData *>(target);
     if (tsd && pc_isdead(tsd))
         return AttackResult::ZERO;
 
@@ -1434,7 +1434,7 @@ AttackResult battle_weapon_attack(struct block_list *src, struct block_list *tar
             reduction = wd.damage;
 
         wd.damage -= reduction;
-        MAP_LOG_PC(reinterpret_cast<struct map_session_data *>(target), "MAGIC-ABSORB-DMG %d", reduction);
+        MAP_LOG_PC(reinterpret_cast<MapSessionData *>(target), "MAGIC-ABSORB-DMG %d", reduction);
     }
 
     int damage = wd.damage + wd.damage2;
@@ -1519,17 +1519,17 @@ bool battle_check_target(struct block_list *src, struct block_list *target)
     // The master (if a mob)
     struct block_list *ss = src;
 
-    struct map_session_data *sd = NULL;
+    MapSessionData *sd = NULL;
     struct mob_data *md = NULL;
     if (src->type == BL_PC)
-        sd = reinterpret_cast<struct map_session_data *>(src);
+        sd = reinterpret_cast<MapSessionData *>(src);
     if (src->type == BL_MOB)
         md = reinterpret_cast<struct mob_data *>(src);
 
-    struct map_session_data *tsd = NULL;
+    MapSessionData *tsd = NULL;
     struct mob_data *tmd = NULL;
     if (target->type == BL_PC)
-        tsd = reinterpret_cast<struct map_session_data *>(target);
+        tsd = reinterpret_cast<MapSessionData *>(target);
     if (target->type == BL_MOB)
         tmd = reinterpret_cast<struct mob_data *>(target);
 
@@ -1556,7 +1556,7 @@ bool battle_check_target(struct block_list *src, struct block_list *target)
         return 0;
 
     if (ss->type == BL_PC)
-        sd = reinterpret_cast<struct map_session_data *>(ss);
+        sd = reinterpret_cast<MapSessionData *>(ss);
     if (ss->type == BL_MOB)
         md = reinterpret_cast<struct mob_data *>(ss);
 

@@ -23,7 +23,7 @@ struct AtCommandInfo
 {
     const char *command;
     gm_level_t level;
-    int (*proc)(const int, struct map_session_data *,
+    int (*proc)(const int, MapSessionData *,
                 const char *command, const char *message);
     AtCommandCategory cat;
     const char *arg_help;
@@ -31,7 +31,7 @@ struct AtCommandInfo
 };
 
 /// Execute an atcommand, return true if it succeeded
-bool is_atcommand(const int fd, struct map_session_data *sd,
+bool is_atcommand(const int fd, MapSessionData *sd,
                   const char *message, gm_level_t gmlvl);
 
 void atcommand_config_read(const char *cfgName);

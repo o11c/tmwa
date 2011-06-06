@@ -58,16 +58,16 @@
                    pc_readglobalreg(sd, "MAGIC_EXPERIENCE") & 0xffff,   \
                    (pc_readglobalreg(sd, "MAGIC_EXPERIENCE") >> 24) & 0xff)
 
-static int pc_isequip(struct map_session_data *sd, int n);
-static int pc_checkoverhp(struct map_session_data *);
-static int pc_checkoversp(struct map_session_data *);
-static int pc_can_reach(struct map_session_data *, int, int);
-static int pc_checkbaselevelup(struct map_session_data *sd);
-static int pc_checkjoblevelup(struct map_session_data *sd);
-static int pc_nextbaseafter(struct map_session_data *);
-static int pc_nextjobafter(struct map_session_data *);
-static int pc_calc_pvprank(struct map_session_data *sd);
-static int pc_ismarried(struct map_session_data *sd);
+static int pc_isequip(MapSessionData *sd, int n);
+static int pc_checkoverhp(MapSessionData *);
+static int pc_checkoversp(MapSessionData *);
+static int pc_can_reach(MapSessionData *, int, int);
+static int pc_checkbaselevelup(MapSessionData *sd);
+static int pc_checkjoblevelup(MapSessionData *sd);
+static int pc_nextbaseafter(MapSessionData *);
+static int pc_nextjobafter(MapSessionData *);
+static int pc_calc_pvprank(MapSessionData *sd);
+static int pc_ismarried(MapSessionData *sd);
 
 static int max_weight_base[MAX_PC_CLASS];
 static int hp_coefficient[MAX_PC_CLASS];
@@ -94,7 +94,7 @@ static unsigned int equip_pos[11] =
 static struct gm_account *gm_account = NULL;
 static int GM_num = 0;
 
-int pc_isGM(struct map_session_data *sd)
+int pc_isGM(MapSessionData *sd)
 {
 //  struct gm_account *p;
     int i;
@@ -113,8 +113,8 @@ int pc_isGM(struct map_session_data *sd)
 
 }
 
-int pc_iskiller(struct map_session_data *src,
-                 struct map_session_data *target)
+int pc_iskiller(MapSessionData *src,
+                 MapSessionData *target)
 {
     nullpo_ret(src);
 
@@ -161,10 +161,9 @@ static int distance(int x_0, int y_0, int x_1, int y_1)
 
 static void pc_invincible_timer(timer_id tid, tick_t, uint32_t id)
 {
-    struct map_session_data *sd;
+    MapSessionData *sd = map_id2sd(id);
 
-    if ((sd = reinterpret_cast<struct map_session_data *>(map_id2sd(id))) == NULL
-        || sd->bl.type != BL_PC)
+    if (!sd)
         return;
 
     if (sd->invincible_timer != tid)
@@ -175,7 +174,7 @@ static void pc_invincible_timer(timer_id tid, tick_t, uint32_t id)
     sd->invincible_timer = -1;
 }
 
-int pc_setinvincibletimer(struct map_session_data *sd, int val)
+int pc_setinvincibletimer(MapSessionData *sd, int val)
 {
     nullpo_ret(sd);
 
@@ -186,7 +185,7 @@ int pc_setinvincibletimer(struct map_session_data *sd, int val)
     return 0;
 }
 
-int pc_delinvincibletimer(struct map_session_data *sd)
+int pc_delinvincibletimer(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
@@ -198,7 +197,7 @@ int pc_delinvincibletimer(struct map_session_data *sd)
     return 0;
 }
 
-int pc_setrestartvalue(struct map_session_data *sd, int type)
+int pc_setrestartvalue(MapSessionData *sd, int type)
 {
     nullpo_ret(sd);
 
@@ -258,7 +257,7 @@ static void pc_counttargeted_sub(struct block_list *bl, uint32_t id, int *c,
         return;
     if (bl->type == BL_PC)
     {
-        struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(bl);
+        MapSessionData *sd = reinterpret_cast<MapSessionData *>(bl);
         if (sd && sd->attacktarget == id && sd->attacktimer != -1
             && sd->attacktarget_lv >= target_lv)
             (*c)++;
@@ -274,7 +273,7 @@ static void pc_counttargeted_sub(struct block_list *bl, uint32_t id, int *c,
     }
 }
 
-int pc_counttargeted(struct map_session_data *sd, struct block_list *src,
+int pc_counttargeted(MapSessionData *sd, struct block_list *src,
                       AttackResult target_lv)
 {
     int c = 0;
@@ -289,13 +288,13 @@ int pc_counttargeted(struct map_session_data *sd, struct block_list *src,
  * ローカルプロトタイプ宣言 (必要な物のみ)
  *------------------------------------------
  */
-static int pc_walktoxy_sub(struct map_session_data *);
+static int pc_walktoxy_sub(MapSessionData *);
 
 /*==========================================
  * saveに必要なステータス修正を行なう
  *------------------------------------------
  */
-int pc_makesavestatus(struct map_session_data *sd)
+int pc_makesavestatus(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
@@ -331,7 +330,7 @@ int pc_makesavestatus(struct map_session_data *sd)
  * 接続時の初期化
  *------------------------------------------
  */
-int pc_setnewpc(struct map_session_data *sd, int account_id, int char_id,
+int pc_setnewpc(MapSessionData *sd, int account_id, int char_id,
                  int login_id1, int client_tick, int sex, int)
 {
     nullpo_ret(sd);
@@ -351,7 +350,7 @@ int pc_setnewpc(struct map_session_data *sd, int account_id, int char_id,
     return 0;
 }
 
-int pc_equippoint(struct map_session_data *sd, int n)
+int pc_equippoint(MapSessionData *sd, int n)
 {
     int ep = 0;
     nullpo_ret(sd);
@@ -364,7 +363,7 @@ int pc_equippoint(struct map_session_data *sd, int n)
     return ep;
 }
 
-static int pc_setinventorydata(struct map_session_data *sd)
+static int pc_setinventorydata(MapSessionData *sd)
 {
     int i, id;
 
@@ -378,7 +377,7 @@ static int pc_setinventorydata(struct map_session_data *sd)
     return 0;
 }
 
-static int pc_calcweapontype(struct map_session_data *sd)
+static int pc_calcweapontype(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
@@ -404,7 +403,7 @@ static int pc_calcweapontype(struct map_session_data *sd)
     return 0;
 }
 
-static int pc_setequipindex(struct map_session_data *sd)
+static int pc_setequipindex(MapSessionData *sd)
 {
     int i, j;
 
@@ -453,7 +452,7 @@ static int pc_setequipindex(struct map_session_data *sd)
     return 0;
 }
 
-int pc_isequip(struct map_session_data *sd, int n)
+int pc_isequip(MapSessionData *sd, int n)
 {
     struct item_data *item;
     //転生や養子の場合の元の職業を算出する
@@ -479,7 +478,7 @@ int pc_isequip(struct map_session_data *sd, int n)
  * Weapon Breaking [Valaris]
  *------------------------------------------
  */
-int pc_breakweapon(struct map_session_data *sd)
+int pc_breakweapon(MapSessionData *sd)
 {
     struct item_data *item;
     char output[255];
@@ -522,7 +521,7 @@ int pc_breakweapon(struct map_session_data *sd)
  * Armor Breaking [Valaris]
  *------------------------------------------
  */
-int pc_breakarmor(struct map_session_data *sd)
+int pc_breakarmor(MapSessionData *sd)
 {
     struct item_data *item;
     char output[255];
@@ -568,7 +567,7 @@ int pc_breakarmor(struct map_session_data *sd)
 int pc_authok(int id, int login_id2, time_t connect_until_time,
                short tmw_version, const struct mmo_charstatus *st)
 {
-    struct map_session_data *sd = NULL;
+    MapSessionData *sd = NULL;
 
     struct party *p;
     unsigned long tick = gettick();
@@ -748,7 +747,7 @@ int pc_authok(int id, int login_id2, time_t connect_until_time,
  */
 int pc_authfail(int id)
 {
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     sd = map_id2sd(id);
     if (sd == NULL)
@@ -759,7 +758,7 @@ int pc_authfail(int id)
     return 0;
 }
 
-static int pc_calc_skillpoint(struct map_session_data *sd)
+static int pc_calc_skillpoint(MapSessionData *sd)
 {
     int i, skill_points = 0;
 
@@ -774,7 +773,7 @@ static int pc_calc_skillpoint(struct map_session_data *sd)
     return skill_points;
 }
 
-static void pc_set_weapon_look(struct map_session_data *sd)
+static void pc_set_weapon_look(MapSessionData *sd)
 {
     if (sd->attack_spell_override)
         clif_changelook(&sd->bl, LOOK_WEAPON,
@@ -790,7 +789,7 @@ static void pc_set_weapon_look(struct map_session_data *sd)
  * 能動的に変化させたパラメータは自前でsendするように
  *------------------------------------------
  */
-int pc_calcstatus(struct map_session_data *sd, int first)
+int pc_calcstatus(MapSessionData *sd, int first)
 {
     int b_speed, b_max_hp, b_max_sp, b_hp, b_sp, b_weight, b_max_weight,
         b_paramb[6], b_parame[6], b_hit, b_flee;
@@ -1460,7 +1459,7 @@ int pc_calcstatus(struct map_session_data *sd, int first)
  * 装 備品による能力等のボーナス設定
  *------------------------------------------
  */
-int pc_bonus(struct map_session_data *sd, int type, int val)
+int pc_bonus(MapSessionData *sd, int type, int val)
 {
     nullpo_ret(sd);
 
@@ -1848,7 +1847,7 @@ int pc_bonus(struct map_session_data *sd, int type, int val)
  * スクリプトによるスキル所得
  *------------------------------------------
  */
-int pc_skill(struct map_session_data *sd, int id, int level, int flag)
+int pc_skill(MapSessionData *sd, int id, int level, int flag)
 {
     nullpo_ret(sd);
 
@@ -1881,7 +1880,7 @@ int pc_skill(struct map_session_data *sd, int id, int level, int flag)
  * 3万個制限にかかるか確認
  *------------------------------------------
  */
-int pc_checkadditem(struct map_session_data *sd, int nameid, int amount)
+int pc_checkadditem(MapSessionData *sd, int nameid, int amount)
 {
     int i;
 
@@ -1909,7 +1908,7 @@ int pc_checkadditem(struct map_session_data *sd, int nameid, int amount)
  * 空きアイテム欄の個数
  *------------------------------------------
  */
-int pc_inventoryblank(struct map_session_data *sd)
+int pc_inventoryblank(MapSessionData *sd)
 {
     int i, b;
 
@@ -1928,7 +1927,7 @@ int pc_inventoryblank(struct map_session_data *sd)
  * お金を払う
  *------------------------------------------
  */
-int pc_payzeny(struct map_session_data *sd, int zeny)
+int pc_payzeny(MapSessionData *sd, int zeny)
 {
     double z;
 
@@ -1947,7 +1946,7 @@ int pc_payzeny(struct map_session_data *sd, int zeny)
  * お金を得る
  *------------------------------------------
  */
-int pc_getzeny(struct map_session_data *sd, int zeny)
+int pc_getzeny(MapSessionData *sd, int zeny)
 {
     double z;
 
@@ -1969,7 +1968,7 @@ int pc_getzeny(struct map_session_data *sd, int zeny)
  * アイテムを探して、インデックスを返す
  *------------------------------------------
  */
-int pc_search_inventory(struct map_session_data *sd, int item_id)
+int pc_search_inventory(MapSessionData *sd, int item_id)
 {
     int i;
 
@@ -1985,7 +1984,7 @@ int pc_search_inventory(struct map_session_data *sd, int item_id)
     return -1;
 }
 
-int pc_count_all_items(struct map_session_data *player, int item_id)
+int pc_count_all_items(MapSessionData *player, int item_id)
 {
     int i;
     int count = 0;
@@ -2001,7 +2000,7 @@ int pc_count_all_items(struct map_session_data *player, int item_id)
     return count;
 }
 
-int pc_remove_items(struct map_session_data *player, int item_id, int count)
+int pc_remove_items(MapSessionData *player, int item_id, int count)
 {
     int i;
 
@@ -2032,7 +2031,7 @@ int pc_remove_items(struct map_session_data *player, int item_id, int count)
  * アイテム追加。個数のみitem構造体の数字を無視
  *------------------------------------------
  */
-int pc_additem(struct map_session_data *sd, struct item *item_data,
+int pc_additem(MapSessionData *sd, struct item *item_data,
                 int amount)
 {
     struct item_data *data;
@@ -2097,7 +2096,7 @@ int pc_additem(struct map_session_data *sd, struct item *item_data,
  * アイテムを減らす
  *------------------------------------------
  */
-int pc_delitem(struct map_session_data *sd, int n, int amount, int type)
+int pc_delitem(MapSessionData *sd, int n, int amount, int type)
 {
     nullpo_retr(1, sd);
 
@@ -2131,7 +2130,7 @@ int pc_delitem(struct map_session_data *sd, int n, int amount, int type)
  * アイテムを落す
  *------------------------------------------
  */
-int pc_dropitem(struct map_session_data *sd, int n, int amount)
+int pc_dropitem(MapSessionData *sd, int n, int amount)
 {
     nullpo_retr(1, sd);
 
@@ -2162,7 +2161,7 @@ int pc_dropitem(struct map_session_data *sd, int n, int amount)
  *------------------------------------------
  */
 
-static int can_pick_item_up_from(struct map_session_data *self, int other_id)
+static int can_pick_item_up_from(MapSessionData *self, int other_id)
 {
     struct party *p = party_search(self->status.party_id);
 
@@ -2170,7 +2169,7 @@ static int can_pick_item_up_from(struct map_session_data *self, int other_id)
     if (!self || self->bl.id == other_id || !other_id)
         return 1;
 
-    struct map_session_data *other = map_id2sd(other_id);
+    MapSessionData *other = map_id2sd(other_id);
 
     /* Other no longer exists? */
     if (!other)
@@ -2198,7 +2197,7 @@ static int can_pick_item_up_from(struct map_session_data *self, int other_id)
     }
 }
 
-int pc_takeitem(struct map_session_data *sd, struct flooritem_data *fitem)
+int pc_takeitem(MapSessionData *sd, struct flooritem_data *fitem)
 {
     int flag;
     unsigned int tick = gettick();
@@ -2255,7 +2254,7 @@ int pc_takeitem(struct map_session_data *sd, struct flooritem_data *fitem)
     return 0;
 }
 
-static int pc_isUseitem(struct map_session_data *sd, int n)
+static int pc_isUseitem(MapSessionData *sd, int n)
 {
     struct item_data *item;
     int nameid;
@@ -2290,7 +2289,7 @@ static int pc_isUseitem(struct map_session_data *sd, int n)
  * アイテムを使う
  *------------------------------------------
  */
-int pc_useitem(struct map_session_data *sd, int n)
+int pc_useitem(MapSessionData *sd, int n)
 {
     int amount;
 
@@ -2323,7 +2322,7 @@ int pc_useitem(struct map_session_data *sd, int n)
  * PCの位置設定
  *------------------------------------------
  */
-int pc_setpos(struct map_session_data *sd, const char *mapname_org, int x, int y,
+int pc_setpos(MapSessionData *sd, const char *mapname_org, int x, int y,
               BeingRemoveType clrtype)
 {
     char mapname[24];
@@ -2436,7 +2435,7 @@ int pc_setpos(struct map_session_data *sd, const char *mapname_org, int x, int y
  * PCのランダムワープ
  *------------------------------------------
  */
-int pc_randomwarp(struct map_session_data *sd, BeingRemoveType type)
+int pc_randomwarp(MapSessionData *sd, BeingRemoveType type)
 {
     int x, y, c, i = 0;
     int m;
@@ -2465,7 +2464,7 @@ int pc_randomwarp(struct map_session_data *sd, BeingRemoveType type)
  *
  *------------------------------------------
  */
-int pc_can_reach(struct map_session_data *sd, int x, int y)
+int pc_can_reach(MapSessionData *sd, int x, int y)
 {
     struct walkpath_data wpd;
 
@@ -2489,7 +2488,7 @@ int pc_can_reach(struct map_session_data *sd, int x, int y)
  * 次の1歩にかかる時間を計算
  *------------------------------------------
  */
-static int calc_next_walk_step(struct map_session_data *sd)
+static int calc_next_walk_step(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
@@ -2507,7 +2506,7 @@ static int calc_next_walk_step(struct map_session_data *sd)
  */
 static void pc_walk(timer_id tid, tick_t tick, uint32_t id, uint8_t data)
 {
-    struct map_session_data *sd;
+    MapSessionData *sd;
     int i, ctype;
     int moveblock;
     int x, y, dx, dy;
@@ -2620,7 +2619,7 @@ static void pc_walk(timer_id tid, tick_t tick, uint32_t id, uint8_t data)
  * 移動可能か確認して、可能なら歩行開始
  *------------------------------------------
  */
-static int pc_walktoxy_sub(struct map_session_data *sd)
+static int pc_walktoxy_sub(MapSessionData *sd)
 {
     struct walkpath_data wpd;
     int i;
@@ -2649,7 +2648,7 @@ static int pc_walktoxy_sub(struct map_session_data *sd)
  * pc歩 行要求
  *------------------------------------------
  */
-int pc_walktoxy(struct map_session_data *sd, int x, int y)
+int pc_walktoxy(MapSessionData *sd, int x, int y)
 {
 
     nullpo_ret(sd);
@@ -2678,7 +2677,7 @@ int pc_walktoxy(struct map_session_data *sd, int x, int y)
  * 歩 行停止
  *------------------------------------------
  */
-int pc_stop_walking(struct map_session_data *sd, int type)
+int pc_stop_walking(MapSessionData *sd, int type)
 {
     nullpo_ret(sd);
 
@@ -2703,7 +2702,7 @@ int pc_stop_walking(struct map_session_data *sd, int type)
     return 0;
 }
 
-void pc_touch_all_relevant_npcs(struct map_session_data *sd)
+void pc_touch_all_relevant_npcs(MapSessionData *sd)
 {
     if (map_getcell(sd->bl.m, sd->bl.x, sd->bl.y) & 0x80)
         npc_touch_areanpc(sd, sd->bl.m, sd->bl.x, sd->bl.y);
@@ -2718,7 +2717,7 @@ void pc_touch_all_relevant_npcs(struct map_session_data *sd)
  * スキルの検索 所有していた場合Lvが返る
  *------------------------------------------
  */
-int pc_checkskill(struct map_session_data *sd, int skill_id)
+int pc_checkskill(MapSessionData *sd, int skill_id)
 {
     if (sd == NULL)
         return 0;
@@ -2737,7 +2736,7 @@ int pc_checkskill(struct map_session_data *sd, int skill_id)
  * 装 備品のチェック
  *------------------------------------------
  */
-int pc_checkequip(struct map_session_data *sd, int pos)
+int pc_checkequip(MapSessionData *sd, int pos)
 {
     int i;
 
@@ -2758,7 +2757,7 @@ int pc_checkequip(struct map_session_data *sd, int pos)
  */
 static void pc_attack_timer(timer_id tid, tick_t tick, uint32_t id)
 {
-    struct map_session_data *sd;
+    MapSessionData *sd;
     struct block_list *bl;
     short *opt;
     int dist, range;
@@ -2781,7 +2780,7 @@ static void pc_attack_timer(timer_id tid, tick_t tick, uint32_t id)
     if (bl == NULL || bl->prev == NULL)
         return;
 
-    if (bl->type == BL_PC && pc_isdead(reinterpret_cast<struct map_session_data *>(bl)))
+    if (bl->type == BL_PC && pc_isdead(reinterpret_cast<MapSessionData *>(bl)))
         return;
 
     // 同じmapでないなら攻撃しない
@@ -2865,7 +2864,7 @@ static void pc_attack_timer(timer_id tid, tick_t tick, uint32_t id)
  * typeが1なら継続攻撃
  *------------------------------------------
  */
-int pc_attack(struct map_session_data *sd, int target_id, int type)
+int pc_attack(MapSessionData *sd, int target_id, int type)
 {
     struct block_list *bl;
     int d;
@@ -2908,7 +2907,7 @@ int pc_attack(struct map_session_data *sd, int target_id, int type)
  * 継続攻撃停止
  *------------------------------------------
  */
-int pc_stopattack(struct map_session_data *sd)
+int pc_stopattack(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
@@ -2923,7 +2922,7 @@ int pc_stopattack(struct map_session_data *sd)
     return 0;
 }
 
-int pc_checkbaselevelup(struct map_session_data *sd)
+int pc_checkbaselevelup(MapSessionData *sd)
 {
     int next = pc_nextbaseexp(sd);
 
@@ -2957,7 +2956,7 @@ int pc_checkbaselevelup(struct map_session_data *sd)
  * Compute the maximum for sd->skill_point, i.e., the max. number of skill points that can still be filled in
  *----------------------------------------
  */
-static int pc_skillpt_potential(struct map_session_data *sd)
+static int pc_skillpt_potential(MapSessionData *sd)
 {
     int skill_id;
     int potential = 0;
@@ -2974,7 +2973,7 @@ static int pc_skillpt_potential(struct map_session_data *sd)
     return potential;
 }
 
-int pc_checkjoblevelup(struct map_session_data *sd)
+int pc_checkjoblevelup(MapSessionData *sd)
 {
     int next = pc_nextjobexp(sd);
 
@@ -3014,13 +3013,13 @@ int pc_checkjoblevelup(struct map_session_data *sd)
  * 経験値取得
  *------------------------------------------
  */
-int pc_gainexp(struct map_session_data *sd, int base_exp, int job_exp)
+int pc_gainexp(MapSessionData *sd, int base_exp, int job_exp)
 {
     return pc_gainexp_reason(sd, base_exp, job_exp,
                               PC_GAINEXP_REASON_KILLING);
 }
 
-int pc_gainexp_reason(struct map_session_data *sd, int base_exp, int job_exp,
+int pc_gainexp_reason(MapSessionData *sd, int base_exp, int job_exp,
                        int reason)
 {
     char output[256];
@@ -3093,7 +3092,7 @@ int pc_gainexp_reason(struct map_session_data *sd, int base_exp, int job_exp,
     return 0;
 }
 
-int pc_extract_healer_exp(struct map_session_data *sd, int max)
+int pc_extract_healer_exp(MapSessionData *sd, int max)
 {
     int amount;
     nullpo_ret(sd);
@@ -3110,7 +3109,7 @@ int pc_extract_healer_exp(struct map_session_data *sd, int max)
  * base level側必要経験値計算
  *------------------------------------------
  */
-int pc_nextbaseexp(struct map_session_data *sd)
+int pc_nextbaseexp(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
@@ -3124,7 +3123,7 @@ int pc_nextbaseexp(struct map_session_data *sd)
  * job level側必要経験値計算
  *------------------------------------------
  */
-int pc_nextjobexp(struct map_session_data *sd)
+int pc_nextjobexp(MapSessionData *sd)
 {
     // [fate]  For normal levels, this ranges from 20k to 50k, depending on job level.
     // Job level is at most twice the player's experience level (base_level).  Levelling
@@ -3138,7 +3137,7 @@ int pc_nextjobexp(struct map_session_data *sd)
  * base level after next [Valaris]
  *------------------------------------------
  */
-int pc_nextbaseafter(struct map_session_data *sd)
+int pc_nextbaseafter(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
@@ -3152,7 +3151,7 @@ int pc_nextbaseafter(struct map_session_data *sd)
  * job level after next [Valaris]
  *------------------------------------------
  */
-int pc_nextjobafter(struct map_session_data *sd)
+int pc_nextjobafter(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
@@ -3167,7 +3166,7 @@ int pc_nextjobafter(struct map_session_data *sd)
  * 必要ステータスポイント計算
  *------------------------------------------
  */
-int pc_need_status_point(struct map_session_data *sd, int type)
+int pc_need_status_point(MapSessionData *sd, int type)
 {
     int val;
 
@@ -3189,7 +3188,7 @@ int pc_need_status_point(struct map_session_data *sd, int type)
  * 能力値成長
  *------------------------------------------
  */
-int pc_statusup(struct map_session_data *sd, int type)
+int pc_statusup(MapSessionData *sd, int type)
 {
     int need, val = 0;
 
@@ -3265,7 +3264,7 @@ int pc_statusup(struct map_session_data *sd, int type)
  * 能力値成長
  *------------------------------------------
  */
-int pc_statusup2(struct map_session_data *sd, int type, int val)
+int pc_statusup2(MapSessionData *sd, int type, int val)
 {
     nullpo_ret(sd);
 
@@ -3344,7 +3343,7 @@ int pc_statusup2(struct map_session_data *sd, int type, int val)
  * スキルポイント割り振り
  *------------------------------------------
  */
-int pc_skillup(struct map_session_data *sd, int skill_num)
+int pc_skillup(MapSessionData *sd, int skill_num)
 {
     nullpo_ret(sd);
 
@@ -3370,7 +3369,7 @@ int pc_skillup(struct map_session_data *sd, int skill_num)
  * /resetlvl
  *------------------------------------------
  */
-int pc_resetlvl(struct map_session_data *sd, int type)
+int pc_resetlvl(MapSessionData *sd, int type)
 {
     int i;
 
@@ -3461,7 +3460,7 @@ int pc_resetlvl(struct map_session_data *sd, int type)
  * /resetstate
  *------------------------------------------
  */
-int pc_resetstate(struct map_session_data *sd)
+int pc_resetstate(MapSessionData *sd)
 {
 #define sumsp(a) ((a)*((a-2)/10+2) - 5*((a-2)/10)*((a-2)/10) - 6*((a-2)/10) -2)
 //  int add=0; // Removed by Dexity
@@ -3513,7 +3512,7 @@ int pc_resetstate(struct map_session_data *sd)
  * /resetskill
  *------------------------------------------
  */
-int pc_resetskill(struct map_session_data *sd)
+int pc_resetskill(MapSessionData *sd)
 {
     int i, skill;
 
@@ -3539,7 +3538,7 @@ int pc_resetskill(struct map_session_data *sd)
  * pcにダメージを与える
  *------------------------------------------
  */
-int pc_damage(struct block_list *src, struct map_session_data *sd,
+int pc_damage(struct block_list *src, MapSessionData *sd,
                int damage)
 {
     int i = 0, j = 0;
@@ -3559,7 +3558,7 @@ int pc_damage(struct block_list *src, struct map_session_data *sd,
         if (src->type == BL_PC)
         {
             MAP_LOG_PC(sd, "INJURED-BY PC%d FOR %d",
-                       reinterpret_cast<struct map_session_data *>(src)->status.char_id,
+                       reinterpret_cast<MapSessionData *>(src)->status.char_id,
                        damage);
         }
         else
@@ -3741,7 +3740,7 @@ int pc_damage(struct block_list *src, struct map_session_data *sd,
         {
             sd->pvp_point -= 5;
             if (src && src->type == BL_PC)
-                reinterpret_cast<struct map_session_data *>(src)->pvp_point++;
+                reinterpret_cast<MapSessionData *>(src)->pvp_point++;
             //} //fixed wrong '{' placement by Lupus
             pc_setdead(sd);
         }
@@ -3781,7 +3780,7 @@ int pc_damage(struct block_list *src, struct map_session_data *sd,
  * script用PCステータス読み出し
  *------------------------------------------
  */
-int pc_readparam(struct map_session_data *sd, int type)
+int pc_readparam(MapSessionData *sd, int type)
 {
     int val = 0;
 
@@ -3867,7 +3866,7 @@ int pc_readparam(struct map_session_data *sd, int type)
  * script用PCステータス設定
  *------------------------------------------
  */
-int pc_setparam(struct map_session_data *sd, int type, int val)
+int pc_setparam(MapSessionData *sd, int type, int val)
 {
     int i = 0, up_level = 50;
 
@@ -3997,7 +3996,7 @@ int pc_setparam(struct map_session_data *sd, int type, int val)
  * HP/SP回復
  *------------------------------------------
  */
-int pc_heal(struct map_session_data *sd, int hp, int sp)
+int pc_heal(MapSessionData *sd, int hp, int sp)
 {
 //  if (battle_config.battle_log)
 //      printf("heal %d %d\n",hp,sp);
@@ -4048,7 +4047,7 @@ int pc_heal(struct map_session_data *sd, int hp, int sp)
  * HP/SP回復
  *------------------------------------------
  */
-static int pc_itemheal_effect(struct map_session_data *sd, int hp, int sp);
+static int pc_itemheal_effect(MapSessionData *sd, int hp, int sp);
 
 static int                     // Compute how quickly we regenerate (less is faster) for that amount
 pc_heal_quick_speed(int amount)
@@ -4086,7 +4085,7 @@ static void pc_heal_quick_accumulate(int new_amount,
     quick_regen->tickdelay = MIN(quick_regen->speed, quick_regen->tickdelay);
 }
 
-int pc_itemheal(struct map_session_data *sd, int hp, int sp)
+int pc_itemheal(MapSessionData *sd, int hp, int sp)
 {
     /* defer healing */
     if (hp > 0)
@@ -4115,7 +4114,7 @@ int pc_itemheal(struct map_session_data *sd, int hp, int sp)
 /* pc_itemheal_effect is invoked once every 0.5s whenever the pc
  * has health recovery queued up(cf. pc_natural_heal_sub).
  */
-static int pc_itemheal_effect(struct map_session_data *sd, int hp, int sp)
+static int pc_itemheal_effect(MapSessionData *sd, int hp, int sp)
 {
     int bonus;
 //  if (battle_config.battle_log)
@@ -4173,7 +4172,7 @@ static int pc_itemheal_effect(struct map_session_data *sd, int hp, int sp)
  * HP/SP回復
  *------------------------------------------
  */
-int pc_percentheal(struct map_session_data *sd, int hp, int sp)
+int pc_percentheal(MapSessionData *sd, int hp, int sp)
 {
     nullpo_ret(sd);
 
@@ -4242,7 +4241,7 @@ int pc_percentheal(struct map_session_data *sd, int hp, int sp)
  * 見た目変更
  *------------------------------------------
  */
-int pc_changelook(struct map_session_data *sd, int type, int val)
+int pc_changelook(MapSessionData *sd, int type, int val)
 {
     nullpo_ret(sd);
 
@@ -4281,7 +4280,7 @@ int pc_changelook(struct map_session_data *sd, int type, int val)
  * 付属品(鷹,ペコ,カート)設定
  *------------------------------------------
  */
-int pc_setoption(struct map_session_data *sd, int type)
+int pc_setoption(MapSessionData *sd, int type)
 {
     nullpo_ret(sd);
 
@@ -4296,7 +4295,7 @@ int pc_setoption(struct map_session_data *sd, int type)
  * script用変数の値を読む
  *------------------------------------------
  */
-int pc_readreg(struct map_session_data *sd, int reg)
+int pc_readreg(MapSessionData *sd, int reg)
 {
     int i;
 
@@ -4313,7 +4312,7 @@ int pc_readreg(struct map_session_data *sd, int reg)
  * script用変数の値を設定
  *------------------------------------------
  */
-int pc_setreg(struct map_session_data *sd, int reg, int val)
+int pc_setreg(MapSessionData *sd, int reg, int val)
 {
     int i;
 
@@ -4339,7 +4338,7 @@ int pc_setreg(struct map_session_data *sd, int reg, int val)
  * script用文字列変数の値を読む
  *------------------------------------------
  */
-char *pc_readregstr(struct map_session_data *sd, int reg)
+char *pc_readregstr(MapSessionData *sd, int reg)
 {
     int i;
 
@@ -4356,7 +4355,7 @@ char *pc_readregstr(struct map_session_data *sd, int reg)
  * script用文字列変数の値を設定
  *------------------------------------------
  */
-int pc_setregstr(struct map_session_data *sd, int reg, const char *str)
+int pc_setregstr(MapSessionData *sd, int reg, const char *str)
 {
     int i;
 
@@ -4386,7 +4385,7 @@ int pc_setregstr(struct map_session_data *sd, int reg, const char *str)
  * script用グローバル変数の値を読む
  *------------------------------------------
  */
-int pc_readglobalreg(struct map_session_data *sd, const char *reg)
+int pc_readglobalreg(MapSessionData *sd, const char *reg)
 {
     int i;
 
@@ -4405,7 +4404,7 @@ int pc_readglobalreg(struct map_session_data *sd, const char *reg)
  * script用グローバル変数の値を設定
  *------------------------------------------
  */
-int pc_setglobalreg(struct map_session_data *sd, const char *reg, int val)
+int pc_setglobalreg(MapSessionData *sd, const char *reg, int val)
 {
     int i;
 
@@ -4456,7 +4455,7 @@ int pc_setglobalreg(struct map_session_data *sd, const char *reg, int val)
  * script用アカウント変数の値を読む
  *------------------------------------------
  */
-int pc_readaccountreg(struct map_session_data *sd, const char *reg)
+int pc_readaccountreg(MapSessionData *sd, const char *reg)
 {
     int i;
 
@@ -4475,7 +4474,7 @@ int pc_readaccountreg(struct map_session_data *sd, const char *reg)
  * script用アカウント変数の値を設定
  *------------------------------------------
  */
-int pc_setaccountreg(struct map_session_data *sd, const char *reg, int val)
+int pc_setaccountreg(MapSessionData *sd, const char *reg, int val)
 {
     int i;
 
@@ -4523,7 +4522,7 @@ int pc_setaccountreg(struct map_session_data *sd, const char *reg, int val)
  * script用アカウント変数2の値を読む
  *------------------------------------------
  */
-int pc_readaccountreg2(struct map_session_data *sd, const char *reg)
+int pc_readaccountreg2(MapSessionData *sd, const char *reg)
 {
     int i;
 
@@ -4542,7 +4541,7 @@ int pc_readaccountreg2(struct map_session_data *sd, const char *reg)
  * script用アカウント変数2の値を設定
  *------------------------------------------
  */
-int pc_setaccountreg2(struct map_session_data *sd, const char *reg, int val)
+int pc_setaccountreg2(MapSessionData *sd, const char *reg, int val)
 {
     int i;
 
@@ -4590,7 +4589,7 @@ int pc_setaccountreg2(struct map_session_data *sd, const char *reg, int val)
  * 精錬成功率
  *------------------------------------------
  */
-int pc_percentrefinery(struct map_session_data *, struct item *item)
+int pc_percentrefinery(MapSessionData *, struct item *item)
 {
     int percent;
 
@@ -4616,7 +4615,7 @@ int pc_percentrefinery(struct map_session_data *, struct item *item)
  */
 static void pc_eventtimer(timer_id tid, tick_t, uint32_t id, char *data)
 {
-    struct map_session_data *sd = map_id2sd(id);
+    MapSessionData *sd = map_id2sd(id);
     int i;
     if (sd == NULL)
         return;
@@ -4641,7 +4640,7 @@ static void pc_eventtimer(timer_id tid, tick_t, uint32_t id, char *data)
  * イベントタイマー追加
  *------------------------------------------
  */
-int pc_addeventtimer(struct map_session_data *sd, int tick, const char *name)
+int pc_addeventtimer(MapSessionData *sd, int tick, const char *name)
 {
     int i;
 
@@ -4669,7 +4668,7 @@ int pc_addeventtimer(struct map_session_data *sd, int tick, const char *name)
  * イベントタイマー削除
  *------------------------------------------
  */
-int pc_deleventtimer(struct map_session_data *sd, const char *name)
+int pc_deleventtimer(MapSessionData *sd, const char *name)
 {
     int i;
 
@@ -4690,7 +4689,7 @@ int pc_deleventtimer(struct map_session_data *sd, const char *name)
  * イベントタイマー全削除
  *------------------------------------------
  */
-int pc_cleareventtimer(struct map_session_data *sd)
+int pc_cleareventtimer(MapSessionData *sd)
 {
     int i;
 
@@ -4713,7 +4712,7 @@ int pc_cleareventtimer(struct map_session_data *sd)
  * アイテムを装備する
  *------------------------------------------
  */
-static int pc_signal_advanced_equipment_change(struct map_session_data *sd, int n)
+static int pc_signal_advanced_equipment_change(MapSessionData *sd, int n)
 {
     if (sd->status.inventory[n].equip & 0x0040)
         clif_changelook(&sd->bl, LOOK_SHOES, 0);
@@ -4728,7 +4727,7 @@ static int pc_signal_advanced_equipment_change(struct map_session_data *sd, int 
     return 0;
 }
 
-int pc_equipitem(struct map_session_data *sd, int n, int pos)
+int pc_equipitem(MapSessionData *sd, int n, int pos)
 {
     int i, nameid, arrow, view;
     struct item_data *id;
@@ -4862,7 +4861,7 @@ int pc_equipitem(struct map_session_data *sd, int n, int pos)
  * 装 備した物を外す
  *------------------------------------------
  */
-int pc_unequipitem(struct map_session_data *sd, int n, int type)
+int pc_unequipitem(MapSessionData *sd, int n, int type)
 {
     nullpo_ret(sd);
 
@@ -4927,7 +4926,7 @@ int pc_unequipitem(struct map_session_data *sd, int n, int type)
     return 0;
 }
 
-int pc_unequipinvyitem(struct map_session_data *sd, int n, int type)
+int pc_unequipinvyitem(MapSessionData *sd, int n, int type)
 {
     int i;
 
@@ -4950,7 +4949,7 @@ int pc_unequipinvyitem(struct map_session_data *sd, int n, int type)
  * 装 備品の装備可能チェックを行なう
  *------------------------------------------
  */
-int pc_checkitem(struct map_session_data *sd)
+int pc_checkitem(MapSessionData *sd)
 {
     int i, j, k, id, calc_flag = 0;
     struct item_data *it = NULL;
@@ -5013,7 +5012,7 @@ int pc_checkitem(struct map_session_data *sd)
     return 0;
 }
 
-int pc_checkoverhp(struct map_session_data *sd)
+int pc_checkoverhp(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
@@ -5029,7 +5028,7 @@ int pc_checkoverhp(struct map_session_data *sd)
     return 0;
 }
 
-int pc_checkoversp(struct map_session_data *sd)
+int pc_checkoversp(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
@@ -5049,12 +5048,12 @@ int pc_checkoversp(struct map_session_data *sd)
  * PVP順位計算用(foreachinarea)
  *------------------------------------------
  */
-static void pc_calc_pvprank_sub(struct block_list *bl, struct map_session_data *sd2)
+static void pc_calc_pvprank_sub(struct block_list *bl, MapSessionData *sd2)
 {
-    struct map_session_data *sd1;
+    MapSessionData *sd1;
 
     nullpo_retv(bl);
-    nullpo_retv(sd1 = reinterpret_cast<struct map_session_data *>(bl));
+    nullpo_retv(sd1 = reinterpret_cast<MapSessionData *>(bl));
     nullpo_retv(sd2);
 
     if (sd1->pvp_point > sd2->pvp_point)
@@ -5065,7 +5064,7 @@ static void pc_calc_pvprank_sub(struct block_list *bl, struct map_session_data *
  * PVP順位計算
  *------------------------------------------
  */
-int pc_calc_pvprank(struct map_session_data *sd)
+int pc_calc_pvprank(MapSessionData *sd)
 {
     struct map_data *m;
 
@@ -5086,7 +5085,7 @@ int pc_calc_pvprank(struct map_session_data *sd)
  */
 void pc_calc_pvprank_timer(timer_id, tick_t, uint32_t id)
 {
-    struct map_session_data *sd = NULL;
+    MapSessionData *sd = NULL;
     if (battle_config.pk_mode)  // disable pvp ranking if pk_mode on [Valaris]
         return;
 
@@ -5103,7 +5102,7 @@ void pc_calc_pvprank_timer(timer_id, tick_t, uint32_t id)
  * sdは結婚しているか(既婚の場合は相方のchar_idを返す)
  *------------------------------------------
  */
-int pc_ismarried(struct map_session_data *sd)
+int pc_ismarried(MapSessionData *sd)
 {
     if (sd == NULL)
         return -1;
@@ -5117,7 +5116,7 @@ int pc_ismarried(struct map_session_data *sd)
  * sdがdstsdと結婚(dstsd→sdの結婚処理も同時に行う)
  *------------------------------------------
  */
-int pc_marriage(struct map_session_data *sd, struct map_session_data *dstsd)
+int pc_marriage(MapSessionData *sd, MapSessionData *dstsd)
 {
     if (sd == NULL || dstsd == NULL || sd->status.partner_id > 0
         || dstsd->status.partner_id > 0)
@@ -5131,9 +5130,9 @@ int pc_marriage(struct map_session_data *sd, struct map_session_data *dstsd)
  * sdが離婚(相手はsd->status.partner_idに依る)(相手も同時に離婚・結婚指輪自動剥奪)
  *------------------------------------------
  */
-int pc_divorce(struct map_session_data *sd)
+int pc_divorce(MapSessionData *sd)
 {
-    struct map_session_data *p_sd = NULL;
+    MapSessionData *p_sd = NULL;
     if (sd == NULL || !pc_ismarried(sd))
         return -1;
 
@@ -5167,9 +5166,9 @@ int pc_divorce(struct map_session_data *sd)
  * sdの相方のmap_session_dataを返す
  *------------------------------------------
  */
-struct map_session_data *pc_get_partner(struct map_session_data *sd)
+MapSessionData *pc_get_partner(MapSessionData *sd)
 {
-    struct map_session_data *p_sd = NULL;
+    MapSessionData *p_sd = NULL;
     if (sd == NULL || !pc_ismarried(sd))
         return NULL;
 
@@ -5192,7 +5191,7 @@ struct map_session_data *pc_get_partner(struct map_session_data *sd)
  *------------------------------------------
  */
 static int natural_heal_tick, natural_heal_prev_tick, natural_heal_diff_tick;
-static int pc_spheal(struct map_session_data *sd)
+static int pc_spheal(MapSessionData *sd)
 {
     int a;
 
@@ -5209,7 +5208,7 @@ static int pc_spheal(struct map_session_data *sd)
  * HP回復量計算
  *------------------------------------------
  */
-static int pc_hpheal(struct map_session_data *sd)
+static int pc_hpheal(MapSessionData *sd)
 {
     int a;
 
@@ -5222,7 +5221,7 @@ static int pc_hpheal(struct map_session_data *sd)
     return a;
 }
 
-static int pc_natural_heal_hp(struct map_session_data *sd)
+static int pc_natural_heal_hp(MapSessionData *sd)
 {
     int bhp;
     int inc_num, bonus, hp_flag;
@@ -5308,7 +5307,7 @@ static int pc_natural_heal_hp(struct map_session_data *sd)
     return 0;
 }
 
-static int pc_natural_heal_sp(struct map_session_data *sd)
+static int pc_natural_heal_sp(MapSessionData *sd)
 {
     int bsp;
     int inc_num, bonus;
@@ -5397,7 +5396,7 @@ static int pc_quickregenerate_effect(struct quick_regeneration *quick_regen,
     return 0;
 }
 
-static void pc_natural_heal_sub(struct map_session_data *sd)
+static void pc_natural_heal_sub(MapSessionData *sd)
 {
     nullpo_retv(sd);
 
@@ -5465,7 +5464,7 @@ static void pc_natural_heal(timer_id, tick_t tick)
 {
     natural_heal_tick = tick;
     natural_heal_diff_tick = DIFF_TICK(natural_heal_tick, natural_heal_prev_tick);
-    for (struct map_session_data *sd : sessions)
+    for (MapSessionData *sd : sessions)
         pc_natural_heal_sub(sd);
 
     natural_heal_prev_tick = tick;
@@ -5475,7 +5474,7 @@ static void pc_natural_heal(timer_id, tick_t tick)
  * セーブポイントの保存
  *------------------------------------------
  */
-int pc_setsavepoint(struct map_session_data *sd, const char *mapname, int x, int y)
+int pc_setsavepoint(MapSessionData *sd, const char *mapname, int x, int y)
 {
     nullpo_ret(sd);
 
@@ -5492,7 +5491,7 @@ int pc_setsavepoint(struct map_session_data *sd, const char *mapname, int x, int
  *------------------------------------------
  */
 static int last_save_fd, save_flag;
-static void pc_autosave_sub(struct map_session_data *sd)
+static void pc_autosave_sub(MapSessionData *sd)
 {
     nullpo_retv(sd);
 
@@ -5515,7 +5514,7 @@ static void pc_autosave(timer_id, tick_t)
     int interval;
 
     save_flag = 0;
-    for (struct map_session_data *sd : sessions)
+    for (MapSessionData *sd : sessions)
         pc_autosave_sub(sd);
     if (save_flag == 0)
         last_save_fd = 0;
@@ -5544,7 +5543,7 @@ int pc_read_gm_account(int fd)
     return GM_num;
 }
 
-void pc_setstand(struct map_session_data *sd)
+void pc_setstand(MapSessionData *sd)
 {
     nullpo_retv(sd);
 
@@ -5880,7 +5879,7 @@ int do_init_pc(void)
     return 0;
 }
 
-void pc_invisibility(struct map_session_data *sd, int enabled)
+void pc_invisibility(MapSessionData *sd, int enabled)
 {
     if (enabled && !(sd->status.option & OPTION_INVISIBILITY))
     {
@@ -5896,7 +5895,7 @@ void pc_invisibility(struct map_session_data *sd, int enabled)
     }
 }
 
-int pc_logout(struct map_session_data *sd) // [fate] Player logs out
+int pc_logout(MapSessionData *sd) // [fate] Player logs out
 {
     unsigned int tick = gettick();
 

@@ -94,7 +94,7 @@ static const char *show_entity(entity_t * entity)
     switch (entity->type)
     {
         case BL_PC:
-            return reinterpret_cast<struct map_session_data *>(entity)->status.name;
+            return reinterpret_cast<MapSessionData *>(entity)->status.name;
         case BL_NPC:
             return reinterpret_cast<struct npc_data *>(entity)->name;
         case BL_MOB:

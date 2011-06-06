@@ -71,7 +71,7 @@ int skill_castcancel(struct block_list *bl)
 
     if (bl->type == BL_PC)
     {
-        struct map_session_data *sd = reinterpret_cast<struct map_session_data *>(bl);
+        MapSessionData *sd = reinterpret_cast<MapSessionData *>(bl);
         unsigned long tick = gettick();
         nullpo_ret(sd);
         sd->canact_tick = tick;
@@ -187,13 +187,13 @@ int skill_status_change_end(struct block_list *bl, int type, int tid)
             clif_changeoption(bl);
 
         if (bl->type == BL_PC && calc_flag)
-            pc_calcstatus(reinterpret_cast<struct map_session_data *>(bl), 0);  /* ステータス再計算 */
+            pc_calcstatus(reinterpret_cast<MapSessionData *>(bl), 0);  /* ステータス再計算 */
     }
 
     return 0;
 }
 
-void skill_update_heal_animation(struct map_session_data *sd)
+void skill_update_heal_animation(MapSessionData *sd)
 {
     const int mask = 0x100;
     int was_active;
@@ -221,7 +221,7 @@ void skill_update_heal_animation(struct map_session_data *sd)
 static void skill_status_change_timer(timer_id tid, tick_t tick, uint32_t id, int type)
 {
     struct block_list *bl;
-    struct map_session_data *sd = NULL;
+    MapSessionData *sd = NULL;
     struct status_change *sc_data;
     //short *sc_count; //使ってない？
 
@@ -230,7 +230,7 @@ static void skill_status_change_timer(timer_id tid, tick_t tick, uint32_t id, in
     nullpo_retv(sc_data = battle_get_sc_data(bl));
 
     if (bl->type == BL_PC)
-        sd = reinterpret_cast<struct map_session_data *>(bl);
+        sd = reinterpret_cast<MapSessionData *>(bl);
 
     //sc_count=battle_get_sc_count(bl); //使ってない？
 
@@ -320,7 +320,7 @@ int skill_status_effect(struct block_list *bl, int type, int val1, int val2,
                          int val3, int val4, int tick, int flag,
                          int spell_invocation)
 {
-    struct map_session_data *sd = NULL;
+    MapSessionData *sd = NULL;
     struct status_change *sc_data;
     short *sc_count, *option, *opt1, *opt2, *opt3;
     int opt_flag = 0, calc_flag = 0, updateflag =
@@ -347,7 +347,7 @@ int skill_status_effect(struct block_list *bl, int type, int val1, int val2,
         return 0;
     if (bl->type == BL_PC)
     {
-        sd = reinterpret_cast<struct map_session_data *>(bl);
+        sd = reinterpret_cast<MapSessionData *>(bl);
     }
     else if (bl->type == BL_MOB)
     {

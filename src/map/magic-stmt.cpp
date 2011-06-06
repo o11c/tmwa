@@ -302,7 +302,7 @@ static int op_itemheal(env_t * env, int args_nr, val_t * args)
     entity_t *subject = ARGENTITY(0);
     if (subject->type == BL_PC)
     {
-        pc_itemheal(reinterpret_cast<struct map_session_data *>(subject),
+        pc_itemheal(reinterpret_cast<MapSessionData *>(subject),
                      ARGINT(1), ARGINT(2));
     }
     else

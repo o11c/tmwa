@@ -73,8 +73,9 @@ enum NameLetterControl
 // list of letters/symbols authorised (or not) in a character name. by [Yor]
 char char_name_letters[255] = "";
 
-struct char_session_data
+class CharSessionData : public SessionData
 {
+public:
     account_t account_id;
     uint32_t login_id1, login_id2;
     enum gender sex;
@@ -611,7 +612,7 @@ struct new_char_dat
 static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
 {
     struct new_char_dat dat = *reinterpret_cast<const struct new_char_dat *>(raw_dat);
-    struct char_session_data *sd = reinterpret_cast<struct char_session_data *>(session[fd]->session_data);
+    CharSessionData *sd = static_cast<CharSessionData *>(session[fd]->session_data);
 
     // remove control characters from the name
     char *name = dat.name;
@@ -1090,7 +1091,7 @@ static int find_equip_view(struct mmo_charstatus *p, unsigned int equipmask)
 }
 
 /// List slots
-static void mmo_char_send006b(int fd, struct char_session_data *sd)
+static void mmo_char_send006b(int fd, CharSessionData *sd)
 {
     int found_num = 0;
     for (int i = 0; i < char_num; i++)
@@ -1237,7 +1238,7 @@ static void disconnect_player(account_t account_id)
     {
         if (!session[i])
             continue;
-        struct char_session_data *sd = reinterpret_cast<struct char_session_data*>(session[i]->session_data);
+        CharSessionData *sd = static_cast<CharSessionData*>(session[i]->session_data);
         if (!sd)
             continue;
         if (sd->account_id == account_id)
@@ -1320,7 +1321,7 @@ static void parse_tologin(int fd)
             {
                 if (!session[i])
                     continue;
-                struct char_session_data *sd = reinterpret_cast<struct char_session_data*>(session[i]->session_data);
+                CharSessionData *sd = static_cast<CharSessionData*>(session[i]->session_data);
                 if (!sd || sd->account_id != RFIFOL(fd, 2))
                     continue;
                 if (RFIFOB(fd, 6))
@@ -1364,7 +1365,7 @@ static void parse_tologin(int fd)
             {
                 if (!session[i])
                     continue;
-                struct char_session_data *sd = reinterpret_cast<struct char_session_data*>(session[i]->session_data);
+                CharSessionData *sd = static_cast<CharSessionData*>(session[i]->session_data);
                 if (!sd || sd->account_id != RFIFOL(fd, 2))
                     continue;
                 STRZCPY(sd->email, sign_cast<const char *>(RFIFOP(fd, 6)));
@@ -1599,7 +1600,7 @@ static void parse_tologin(int fd)
                 {
                     if (!session[j])
                         continue;
-                    struct char_session_data *sd2 = reinterpret_cast<struct char_session_data*>(session[j]->session_data);
+                    CharSessionData *sd2 = static_cast<CharSessionData*>(session[j]->session_data);
                     if (!sd2 || sd2->account_id != char_dat[char_num].account_id)
                         continue;
                     for (int k = 0; k < MAX_CHARS_PER_ACCOUNT; k++)
@@ -1678,7 +1679,7 @@ static void parse_tologin(int fd)
             {
                 if (!session[i])
                     continue;
-                struct char_session_data *sd = reinterpret_cast<struct char_session_data*>(session[i]->session_data);
+                CharSessionData *sd = static_cast<CharSessionData*>(session[i]->session_data);
                 if (!sd || sd->account_id != acc)
                     continue;
                 WFIFOW(i, 0) = 0x62;
@@ -2226,7 +2227,7 @@ static void parse_char(int fd)
         return;
     }
 
-    struct char_session_data *sd = reinterpret_cast<struct char_session_data*>(session[fd]->session_data);
+    CharSessionData *sd = static_cast<CharSessionData*>(session[fd]->session_data);
 
     while (RFIFOREST(fd) >= 2)
     {
@@ -2259,9 +2260,11 @@ static void parse_char(int fd)
             else
                 printf("Account Logged On; Account ID: %d.\n", acc);
             // TODO - can non-null sd happen?
+            if (sd)
+                char_log("non-null session data on initial connection - I thought this couldn't happen");
             if (!sd)
             {
-                CREATE(sd, struct char_session_data, 1);
+                sd = new CharSessionData;
                 session[fd]->session_data = sd;
                 // put here a mail without '@' to refuse deletion if we don't receive the e-mail
                 STRZCPY(sd->email, "no mail");
@@ -2491,7 +2494,7 @@ static void parse_char(int fd)
                 {
                     if (!session[j])
                         continue;
-                    struct char_session_data *sd2 = reinterpret_cast<struct char_session_data*>(session[j]->session_data);
+                    CharSessionData *sd2 = static_cast<CharSessionData*>(session[j]->session_data);
                     if (!sd2 || sd2->account_id != char_dat[char_num].account_id)
                         continue;
                     for (int k = 0; k < MAX_CHARS_PER_ACCOUNT; k++)

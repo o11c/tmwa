@@ -92,7 +92,7 @@ int storage_delete(int account_id)
  * カプラ倉庫を開く
  *------------------------------------------
  */
-int storage_storageopen(struct map_session_data *sd)
+int storage_storageopen(MapSessionData *sd)
 {
     struct storage *stor;
     nullpo_ret(sd);
@@ -124,7 +124,7 @@ int storage_storageopen(struct map_session_data *sd)
  * Internal add-item function.
  *------------------------------------------
  */
-static int storage_additem(struct map_session_data *sd, struct storage *stor,
+static int storage_additem(MapSessionData *sd, struct storage *stor,
                             struct item *item_data, int amount)
 {
     struct item_data *data;
@@ -169,7 +169,7 @@ static int storage_additem(struct map_session_data *sd, struct storage *stor,
  * Internal del-item function
  *------------------------------------------
  */
-static int storage_delitem(struct map_session_data *sd, struct storage *stor,
+static int storage_delitem(MapSessionData *sd, struct storage *stor,
                             int n, int amount)
 {
 
@@ -193,7 +193,7 @@ static int storage_delitem(struct map_session_data *sd, struct storage *stor,
  * Add an item to the storage from the inventory.
  *------------------------------------------
  */
-int storage_storageadd(struct map_session_data *sd, int idx, int amount)
+int storage_storageadd(MapSessionData *sd, int idx, int amount)
 {
     struct storage *stor;
 
@@ -227,7 +227,7 @@ int storage_storageadd(struct map_session_data *sd, int idx, int amount)
  * Retrieve an item from the storage.
  *------------------------------------------
  */
-int storage_storageget(struct map_session_data *sd, int idx, int amount)
+int storage_storageget(MapSessionData *sd, int idx, int amount)
 {
     struct storage *stor;
     int flag;
@@ -256,7 +256,7 @@ int storage_storageget(struct map_session_data *sd, int idx, int amount)
  * Modified By Valaris to save upon closing [massdriller]
  *------------------------------------------
  */
-int storage_storageclose(struct map_session_data *sd)
+int storage_storageclose(MapSessionData *sd)
 {
     struct storage *stor;
 
@@ -284,7 +284,7 @@ int storage_storageclose(struct map_session_data *sd)
  * When quitting the game.
  *------------------------------------------
  */
-int storage_storage_quit(struct map_session_data *sd)
+int storage_storage_quit(MapSessionData *sd)
 {
     struct storage *stor;
 

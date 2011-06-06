@@ -1241,9 +1241,9 @@ enum
  * ridからsdへの解決
  *------------------------------------------
  */
-static struct map_session_data *script_rid2sd(struct script_state *st)
+static MapSessionData *script_rid2sd(struct script_state *st)
 {
-    struct map_session_data *sd = map_id2sd(st->rid);
+    MapSessionData *sd = map_id2sd(st->rid);
     if (!sd)
     {
         printf("script_rid2sd: fatal error ! player not attached!\n");
@@ -1257,7 +1257,7 @@ static struct map_session_data *script_rid2sd(struct script_state *st)
  */
 static int get_val(struct script_state *st, struct script_data *data)
 {
-    struct map_session_data *sd = NULL;
+    MapSessionData *sd = NULL;
     if (data->type == C_NAME)
     {
         char *name = str_buf + str_data[data->u.num & 0x00ffffff].str;
@@ -1358,7 +1358,7 @@ static const void *get_val2(struct script_state *st, int num)
  * 変数設定用
  *------------------------------------------
  */
-static int set_reg(struct map_session_data *sd, int num, const char *name, const void *v)
+static int set_reg(MapSessionData *sd, int num, const char *name, const void *v)
 {
     const char prefix = *name;
     const char postfix = name[strlen(name) - 1];
@@ -1710,7 +1710,7 @@ int buildin_menu(struct script_state *st)
     int menu_choices = 0;
     int finished_menu_items = 0;   // [fate] set to 1 after we hit the first empty string
 
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     sd = script_rid2sd(st);
 
@@ -1829,7 +1829,7 @@ int buildin_isat(struct script_state *st)
 {
     int x, y;
     const char *str;
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
 
     str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
     x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -1853,7 +1853,7 @@ int buildin_warp(struct script_state *st)
 {
     int x, y;
     const char *str;
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
 
     str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
     x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -1888,9 +1888,9 @@ int buildin_warp(struct script_state *st)
 static void buildin_areawarp_sub(struct block_list *bl, const char *map, int x, int y)
 {
     if (strcmp(map, "Random") == 0)
-        pc_randomwarp(reinterpret_cast<struct map_session_data *>(bl), BeingRemoveType::WARP);
+        pc_randomwarp(reinterpret_cast<MapSessionData *>(bl), BeingRemoveType::WARP);
     else
-        pc_setpos(reinterpret_cast<struct map_session_data *>(bl), map, x, y, BeingRemoveType::ZERO);
+        pc_setpos(reinterpret_cast<MapSessionData *>(bl), map, x, y, BeingRemoveType::ZERO);
 }
 
 int buildin_areawarp(struct script_state *st)
@@ -1965,7 +1965,7 @@ int buildin_percentheal(struct script_state *st)
  */
 int buildin_input(struct script_state *st)
 {
-    struct map_session_data *sd = NULL;
+    MapSessionData *sd = NULL;
     int num =
         (st->end >
          st->start + 2) ? st->stack->stack_data[st->start + 2].u.num : 0;
@@ -2058,7 +2058,7 @@ int buildin_if(struct script_state *st)
  */
 int buildin_set(struct script_state *st)
 {
-    struct map_session_data *sd = NULL;
+    MapSessionData *sd = NULL;
     int num = st->stack->stack_data[st->start + 2].u.num;
     char *name = str_buf + str_data[num & 0x00ffffff].str;
     char prefix = *name;
@@ -2095,7 +2095,7 @@ int buildin_set(struct script_state *st)
  */
 int buildin_setarray(struct script_state *st)
 {
-    struct map_session_data *sd = NULL;
+    MapSessionData *sd = NULL;
     int num = st->stack->stack_data[st->start + 2].u.num;
     char *name = str_buf + str_data[num & 0x00ffffff].str;
     char prefix = *name;
@@ -2133,7 +2133,7 @@ int buildin_setarray(struct script_state *st)
  */
 int buildin_cleararray(struct script_state *st)
 {
-    struct map_session_data *sd = NULL;
+    MapSessionData *sd = NULL;
     int num = st->stack->stack_data[st->start + 2].u.num;
     char *name = str_buf + str_data[num & 0x00ffffff].str;
     char prefix = *name;
@@ -2171,7 +2171,7 @@ int buildin_cleararray(struct script_state *st)
  */
 int buildin_copyarray(struct script_state *st)
 {
-    struct map_session_data *sd = NULL;
+    MapSessionData *sd = NULL;
     int num = st->stack->stack_data[st->start + 2].u.num;
     char *name = str_buf + str_data[num & 0x00ffffff].str;
     char prefix = *name;
@@ -2242,7 +2242,7 @@ int buildin_getarraysize(struct script_state *st)
  */
 int buildin_deletearray(struct script_state *st)
 {
-    struct map_session_data *sd = NULL;
+    MapSessionData *sd = NULL;
     int num = st->stack->stack_data[st->start + 2].u.num;
     char *name = str_buf + str_data[num & 0x00ffffff].str;
     char prefix = *name;
@@ -2330,7 +2330,7 @@ int buildin_setlook(struct script_state *st)
 int buildin_countitem(struct script_state *st)
 {
     int nameid = 0, count = 0, i;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     struct script_data *data;
 
@@ -2370,7 +2370,7 @@ int buildin_countitem(struct script_state *st)
 int buildin_checkweight(struct script_state *st)
 {
     int nameid = 0, amount;
-    struct map_session_data *sd;
+    MapSessionData *sd;
     struct script_data *data;
 
     sd = script_rid2sd(st);
@@ -2414,7 +2414,7 @@ int buildin_getitem(struct script_state *st)
 {
     int nameid, amount, flag = 0;
     struct item item_tmp;
-    struct map_session_data *sd;
+    MapSessionData *sd;
     struct script_data *data;
 
     sd = script_rid2sd(st);
@@ -2477,7 +2477,7 @@ int buildin_getitem2(struct script_state *st)
     int nameid, amount, flag = 0;
     int iden, ref, attr, c1, c2, c3, c4;
     struct item item_tmp;
-    struct map_session_data *sd;
+    MapSessionData *sd;
     struct script_data *data;
 
     sd = script_rid2sd(st);
@@ -2568,7 +2568,7 @@ int buildin_makeitem(struct script_state *st)
     int x, y, m;
     const char *mapname;
     struct item item_tmp;
-    struct map_session_data *sd;
+    MapSessionData *sd;
     struct script_data *data;
 
     sd = script_rid2sd(st);
@@ -2625,7 +2625,7 @@ int buildin_makeitem(struct script_state *st)
 int buildin_delitem(struct script_state *st)
 {
     int nameid = 0, amount, i;
-    struct map_session_data *sd;
+    MapSessionData *sd;
     struct script_data *data;
 
     sd = script_rid2sd(st);
@@ -2690,7 +2690,7 @@ int buildin_delitem(struct script_state *st)
 int buildin_readparam(struct script_state *st)
 {
     int type;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     if (st->end > st->start + 3)
@@ -2717,7 +2717,7 @@ int buildin_readparam(struct script_state *st)
 int buildin_getcharid(struct script_state *st)
 {
     int num;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     if (st->end > st->start + 3)
@@ -2814,7 +2814,7 @@ int buildin_getpartymember(struct script_state *st)
  */
 int buildin_strcharinfo(struct script_state *st)
 {
-    struct map_session_data *sd;
+    MapSessionData *sd;
     int num;
 
     sd = script_rid2sd(st);
@@ -2856,7 +2856,7 @@ unsigned int equip[10] =
 int buildin_getequipid(struct script_state *st)
 {
     int i, num;
-    struct map_session_data *sd;
+    MapSessionData *sd;
     struct item_data *item;
 
     sd = script_rid2sd(st);
@@ -2889,7 +2889,7 @@ int buildin_getequipid(struct script_state *st)
 int buildin_getequipname(struct script_state *st)
 {
     int i, num;
-    struct map_session_data *sd;
+    MapSessionData *sd;
     struct item_data *item;
     char *buf;
 
@@ -2921,7 +2921,7 @@ int buildin_getequipname(struct script_state *st)
 int buildin_getbrokenid(struct script_state *st)
 {
     int i, num, id = 0, brokencounter = 0;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     sd = script_rid2sd(st);
 
@@ -2952,7 +2952,7 @@ int buildin_repair(struct script_state *st)
 {
     int i, num;
     int repaircounter = 0;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     sd = script_rid2sd(st);
 
@@ -2983,7 +2983,7 @@ int buildin_repair(struct script_state *st)
 int buildin_getequipisequiped(struct script_state *st)
 {
     int i, num;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     sd = script_rid2sd(st);
@@ -3007,7 +3007,7 @@ int buildin_getequipisequiped(struct script_state *st)
 int buildin_getequipisenableref(struct script_state *st)
 {
     int i, num;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     sd = script_rid2sd(st);
@@ -3036,7 +3036,7 @@ int buildin_getequipisenableref(struct script_state *st)
 int buildin_getequipisidentify(struct script_state *st)
 {
     int i, num;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     sd = script_rid2sd(st);
@@ -3056,7 +3056,7 @@ int buildin_getequipisidentify(struct script_state *st)
 int buildin_getequiprefinerycnt(struct script_state *st)
 {
     int i, num;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     sd = script_rid2sd(st);
@@ -3076,7 +3076,7 @@ int buildin_getequiprefinerycnt(struct script_state *st)
 int buildin_getequipweaponlv(struct script_state *st)
 {
     int i, num;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     sd = script_rid2sd(st);
@@ -3096,7 +3096,7 @@ int buildin_getequipweaponlv(struct script_state *st)
 int buildin_getequippercentrefinery(struct script_state *st)
 {
     int i, num;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     sd = script_rid2sd(st);
@@ -3117,7 +3117,7 @@ int buildin_getequippercentrefinery(struct script_state *st)
 int buildin_successrefitem(struct script_state *st)
 {
     int i, num, ep;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     sd = script_rid2sd(st);
@@ -3144,7 +3144,7 @@ int buildin_successrefitem(struct script_state *st)
 int buildin_failedrefitem(struct script_state *st)
 {
     int i, num;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     sd = script_rid2sd(st);
@@ -3169,7 +3169,7 @@ int buildin_failedrefitem(struct script_state *st)
 int buildin_statusup(struct script_state *st)
 {
     int type;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     sd = script_rid2sd(st);
@@ -3185,7 +3185,7 @@ int buildin_statusup(struct script_state *st)
 int buildin_statusup2(struct script_state *st)
 {
     int type, val;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     val = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -3202,7 +3202,7 @@ int buildin_statusup2(struct script_state *st)
 int buildin_bonus(struct script_state *st)
 {
     int type, val;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     val = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -3219,7 +3219,7 @@ int buildin_bonus(struct script_state *st)
 int buildin_skill(struct script_state *st)
 {
     int id, level, flag = 1;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     level = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -3239,7 +3239,7 @@ int buildin_skill(struct script_state *st)
 int buildin_setskill(struct script_state *st)
 {
     int id, level;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     level = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -3289,7 +3289,7 @@ int buildin_end(struct script_state *st)
 
 int buildin_getopt2(struct script_state *st)
 {
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     sd = script_rid2sd(st);
 
@@ -3306,7 +3306,7 @@ int buildin_getopt2(struct script_state *st)
 int buildin_setopt2(struct script_state *st)
 {
     int new_opt2;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     new_opt2 = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     sd = script_rid2sd(st);
@@ -3326,7 +3326,7 @@ int buildin_setopt2(struct script_state *st)
 int buildin_checkoption(struct script_state *st)
 {
     int type;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     sd = script_rid2sd(st);
@@ -3350,7 +3350,7 @@ int buildin_checkoption(struct script_state *st)
 int buildin_setoption(struct script_state *st)
 {
     int type;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     sd = script_rid2sd(st);
@@ -3495,7 +3495,7 @@ int buildin_openstorage(struct script_state *st)
 {
 //  int sync = 0;
 //  if (st->end >= 3) sync = conv_num(st,& (st->stack->stack_data[st->start+2]));
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
 
 //  if (sync) {
     st->state = STOP;
@@ -3512,7 +3512,7 @@ int buildin_openstorage(struct script_state *st)
  */
 int buildin_getexp(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
     int base = 0, job = 0;
 
     base = conv_num(st, &(st->stack->stack_data[st->start + 2]));
@@ -4159,7 +4159,7 @@ int buildin_debugmes(struct script_state *st)
  */
 int buildin_resetlvl(struct script_state *st)
 {
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     int type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
 
@@ -4174,7 +4174,7 @@ int buildin_resetlvl(struct script_state *st)
  */
 int buildin_resetstatus(struct script_state *st)
 {
-    struct map_session_data *sd;
+    MapSessionData *sd;
     sd = script_rid2sd(st);
     pc_resetstate(sd);
     return 0;
@@ -4186,7 +4186,7 @@ int buildin_resetstatus(struct script_state *st)
  */
 int buildin_resetskill(struct script_state *st)
 {
-    struct map_session_data *sd;
+    MapSessionData *sd;
     sd = script_rid2sd(st);
     pc_resetskill(sd);
     return 0;
@@ -4198,7 +4198,7 @@ int buildin_resetskill(struct script_state *st)
  */
 int buildin_changesex(struct script_state *st)
 {
-    struct map_session_data *sd = NULL;
+    MapSessionData *sd = NULL;
     sd = script_rid2sd(st);
 
     if (sd->status.sex == 0)
@@ -4387,7 +4387,7 @@ int buildin_pvpon(struct script_state *st)
         if (battle_config.pk_mode)  // disable ranking functions if pk_mode is on [Valaris]
             return 0;
 
-        for (struct map_session_data *pl_sd : sessions)
+        for (MapSessionData *pl_sd : sessions)
         {
             if (m == pl_sd->bl.m && pl_sd->pvp_timer == -1)
             {
@@ -4415,7 +4415,7 @@ int buildin_pvpoff(struct script_state *st)
         if (battle_config.pk_mode)  // disable ranking options if pk_mode is on [Valaris]
             return 0;
 
-        for (struct map_session_data *pl_sd : sessions)
+        for (MapSessionData *pl_sd : sessions)
         {
             if (m == pl_sd->bl.m)
             {
@@ -4453,7 +4453,7 @@ int buildin_emotion(struct script_state *st)
 int buildin_getequipcardcnt(struct script_state *st)
 {
     int i, num;
-    struct map_session_data *sd;
+    MapSessionData *sd;
     int c = 4;
 
     num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
@@ -4486,7 +4486,7 @@ int buildin_getequipcardcnt(struct script_state *st)
 int buildin_successremovecards(struct script_state *st)
 {
     int i, num, cardflag = 0, flag;
-    struct map_session_data *sd;
+    MapSessionData *sd;
     struct item item_tmp;
     int c = 4;
 
@@ -4551,7 +4551,7 @@ int buildin_successremovecards(struct script_state *st)
 int buildin_failedremovecards(struct script_state *st)
 {
     int i, num, cardflag = 0, flag, typefail;
-    struct map_session_data *sd;
+    MapSessionData *sd;
     struct item item_tmp;
     int c = 4;
 
@@ -4707,8 +4707,8 @@ int buildin_mobcount(struct script_state *st)  // Added by RoVeRT
 int buildin_marriage(struct script_state *st)
 {
     const char *partner = conv_str(st, &(st->stack->stack_data[st->start + 2]));
-    struct map_session_data *sd = script_rid2sd(st);
-    struct map_session_data *p_sd = map_nick2sd(partner);
+    MapSessionData *sd = script_rid2sd(st);
+    MapSessionData *p_sd = map_nick2sd(partner);
 
     if (sd == NULL || p_sd == NULL || pc_marriage(sd, p_sd) < 0)
     {
@@ -4721,7 +4721,7 @@ int buildin_marriage(struct script_state *st)
 
 int buildin_divorce(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
 
     st->state = STOP;           // rely on pc_divorce to restart
 
@@ -4843,7 +4843,7 @@ int buildin_getanchorinvocation(struct script_state *st)
 
 int buildin_getpartnerid(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
 
     push_val(st->stack, C_INT, sd->status.partner_id);
     return 0;
@@ -4855,7 +4855,7 @@ int buildin_getpartnerid(struct script_state *st)
  */
 int buildin_getinventorylist(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
     int i, j = 0;
     if (!sd)
         return 0;
@@ -4893,7 +4893,7 @@ int buildin_getinventorylist(struct script_state *st)
 
 int buildin_getskilllist(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
     int i, j = 0;
     if (!sd)
         return 0;
@@ -4916,7 +4916,7 @@ int buildin_getskilllist(struct script_state *st)
 
 int buildin_get_activated_pool_skills(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
     int pool_skills[MAX_SKILL_POOL];
     int pool_size = skill_pool(sd, pool_skills);
     int i, count = 0;
@@ -4951,7 +4951,7 @@ extern int skill_pool_skills_size;
 
 int buildin_get_unactivated_pool_skills(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
     int i, count = 0;
 
     if (!sd)
@@ -4981,7 +4981,7 @@ int buildin_get_unactivated_pool_skills(struct script_state *st)
 
 int buildin_get_pool_skills(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
     int i, count = 0;
 
     if (!sd)
@@ -5011,7 +5011,7 @@ int buildin_get_pool_skills(struct script_state *st)
 
 int buildin_activate_pool_skill(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
     int skill_id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
 
     skill_pool_activate(sd, skill_id);
@@ -5022,7 +5022,7 @@ int buildin_activate_pool_skill(struct script_state *st)
 
 int buildin_deactivate_pool_skill(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
     int skill_id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
 
     skill_pool_deactivate(sd, skill_id);
@@ -5033,7 +5033,7 @@ int buildin_deactivate_pool_skill(struct script_state *st)
 
 int buildin_check_pool_skill(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
     int skill_id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
 
     push_val(st->stack, C_INT, skill_pool_is_activated(sd, skill_id));
@@ -5043,7 +5043,7 @@ int buildin_check_pool_skill(struct script_state *st)
 
 int buildin_clearitem(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
     int i;
     if (sd == NULL)
         return 0;
@@ -5089,7 +5089,7 @@ int buildin_misceffect(struct script_state *st)
 
     if (name)
     {
-        struct map_session_data *sd = map_nick2sd(name);
+        MapSessionData *sd = map_nick2sd(name);
         if (sd)
             bl = &sd->bl;
     }
@@ -5099,7 +5099,7 @@ int buildin_misceffect(struct script_state *st)
         bl = map_id2bl(st->oid);
     else
     {
-        struct map_session_data *sd = script_rid2sd(st);
+        MapSessionData *sd = script_rid2sd(st);
         if (sd)
             bl = &sd->bl;
     }
@@ -5116,7 +5116,7 @@ int buildin_misceffect(struct script_state *st)
  */
 int buildin_soundeffect(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
     const char *name;
     int type = 0;
 
@@ -5155,7 +5155,7 @@ int buildin_specialeffect(struct script_state *st)
 
 int buildin_specialeffect2(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
 
     if (sd == NULL)
         return 0;
@@ -5175,7 +5175,7 @@ int buildin_specialeffect2(struct script_state *st)
 
 int buildin_nude(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
     int i;
 
     if (sd == NULL)
@@ -5196,7 +5196,7 @@ int buildin_nude(struct script_state *st)
 
 int buildin_unequip_by_id(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
     if (sd == NULL)
         return 0;
 
@@ -5219,7 +5219,7 @@ int buildin_unequip_by_id(struct script_state *st)
 
 int buildin_gmcommand(struct script_state *st)
 {
-    struct map_session_data *sd;
+    MapSessionData *sd;
     const char *cmd;
 
     sd = script_rid2sd(st);
@@ -5236,7 +5236,7 @@ int buildin_gmcommand(struct script_state *st)
  */
 int buildin_movenpc(struct script_state *st)
 {
-//     struct map_session_data *sd = script_rid2sd(st);
+//     MapSessionData *sd = script_rid2sd(st);
 
 //     const char *map = conv_str (st, &(st->stack->stack_data[st->start + 2]));
     int x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -5300,7 +5300,7 @@ int buildin_npcwarp(struct script_state *st)
 int buildin_message(struct script_state *st)
 {
     const char *msg, *player;
-    struct map_session_data *pl_sd = NULL;
+    MapSessionData *pl_sd = NULL;
 
     player = conv_str(st, &(st->stack->stack_data[st->start + 2]));
     msg = conv_str(st, &(st->stack->stack_data[st->start + 3]));
@@ -5347,7 +5347,7 @@ int buildin_npctalk(struct script_state *st)
 int buildin_hasitems(struct script_state *st)
 {
     int i;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     sd = script_rid2sd(st);
 
@@ -5372,7 +5372,7 @@ int buildin_hasitems(struct script_state *st)
 int buildin_getlook(struct script_state *st)
 {
     int type, val;
-    struct map_session_data *sd;
+    MapSessionData *sd;
     sd = script_rid2sd(st);
 
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
@@ -5416,7 +5416,7 @@ int buildin_getsavepoint(struct script_state *st)
 {
     int x, y, type;
     char *mapname;
-    struct map_session_data *sd;
+    MapSessionData *sd;
 
     sd = script_rid2sd(st);
 
@@ -5447,7 +5447,7 @@ int buildin_getsavepoint(struct script_state *st)
  */
 static void buildin_areatimer_sub(struct block_list *bl, int tick, const char *event)
 {
-    pc_addeventtimer(reinterpret_cast<struct map_session_data *>(bl), tick, event);
+    pc_addeventtimer(reinterpret_cast<MapSessionData *>(bl), tick, event);
 }
 
 int buildin_areatimer(struct script_state *st)
@@ -5481,7 +5481,7 @@ int buildin_isin(struct script_state *st)
 {
     int x_1, y_1, x2, y2;
     const char *str;
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
 
     str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
     x_1 = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -5503,7 +5503,7 @@ int buildin_isin(struct script_state *st)
 // Trigger the shop on a (hopefully) nearby shop NPC
 int buildin_shop(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
     struct npc_data *nd;
 
     if (!sd)
@@ -5524,7 +5524,7 @@ int buildin_shop(struct script_state *st)
  */
 int buildin_isdead(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
 
     push_val(st->stack, C_INT, pc_isdead(sd));
     return 0;
@@ -5564,7 +5564,7 @@ int buildin_fakenpcname(struct script_state *st)
 
 int buildin_getx(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
 
     push_val(st->stack, C_INT, sd->bl.x);
     return 0;
@@ -5576,7 +5576,7 @@ int buildin_getx(struct script_state *st)
  */
 int buildin_gety(struct script_state *st)
 {
-    struct map_session_data *sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
 
     push_val(st->stack, C_INT, sd->bl.y);
     return 0;
@@ -6026,7 +6026,7 @@ static int run_script_main(script_ptr script, int pos, int, int,
             break;
         case END:
         {
-            struct map_session_data *sd = map_id2sd(st->rid);
+            MapSessionData *sd = map_id2sd(st->rid);
             st->pos = -1;
             if (sd && sd->npc_id == st->oid)
                 npc_event_dequeue(sd);
@@ -6042,7 +6042,7 @@ static int run_script_main(script_ptr script, int pos, int, int,
     if (st->state != END)
     {
         // 再開するためにスタック情報を保存
-        struct map_session_data *sd = map_id2sd(st->rid);
+        MapSessionData *sd = map_id2sd(st->rid);
         if (sd /* && sd->npc_stackbuf==NULL */ )
         {
             if (sd->npc_stackbuf)
@@ -6073,7 +6073,7 @@ int run_script_l(script_ptr script, int pos, int rid, int oid,
 {
     struct script_stack stack;
     struct script_state st;
-    struct map_session_data *sd = map_id2sd(rid);
+    MapSessionData *sd = map_id2sd(rid);
     script_ptr rootscript = script;
     int i;
     if (script == NULL || pos < 0)

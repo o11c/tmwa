@@ -147,7 +147,7 @@ struct party_member
     int leader;
     bool online;
     level_t lv;
-    struct map_session_data *sd;
+    class MapSessionData *sd;
 };
 
 struct party

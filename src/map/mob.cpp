@@ -407,7 +407,7 @@ int mob_once_spawn(MapSessionData *sd, const char *mapname,
         md->bl.y = y;
         if (r < 0 && battle_config.dead_branch_active == 1)
             md->mode = 0x1 + 0x4 + 0x80;    //移動してアクティブで反撃する
-        md->m = m;
+        md->m_0 = m;
         md->x_0 = x;
         md->y_0 = y;
         md->xs = 0;
@@ -1045,7 +1045,7 @@ int mob_spawn(int id)
     else
         md->mob_class = md->base_class;
 
-    md->bl.m = md->m;
+    md->bl.m = md->m_0;
     do
     {
         if (md->x_0 == 0 && md->y_0 == 0)

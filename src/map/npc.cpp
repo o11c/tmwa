@@ -602,7 +602,7 @@ int npc_touch_areanpc(MapSessionData *sd, int m, int x, int y)
             continue;
         }
 
-        switch (maps[m].npc[i]->bl.subtype)
+        switch (maps[m].npc[i]->subtype)
         {
             case WARP:
                 xs = maps[m].npc[i]->u.warp.xs;
@@ -630,7 +630,7 @@ int npc_touch_areanpc(MapSessionData *sd, int m, int x, int y)
         }
         return 1;
     }
-    switch (maps[m].npc[i]->bl.subtype)
+    switch (maps[m].npc[i]->subtype)
     {
         case WARP:
             pc_setpos(sd, maps[m].npc[i]->u.warp.name,
@@ -713,7 +713,7 @@ int npc_click(MapSessionData *sd, int id)
         return 1;
 
     sd->npc_id = id;
-    switch (nd->bl.subtype)
+    switch (nd->subtype)
     {
         case SHOP:
             clif_npcbuysell(sd, id);
@@ -753,7 +753,7 @@ int npc_scriptcont(MapSessionData *sd, int id)
 
     nd = reinterpret_cast<struct npc_data *>(map_id2bl(id));
 
-    if (!nd /* NPC was disposed? */  || nd->bl.subtype == MESSAGE)
+    if (!nd /* NPC was disposed? */  || nd->subtype == MESSAGE)
     {
         clif_scriptclose(sd, id);
         npc_event_dequeue(sd);
@@ -779,7 +779,7 @@ int npc_buysellsel(MapSessionData *sd, int id, int type)
         return 1;
 
     nd = reinterpret_cast<struct npc_data *>(map_id2bl(id));
-    if (nd->bl.subtype != SHOP)
+    if (nd->subtype != SHOP)
     {
         map_log("no sucmap_logh shop npc : %d\n", id);
         sd->npc_id = 0;
@@ -818,7 +818,7 @@ int npc_buylist(MapSessionData *sd, int n,
         return 3;
 
     nd = reinterpret_cast<struct npc_data *>(map_id2bl(sd->npc_shopid));
-    if (nd->bl.subtype != SHOP)
+    if (nd->subtype != SHOP)
         return 3;
 
     for (i = 0, w = 0, z = 0; i < n; i++)
@@ -1049,7 +1049,7 @@ int npc_parse_warp(char *w1, const char *, char *w3, char *w4)
 //  printf("warp npc %s %d read done\n",mapname,nd->bl.id);
     npc_warp++;
     nd->bl.type = BL_NPC;
-    nd->bl.subtype = WARP;
+    nd->subtype = WARP;
     map_addblock(&nd->bl);
     clif_spawnnpc(nd);
     strdb_insert(npcname_db, nd->name, static_cast<void *>(nd));
@@ -1143,7 +1143,7 @@ static int npc_parse_shop(char *w1, char *, char *w3, char *w4)
     //printf("shop npc %s %d read done\n",mapname,nd->bl.id);
     npc_shop++;
     nd->bl.type = BL_NPC;
-    nd->bl.subtype = SHOP;
+    nd->subtype = SHOP;
     nd->n = map_addnpc(m, nd);
     map_addblock(&nd->bl);
     clif_spawnnpc(nd);
@@ -1378,7 +1378,7 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
     //printf("script npc %s %d %d read done\n",mapname,nd->bl.id,nd->class);
     npc_script++;
     nd->bl.type = BL_NPC;
-    nd->bl.subtype = SCRIPT;
+    nd->subtype = SCRIPT;
     if (m >= 0)
     {
         nd->n = map_addnpc(m, nd);
@@ -1617,7 +1617,7 @@ int npc_parse_mob(char *w1, char *, char *w3, char *w4)
         md->n = i;
         md->base_class = md->mob_class = mob_class;
         md->bl.id = npc_get_new_npc_id();
-        md->m = m;
+        md->m_0 = m;
         md->x_0 = x;
         md->y_0 = y;
         md->xs = xs;
@@ -1805,7 +1805,7 @@ struct npc_data *npc_spawn_text(int m, int x, int y,
     retval->bl.y = y;
     retval->bl.m = m;
     retval->bl.type = BL_NPC;
-    retval->bl.subtype = MESSAGE;
+    retval->subtype = MESSAGE;
 
     strncpy(retval->name, name, 23);
     strncpy(retval->exname, name, 23);
@@ -1827,7 +1827,7 @@ struct npc_data *npc_spawn_text(int m, int x, int y,
 
 static void npc_free_internal(struct npc_data *nd)
 {
-    if (nd->bl.subtype == SCRIPT)
+    if (nd->subtype == SCRIPT)
     {
         if (nd->u.scr.timer_event)
             free(nd->u.scr.timer_event);
@@ -1845,7 +1845,7 @@ static void npc_free_internal(struct npc_data *nd)
             }
         }
     }
-    else if (nd->bl.subtype == MESSAGE && nd->u.message)
+    else if (nd->subtype == MESSAGE && nd->u.message)
     {
         free(nd->u.message);
     }

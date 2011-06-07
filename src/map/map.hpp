@@ -66,8 +66,8 @@
 
 enum BlockType
 { BL_NUL, BL_PC, BL_NPC, BL_MOB, BL_ITEM, BL_SPELL };
-enum
-{ WARP, SHOP, SCRIPT, MONS, MESSAGE };
+enum NPC_Subtype
+{ WARP, SHOP, SCRIPT, MESSAGE };
 struct block_list
 {
     struct block_list *next, *prev;
@@ -75,7 +75,6 @@ struct block_list
     uint32_t id;
     uint16_t m, x, y;
     BlockType type;
-    uint32_t subtype;
 };
 
 struct walkpath_data
@@ -322,6 +321,7 @@ struct npc_item_list
 struct npc_data
 {
     struct block_list bl;
+    NPC_Subtype subtype;
     short n;
     short npc_class;
     Direction dir;
@@ -392,7 +392,7 @@ struct mob_data
     short n;
     short base_class, mob_class, mode;
     Direction dir;
-    short m, x_0, y_0, xs, ys;
+    short m_0, x_0, y_0, xs, ys;
     char name[24];
     int spawndelay_1, spawndelay2;
     struct

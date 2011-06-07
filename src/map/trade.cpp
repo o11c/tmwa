@@ -44,11 +44,11 @@ void trade_traderequest(MapSessionData *sd, int target_id)
         }
         else
         {
-            if (sd->bl.m != target_sd->bl.m
-                || (sd->bl.x - target_sd->bl.x <= -5
-                    || sd->bl.x - target_sd->bl.x >= 5)
-                || (sd->bl.y - target_sd->bl.y <= -5
-                    || sd->bl.y - target_sd->bl.y >= 5))
+            if (sd->m != target_sd->m
+                || (sd->x - target_sd->x <= -5
+                    || sd->x - target_sd->x >= 5)
+                || (sd->y - target_sd->y <= -5
+                    || sd->y - target_sd->y >= 5))
             {
                 clif_tradestart(sd, 0);    //too far
             }
@@ -302,7 +302,7 @@ void trade_tradecancel(MapSessionData *sd)
     }
 }
 
-#define MAP_LOG_PC(sd, fmt, args...) map_log("PC%d %d:%d,%d " fmt, sd->status.char_id, sd->bl.m, sd->bl.x, sd->bl.y, ## args)
+#define MAP_LOG_PC(sd, fmt, args...) map_log("PC%d %d:%d,%d " fmt, sd->status.char_id, sd->m, sd->x, sd->y, ## args)
 
 /*==========================================
  * 取引許諾(trade押し)

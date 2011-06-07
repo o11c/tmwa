@@ -32,9 +32,9 @@ void magic_area_rect(int *m, int *x, int *y, int *width, int *height, area_t *ar
 #define TY(x) args[x].ty
 #define ETY(x) ARGENTITY(x)->type
 
-#define ARGPC(x)    reinterpret_cast<MapSessionData *>(ARGENTITY(x))
-#define ARGNPC(x)   reinterpret_cast<struct npc_data *>(ARGENTITY(x))
-#define ARGMOB(x)   reinterpret_cast<struct mob_data *>(ARGENTITY(x))
+#define ARGPC(x)    static_cast<MapSessionData *>(ARGENTITY(x))
+#define ARGNPC(x)   static_cast<struct npc_data *>(ARGENTITY(x))
+#define ARGMOB(x)   static_cast<struct mob_data *>(ARGENTITY(x))
 
 #define ARG_MAY_BE_AREA(x) (TY(x) == TY_AREA || TY(x) == TY_LOCATION)
 

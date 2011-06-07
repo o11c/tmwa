@@ -26,7 +26,7 @@ struct skill_name_db
 };
 extern struct skill_name_db skill_names[];
 
-struct block_list;
+class BlockList;
 class MapSessionData;
 
 void do_init_skill(void);
@@ -34,18 +34,18 @@ void do_init_skill(void);
 int skill_get_max_raise(int id);
 
 // 詠唱キャンセル
-int skill_castcancel(struct block_list *bl);
+int skill_castcancel(BlockList *bl);
 
 // ステータス異常
-int skill_status_effect(struct block_list *bl, int type, int val1, int val2,
+int skill_status_effect(BlockList *bl, int type, int val1, int val2,
                           int val3, int val4, int tick, int flag,
                          int spell_invocation);
-int skill_status_change_start(struct block_list *bl, int type, int val1,
+int skill_status_change_start(BlockList *bl, int type, int val1,
                                 int val2, int val3, int val4, int tick,
                                int flag);
-int skill_status_change_active(struct block_list *bl, int type);  // [fate]
-int skill_status_change_end(struct block_list *bl, int type, int tid);
-int skill_status_change_clear(struct block_list *bl, int type);
+int skill_status_change_active(BlockList *bl, int type);  // [fate]
+int skill_status_change_end(BlockList *bl, int type, int tid);
+int skill_status_change_clear(BlockList *bl, int type);
 
 void skill_update_heal_animation(MapSessionData *sd); // [Fate]  Check whether the healing flag must be updated, do so if needed
 
@@ -121,7 +121,7 @@ const char *skill_name(int skill);   // Yield configurable skill name
 int skill_stat(int skill);    // Yields the stat associated with a skill.  Returns zero if none, or SP_STR, SP_VIT, ... otherwise
 int skill_power(MapSessionData *sd, int skill);  // Yields the power of a skill.  This is zero if the skill is unknown or if it's a pool skill that is outside of the skill pool,
                              // otherwise a value from 0 to 255 (with 200 being the `normal maximum')
-int skill_power_bl(struct block_list *bl, int skill); // Yields the power of a skill.  This is zero if the skill is unknown or if it's a pool skill that is outside of the skill pool,
+int skill_power_bl(BlockList *bl, int skill); // Yields the power of a skill.  This is zero if the skill is unknown or if it's a pool skill that is outside of the skill pool,
                              // otherwise a value from 0 to 255 (with 200 being the `normal maximum')
 
 #endif // SKILL_H

@@ -92,7 +92,7 @@ void chrif_save(MapSessionData *sd)
 
     WFIFOW(char_fd, 0) = 0x2b01;
     WFIFOW(char_fd, 2) = sizeof(sd->status) + 12;
-    WFIFOL(char_fd, 4) = sd->bl.id;
+    WFIFOL(char_fd, 4) = sd->id;
     WFIFOL(char_fd, 8) = sd->char_id;
     memcpy(WFIFOP(char_fd, 12), &sd->status, sizeof(sd->status));
     WFIFOSET(char_fd, WFIFOW(char_fd, 2));
@@ -154,7 +154,7 @@ void chrif_changemapserver(MapSessionData *sd,
     in_addr_t s_ip = session[i]->client_addr.sin_addr.s_addr;
 
     WFIFOW(char_fd, 0) = 0x2b05;
-    WFIFOL(char_fd, 2) = sd->bl.id;
+    WFIFOL(char_fd, 2) = sd->id;
     WFIFOL(char_fd, 6) = sd->login_id1;
     WFIFOL(char_fd, 10) = sd->login_id2;
     WFIFOL(char_fd, 14) = sd->status.char_id;
@@ -226,12 +226,12 @@ void chrif_authreq(MapSessionData *sd)
 {
     nullpo_retv(sd);
 
-    if (!sd || char_fd < 0 || !sd->bl.id || !sd->login_id1)
+    if (!sd || char_fd < 0 || !sd->id || !sd->login_id1)
         return;
 
     int i = sd->fd;
     WFIFOW(char_fd, 0) = 0x2afc;
-    WFIFOL(char_fd, 2) = sd->bl.id;
+    WFIFOL(char_fd, 2) = sd->id;
     WFIFOL(char_fd, 6) = sd->char_id;
     WFIFOL(char_fd, 10) = sd->login_id1;
     WFIFOL(char_fd, 14) = sd->login_id2;
@@ -247,14 +247,14 @@ void chrif_charselectreq(MapSessionData *sd)
 {
     nullpo_retv(sd);
 
-    if (!sd || char_fd < 0 || !sd->bl.id || !sd->login_id1)
+    if (!sd || char_fd < 0 || !sd->id || !sd->login_id1)
         return;
 
     int i = sd->fd;
     in_addr_t s_ip = session[i]->client_addr.sin_addr.s_addr;
 
     WFIFOW(char_fd, 0) = 0x2b02;
-    WFIFOL(char_fd, 2) = sd->bl.id;
+    WFIFOL(char_fd, 2) = sd->id;
     WFIFOL(char_fd, 6) = sd->login_id1;
     WFIFOL(char_fd, 10) = sd->login_id2;
     WFIFOL(char_fd, 14) = s_ip;
@@ -422,7 +422,7 @@ void chrif_saveaccountreg2(MapSessionData *sd)
     }
     WFIFOW(char_fd, 0) = 0x2b10;
     WFIFOW(char_fd, 2) = p;
-    WFIFOL(char_fd, 4) = sd->bl.id;
+    WFIFOL(char_fd, 4) = sd->id;
     WFIFOSET(char_fd, p);
 }
 
@@ -584,7 +584,7 @@ static void ladmin_itemfrob_fix_item(int source, int dest, struct item *item)
     }
 }
 
-static void ladmin_itemfrob_c(struct block_list *bl, int source_id,
+static void ladmin_itemfrob_c(BlockList *bl, int source_id,
                               int dest_id)
 {
 #define IFIX(v) if (v == source_id) {v = dest_id; }
@@ -597,7 +597,7 @@ static void ladmin_itemfrob_c(struct block_list *bl, int source_id,
     {
     case BL_PC:
     {
-        MapSessionData *pc = reinterpret_cast<MapSessionData *>(bl);
+        MapSessionData *pc = static_cast<MapSessionData *>(bl);
         struct storage *stor = account2storage2(pc->status.account_id);
 
         for (int j = 0; j < MAX_INVENTORY; j++)
@@ -629,7 +629,7 @@ static void ladmin_itemfrob_c(struct block_list *bl, int source_id,
 
     case BL_MOB:
     {
-        struct mob_data *mob = reinterpret_cast<struct mob_data *>(bl);
+        struct mob_data *mob = static_cast<struct mob_data *>(bl);
         for (int i = 0; i < mob->lootitem_count; i++)
             FIX(mob->lootitem[i]);
         break;
@@ -637,7 +637,7 @@ static void ladmin_itemfrob_c(struct block_list *bl, int source_id,
 
     case BL_ITEM:
     {
-        struct flooritem_data *item = reinterpret_cast<struct flooritem_data *>(bl);
+        struct flooritem_data *item = static_cast<struct flooritem_data *>(bl);
         FIX(item->item_data);
         break;
     }
@@ -650,7 +650,7 @@ static void ladmin_itemfrob(int fd)
 {
     int source_id = RFIFOL(fd, 2);
     int dest_id = RFIFOL(fd, 6);
-    struct block_list *bl = reinterpret_cast<struct block_list *>(map_get_first_session());
+    BlockList *bl = map_get_first_session();
 
     // flooritems
     map_foreachobject(ladmin_itemfrob_c, source_id, dest_id);
@@ -718,7 +718,7 @@ void intif_saveaccountreg(MapSessionData *sd)
     nullpo_retv(sd);
 
     WFIFOW(char_fd, 0) = 0x3004;
-    WFIFOL(char_fd, 4) = sd->bl.id;
+    WFIFOL(char_fd, 4) = sd->id;
     int p = 8;
     for (int j = 0; j < sd->status.account_reg_num; j++)
     {
@@ -737,7 +737,7 @@ void intif_request_accountreg(MapSessionData *sd)
     nullpo_retv(sd);
 
     WFIFOW(char_fd, 0) = 0x3005;
-    WFIFOL(char_fd, 2) = sd->bl.id;
+    WFIFOL(char_fd, 2) = sd->id;
     WFIFOSET(char_fd, 6);
 }
 
@@ -769,7 +769,7 @@ void intif_create_party(MapSessionData *sd, const char *name)
     WFIFOL(char_fd, 2) = sd->status.account_id;
     strzcpy(sign_cast<char *>(WFIFOP(char_fd, 6)), name, 24);
     STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 30)), sd->status.name);
-    STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 54)), maps[sd->bl.m].name);
+    STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 54)), maps[sd->m].name);
     WFIFOW(char_fd, 70) = sd->status.base_level;
     WFIFOSET(char_fd, 72);
 }
@@ -792,7 +792,7 @@ void intif_party_addmember(party_t party_id, account_t account_id)
     WFIFOL(char_fd, 2) = party_id;
     WFIFOL(char_fd, 6) = account_id;
     STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 10)), sd->status.name);
-    STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 34)), maps[sd->bl.m].name);
+    STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 34)), maps[sd->m].name);
     WFIFOW(char_fd, 50) = sd->status.base_level;
     WFIFOSET(char_fd, 52);
 }
@@ -826,7 +826,7 @@ void intif_party_changemap(MapSessionData *sd, bool online)
     WFIFOW(char_fd, 0) = 0x3025;
     WFIFOL(char_fd, 2) = sd->status.party_id;
     WFIFOL(char_fd, 6) = sd->status.account_id;
-    memcpy(WFIFOP(char_fd, 10), maps[sd->bl.m].name, 16);
+    STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 10)), maps[sd->m].name);
     WFIFOB(char_fd, 26) = online;
     WFIFOW(char_fd, 27) = sd->status.base_level;
     WFIFOSET(char_fd, 29);
@@ -900,7 +900,7 @@ static void mapif_parse_WhisperToGM(int fd)
     char message[len];
     STRZCPY(message, sign_cast<const char *>(RFIFOP(fd, 30)));
 
-    for (MapSessionData *pl_sd : sessions)
+    for (MapSessionData *pl_sd : auth_sessions)
     {
         if (pc_isGM(pl_sd) < min_gm_level)
             continue;
@@ -1315,7 +1315,7 @@ static void send_users_tochar(timer_id, tick_t)
     WFIFOW(char_fd, 0) = 0x2aff;
 
     int users = 0;
-    for (MapSessionData *sd : sessions)
+    for (MapSessionData *sd : auth_sessions)
     {
         if ((battle_config.hide_GM_session
                 || sd->state.shroud_active

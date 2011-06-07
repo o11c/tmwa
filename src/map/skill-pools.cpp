@@ -123,7 +123,7 @@ int skill_power(MapSessionData *sd, int skill_id)
     if (stat == 0 || !skill_pool_is_activated(sd, skill_id))
         return 0;
 
-    stat_value = battle_get_stat(stat, &(sd->bl));
+    stat_value = battle_get_stat(stat, sd);
     skill_value = sd->status.skill[skill_id].lv;
 
     if ((skill_value * 10) - 1 > stat_value)
@@ -136,10 +136,10 @@ int skill_power(MapSessionData *sd, int skill_id)
     return result;
 }
 
-int skill_power_bl(struct block_list *bl, int skill)
+int skill_power_bl(BlockList *bl, int skill)
 {
     if (bl->type == BL_PC)
-        return skill_power(reinterpret_cast<MapSessionData *>(bl), skill);
+        return skill_power(static_cast<MapSessionData *>(bl), skill);
     else
         return 0;
 }

@@ -19,184 +19,184 @@
 #include "../common/socket.hpp"
 #include "../common/mt_rand.hpp"
 
-static struct Damage battle_calc_weapon_attack(struct block_list *bl, struct block_list *target);
-static int battle_calc_damage(struct block_list *target, int damage, int div_, int flag);
+static struct Damage battle_calc_weapon_attack(BlockList *bl, BlockList *target);
+static int battle_calc_damage(BlockList *target, int damage, int div_, int flag);
 
-static int battle_get_party_id(struct block_list *bl);
-static int battle_get_race(struct block_list *bl);
-static int battle_get_mode(struct block_list *bl);
+static int battle_get_party_id(BlockList *bl);
+static int battle_get_race(BlockList *bl);
+static int battle_get_mode(BlockList *bl);
 
 static int battle_attr_fix(int damage, int atk_elem, int def_elem);
-static int battle_stopattack(struct block_list *bl);
-static int battle_get_hit(struct block_list *bl);
-static int battle_get_flee(struct block_list *bl);
-static int battle_get_flee2(struct block_list *bl);
-static int battle_get_def2(struct block_list *bl);
-static int battle_get_baseatk(struct block_list *bl);
-static int battle_get_atk(struct block_list *bl);
-static int battle_get_atk2(struct block_list *bl);
-static int battle_get_attack_element(struct block_list *bl);
-static int battle_get_attack_element2(struct block_list *bl);
+static int battle_stopattack(BlockList *bl);
+static int battle_get_hit(BlockList *bl);
+static int battle_get_flee(BlockList *bl);
+static int battle_get_flee2(BlockList *bl);
+static int battle_get_def2(BlockList *bl);
+static int battle_get_baseatk(BlockList *bl);
+static int battle_get_atk(BlockList *bl);
+static int battle_get_atk2(BlockList *bl);
+static int battle_get_attack_element(BlockList *bl);
+static int battle_get_attack_element2(BlockList *bl);
 
 /// Table of elemental damage modifiers
 int attr_fix_table[4][10][10];
 
 struct Battle_Config battle_config;
 
-// There are lots of battle_get_foo(struct block_list *) entries
+// There are lots of battle_get_foo(BlockList *) entries
 // to hide the differences between PCs and MOBs.
 // In addition, there are some effects
 
 /// Count the number of beings attacking this being, that are at least the given level
-static int battle_counttargeted(struct block_list *bl, struct block_list *src, AttackResult target_lv)
+static int battle_counttargeted(BlockList *bl, BlockList *src, AttackResult target_lv)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
-        return pc_counttargeted(reinterpret_cast<MapSessionData *>(bl), src, target_lv);
+        return pc_counttargeted(static_cast<MapSessionData *>(bl), src, target_lv);
     if (bl->type == BL_MOB)
-        return mob_counttargeted(reinterpret_cast<struct mob_data *>(bl), src, target_lv);
+        return mob_counttargeted(static_cast<struct mob_data *>(bl), src, target_lv);
     return 0;
 }
 
 /// which way the object is facing
-Direction battle_get_dir(struct block_list *bl)
+Direction battle_get_dir(BlockList *bl)
 {
     nullpo_retr(Direction::S, bl);
 
     if (bl->type == BL_MOB)
-        return reinterpret_cast<struct mob_data *>(bl)->dir;
+        return static_cast<struct mob_data *>(bl)->dir;
     if (bl->type == BL_PC)
-        return reinterpret_cast<MapSessionData *>(bl)->dir;
+        return static_cast<MapSessionData *>(bl)->dir;
     return Direction::S;
 }
 
 /// Get the (base) level of this being
-int battle_get_lv(struct block_list *bl)
+int battle_get_lv(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
-        return reinterpret_cast<struct mob_data *>(bl)->stats[MOB_LV];
+        return static_cast<struct mob_data *>(bl)->stats[MOB_LV];
     if (bl->type == BL_PC)
-        return reinterpret_cast<MapSessionData *>(bl)->status.base_level;
+        return static_cast<MapSessionData *>(bl)->status.base_level;
     return 0;
 }
 
 /// Get the maximum attack distance of this being
-int battle_get_range(struct block_list *bl)
+int battle_get_range(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
-        return mob_db[reinterpret_cast<struct mob_data *>(bl)->mob_class].range;
+        return mob_db[static_cast<struct mob_data *>(bl)->mob_class].range;
     if (bl->type == BL_PC)
-        return reinterpret_cast<MapSessionData *>(bl)->attackrange;
+        return static_cast<MapSessionData *>(bl)->attackrange;
     return 0;
 }
 
 /// Get current HP of this being
-int battle_get_hp(struct block_list *bl)
+int battle_get_hp(BlockList *bl)
 {
     nullpo_retr(1, bl);
 
     if (bl->type == BL_MOB)
-        return reinterpret_cast<struct mob_data *>(bl)->hp;
+        return static_cast<struct mob_data *>(bl)->hp;
     if (bl->type == BL_PC)
-        return reinterpret_cast<MapSessionData *>(bl)->status.hp;
+        return static_cast<MapSessionData *>(bl)->status.hp;
     return 1;
 }
 
 /// Get maximum HP of this being
-int battle_get_max_hp(struct block_list *bl)
+int battle_get_max_hp(BlockList *bl)
 {
     nullpo_retr(1, bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<MapSessionData *>(bl)->status.max_hp;
+        return static_cast<MapSessionData *>(bl)->status.max_hp;
     if (bl->type != BL_MOB)
         return 1;
 
-    int max_hp = reinterpret_cast<struct mob_data *>(bl)->stats[MOB_MAX_HP];
+    int max_hp = static_cast<struct mob_data *>(bl)->stats[MOB_MAX_HP];
     percent_adjust(max_hp, battle_config.monster_hp_rate);
     return std::max(1, max_hp);
 }
 
 /// Get strength of a being
-int battle_get_str(struct block_list *bl)
+int battle_get_str(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
-        return std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_STR]));
+        return std::max(0, static_cast<int>(static_cast<struct mob_data *>(bl)->stats[MOB_STR]));
     if (bl->type == BL_PC)
-        return std::max(0, static_cast<int>(reinterpret_cast<MapSessionData *>(bl)->paramc[0]));
+        return std::max(0, static_cast<int>(static_cast<MapSessionData *>(bl)->paramc[0]));
     return 0;
 }
 
 /// Get agility of a being
-int battle_get_agi(struct block_list *bl)
+int battle_get_agi(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
-        std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_AGI]));
+        std::max(0, static_cast<int>(static_cast<struct mob_data *>(bl)->stats[MOB_AGI]));
     if (bl->type == BL_PC)
-        std::max(0, static_cast<int>(reinterpret_cast<MapSessionData *>(bl)->paramc[1]));
+        std::max(0, static_cast<int>(static_cast<MapSessionData *>(bl)->paramc[1]));
     return 0;
 }
 
 /// Get vitality of a being
-int battle_get_vit(struct block_list *bl)
+int battle_get_vit(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
-        std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_VIT]));
+        std::max(0, static_cast<int>(static_cast<struct mob_data *>(bl)->stats[MOB_VIT]));
     if (bl->type == BL_PC)
-        std::max(0, static_cast<int>(reinterpret_cast<MapSessionData *>(bl)->paramc[2]));
+        std::max(0, static_cast<int>(static_cast<MapSessionData *>(bl)->paramc[2]));
     return 0;
 }
 
 /// Get intelligence of a being
-int battle_get_int(struct block_list *bl)
+int battle_get_int(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
-        std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_INT]));
+        std::max(0, static_cast<int>(static_cast<struct mob_data *>(bl)->stats[MOB_INT]));
     if (bl->type == BL_PC)
-        std::max(0, static_cast<int>(reinterpret_cast<MapSessionData *>(bl)->paramc[3]));
+        std::max(0, static_cast<int>(static_cast<MapSessionData *>(bl)->paramc[3]));
     return 0;
 }
 
 /// Get dexterity of a being
-int battle_get_dex(struct block_list *bl)
+int battle_get_dex(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
-        std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_DEX]));
+        std::max(0, static_cast<int>(static_cast<struct mob_data *>(bl)->stats[MOB_DEX]));
     if (bl->type == BL_PC)
-        std::max(0, static_cast<int>(reinterpret_cast<MapSessionData *>(bl)->paramc[4]));
+        std::max(0, static_cast<int>(static_cast<MapSessionData *>(bl)->paramc[4]));
     return 0;
 }
 
 /// Get luck of a being
-int battle_get_luk(struct block_list *bl)
+int battle_get_luk(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
-        std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_LUK]));
+        std::max(0, static_cast<int>(static_cast<struct mob_data *>(bl)->stats[MOB_LUK]));
     if (bl->type == BL_PC)
-        std::max(0, static_cast<int>(reinterpret_cast<MapSessionData *>(bl)->paramc[5]));
+        std::max(0, static_cast<int>(static_cast<MapSessionData *>(bl)->paramc[5]));
     return 0;
 }
 
 /// Calculate a being's ability to not be hit
-int battle_get_flee(struct block_list *bl)
+int battle_get_flee(BlockList *bl)
 {
     nullpo_retr(1, bl);
 
     int flee;
     if (bl->type == BL_PC)
-        flee = reinterpret_cast<MapSessionData *>(bl)->flee;
+        flee = static_cast<MapSessionData *>(bl)->flee;
     else
         flee = battle_get_agi(bl) + battle_get_lv(bl);
 
@@ -209,13 +209,13 @@ int battle_get_flee(struct block_list *bl)
 }
 
 /// Calculate a being's ability to hit something
-int battle_get_hit(struct block_list *bl)
+int battle_get_hit(BlockList *bl)
 {
     nullpo_retr(1, bl);
 
     int hit;
     if (bl->type == BL_PC)
-        hit = reinterpret_cast<MapSessionData *>(bl)->hit;
+        hit = static_cast<MapSessionData *>(bl)->hit;
     else
         hit = battle_get_dex(bl) + battle_get_lv(bl);
 
@@ -227,13 +227,13 @@ int battle_get_hit(struct block_list *bl)
 }
 
 /// Calculate a being's luck at not getting hit
-int battle_get_flee2(struct block_list *bl)
+int battle_get_flee2(BlockList *bl)
 {
     nullpo_retr(1, bl);
 
     int flee2;
     if (bl->type == BL_PC)
-        flee2 = reinterpret_cast<MapSessionData *>(bl)->flee2;
+        flee2 = static_cast<MapSessionData *>(bl)->flee2;
     else
         flee2 = battle_get_luk(bl) + 1;
 
@@ -246,23 +246,23 @@ int battle_get_flee2(struct block_list *bl)
 }
 
 /// Calculate being's ability to make a critical hit
-static int battle_get_critical(struct block_list *bl)
+static int battle_get_critical(BlockList *bl)
 {
     nullpo_retr(1, bl);
 
     if (bl->type == BL_PC)
         // FIXME was this intended?
-        return std::max(1, reinterpret_cast<MapSessionData *>(bl)->critical - battle_get_luk(bl));
+        return std::max(1, static_cast<MapSessionData *>(bl)->critical - battle_get_luk(bl));
     return battle_get_luk(bl) * 3 + 1;
 }
 
 /// Get a being's base attack strength
-int battle_get_baseatk(struct block_list *bl)
+int battle_get_baseatk(BlockList *bl)
 {
     nullpo_retr(1, bl);
 
     if (bl->type == BL_PC)
-        return std::max(1, static_cast<int>(reinterpret_cast<MapSessionData *>(bl)->base_atk));
+        return std::max(1, static_cast<int>(static_cast<MapSessionData *>(bl)->base_atk));
 
     int str = battle_get_str(bl);
     int dstr = str / 10;
@@ -270,62 +270,62 @@ int battle_get_baseatk(struct block_list *bl)
 }
 
 /// Get minimum attack strength of a PC's main weapon
-int battle_get_atk(struct block_list *bl)
+int battle_get_atk(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
-        return std::max(0, static_cast<int>(reinterpret_cast<MapSessionData *>(bl)->watk));
+        return std::max(0, static_cast<int>(static_cast<MapSessionData *>(bl)->watk));
     if (bl->type == BL_MOB)
-        return std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_ATK1]));
+        return std::max(0, static_cast<int>(static_cast<struct mob_data *>(bl)->stats[MOB_ATK1]));
     return 0;
 }
 
 /// Get minimum attack strength of a PC's second weapon
-static int battle_get_atk_(struct block_list *bl)
+static int battle_get_atk_(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<MapSessionData *>(bl)->watk_;
+        return static_cast<MapSessionData *>(bl)->watk_;
     return 0;
 }
 
 /// Get maximum attack strength of a PC's main weapon
-int battle_get_atk2(struct block_list *bl)
+int battle_get_atk2(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<MapSessionData *>(bl)->watk2;
+        return static_cast<MapSessionData *>(bl)->watk2;
     if (bl->type != BL_MOB)
         return 0;
-    return std::max(0, static_cast<int>(reinterpret_cast<struct mob_data *>(bl)->stats[MOB_ATK2]));
+    return std::max(0, static_cast<int>(static_cast<struct mob_data *>(bl)->stats[MOB_ATK2]));
 }
 
 /// Get maximum attack strength of a PC's second weapon
-static int battle_get_atk_2(struct block_list *bl)
+static int battle_get_atk_2(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<MapSessionData *>(bl)->watk_2;
+        return static_cast<MapSessionData *>(bl)->watk_2;
     return 0;
 }
 
 /// Get a being's defense
-int battle_get_def(struct block_list *bl)
+int battle_get_def(BlockList *bl)
 {
     nullpo_ret(bl);
 
     int def = 0;
     if (bl->type == BL_PC)
     {
-        def = reinterpret_cast<MapSessionData *>(bl)->def;
+        def = static_cast<MapSessionData *>(bl)->def;
     }
     if (bl->type == BL_MOB)
     {
-        def = reinterpret_cast<struct mob_data *>(bl)->stats[MOB_DEF];
+        def = static_cast<struct mob_data *>(bl)->stats[MOB_DEF];
     }
 
     struct status_change *sc_data = battle_get_sc_data(bl);
@@ -338,15 +338,15 @@ int battle_get_def(struct block_list *bl)
 }
 
 /// Get a being's magical defense
-int battle_get_mdef(struct block_list *bl)
+int battle_get_mdef(BlockList *bl)
 {
     nullpo_ret(bl);
 
     int mdef = 0;
     if (bl->type == BL_PC)
-        mdef = reinterpret_cast<MapSessionData *>(bl)->mdef;
+        mdef = static_cast<MapSessionData *>(bl)->mdef;
     if (bl->type == BL_MOB)
-        mdef = reinterpret_cast<struct mob_data *>(bl)->stats[MOB_MDEF];
+        mdef = static_cast<struct mob_data *>(bl)->stats[MOB_MDEF];
 
     struct status_change *sc_data = battle_get_sc_data(bl);
     if (sc_data)
@@ -362,15 +362,15 @@ int battle_get_mdef(struct block_list *bl)
 }
 
 /// Get a being's secondary defense
-int battle_get_def2(struct block_list *bl)
+int battle_get_def2(BlockList *bl)
 {
     nullpo_retr(1, bl);
 
     int def2 = 1;
     if (bl->type == BL_PC)
-        def2 = reinterpret_cast<MapSessionData *>(bl)->def2;
+        def2 = static_cast<MapSessionData *>(bl)->def2;
     if (bl->type == BL_MOB)
-        def2 = reinterpret_cast<struct mob_data *>(bl)->stats[MOB_VIT];
+        def2 = static_cast<struct mob_data *>(bl)->stats[MOB_VIT];
 
     struct status_change *sc_data = battle_get_sc_data(bl);
     if (sc_data)
@@ -382,32 +382,32 @@ int battle_get_def2(struct block_list *bl)
 }
 
 /// Get a being's walk delay
-int battle_get_speed(struct block_list *bl)
+int battle_get_speed(BlockList *bl)
 {
     nullpo_retr(1000, bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<MapSessionData *>(bl)->speed;
+        return static_cast<MapSessionData *>(bl)->speed;
 
     int speed = 1000;
     if (bl->type == BL_MOB)
-        speed = reinterpret_cast<struct mob_data *>(bl)->stats[MOB_SPEED];
+        speed = static_cast<struct mob_data *>(bl)->stats[MOB_SPEED];
     return std::max(1, speed);
 }
 
 /// Get a being's attack delay
-int battle_get_adelay(struct block_list *bl)
+int battle_get_adelay(BlockList *bl)
 {
     nullpo_retr(4000, bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<MapSessionData *>(bl)->aspd << 1;
+        return static_cast<MapSessionData *>(bl)->aspd << 1;
 
     struct status_change *sc_data = battle_get_sc_data(bl);
     int adelay = 4000;
     int aspd_rate = 100;
     if (bl->type == BL_MOB)
-        adelay = reinterpret_cast<struct mob_data *>(bl)->stats[MOB_ADELAY];
+        adelay = static_cast<struct mob_data *>(bl)->stats[MOB_ADELAY];
 
     if (sc_data)
     {
@@ -425,16 +425,16 @@ int battle_get_adelay(struct block_list *bl)
 }
 
 /// Being's attack motion rate?
-int battle_get_amotion(struct block_list *bl)
+int battle_get_amotion(BlockList *bl)
 {
     nullpo_retr(2000, bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<MapSessionData *>(bl)->amotion;
+        return static_cast<MapSessionData *>(bl)->amotion;
     struct status_change *sc_data = battle_get_sc_data(bl);
     int amotion = 2000, aspd_rate = 100;
-    if (bl->type == BL_MOB && reinterpret_cast<struct mob_data *>(bl))
-        amotion = mob_db[reinterpret_cast<struct mob_data *>(bl)->mob_class].amotion;
+    if (bl->type == BL_MOB && static_cast<struct mob_data *>(bl))
+        amotion = mob_db[static_cast<struct mob_data *>(bl)->mob_class].amotion;
 
     if (sc_data)
     {
@@ -451,19 +451,19 @@ int battle_get_amotion(struct block_list *bl)
 }
 
 /// Being's defense motion rate?
-int battle_get_dmotion(struct block_list *bl)
+int battle_get_dmotion(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
     {
-        int ret = mob_db[reinterpret_cast<struct mob_data *>(bl)->mob_class].dmotion;
+        int ret = mob_db[static_cast<struct mob_data *>(bl)->mob_class].dmotion;
         percent_adjust(ret, battle_config.monster_damage_delay_rate);
         return ret;
     }
     if (bl->type == BL_PC)
     {
-        int ret = reinterpret_cast<MapSessionData *>(bl)->dmotion;
+        int ret = static_cast<MapSessionData *>(bl)->dmotion;
         percent_adjust(ret, battle_config.pc_damage_delay_rate);
         return ret;
     }
@@ -471,64 +471,64 @@ int battle_get_dmotion(struct block_list *bl)
 }
 
 /// Get a being's (encoded) defense element
-int battle_get_element(struct block_list *bl)
+int battle_get_element(BlockList *bl)
 {
     nullpo_retr(20, bl);
 
     if (bl->type == BL_MOB)
-        return reinterpret_cast<struct mob_data *>(bl)->def_ele;
+        return static_cast<struct mob_data *>(bl)->def_ele;
     if (bl->type == BL_PC)
         // This adds 1 level ...
-        return 20 + reinterpret_cast<MapSessionData *>(bl)->def_ele;
+        return 20 + static_cast<MapSessionData *>(bl)->def_ele;
     // 20 = level 1 neutral
     return 20;
 }
 
 /// Get a PC's (secondary?) attack element (TODO rewrite element system)
-int battle_get_attack_element(struct block_list *bl)
+int battle_get_attack_element(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<MapSessionData *>(bl)->atk_ele;
+        return static_cast<MapSessionData *>(bl)->atk_ele;
     return 0;
 }
 
 /// Get a PC's (secondary?) attack element
-int battle_get_attack_element2(struct block_list *bl)
+int battle_get_attack_element2(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
-        return reinterpret_cast<MapSessionData *>(bl)->atk_ele_;
+        return static_cast<MapSessionData *>(bl)->atk_ele_;
     return 0;
 }
 
 /// Return a party ID (or fake one) for a being
-int battle_get_party_id(struct block_list *bl)
+int battle_get_party_id(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_PC)
-        return reinterpret_cast<MapSessionData *>(bl)->status.party_id;
+        return static_cast<MapSessionData *>(bl)->status.party_id;
     if (bl->type == BL_MOB)
     {
-        struct mob_data *md = reinterpret_cast<struct mob_data *>(bl);
+        struct mob_data *md = static_cast<struct mob_data *>(bl);
         if (md->master_id > 0)
             // slave mobs
             return -md->master_id;
         // else, it is its own party
-        return -md->bl.id;
+        return -md->id;
     }
     return 0;
 }
 
 /// Get a being's race
-int battle_get_race(struct block_list *bl)
+int battle_get_race(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
-        return mob_db[reinterpret_cast<struct mob_data *>(bl)->mob_class].race;
+        return mob_db[static_cast<struct mob_data *>(bl)->mob_class].race;
     if (bl->type == BL_PC)
         return 7;
     return 0;
@@ -546,18 +546,18 @@ int battle_get_race(struct block_list *bl)
 // 0x80: can attack
 // 0x100: detector
 // 0x200: changetarget
-int battle_get_mode(struct block_list *bl)
+int battle_get_mode(BlockList *bl)
 {
     nullpo_retr(0x01, bl);
 
     if (bl->type == BL_MOB)
-        return mob_db[reinterpret_cast<struct mob_data *>(bl)->mob_class].mode;
+        return mob_db[static_cast<struct mob_data *>(bl)->mob_class].mode;
     return 0x01;
 }
 
 /// stat_id: like SP_VIT
 // this is only used by the skill pool system
-int battle_get_stat(int stat_id, struct block_list *bl)
+int battle_get_stat(int stat_id, BlockList *bl)
 {
     switch (stat_id)
     {
@@ -579,80 +579,80 @@ int battle_get_stat(int stat_id, struct block_list *bl)
 }
 
 /// Get the list of status effects on a being
-struct status_change *battle_get_sc_data(struct block_list *bl)
+struct status_change *battle_get_sc_data(BlockList *bl)
 {
     nullpo_retr(NULL, bl);
     if (bl->type == BL_MOB)
-        return reinterpret_cast<struct mob_data *>(bl)->sc_data;
+        return static_cast<struct mob_data *>(bl)->sc_data;
     if (bl->type == BL_PC)
-        return reinterpret_cast<MapSessionData *>(bl)->sc_data;
+        return static_cast<MapSessionData *>(bl)->sc_data;
     return NULL;
 }
 
 /// Get pointer to the number of status effects on a being?
-short *battle_get_sc_count(struct block_list *bl)
+short *battle_get_sc_count(BlockList *bl)
 {
     nullpo_retr(NULL, bl);
 
     if (bl->type == BL_MOB)
-        return &reinterpret_cast<struct mob_data *>(bl)->sc_count;
+        return &static_cast<struct mob_data *>(bl)->sc_count;
     if (bl->type == BL_PC)
-        return &reinterpret_cast<MapSessionData *>(bl)->sc_count;
+        return &static_cast<MapSessionData *>(bl)->sc_count;
     return NULL;
 }
 
 /// Get a pointer to a being's "opt1" field
-short *battle_get_opt1(struct block_list *bl)
+short *battle_get_opt1(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
-        return &reinterpret_cast<struct mob_data *>(bl)->opt1;
-    if (bl->type == BL_PC && reinterpret_cast<MapSessionData *>(bl))
-        return &reinterpret_cast<MapSessionData *>(bl)->opt1;
-    if (bl->type == BL_NPC && reinterpret_cast<struct npc_data *>(bl))
-        return &reinterpret_cast<struct npc_data *>(bl)->opt1;
+        return &static_cast<struct mob_data *>(bl)->opt1;
+    if (bl->type == BL_PC && static_cast<MapSessionData *>(bl))
+        return &static_cast<MapSessionData *>(bl)->opt1;
+    if (bl->type == BL_NPC && static_cast<struct npc_data *>(bl))
+        return &static_cast<struct npc_data *>(bl)->opt1;
     return 0;
 }
 
 /// Get a pointer to a being's "opt2" field
-short *battle_get_opt2(struct block_list *bl)
+short *battle_get_opt2(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
-        return &reinterpret_cast<struct mob_data *>(bl)->opt2;
+        return &static_cast<struct mob_data *>(bl)->opt2;
     if (bl->type == BL_PC)
-        return &reinterpret_cast<MapSessionData *>(bl)->opt2;
+        return &static_cast<MapSessionData *>(bl)->opt2;
     if (bl->type == BL_NPC)
-        return &reinterpret_cast<struct npc_data *>(bl)->opt2;
+        return &static_cast<struct npc_data *>(bl)->opt2;
     return 0;
 }
 
 /// Get a pointer to a being's "opt3" field
-short *battle_get_opt3(struct block_list *bl)
+short *battle_get_opt3(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
-        return &reinterpret_cast<struct mob_data *>(bl)->opt3;
+        return &static_cast<struct mob_data *>(bl)->opt3;
     if (bl->type == BL_PC)
-        return &reinterpret_cast<MapSessionData *>(bl)->opt3;
+        return &static_cast<MapSessionData *>(bl)->opt3;
     if (bl->type == BL_NPC)
-        return &reinterpret_cast<struct npc_data *>(bl)->opt3;
+        return &static_cast<struct npc_data *>(bl)->opt3;
     return 0;
 }
 
 /// Get a pointer to a being's "option" field
-short *battle_get_option(struct block_list *bl)
+short *battle_get_option(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
-        return &reinterpret_cast<struct mob_data *>(bl)->option;
+        return &static_cast<struct mob_data *>(bl)->option;
     if (bl->type == BL_PC)
-        return &reinterpret_cast<MapSessionData *>(bl)->status.option;
+        return &static_cast<MapSessionData *>(bl)->status.option;
     if (bl->type == BL_NPC)
-        return &reinterpret_cast<struct npc_data *>(bl)->option;
+        return &static_cast<struct npc_data *>(bl)->option;
     return 0;
 }
 
@@ -660,7 +660,7 @@ short *battle_get_option(struct block_list *bl)
 
 /// Decrease the HP of target
 // if trying to damage by a negative amount, heal instead
-int battle_damage(struct block_list *src, struct block_list *target, int damage)
+int battle_damage(BlockList *src, BlockList *target, int damage)
 {
     nullpo_ret(target);
     // src may be NULL for programmatic damage
@@ -677,12 +677,12 @@ int battle_damage(struct block_list *src, struct block_list *target, int damage)
 
     if (target->type == BL_MOB)
     {
-        struct mob_data *md = reinterpret_cast<struct mob_data *>(target);
+        struct mob_data *md = static_cast<struct mob_data *>(target);
         return mob_damage(src, md, damage, 0);
     }
     if (target->type == BL_PC)
     {
-        MapSessionData *tsd = reinterpret_cast<MapSessionData *>(target);
+        MapSessionData *tsd = static_cast<MapSessionData *>(target);
         return pc_damage(src, tsd, damage);
     }
     return 0;
@@ -690,12 +690,12 @@ int battle_damage(struct block_list *src, struct block_list *target, int damage)
 
 /// Increase HP of a being (and SP of a PC)
 // if hp is negative, do damage and ignore sp
-int battle_heal(struct block_list *src, struct block_list *target, int hp, int sp)
+int battle_heal(BlockList *src, BlockList *target, int hp, int sp)
 {
     nullpo_ret(target);
     // src may be NULL for programmatic healing
 
-    if (target->type == BL_PC && pc_isdead(reinterpret_cast<MapSessionData *>(target)))
+    if (target->type == BL_PC && pc_isdead(static_cast<MapSessionData *>(target)))
         return 0;
     if (!hp && !sp)
         return 0;
@@ -704,21 +704,21 @@ int battle_heal(struct block_list *src, struct block_list *target, int hp, int s
         return battle_damage(src, target, -hp);
 
     if (target->type == BL_MOB)
-        return mob_heal(reinterpret_cast<struct mob_data *>(target), hp);
+        return mob_heal(static_cast<struct mob_data *>(target), hp);
     if (target->type == BL_PC)
-        return pc_heal(reinterpret_cast<MapSessionData *>(target), hp, sp);
+        return pc_heal(static_cast<MapSessionData *>(target), hp, sp);
     return 0;
 }
 
 /// A being should stop attacking its target
-int battle_stopattack(struct block_list *bl)
+int battle_stopattack(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
-        return mob_stopattack(reinterpret_cast<struct mob_data *>(bl));
+        return mob_stopattack(static_cast<struct mob_data *>(bl));
     if (bl->type == BL_PC)
-        return pc_stopattack(reinterpret_cast<MapSessionData *>(bl));
+        return pc_stopattack(static_cast<MapSessionData *>(bl));
     return 0;
 }
 
@@ -740,7 +740,7 @@ int battle_attr_fix(int damage, int atk_elem, int def_elem)
 }
 
 /// Calculate the damage of attacking
-int battle_calc_damage(struct block_list *target, int damage, int div_, int flag)
+int battle_calc_damage(BlockList *target, int damage, int div_, int flag)
 {
     nullpo_ret(target);
 
@@ -759,11 +759,11 @@ int battle_calc_damage(struct block_list *target, int damage, int div_, int flag
 
 /// A monster attacks another being
 static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
-                                                   struct block_list *target)
+                                                   BlockList *target)
 {
     struct Damage wd = {};
     wd.damage2 = 0;
-    wd.amotion = battle_get_amotion(&md->bl);
+    wd.amotion = battle_get_amotion(md);
     wd.dmotion = battle_get_dmotion(target);
     wd.flag = BF_SHORT | BF_WEAPON;
     wd.dmg_lv = AttackResult::ZERO;
@@ -774,23 +774,23 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
 
     MapSessionData *tsd = NULL;
     if (target->type == BL_PC)
-        tsd = reinterpret_cast<MapSessionData *>(target);
+        tsd = static_cast<MapSessionData *>(target);
     struct mob_data *tmd = NULL;
     if (target->type == BL_MOB)
-        tmd = reinterpret_cast<struct mob_data *>(target);
+        tmd = static_cast<struct mob_data *>(target);
 
     int flee = battle_get_flee(target);
 
     if (battle_config.agi_penaly_type == 1)
     {
-        int target_count = battle_counttargeted(target, &md->bl, static_cast<AttackResult>(battle_config.agi_penaly_count_lv));
+        int target_count = battle_counttargeted(target, md, static_cast<AttackResult>(battle_config.agi_penaly_count_lv));
         target_count -= battle_config.agi_penaly_count;
         if (target_count > 0)
             percent_subtract(flee, target_count * battle_config.agi_penaly_num);
     }
     if (battle_config.agi_penaly_type == 2)
     {
-        int target_count = battle_counttargeted(target, &md->bl, static_cast<AttackResult>(battle_config.agi_penaly_count_lv));
+        int target_count = battle_counttargeted(target, md, static_cast<AttackResult>(battle_config.agi_penaly_count_lv));
         target_count -= battle_config.agi_penaly_count;
         if (target_count > 0)
             flee -= target_count * battle_config.agi_penaly_num;
@@ -800,17 +800,17 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
         flee = 1;
 
     if (battle_config.enemy_str)
-        wd.damage = battle_get_baseatk(&md->bl);
+        wd.damage = battle_get_baseatk(md);
 
     if (mob_db[md->mob_class].range > 3)
         wd.flag = (wd.flag & ~BF_RANGEMASK) | BF_LONG;
 
-    int atkmin = battle_get_atk(&md->bl);
-    int atkmax = battle_get_atk2(&md->bl);
+    int atkmin = battle_get_atk(md);
+    int atkmax = battle_get_atk2(md);
     if (atkmin > atkmax)
         atkmin = atkmax;
 
-    int cri = battle_get_critical(&md->bl);
+    int cri = battle_get_critical(md);
     cri -= battle_get_luk(target) * 3;
     percent_adjust(cri, battle_config.enemy_critical_rate);
     if (cri < 1)
@@ -818,7 +818,7 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
     if (tsd && tsd->critical_def)
         percent_subtract(cri, tsd->critical_def);
 
-    int s_ele = battle_get_attack_element(&md->bl);
+    int s_ele = battle_get_attack_element(md);
 
     if (battle_config.enemy_critical && MRAND(1000) < cri)
     {
@@ -837,7 +837,7 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
 
         if (battle_config.vit_penaly_type == 1)
         {
-            int target_count = battle_counttargeted(target, &md->bl, static_cast<AttackResult>(battle_config.vit_penaly_count_lv));
+            int target_count = battle_counttargeted(target, md, static_cast<AttackResult>(battle_config.vit_penaly_count_lv));
             target_count -= battle_config.vit_penaly_count;
             if (target_count > 0)
             {
@@ -848,7 +848,7 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
         }
         if (battle_config.vit_penaly_type == 2)
         {
-            int target_count = battle_counttargeted(target, &md->bl, static_cast<AttackResult>(battle_config.vit_penaly_count_lv));
+            int target_count = battle_counttargeted(target, md, static_cast<AttackResult>(battle_config.vit_penaly_count_lv));
             target_count -= battle_config.vit_penaly_count;
             if (target_count > 0)
             {
@@ -878,7 +878,7 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
     if (wd.damage < 1)
         wd.damage = 1;
 
-    int hitrate = battle_get_hit(&md->bl) - flee + 80;
+    int hitrate = battle_get_hit(md) - flee + 80;
     hitrate = hitrate > 95 ? 95 : (hitrate < 5 ? 5 : hitrate);
     if (wd.type == 0 && MRAND(100) >= hitrate)
     {
@@ -930,22 +930,22 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
 }
 
 /// Check if a PC is unarmed
-int battle_is_unarmed(struct block_list *bl)
+int battle_is_unarmed(BlockList *bl)
 {
     if (!bl || bl->type != BL_PC)
         return 0;
-    MapSessionData *sd = reinterpret_cast<MapSessionData *>(bl);
+    MapSessionData *sd = static_cast<MapSessionData *>(bl);
     return sd->equip_index[EQUIP_SHIELD] == -1 && sd->equip_index[EQUIP_WEAPON] == -1;
 }
 
 /// A PC attacks another being
 static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
-                                                  struct block_list *target)
+                                                  BlockList *target)
 {
     struct Damage wd = {};
     sd->state.attack_type = BF_WEAPON;
 
-    wd.amotion = battle_get_amotion(&sd->bl);
+    wd.amotion = battle_get_amotion(sd);
     wd.dmotion = battle_get_dmotion(target);
     wd.dmg_lv = AttackResult::ZERO;
     wd.flag = BF_SHORT | BF_WEAPON;
@@ -956,30 +956,30 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
     int def2 = battle_get_def2(target);
     int t_vit = battle_get_vit(target);
 
-    int s_ele = battle_get_attack_element(&sd->bl);
-    int s_ele_ = battle_get_attack_element2(&sd->bl);
+    int s_ele = battle_get_attack_element(sd);
+    int s_ele_ = battle_get_attack_element2(sd);
     int t_race = battle_get_race(target);
     int t_ele = battle_get_element(target) % 10;
     int t_mode = battle_get_mode(target);
 
     MapSessionData *tsd = NULL;
     if (target->type == BL_PC)
-        tsd = reinterpret_cast<MapSessionData *>(target);
+        tsd = static_cast<MapSessionData *>(target);
     struct mob_data *tmd = NULL;
     if (target->type == BL_MOB)
-        tmd = reinterpret_cast<struct mob_data *>(target);
+        tmd = static_cast<struct mob_data *>(target);
 
     int flee = battle_get_flee(target);
     if (battle_config.agi_penaly_type == 1)
     {
-        int target_count = battle_counttargeted(target, &sd->bl, static_cast<AttackResult>(battle_config.agi_penaly_count_lv));
+        int target_count = battle_counttargeted(target, sd, static_cast<AttackResult>(battle_config.agi_penaly_count_lv));
         target_count -= battle_config.agi_penaly_count;
         if (target_count > 0)
             percent_subtract(flee, target_count * battle_config.agi_penaly_num);
     }
     if (battle_config.agi_penaly_type == 2)
     {
-        int target_count = battle_counttargeted(target, &sd->bl, static_cast<AttackResult>(battle_config.agi_penaly_count_lv));
+        int target_count = battle_counttargeted(target, sd, static_cast<AttackResult>(battle_config.agi_penaly_count_lv));
         target_count -= battle_config.agi_penaly_count;
         if (target_count > 0)
             flee -= target_count * battle_config.agi_penaly_num;
@@ -987,18 +987,18 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
     if (flee < 1)
         flee = 1;
 
-    int target_distance = std::max(abs(sd->bl.x - target->x), abs(sd->bl.y - target->y));
+    int target_distance = std::max(abs(sd->x - target->x), abs(sd->y - target->y));
     // NOTE: dividing by 75 means the penalty distance is only decreased by 2
     // even at maximum skill, whereas the range increases every 60, maximum 3
     int malus_dist = std::max(0, target_distance - skill_power(sd, AC_OWL) / 75);
-    int hitrate = battle_get_hit(&sd->bl) - flee + 80;
+    int hitrate = battle_get_hit(sd) - flee + 80;
     hitrate -= malus_dist * (malus_dist + 1);
 
-    int dex = battle_get_dex(&sd->bl);
-    int watk = battle_get_atk(&sd->bl);
-    int watk_ = battle_get_atk_(&sd->bl);
+    int dex = battle_get_dex(sd);
+    int watk = battle_get_atk(sd);
+    int watk_ = battle_get_atk_(sd);
 
-    wd.damage = wd.damage2 = battle_get_baseatk(&sd->bl);
+    wd.damage = wd.damage2 = battle_get_baseatk(sd);
     if (sd->attackrange > 2)
     {
         // up to 31.25% bonus for long-range hit
@@ -1044,7 +1044,7 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
     int cri = 0;
     if (da == 0)
     {
-        cri = battle_get_critical(&sd->bl);
+        cri = battle_get_critical(sd);
 
         if (sd->state.arrow_atk)
             cri += sd->arrow_cri;
@@ -1127,7 +1127,7 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
 
         if (battle_config.vit_penaly_type == 1)
         {
-            int target_count = battle_counttargeted(target, &sd->bl, static_cast<AttackResult>(battle_config.vit_penaly_count_lv));
+            int target_count = battle_counttargeted(target, sd, static_cast<AttackResult>(battle_config.vit_penaly_count_lv));
             target_count -= battle_config.vit_penaly_count;
             if (target_count > 0)
             {
@@ -1138,7 +1138,7 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
         }
         if (battle_config.vit_penaly_type == 2)
         {
-            int target_count = battle_counttargeted(target, &sd->bl, static_cast<AttackResult>(battle_config.vit_penaly_count_lv));
+            int target_count = battle_counttargeted(target, sd, static_cast<AttackResult>(battle_config.vit_penaly_count_lv));
             target_count -= battle_config.vit_penaly_count;
             if (target_count > 0)
             {
@@ -1193,8 +1193,8 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
         }
     }
 
-    wd.damage += battle_get_atk2(&sd->bl);
-    wd.damage2 += battle_get_atk_2(&sd->bl);
+    wd.damage += battle_get_atk2(sd);
+    wd.damage2 += battle_get_atk_2(sd);
 
     if (wd.damage < 1)
         wd.damage = 1;
@@ -1322,7 +1322,7 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
 }
 
 /// Calculate damage of one being attacking another
-struct Damage battle_calc_weapon_attack(struct block_list *src, struct block_list *target)
+struct Damage battle_calc_weapon_attack(BlockList *src, BlockList *target)
 {
     struct Damage wd = {};
     nullpo_retr(wd, src);
@@ -1332,12 +1332,12 @@ struct Damage battle_calc_weapon_attack(struct block_list *src, struct block_lis
     struct mob_data *md = NULL;
     if (src->type == BL_PC)
     {
-        sd = reinterpret_cast<MapSessionData *>(src);
+        sd = static_cast<MapSessionData *>(src);
         wd = battle_calc_pc_weapon_attack(sd, target);
     }
     else if (src->type == BL_MOB)
     {
-        md = reinterpret_cast<struct mob_data *>(src);
+        md = static_cast<struct mob_data *>(src);
         wd = battle_calc_mob_weapon_attack(md, target);
     }
     else
@@ -1368,7 +1368,7 @@ struct Damage battle_calc_weapon_attack(struct block_list *src, struct block_lis
             breakrate *= 2;
         if (breakrate >= 10000 || MRAND(10000) < breakrate * battle_config.equipment_break_rate / 100)
         {
-            pc_breakarmor(reinterpret_cast<MapSessionData *>(target));
+            pc_breakarmor(static_cast<MapSessionData *>(target));
         }
     }
 
@@ -1376,14 +1376,14 @@ struct Damage battle_calc_weapon_attack(struct block_list *src, struct block_lis
 }
 
 /// One being attacks another at some time
-AttackResult battle_weapon_attack(struct block_list *src, struct block_list *target, tick_t tick)
+AttackResult battle_weapon_attack(BlockList *src, BlockList *target, tick_t tick)
 {
     nullpo_retr(AttackResult::ZERO, src);
     nullpo_retr(AttackResult::ZERO, target);
 
     MapSessionData *sd = NULL;
     if (src->type == BL_PC)
-        sd = reinterpret_cast<MapSessionData *>(src);
+        sd = static_cast<MapSessionData *>(src);
 
     if (src->prev == NULL || target->prev == NULL)
         return AttackResult::ZERO;
@@ -1391,7 +1391,7 @@ AttackResult battle_weapon_attack(struct block_list *src, struct block_list *tar
         return AttackResult::ZERO;
     MapSessionData *tsd = NULL;
     if (target->type == BL_PC)
-        tsd = reinterpret_cast<MapSessionData *>(target);
+        tsd = static_cast<MapSessionData *>(target);
     if (tsd && pc_isdead(tsd))
         return AttackResult::ZERO;
 
@@ -1434,7 +1434,7 @@ AttackResult battle_weapon_attack(struct block_list *src, struct block_list *tar
             reduction = wd.damage;
 
         wd.damage -= reduction;
-        MAP_LOG_PC(reinterpret_cast<MapSessionData *>(target), "MAGIC-ABSORB-DMG %d", reduction);
+        MAP_LOG_PC(static_cast<MapSessionData *>(target), "MAGIC-ABSORB-DMG %d", reduction);
     }
 
     int damage = wd.damage + wd.damage2;
@@ -1485,7 +1485,7 @@ AttackResult battle_weapon_attack(struct block_list *src, struct block_list *tar
                 sd->status.char_id, src->m, src->x, src->y,
                 tsd ? "PC" : "MOB",
                 tsd ? tsd->status.char_id : target->id,
-                tsd ? 0 : reinterpret_cast<struct mob_data *>(target)->mob_class,
+                tsd ? 0 : static_cast<struct mob_data *>(target)->mob_class,
                 wd.damage + wd.damage2, weapon);
     }
 
@@ -1495,7 +1495,7 @@ AttackResult battle_weapon_attack(struct block_list *src, struct block_list *tar
                 tsd->status.char_id, target->m, target->x, target->y,
                 tsd ? "PC" : "MOB",
                 sd ? sd->status.char_id : src->id,
-                sd ? 0 : reinterpret_cast<struct mob_data *>(src)->mob_class,
+                sd ? 0 : static_cast<struct mob_data *>(src)->mob_class,
                 wd.damage + wd.damage2);
     }
 
@@ -1510,28 +1510,28 @@ AttackResult battle_weapon_attack(struct block_list *src, struct block_list *tar
 }
 
 /// Is a target an enemy?
-bool battle_check_target(struct block_list *src, struct block_list *target)
+bool battle_check_target(BlockList *src, BlockList *target)
 {
     nullpo_ret(src);
     nullpo_ret(target);
     if (src == target)
         return 0;
     // The master (if a mob)
-    struct block_list *ss = src;
+    BlockList *ss = src;
 
     MapSessionData *sd = NULL;
     struct mob_data *md = NULL;
     if (src->type == BL_PC)
-        sd = reinterpret_cast<MapSessionData *>(src);
+        sd = static_cast<MapSessionData *>(src);
     if (src->type == BL_MOB)
-        md = reinterpret_cast<struct mob_data *>(src);
+        md = static_cast<struct mob_data *>(src);
 
     MapSessionData *tsd = NULL;
     struct mob_data *tmd = NULL;
     if (target->type == BL_PC)
-        tsd = reinterpret_cast<MapSessionData *>(target);
+        tsd = static_cast<MapSessionData *>(target);
     if (target->type == BL_MOB)
-        tmd = reinterpret_cast<struct mob_data *>(target);
+        tmd = static_cast<struct mob_data *>(target);
 
     if (tsd && tsd->invincible_timer != -1)
         return 0;
@@ -1556,9 +1556,9 @@ bool battle_check_target(struct block_list *src, struct block_list *target)
         return 0;
 
     if (ss->type == BL_PC)
-        sd = reinterpret_cast<MapSessionData *>(ss);
+        sd = static_cast<MapSessionData *>(ss);
     if (ss->type == BL_MOB)
-        md = reinterpret_cast<struct mob_data *>(ss);
+        md = static_cast<struct mob_data *>(ss);
 
     if ((sd && tmd) || (md && tsd))
         return 1;
@@ -1582,7 +1582,7 @@ bool battle_check_target(struct block_list *src, struct block_list *target)
 
 /// Check if a target is within the given range
 // range 0 = unlimited
-bool battle_check_range(struct block_list *src, struct block_list *bl, int range)
+bool battle_check_range(BlockList *src, BlockList *bl, int range)
 {
     nullpo_ret(src);
     nullpo_ret(bl);

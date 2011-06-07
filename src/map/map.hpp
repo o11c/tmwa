@@ -16,6 +16,7 @@
 #include "battle.hpp"
 
 #include <functional>
+#include <new>
 
 #ifndef MAX
 #  define MAX(x,y) (((x)>(y)) ? (x) : (y))
@@ -68,14 +69,27 @@ enum BlockType
 { BL_NUL, BL_PC, BL_NPC, BL_MOB, BL_ITEM, BL_SPELL };
 enum NPC_Subtype
 { WARP, SHOP, SCRIPT, MESSAGE };
-struct block_list
+class BlockList
 {
-    struct block_list *next, *prev;
+public:
+    BlockList *next, *prev;
     // different kind of ID depending on type: mob, pc, npc?
     uint32_t id;
     uint16_t m, x, y;
-    BlockType type;
+    const BlockType type;
+
+    BlockList(BlockType t) : type(t) {}
+    virtual ~BlockList() {}
+
+    void *operator new(size_t sz)
+    {
+        // we used to calloc
+        return memset(::operator new(sz), '\0', sz);
+    }
 };
+
+// catch bugs
+void free(BlockList *) = delete;
 
 struct walkpath_data
 {
@@ -99,7 +113,7 @@ struct status_change
     int spell_invocation;      /* [Fate] If triggered by a spell, record here */
 };
 
-struct invocation;
+class invocation_t;
 struct npc_data;
 struct item_data;
 struct square;
@@ -111,10 +125,9 @@ struct quick_regeneration
     uint8_t tickdelay;    // number of ticks to next update
 };
 
-class MapSessionData : public SessionData
+class MapSessionData : public SessionData, public BlockList
 {
 public:
-    struct block_list bl;
     struct
     {
         unsigned auth:1;
@@ -187,7 +200,7 @@ public:
     int followtarget;
 
     unsigned int cast_tick;     // [Fate] Next tick at which spellcasting is allowed
-    struct invocation *active_spells;   // [Fate] Singly-linked list of active spells linked to this PC
+    invocation_t *active_spells;   // [Fate] Singly-linked list of active spells linked to this PC
     int attack_spell_override; // [Fate] When an attack spell is active for this player, they trigger it
     // like a weapon.  Check pc_attack_timer() for details.
     short attack_spell_icon_override;   // Weapon equipment slot (slot 4) item override
@@ -303,6 +316,8 @@ public:
     int packet_flood_in;
 
     in_addr_t ip;
+
+    MapSessionData() : BlockList(BL_PC) {}
 };
 
 struct npc_timerevent_list
@@ -318,10 +333,9 @@ struct npc_item_list
 {
     int nameid, value;
 };
-struct npc_data
+struct npc_data : public BlockList
 {
-    struct block_list bl;
-    NPC_Subtype subtype;
+    const NPC_Subtype subtype;
     short n;
     short npc_class;
     Direction dir;
@@ -343,7 +357,7 @@ struct npc_data
             struct npc_label_list *label_list;
             int src_id;
         } scr;
-        struct npc_item_list shop_item[1];
+        struct npc_item_list *shop_item;
         struct
         {
             short xs, ys;
@@ -362,6 +376,9 @@ struct npc_data
     } eventtimer[MAX_EVENTTIMER];
 
     short arenaflag;
+
+    npc_data(NPC_Subtype sub) : BlockList(BL_NPC), subtype(sub) {}
+    ~npc_data();
 };
 
 #define MOB_MODE_SUMMONED                 0x1000
@@ -386,9 +403,8 @@ enum mob_stat
 #define MOB_XP_BONUS_BASE  1024
 #define MOB_XP_BONUS_SHIFT 10
 
-struct mob_data
+struct mob_data : public BlockList
 {
-    struct block_list bl;
     short n;
     short base_class, mob_class, mode;
     Direction dir;
@@ -437,6 +453,12 @@ struct mob_data
     char npc_event[50];
     unsigned short stats[MOB_LAST]; // [Fate] mob-specific stats
     short size;
+
+    mob_data() : BlockList(BL_MOB) {}
+    ~mob_data()
+    {
+        delete lootitem;
+    }
 };
 
 enum
@@ -463,8 +485,8 @@ struct map_data
         // but I don't want to make the indentation too big
         struct
         {
-            struct block_list **block;
-            struct block_list **block_mob;
+            BlockList **block;
+            BlockList **block_mob;
         };
     };
     int *block_count, *block_mob_count;
@@ -507,14 +529,15 @@ struct map_data
 #define read_gat(m,x,y) (maps[m].gat[(x)+(y)*maps[m].xs])
 #define read_gatp(m,x,y) (m->gat[(x)+(y)*m->xs])
 
-struct flooritem_data
+struct flooritem_data : public BlockList
 {
-    struct block_list bl;
     short subx, suby;
     int cleartimer;
     int first_get_id, second_get_id, third_get_id;
     unsigned int first_get_tick, second_get_tick, third_get_tick;
     struct item item_data;
+
+    flooritem_data() : BlockList(BL_ITEM) {}
 };
 
 enum SP
@@ -678,16 +701,16 @@ extern char whisper_server_name[24];
 void map_setusers(int);
 int map_getusers(void);
 // block freeing
-int map_freeblock(void *bl);
+int map_freeblock(BlockList *bl);
 int map_freeblock_lock(void);
 int map_freeblock_unlock(void);
 // block related
-bool map_addblock(struct block_list *);
-int map_delblock(struct block_list *);
-typedef std::function<void (struct block_list *)> MapForEachFunc;
+bool map_addblock(BlockList *);
+int map_delblock(BlockList *);
+typedef std::function<void (BlockList *)> MapForEachFunc;
 void map_foreachinarea_impl(MapForEachFunc, int, int, int, int, int, BlockType);
 template<class... Args>
-void map_foreachinarea(void (&func)(struct block_list *, Args...), int m,
+void map_foreachinarea(void (&func)(BlockList *, Args...), int m,
                        int x_0, int y_0, int x_1, int y_1, BlockType type,
                        Args... args)
 {
@@ -697,7 +720,7 @@ void map_foreachinarea(void (&func)(struct block_list *, Args...), int m,
 
 void map_foreachinmovearea_impl(MapForEachFunc, int, int, int, int, int, int, int, BlockType);
 template<class... Args>
-void map_foreachinmovearea(void (&func)(struct block_list *, Args...), int m,
+void map_foreachinmovearea(void (&func)(BlockList *, Args...), int m,
                            int x_0, int y_0, int x_1, int y_1, int dx, int dy,
                            BlockType type, Args... args)
 {
@@ -707,12 +730,12 @@ void map_foreachinmovearea(void (&func)(struct block_list *, Args...), int m,
 
 /// Temporary objects (loot, etc)
 typedef uint32_t obj_id_t;
-obj_id_t map_addobject(struct block_list *);
+obj_id_t map_addobject(BlockList *);
 void map_delobject(obj_id_t, BlockType type);
 
 void map_foreachobject_impl(MapForEachFunc);
 template<class... Args>
-void map_foreachobject(void (&func)(struct block_list *, Args...), Args... args)
+void map_foreachobject(void (&func)(BlockList *, Args...), Args... args)
 {
     map_foreachobject_impl(std::bind(func, std::placeholders::_1, args...));
 }
@@ -724,7 +747,7 @@ int map_addnpc(int, struct npc_data *);
 extern FILE *map_logfile;
 void map_log(const char *format, ...) __attribute__((format(printf, 1, 2)));
 
-#define MAP_LOG_PC(sd, fmt, args...) map_log("PC%d %d:%d,%d " fmt, sd->status.char_id, sd->bl.m, sd->bl.x, sd->bl.y, ## args)
+#define MAP_LOG_PC(sd, fmt, args...) map_log("PC%d %d:%d,%d " fmt, sd->status.char_id, sd->m, sd->x, sd->y, ## args)
 
 // floor item methods
 void map_clearflooritem_timer(timer_id, tick_t, uint32_t);
@@ -745,13 +768,14 @@ void map_addchariddb(charid_t charid, const char *name);
 const char *map_charid2nick(charid_t);
 
 MapSessionData *map_id2sd(unsigned int);
-struct block_list *map_id2bl(unsigned int);
+MapSessionData *map_id2authsd(unsigned int);
+BlockList *map_id2bl(unsigned int);
 int map_mapname2mapid(const char *);
 bool map_mapname2ipport(const char *, in_addr_t *, in_port_t *);
 bool map_setipport(const char *name, in_addr_t ip, in_port_t port);
 
-void map_addiddb(struct block_list *);
-void map_deliddb(struct block_list *bl);
+void map_addiddb(BlockList *);
+void map_deliddb(BlockList *bl);
 void map_foreachiddb(DB_Func func);
 
 void map_addnickdb(MapSessionData *);
@@ -770,7 +794,7 @@ uint8_t map_getcell(int, int, int);
 void map_setcell(int, int, int, uint8_t);
 
 // get the general direction from block's location to the coordinates
-Direction map_calc_dir(struct block_list *src, int x, int y);
+Direction map_calc_dir(BlockList *src, int x, int y);
 
 // in path.cpp
 int path_search(struct walkpath_data *, int, int, int, int, int, int);

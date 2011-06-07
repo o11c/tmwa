@@ -7,7 +7,7 @@
 
 struct party;
 class MapSessionData;
-struct block_list;
+class BlockList;
 
 void do_init_party(void);
 struct party *party_search(int party_id);
@@ -39,7 +39,7 @@ int party_send_logout(MapSessionData *sd);
 int party_send_message(MapSessionData *sd, char *mes, int len);
 int party_recv_message(int party_id, int account_id, const char *mes, int len);
 
-void party_send_hp_check(struct block_list *bl, party_t, bool *);
+void party_send_hp_check(BlockList *bl, party_t, bool *);
 
 int party_exp_share(struct party *p, int map, int base_exp, int job_exp);
 

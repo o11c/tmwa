@@ -51,7 +51,7 @@ struct val;
 struct location;
 struct area;
 struct spell;
-struct invocation;
+class invocation_t;
 
 typedef struct location
 {
@@ -95,7 +95,7 @@ typedef struct val
         entity_t *v_entity;     /* Used ONLY during operation/function invocation; otherwise we use v_int */
         area_t *v_area;
         location_t v_location;
-        struct invocation *v_invocation;    /* Used ONLY during operation/function invocation; otherwise we use v_int */
+        invocation_t *v_invocation;    /* Used ONLY during operation/function invocation; otherwise we use v_int */
         struct spell *v_spell;
     } v;
     uint8_t ty;
@@ -402,11 +402,9 @@ typedef struct status_change_ref
 #define INVOCATION_FLAG_ABORTED    (1 << 1)    /* Used `abort' to terminate */
 #define INVOCATION_FLAG_STOPATTACK (1 << 2)    /* On magical attacks:  if we run out of steam, stop attacking altogether */
 
-typedef struct invocation
+struct invocation_t : public BlockList
 {
-    struct block_list bl;
-
-    struct invocation *next_invocation; /* used for spells directly associated with a caster: they form a singly-linked list */
+    invocation_t *next_invocation; /* used for spells directly associated with a caster: they form a singly-linked list */
     int flags;
 
     env_t *env;
@@ -428,7 +426,8 @@ typedef struct invocation
     int status_change_refs_nr;
     status_change_ref_t *status_change_refs;
 
-} invocation_t;
+    invocation_t() : BlockList(BL_SPELL) {}
+};
 
 extern magic_conf_t magic_conf; /* Global magic conf */
 extern env_t magic_default_env; /* Fake default environment */

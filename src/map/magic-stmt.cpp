@@ -62,7 +62,7 @@ static void clear_activation_record(cont_activation_record_t * ar)
 
 static void invocation_timer_callback(timer_id, tick_t, uint32_t id)
 {
-    invocation_t *invocation = reinterpret_cast<invocation_t *>(map_id2bl(id));
+    invocation_t *invocation = static_cast<invocation_t *>(map_id2bl(id));
 
     if (invocation)
     {
@@ -95,7 +95,7 @@ void spell_free_invocation(invocation_t * invocation)
     {
         entity_t *e = map_id2bl(invocation->subject);
         if (e && e->type == BL_PC)
-            spell_unbind(reinterpret_cast<character_t *>(e), invocation);
+            spell_unbind(static_cast<character_t *>(e), invocation);
     }
 
     clear_stack(invocation);
@@ -105,8 +105,8 @@ void spell_free_invocation(invocation_t * invocation)
 
     magic_free_env(invocation->env);
 
-    map_delblock(&invocation->bl);
-    map_delobject(invocation->bl.id, BL_SPELL);    // also frees the object
+    map_delblock(invocation);
+    map_delobject(invocation->id, BL_SPELL);    // also frees the object
 //        free(invocation);
 }
 
@@ -118,19 +118,19 @@ static void char_set_weapon_icon(character_t * subject, int count, int icon, int
     subject->attack_spell_look_override = look;
 
     if (old_icon && old_icon != icon)
-        clif_status_change(&subject->bl, old_icon, 0);
+        clif_status_change(subject, old_icon, 0);
 
     clif_fixpcpos(subject);
     if (count)
     {
-        clif_changelook(&subject->bl, LOOK_WEAPON, look);
+        clif_changelook(subject, LOOK_WEAPON, look);
         if (icon)
-            clif_status_change(&subject->bl, icon, 1);
+            clif_status_change(subject, icon, 1);
     }
     else
     {
         /* Set it to `normal' */
-        clif_changelook(&subject->bl, LOOK_WEAPON, subject->status.weapon);
+        clif_changelook(subject, LOOK_WEAPON, subject->status.weapon);
     }
 }
 
@@ -166,7 +166,7 @@ void magic_stop_completely(character_t * c)
     if (c->attack_spell_override)
     {
         invocation_t *attack_spell =
-                reinterpret_cast<invocation_t *>(map_id2bl(c->attack_spell_override));
+                static_cast<invocation_t *>(map_id2bl(c->attack_spell_override));
         if (attack_spell)
             spell_free_invocation(attack_spell);
         c->attack_spell_override = 0;
@@ -194,26 +194,26 @@ static void try_to_finish_invocation(invocation_t * invocation)
 
 static int trigger_spell(int subject, int spell)
 {
-    invocation_t *invocation = reinterpret_cast<invocation_t *>(map_id2bl(spell));
+    invocation_t *invocation = static_cast<invocation_t *>(map_id2bl(spell));
 
     if (!invocation)
         return 0;
 
     invocation = spell_clone_effect(invocation);
 
-    spell_bind(reinterpret_cast<character_t *>(map_id2bl(subject)), invocation);
+    spell_bind(static_cast<character_t *>(map_id2bl(subject)), invocation);
     magic_clear_var(&invocation->env->vars[VAR_CASTER]);
     invocation->env->vars[VAR_CASTER].ty = TY_ENTITY;
     invocation->env->vars[VAR_CASTER].v.v_int = subject;
 
-    return invocation->bl.id;
+    return invocation->id;
 }
 
 static void entity_warp(entity_t * target, int destm, int destx, int desty);
 
 static void char_update(character_t * character)
 {
-    entity_warp(&character->bl, character->bl.m, character->bl.x, character->bl.y);
+    entity_warp(character, character->m, character->x, character->y);
 }
 
 static void timer_callback_effect(timer_id, tick_t, uint32_t id, int data)
@@ -234,24 +234,22 @@ void magic_unshroud(character_t *other_char)
     // Now warp the caster out of and back into here to refresh everyone's display
     char_update(other_char);
     clif_displaymessage(other_char->fd, "Your shroud has been dispelled!");
-//        entity_effect(&other_char->bl, MAGIC_EFFECT_REVEAL);
+//        entity_effect(other_char, MAGIC_EFFECT_REVEAL);
 }
 
 static void timer_callback_effect_npc_delete(timer_id, tick_t, uint32_t npc_id)
 {
-    struct npc_data *effect_npc = reinterpret_cast<struct npc_data *>(map_id2bl(npc_id));
-    npc_free(effect_npc);
+    delete map_id2bl(npc_id);
 }
 
 static struct npc_data *local_spell_effect(int m, int x, int y, int effect,
                                             int tdelay)
 {
     int delay = 30000;         /* 1 minute should be enough for all interesting spell effects, I hope */
-    struct npc_data *effect_npc = npc_spawn_text(m, x, y,
-                                                  INVISIBLE_NPC, "", "?");
-    uint32_t effect_npc_id = effect_npc->bl.id;
+    npc_data *effect_npc = npc_spawn_text(m, x, y, INVISIBLE_NPC, "", "?");
+    uint32_t effect_npc_id = effect_npc->id;
 
-    entity_effect(&effect_npc->bl, effect, tdelay);
+    entity_effect(effect_npc, effect, tdelay);
     add_timer(gettick() + delay, timer_callback_effect_npc_delete, effect_npc_id);
 
     return effect_npc;
@@ -287,10 +285,10 @@ static int op_instaheal(env_t *env, int, val_t *args)
 
     if (caster->type == BL_PC && subject->type == BL_PC)
     {
-        character_t *caster_pc = reinterpret_cast<character_t *>(caster);
-        character_t *subject_pc = reinterpret_cast<character_t *>(subject);
+        character_t *caster_pc = static_cast<character_t *>(caster);
+        character_t *subject_pc = static_cast<character_t *>(subject);
         MAP_LOG_PC(caster_pc, "SPELLHEAL-INSTA PC%d FOR %d",
-                    subject_pc->status.char_id, ARGINT(1));
+                   subject_pc->status.char_id, ARGINT(1));
     }
 
     battle_heal(caster, subject, ARGINT(1), ARGINT(2));
@@ -302,7 +300,7 @@ static int op_itemheal(env_t * env, int args_nr, val_t * args)
     entity_t *subject = ARGENTITY(0);
     if (subject->type == BL_PC)
     {
-        pc_itemheal(reinterpret_cast<MapSessionData *>(subject),
+        pc_itemheal(static_cast<MapSessionData *>(subject),
                      ARGINT(1), ARGINT(2));
     }
     else
@@ -357,9 +355,7 @@ static int op_message(env_t *, int, val_t * args)
 
 static void timer_callback_kill_npc(timer_id, tick_t, uint32_t npc_id)
 {
-    struct npc_data *npc = reinterpret_cast<struct npc_data *>(map_id2bl(npc_id));
-    if (npc)
-        npc_free(npc);
+    delete map_id2bl(npc_id);
 }
 
 static int op_messenger_npc(env_t *, int, val_t *args)
@@ -370,7 +366,7 @@ static int op_messenger_npc(env_t *, int, val_t *args)
     npc = npc_spawn_text(loc->m, loc->x, loc->y,
                           ARGINT(1), ARGSTR(2), ARGSTR(3));
 
-    add_timer(gettick() + ARGINT(4), timer_callback_kill_npc, npc->bl.id);
+    add_timer(gettick() + ARGINT(4), timer_callback_kill_npc, npc->id);
 
     return 0;
 }
@@ -384,31 +380,30 @@ static void entity_warp(entity_t * target, int destm, int destx, int desty)
         {
             case BL_PC:
             {
-                character_t *character = reinterpret_cast<character_t *>(target);
+                character_t *character = static_cast<character_t *>(target);
                 char *map_name;
-                clif_being_remove(&character->bl, BeingRemoveType::WARP);
-                map_delblock(&character->bl);
-                character->bl.x = destx;
-                character->bl.y = desty;
-                character->bl.m = destm;
+                clif_being_remove(character, BeingRemoveType::WARP);
+                map_delblock(character);
+                character->x = destx;
+                character->y = desty;
+                character->m = destm;
 
                 pc_touch_all_relevant_npcs(character);
 
                 // Note that touching NPCs may have triggered warping and thereby updated x and y:
-                map_name = maps[character->bl.m].name;
+                map_name = maps[character->m].name;
 
                 // Warp part #1: update relevant data, interrupt trading etc.:
-                pc_setpos(character, map_name, character->bl.x, character->bl.y, BeingRemoveType::ZERO);
+                pc_setpos(character, map_name, character->x, character->y, BeingRemoveType::ZERO);
                 // Warp part #2: now notify the client
-                clif_changemap(character, map_name,
-                                character->bl.x, character->bl.y);
+                clif_changemap(character, map_name, character->x, character->y);
                 break;
             }
             case BL_MOB:
                 target->x = destx;
                 target->y = desty;
                 target->m = destm;
-                clif_fixmobpos(reinterpret_cast<struct mob_data *>(target));
+                clif_fixmobpos(static_cast<struct mob_data *>(target));
                 break;
         }
     }
@@ -444,7 +439,7 @@ static int op_banish(env_t *, int, val_t *args)
 
     if (subject->type == BL_MOB)
     {
-        struct mob_data *mob = reinterpret_cast<struct mob_data *>(subject);
+        struct mob_data *mob = static_cast<struct mob_data *>(subject);
 
         if (mob->mode & MOB_MODE_SUMMONED)
             mob_catch_delete(mob);
@@ -471,7 +466,7 @@ static int op_status_change(env_t *env, int, val_t *args)
     entity_t *subject = ARGENTITY(0);
     int invocation_id = VAR(VAR_INVOCATION).ty == TY_INVOCATION
         ? VAR(VAR_INVOCATION).v.v_int : 0;
-    invocation_t *invocation = reinterpret_cast<invocation_t *>(map_id2bl(invocation_id));
+    invocation_t *invocation = static_cast<invocation_t *>(map_id2bl(invocation_id));
 
     skill_status_effect(subject, ARGINT(1), ARGINT(2), ARGINT(3),
                          ARGINT(4), ARGINT(5), ARGINT(6), 0,
@@ -506,24 +501,24 @@ static int op_override_attack(env_t *env, int, val_t *args)
     if (psubject->type != BL_PC)
         return 0;
 
-    subject = reinterpret_cast<character_t *>(psubject);
+    subject = static_cast<character_t *>(psubject);
 
     if (subject->attack_spell_override)
     {
         invocation_t *old_invocation =
-                reinterpret_cast<invocation_t *>(map_id2bl(subject->attack_spell_override));
+                static_cast<invocation_t *>(map_id2bl(subject->attack_spell_override));
         if (old_invocation)
             spell_free_invocation(old_invocation);
     }
 
     subject->attack_spell_override =
-        trigger_spell(subject->bl.id, VAR(VAR_INVOCATION).v.v_int);
+        trigger_spell(subject->id, VAR(VAR_INVOCATION).v.v_int);
     subject->attack_spell_charges = charges;
 
     if (subject->attack_spell_override)
     {
         invocation_t *attack_spell =
-                reinterpret_cast<invocation_t *>(map_id2bl(subject->attack_spell_override));
+                static_cast<invocation_t *>(map_id2bl(subject->attack_spell_override));
         if (attack_spell && stopattack)
             attack_spell->flags |= INVOCATION_FLAG_STOPATTACK;
 
@@ -545,7 +540,7 @@ static int op_create_item(env_t *, int, val_t *args)
         return 0;
 
     if (entity->type == BL_PC)
-        subject = reinterpret_cast<character_t *>(entity);
+        subject = static_cast<character_t *>(entity);
     else
         return 0;
 
@@ -573,7 +568,7 @@ static int op_aggravate(env_t *, int, val_t *args)
     if (target->type != BL_MOB)
         return 0;
 
-    other = reinterpret_cast<struct mob_data *>(target);
+    other = static_cast<struct mob_data *>(target);
 
     mob_target(other, victim, battle_get_range(victim));
 
@@ -606,7 +601,7 @@ static int op_spawn(env_t *, int, val_t *args)
 
     character_t *owner = NULL;
     if (monster_attitude == MONSTER_ATTITUDE_SERVANT && owner_e->type == BL_PC)
-        owner = reinterpret_cast<character_t *>(owner_e);
+        owner = static_cast<character_t *>(owner_e);
 
     for (i = 0; i < monster_count; i++)
     {
@@ -619,7 +614,7 @@ static int op_spawn(env_t *, int, val_t *args)
         mob_id = mob_once_spawn(owner, maps[loc.m].name, loc.x, loc.y, "--ja--",    // Is that needed?
                                  monster_id, 1, "");
 
-        mob = reinterpret_cast<struct mob_data *>(map_id2bl(mob_id));
+        mob = static_cast<struct mob_data *>(map_id2bl(mob_id));
 
         if (mob)
         {
@@ -641,8 +636,8 @@ static int op_spawn(env_t *, int, val_t *args)
                     mob->mode = 0x84 | (mob->mode & 1);
                     if (owner)
                     {
-                        mob->target_id = owner->bl.id;
-                        mob->attacked_id = owner->bl.id;
+                        mob->target_id = owner->id;
+                        mob->attacked_id = owner->id;
                     }
                     break;
 
@@ -659,7 +654,7 @@ static int op_spawn(env_t *, int, val_t *args)
 
             if (owner)
             {
-                mob->master_id = owner->bl.id;
+                mob->master_id = owner->id;
                 mob->master_dist = 6;
             }
         }
@@ -674,7 +669,7 @@ static const char *get_invocation_name(env_t *env)
 
     if (VAR(VAR_INVOCATION).ty != TY_INVOCATION)
         return "?";
-    invocation = reinterpret_cast<invocation_t *>(map_id2bl(VAR(VAR_INVOCATION).v.v_int));
+    invocation = static_cast<invocation_t *>(map_id2bl(VAR(VAR_INVOCATION).v.v_int));
 
     if (invocation)
         return invocation->spell->name;
@@ -693,9 +688,9 @@ static int op_injure(env_t *env, int, val_t *args)
 
     if (target->type == BL_PC
         && !maps[target->m].flag.pvp
-        && !reinterpret_cast<character_t *>(target)->special_state.killable
+        && !static_cast<character_t *>(target)->special_state.killable
         && (caster->type != BL_PC
-            || !reinterpret_cast<character_t *>(caster)->special_state.killer))
+            || !static_cast<character_t *>(caster)->special_state.killer))
         return 0;               /* Cannot damage other players outside of pvp */
 
     if (target != caster)
@@ -715,14 +710,13 @@ static int op_injure(env_t *env, int, val_t *args)
 
     if (caster->type == BL_PC)
     {
-        character_t *caster_pc = reinterpret_cast<character_t *>(caster);
+        character_t *caster_pc = static_cast<character_t *>(caster);
         if (target->type == BL_MOB)
         {
-            struct mob_data *mob = reinterpret_cast<struct mob_data *>(target);
+            struct mob_data *mob = static_cast<struct mob_data *>(target);
 
             MAP_LOG_PC(caster_pc, "SPELLDMG MOB%d %d FOR %d BY %s",
-                        mob->bl.id, mob->mob_class, damage_caused,
-                        get_invocation_name(env));
+                       mob->id, mob->mob_class, damage_caused, get_invocation_name(env));
         }
     }
     battle_damage(caster, target, damage_caused);
@@ -844,8 +838,8 @@ static int operation_count;
 
 static int compare_operations(const void *lhs, const void *rhs)
 {
-    return strcmp(reinterpret_cast<const op_t *>(lhs)->name,
-                  reinterpret_cast<const op_t *>(rhs)->name);
+    return strcmp(static_cast<const op_t *>(lhs)->name,
+                  static_cast<const op_t *>(rhs)->name);
 }
 
 op_t *magic_get_op(char *name, int *idx)
@@ -867,7 +861,7 @@ op_t *magic_get_op(char *name, int *idx)
 
     key.name = name;
     op_t *op =
-            reinterpret_cast<op_t *>(
+            static_cast<op_t *>(
                     bsearch(&key, operations, operation_count, sizeof(op_t),
                             compare_operations));
 
@@ -881,9 +875,9 @@ void spell_effect_report_termination(int invocation_id, int bl_id, int sc_id, in
 {
     int i;
     int idx = -1;
-    invocation_t *invocation = reinterpret_cast<invocation_t *>(map_id2bl(invocation_id));
+    invocation_t *invocation = static_cast<invocation_t *>(map_id2bl(invocation_id));
 
-    if (!invocation || invocation->bl.type != BL_SPELL)
+    if (!invocation || invocation->type != BL_SPELL)
         return;
 
     for (i = 0; i < invocation->status_change_refs_nr; i++)
@@ -1044,12 +1038,12 @@ static void find_entities_in_area_c(entity_t * target,
                 break;
             else if (filter == FOREACH_FILTER_SPELL)
             {                   /* Check all spells bound to the caster */
-                invocation_t *invoc = reinterpret_cast<character_t *>(target)->active_spells;
+                invocation_t *invoc = static_cast<character_t *>(target)->active_spells;
                 /* Add all spells locked onto thie PC */
 
                 while (invoc)
                 {
-                    ADD_ENTITY(invoc->bl.id);
+                    ADD_ENTITY(invoc->id);
                     invoc = invoc->next_invocation;
                 }
             }
@@ -1066,7 +1060,7 @@ static void find_entities_in_area_c(entity_t * target,
         case BL_SPELL:
             if (filter == FOREACH_FILTER_SPELL)
             {
-                invocation_t *invocation = reinterpret_cast<invocation_t *>(target);
+                invocation_t *invocation = static_cast<invocation_t *>(target);
 
                 /* Check whether the spell is `bound'-- if so, we'll consider it iff we see the caster (case BL_PC). */
                 if (invocation->flags & INVOCATION_FLAG_BOUND)
@@ -1321,8 +1315,8 @@ static void print_cfg(int i, effect_t * e)
  */
 static int spell_run(invocation_t * invocation, int allow_delete)
 {
-    const int invocation_id = invocation->bl.id;
-#define REFRESH_INVOCATION() do {invocation = reinterpret_cast<invocation_t *>(map_id2bl(invocation_id)); if (!invocation) return 0;} while(0)
+    const int invocation_id = invocation->id;
+#define REFRESH_INVOCATION() do {invocation = static_cast<invocation_t *>(map_id2bl(invocation_id)); if (!invocation) return 0;} while(0)
 
 #ifdef DEBUG
     fprintf(stderr, "Resuming execution:  invocation of `%s'\n",
@@ -1386,7 +1380,7 @@ static int spell_run(invocation_t * invocation, int allow_delete)
 
             case EFFECT_SCRIPT:
             {
-                character_t *caster = reinterpret_cast<character_t *>(map_id2bl(invocation->caster));
+                character_t *caster = static_cast<character_t *>(map_id2bl(invocation->caster));
                 if (caster)
                 {
                     env_t *env = invocation->env;
@@ -1409,34 +1403,34 @@ static int spell_run(invocation_t * invocation, int allow_delete)
                         VAR(VAR_SCRIPTTARGET).ty ==
                         TY_ENTITY ? VAR(VAR_SCRIPTTARGET).
                         v.v_int : invocation->caster;
-                    character_t *recipient = reinterpret_cast<character_t *>(map_id2bl(message_recipient));
+                    character_t *recipient = static_cast<character_t *>(map_id2bl(message_recipient));
 
                     if (recipient->npc_id
-                        && recipient->npc_id != invocation->bl.id)
+                        && recipient->npc_id != invocation->id)
                         break;  /* Don't send multiple message boxes at once */
 
                     if (!invocation->script_pos)    // first time running this script?
                         clif_spawn_fake_npc_for_player(recipient,
-                                                        invocation->bl.id);
+                                                        invocation->id);
                     // We have to do this or otherwise the client won't think that it's
                     // dealing with an NPC
 
                     int newpos = run_script_l(e->e.e_script,
                                                 invocation->script_pos,
                                                 message_recipient,
-                                                invocation->bl.id,
+                                                invocation->id,
                                                 3, arg);
                     /* Returns the new script position, or -1 once the script is finished */
                     if (newpos != -1)
                     {
                         /* Must set up for continuation */
-                        recipient->npc_id = invocation->bl.id;
+                        recipient->npc_id = invocation->id;
                         recipient->npc_pos = invocation->script_pos = newpos;
                         return -1;  /* Signal `wait for script' */
                     }
                     else
                         invocation->script_pos = 0;
-                    clif_being_remove_id(invocation->bl.id, 1, caster->fd);
+                    clif_being_remove_id(invocation->id, 1, caster->fd);
                 }
                 REFRESH_INVOCATION(); // Script may have killed the caster
                 break;
@@ -1505,7 +1499,7 @@ static void spell_execute_d(invocation_t * invocation, int allow_deletion)
                      invocation->timer);
             /* *((int *)0x0) = 0; */
         }
-        invocation->timer = add_timer(gettick() + delta, invocation_timer_callback, invocation->bl.id);
+        invocation->timer = add_timer(gettick() + delta, invocation_timer_callback, invocation->id);
     }
 
     /* If 0, the script cleaned itself.  If -1 (wait-for-script), we must wait for the user. */
@@ -1528,14 +1522,14 @@ void spell_execute_script(invocation_t * invocation)
 
 int spell_attack(int caster_id, int target_id)
 {
-    character_t *caster = reinterpret_cast<character_t *>(map_id2bl(caster_id));
+    character_t *caster = static_cast<character_t *>(map_id2bl(caster_id));
     invocation_t *invocation;
     int stop_attack = 0;
 
     if (!caster)
         return 0;
 
-    invocation = reinterpret_cast<invocation_t *>(map_id2bl(caster->attack_spell_override));
+    invocation = static_cast<invocation_t *>(map_id2bl(caster->attack_spell_override));
 
     if (invocation && invocation->flags & INVOCATION_FLAG_STOPATTACK)
         stop_attack = 1;
@@ -1552,13 +1546,13 @@ int spell_attack(int caster_id, int target_id)
                          0 /* don't delete the invocation if done */ );
 
         // If the caster died, we need to refresh here:
-        invocation = reinterpret_cast<invocation_t *>(map_id2bl(caster->attack_spell_override));
+        invocation = static_cast<invocation_t *>(map_id2bl(caster->attack_spell_override));
 
         if (invocation && !(invocation->flags & INVOCATION_FLAG_ABORTED))   // If we didn't abort:
             caster->attack_spell_charges--;
     }
 
-    if (invocation && caster->attack_spell_override != invocation->bl.id)
+    if (invocation && caster->attack_spell_override != invocation->id)
     {
         /* Attack spell changed / was refreshed */
         // spell_free_invocation(invocation); // [Fate] This would be a double free.

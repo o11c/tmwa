@@ -38,12 +38,12 @@ void do_init_party(void)
 // 検索
 struct party *party_search(int party_id)
 {
-    return reinterpret_cast<struct party *>(numdb_search(party_db, party_id).p);
+    return static_cast<struct party *>(numdb_search(party_db, party_id).p);
 }
 
 static void party_searchname_sub(db_key_t, db_val_t data, const char *str, struct party **dst)
 {
-    struct party *p = reinterpret_cast<struct party *>(data.p);
+    struct party *p = static_cast<struct party *>(data.p);
     if (strcasecmp(p->name, str) == 0)
         *dst = p;
 }
@@ -93,7 +93,7 @@ int party_created(int account_id, int fail, int party_id, const char *name)
         struct party *p;
         sd->status.party_id = party_id;
 
-        if ((p = reinterpret_cast<struct party *>(numdb_search(party_db, party_id).p)) != NULL)
+        if ((p = static_cast<struct party *>(numdb_search(party_db, party_id).p)) != NULL)
         {
             printf("party_created(): ID already exists!\n");
             exit(1);
@@ -125,7 +125,7 @@ static int party_check_member(const struct party *p)
 {
     nullpo_ret(p);
 
-    for (MapSessionData *sd : sessions)
+    for (MapSessionData *sd : auth_sessions)
     {
         if (sd->status.party_id != p->party_id)
             continue;
@@ -153,7 +153,7 @@ static int party_check_member(const struct party *p)
 // 情報所得失敗（そのIDのキャラを全部未所属にする）
 int party_recv_noinfo(int party_id)
 {
-    for (MapSessionData *sd : sessions)
+    for (MapSessionData *sd : auth_sessions)
     {
         if (sd->status.party_id == party_id)
             sd->status.party_id = 0;
@@ -169,7 +169,7 @@ int party_recv_info(const struct party *sp)
 
     nullpo_ret(sp);
 
-    if ((p = reinterpret_cast<struct party *>(numdb_search(party_db, static_cast<numdb_key_t>(sp->party_id)).p)) == NULL)
+    if ((p = static_cast<struct party *>(numdb_search(party_db, static_cast<numdb_key_t>(sp->party_id)).p)) == NULL)
     {
         CREATE(p, struct party, 1);
         numdb_insert(party_db, static_cast<numdb_key_t>(sp->party_id), static_cast<void *>(p));
@@ -609,7 +609,7 @@ int party_check_conflict(MapSessionData *sd)
 // 位置やＨＰ通知用
 static void party_send_xyhp_timer_sub(db_key_t, db_val_t data)
 {
-    struct party *p = reinterpret_cast<struct party *>(data.p);
+    struct party *p = static_cast<struct party *>(data.p);
     int i;
 
     nullpo_retv(p);
@@ -620,11 +620,11 @@ static void party_send_xyhp_timer_sub(db_key_t, db_val_t data)
         if ((sd = p->member[i].sd) != NULL)
         {
             // 座標通知
-            if (sd->party_x != sd->bl.x || sd->party_y != sd->bl.y)
+            if (sd->party_x != sd->x || sd->party_y != sd->y)
             {
                 clif_party_xy(p, sd);
-                sd->party_x = sd->bl.x;
-                sd->party_y = sd->bl.y;
+                sd->party_x = sd->x;
+                sd->party_y = sd->y;
             }
             // ＨＰ通知
             if (sd->party_hp != sd->status.hp)
@@ -664,10 +664,10 @@ int party_send_xy_clear(struct party *p)
 }
 
 // HP通知の必要性検査用（map_foreachinmoveareaから呼ばれる）
-void party_send_hp_check(struct block_list *bl, party_t party_id, bool *flag)
+void party_send_hp_check(BlockList *bl, party_t party_id, bool *flag)
 {
     nullpo_retv(bl);
-    MapSessionData *sd = reinterpret_cast<MapSessionData *>(bl);
+    MapSessionData *sd = static_cast<MapSessionData *>(bl);
 
     if (sd->status.party_id == party_id)
     {
@@ -685,12 +685,12 @@ int party_exp_share(struct party *p, int map, int base_exp, int job_exp)
     nullpo_ret(p);
 
     for (i = c = 0; i < MAX_PARTY; i++)
-        if ((sd = p->member[i].sd) != NULL && sd->bl.m == map)
+        if ((sd = p->member[i].sd) != NULL && sd->m == map)
             c++;
     if (c == 0)
         return 0;
     for (i = 0; i < MAX_PARTY; i++)
-        if ((sd = p->member[i].sd) != NULL && sd->bl.m == map)
+        if ((sd = p->member[i].sd) != NULL && sd->m == map)
             pc_gainexp(sd, base_exp / c + 1, job_exp / c + 1);
     return 0;
 }

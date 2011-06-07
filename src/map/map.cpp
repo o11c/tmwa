@@ -28,6 +28,7 @@
 #include "../common/nullpo.hpp"
 #include "../common/socket.hpp"
 #include "magic.hpp"
+#include "magic-interpreter.hpp"
 
 static void map_helpscreen() __attribute__((noreturn));
 
@@ -38,15 +39,15 @@ static struct dbt *nick_db = NULL;
 static struct dbt *charid_db = NULL;
 
 static int users = 0;
-static struct block_list *object[MAX_FLOORITEM];
+static BlockList *object[MAX_FLOORITEM];
 obj_id_t first_free_object_id = 0, last_object_id = 0;
 
 #define block_free_max 1048576
-static void *block_free[block_free_max];
+static BlockList *block_free[block_free_max];
 static int block_free_count = 0, block_free_lock = 0;
 
 #define BL_LIST_MAX 1048576
-static struct block_list *bl_list[BL_LIST_MAX];
+static BlockList *bl_list[BL_LIST_MAX];
 static int bl_list_count = 0;
 
 struct map_data maps[MAX_MAP_PER_SERVER];
@@ -81,13 +82,12 @@ int map_getusers(void)
 
 
 /// Free a block
-// prohibits calling free() until block_free_lock is 0
-int map_freeblock(void *bl)
+// prohibits deleting until block_free_lock is 0
+int map_freeblock(BlockList *bl)
 {
     if (!block_free_lock)
     {
-        free(bl);
-        bl = NULL;
+        delete bl;
         return 0;
     }
     map_log("Adding block %d due to %d locks", block_free_count, block_free_lock);
@@ -120,7 +120,7 @@ int map_freeblock_unlock(void)
     map_log("Freeing %d deferred blocks", block_free_count);
     for (int i = 0; i < block_free_count; i++)
     {
-        free(block_free[i]);
+        delete block_free[i];
         block_free[i] = NULL;
     }
     block_free_count = 0;
@@ -129,11 +129,11 @@ int map_freeblock_unlock(void)
 
 
 /// this is a dummy bl->prev so that legitimate blocks always have non-NULL
-static struct block_list bl_head;
+static BlockList bl_head(BL_NUL);
 
 
 /// link a new block
-bool map_addblock(struct block_list *bl)
+bool map_addblock(BlockList *bl)
 {
     nullpo_ret(bl);
 
@@ -175,7 +175,7 @@ if (bl->m >= map_num || bl->x >= maps[bl->m].xs || bl->y >= maps[bl->m].ys)
 
 /// Remove a block from the list
 // prev shouldn't be NULL
-int map_delblock(struct block_list *bl)
+int map_delblock(BlockList *bl)
 {
     nullpo_ret(bl);
 
@@ -257,7 +257,7 @@ void map_foreachinarea_impl(MapForEachFunc func, int m,
             for (int bx = x_0 / BLOCK_SIZE; bx <= x_1 / BLOCK_SIZE; bx++)
             {
                 int b = bx + by * maps[m].bxs;
-                struct block_list *bl = maps[m].block[b];
+                BlockList *bl = maps[m].block[b];
                 int c = maps[m].block_count[b];
                 for (int i = 0; i < c && bl; i++, bl = bl->next)
                 {
@@ -281,7 +281,7 @@ void map_foreachinarea_impl(MapForEachFunc func, int m,
             for (int bx = x_0 / BLOCK_SIZE; bx <= x_1 / BLOCK_SIZE; bx++)
             {
                 int b = bx + by * maps[m].bxs;
-                struct block_list *bl = maps[m].block_mob[b];
+                BlockList *bl = maps[m].block_mob[b];
                 int c = maps[m].block_mob_count[b];
                 for (int i = 0; i < c && bl; i++, bl = bl->next)
                 {
@@ -367,7 +367,7 @@ void map_foreachinmovearea_impl(MapForEachFunc func, int m,
         {
             for (int bx = x_0 / BLOCK_SIZE; bx <= x_1 / BLOCK_SIZE; bx++)
             {
-                struct block_list *bl = maps[m].block[bx + by * maps[m].bxs];
+                BlockList *bl = maps[m].block[bx + by * maps[m].bxs];
                 int c = maps[m].block_count[bx + by * maps[m].bxs];
                 for (int i = 0; i < c && bl; i++, bl = bl->next)
                 {
@@ -414,7 +414,7 @@ void map_foreachinmovearea_impl(MapForEachFunc func, int m,
             for (int bx = x_0 / BLOCK_SIZE; bx <= x_1 / BLOCK_SIZE; bx++)
             {
                 int b = bx + by * maps[m].bxs;
-                struct block_list *bl = maps[m].block[b];
+                BlockList *bl = maps[m].block[b];
                 int c = maps[m].block_count[b];
                 for (int i = 0; i < c && bl; i++, bl = bl->next)
                 {
@@ -471,7 +471,7 @@ void map_foreachinmovearea_impl(MapForEachFunc func, int m,
 }
 
 /// Add a temporary object on the floor (loot, etc)
-obj_id_t map_addobject(struct block_list *bl)
+obj_id_t map_addobject(BlockList *bl)
 {
     if (!bl)
     {
@@ -522,7 +522,7 @@ static void map_delobjectnofree(obj_id_t id, BlockType type)
 /// Free an object WITH deletion
 void map_delobject(obj_id_t id, BlockType type)
 {
-    struct block_list *obj = object[id];
+    BlockList *obj = object[id];
 
     if (!obj)
         return;
@@ -560,8 +560,8 @@ void map_foreachobject_impl(MapForEachFunc func)
 void map_clearflooritem_timer(timer_id tid, tick_t, uint32_t id)
 {
     bool flag = tid == -1;
-    struct flooritem_data *fitem = reinterpret_cast<struct flooritem_data *>(object[id]);
-    if (!fitem || fitem->bl.type != BL_ITEM)
+    struct flooritem_data *fitem = static_cast<struct flooritem_data *>(object[id]);
+    if (!fitem || fitem->type != BL_ITEM)
     {
         map_log("%s: error: no such item", __func__);
         return;
@@ -574,7 +574,7 @@ void map_clearflooritem_timer(timer_id tid, tick_t, uint32_t id)
     if (flag)
         delete_timer(fitem->cleartimer);
     clif_clearflooritem(fitem, -1);
-    map_delobject(fitem->bl.id, BL_ITEM);
+    map_delobject(fitem->id, BL_ITEM);
 }
 
 /// drop an object on a random point near the object
@@ -644,13 +644,11 @@ int map_addflooritem_any(struct item *item_data, int amount, uint16_t m, uint16_
         return 0;
     int r = mt_random();
 
-    struct flooritem_data *fitem;
-    CREATE(fitem, struct flooritem_data, 1);
-    fitem->bl.type = BL_ITEM;
-    fitem->bl.prev = fitem->bl.next = NULL;
-    fitem->bl.m = m;
-    fitem->bl.x = xy & 0xffff;
-    fitem->bl.y = (xy >> 16) & 0xffff;
+    struct flooritem_data *fitem = new flooritem_data;
+    fitem->prev = fitem->next = NULL;
+    fitem->m = m;
+    fitem->x = xy & 0xffff;
+    fitem->y = (xy >> 16) & 0xffff;
     fitem->first_get_id = 0;
     fitem->first_get_tick = 0;
     fitem->second_get_id = 0;
@@ -659,25 +657,25 @@ int map_addflooritem_any(struct item *item_data, int amount, uint16_t m, uint16_
     fitem->third_get_tick = 0;
 
     // this is kind of ugly
-    fitem->bl.id = map_addobject(&fitem->bl);
-    if (!fitem->bl.id)
+    fitem->id = map_addobject(fitem);
+    if (!fitem->id)
     {
-        free(fitem);
+        delete fitem;
         return 0;
     }
 
     tick_t tick = gettick();
 
     if (owners[0])
-        fitem->first_get_id = owners[0]->bl.id;
+        fitem->first_get_id = owners[0]->id;
     fitem->first_get_tick = tick + owner_protection[0];
 
     if (owners[1])
-        fitem->second_get_id = owners[1]->bl.id;
+        fitem->second_get_id = owners[1]->id;
     fitem->second_get_tick = tick + owner_protection[1];
 
     if (owners[2])
-        fitem->third_get_id = owners[2]->bl.id;
+        fitem->third_get_id = owners[2]->id;
     fitem->third_get_tick = tick + owner_protection[2];
 
     fitem->item_data= *item_data;
@@ -685,12 +683,12 @@ int map_addflooritem_any(struct item *item_data, int amount, uint16_t m, uint16_
     fitem->subx = (r & 3) * 3 + 3;
     fitem->suby = ((r >> 2) & 3) * 3 + 3;
     fitem->cleartimer = add_timer(gettick() + lifetime, map_clearflooritem_timer,
-                                   fitem->bl.id);
+                                  fitem->id);
 
-    map_addblock(&fitem->bl);
+    map_addblock(fitem);
     clif_dropflooritem(fitem);
 
-    return fitem->bl.id;
+    return fitem->id;
 }
 
 /// Add an item such that only the given players can pick it up, at first
@@ -716,7 +714,7 @@ int map_addflooritem(struct item *item_data, int amount, uint16_t m, uint16_t x,
 // then send the reply to that session
 void map_addchariddb(charid_t charid, const char *name)
 {
-    struct charid2nick *p = reinterpret_cast<struct charid2nick *>(numdb_search(charid_db, charid).p);
+    struct charid2nick *p = static_cast<struct charid2nick *>(numdb_search(charid_db, charid).p);
     if (!p)
     {
         // if not in the database, it will need to be added it
@@ -731,14 +729,14 @@ void map_addchariddb(charid_t charid, const char *name)
 }
 
 /// Add block to DB
-void map_addiddb(struct block_list *bl)
+void map_addiddb(BlockList *bl)
 {
     nullpo_retv(bl);
     numdb_insert(id_db, bl->id, static_cast<void *>(bl));
 }
 
 /// Delete block from DB
-void map_deliddb(struct block_list *bl)
+void map_deliddb(BlockList *bl)
 {
     nullpo_retv(bl);
     numdb_erase(id_db, bl->id);
@@ -766,16 +764,16 @@ void map_quit(MapSessionData *sd)
 
     pc_cleareventtimer(sd);
 
-    skill_castcancel(&sd->bl);
+    skill_castcancel(sd);
 
-    skill_status_change_clear(&sd->bl, 1);
+    skill_status_change_clear(sd, 1);
     pc_stop_walking(sd, 0);
     pc_stopattack(sd);
     pc_delinvincibletimer(sd);
 
     pc_calcstatus(sd, 4);
 
-    clif_being_remove(&sd->bl, BeingRemoveType::QUIT);
+    clif_being_remove(sd, BeingRemoveType::QUIT);
 
     if (pc_isdead(sd))
         pc_setrestartvalue(sd, 2);
@@ -789,9 +787,9 @@ void map_quit(MapSessionData *sd)
 
     free(sd->npc_stackbuf);
 
-    map_delblock(&sd->bl);
+    map_delblock(sd);
 
-    numdb_erase(id_db, sd->bl.id);
+    numdb_erase(id_db, sd->id);
     strdb_erase(nick_db, sd->status.name);
     numdb_erase(charid_db, static_cast<numdb_key_t>(sd->status.char_id));
 }
@@ -801,10 +799,17 @@ void map_quit(MapSessionData *sd)
 // I think it might be a charid_t but I'm not sure
 MapSessionData *map_id2sd(unsigned int id)
 {
-    for (MapSessionData *sd : sessions)
-        if (sd->bl.id == id)
+    for (MapSessionData *sd : all_sessions)
+        if (sd->id == id)
             return sd;
-    return NULL;
+        return NULL;
+}
+MapSessionData *map_id2authsd(unsigned int id)
+{
+    for (MapSessionData *sd : auth_sessions)
+        if (sd->id == id)
+            return sd;
+        return NULL;
 }
 
 /// get name of a character
@@ -886,7 +891,7 @@ MapSessionData *map_nick2sd(const char *nick)
     int quantity = 0;
     MapSessionData *sd = NULL;
 
-    for (MapSessionData *pl_sd : sessions)
+    for (MapSessionData *pl_sd : auth_sessions)
     {
         // Without case sensitive check (increase the number of similar character names found)
         if (strncasecmp(pl_sd->status.name, nick, nicklen) == 0)
@@ -907,11 +912,11 @@ MapSessionData *map_nick2sd(const char *nick)
     return NULL;
 }
 
-struct block_list *map_id2bl(unsigned int id)
+BlockList *map_id2bl(unsigned int id)
 {
     if (id < ARRAY_SIZEOF(object))
         return object[id];
-    return static_cast<struct block_list *>(numdb_search(id_db, id).p);
+    return static_cast<BlockList *>(numdb_search(id_db, id).p);
 }
 
 /// Run func for whole ID db
@@ -946,7 +951,7 @@ int map_addnpc(int m, struct npc_data *nd)
 
     maps[m].npc[i] = nd;
     nd->n = i;
-    numdb_insert(id_db, nd->bl.id, static_cast<void *>(nd));
+    numdb_insert(id_db, nd->id, static_cast<void *>(nd));
 
     return i;
 }
@@ -971,7 +976,7 @@ bool map_mapname2ipport(const char *name, in_addr_t *ip, in_port_t *port)
     return 1;
 }
 
-Direction map_calc_dir(struct block_list *src, int x, int y)
+Direction map_calc_dir(BlockList *src, int x, int y)
 {
     nullpo_retr(Direction::S, src);
 
@@ -1091,8 +1096,8 @@ static bool map_readmap(int m, const char *filename)
 
     size_t size = maps[m].bxs * maps[m].bys;
 
-    CREATE(maps[m].block, struct block_list *, size);
-    CREATE(maps[m].block_mob, struct block_list *, size);
+    CREATE(maps[m].block, BlockList *, size);
+    CREATE(maps[m].block_mob, BlockList *, size);
     CREATE(maps[m].block_count, int, size);
     CREATE(maps[m].block_mob_count, int, size);
 
@@ -1421,7 +1426,7 @@ void do_init(int argc, char *argv[])
 
 int map_scriptcont(MapSessionData *sd, int id)
 {
-    struct block_list *bl = map_id2bl(id);
+    BlockList *bl = map_id2bl(id);
 
     if (!bl)
         return 0;
@@ -1431,7 +1436,7 @@ int map_scriptcont(MapSessionData *sd, int id)
         case BL_NPC:
             return npc_scriptcont(sd, id);
         case BL_SPELL:
-            spell_execute_script(reinterpret_cast<struct invocation *>(bl));
+            spell_execute_script(static_cast<invocation_t *>(bl));
             break;
     }
 

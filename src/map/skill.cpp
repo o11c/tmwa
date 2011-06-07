@@ -65,13 +65,13 @@ int skill_get_max_raise(int id)
  * スキル詠唱キャンセル
  *------------------------------------------
  */
-int skill_castcancel(struct block_list *bl)
+int skill_castcancel(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
     {
-        MapSessionData *sd = reinterpret_cast<MapSessionData *>(bl);
+        MapSessionData *sd = static_cast<MapSessionData *>(bl);
         unsigned long tick = gettick();
         nullpo_ret(sd);
         sd->canact_tick = tick;
@@ -95,7 +95,7 @@ int skill_castcancel(struct block_list *bl)
  * ステータス異常終了
  *------------------------------------------
  */
-int skill_status_change_active(struct block_list *bl, int type)
+int skill_status_change_active(BlockList *bl, int type)
 {
     struct status_change *sc_data;
 
@@ -111,7 +111,7 @@ int skill_status_change_active(struct block_list *bl, int type)
     return sc_data[type].timer != -1;
 }
 
-int skill_status_change_end(struct block_list *bl, int type, int tid)
+int skill_status_change_end(BlockList *bl, int type, int tid)
 {
     struct status_change *sc_data;
     int opt_flag = 0, calc_flag = 0;
@@ -187,7 +187,7 @@ int skill_status_change_end(struct block_list *bl, int type, int tid)
             clif_changeoption(bl);
 
         if (bl->type == BL_PC && calc_flag)
-            pc_calcstatus(reinterpret_cast<MapSessionData *>(bl), 0);  /* ステータス再計算 */
+            pc_calcstatus(static_cast<MapSessionData *>(bl), 0);  /* ステータス再計算 */
     }
 
     return 0;
@@ -211,7 +211,7 @@ void skill_update_heal_animation(MapSessionData *sd)
     else
         sd->opt2 &= ~mask;
 
-    clif_changeoption(&sd->bl);
+    clif_changeoption(sd);
 }
 
 /*==========================================
@@ -220,7 +220,7 @@ void skill_update_heal_animation(MapSessionData *sd)
  */
 static void skill_status_change_timer(timer_id tid, tick_t tick, uint32_t id, int type)
 {
-    struct block_list *bl;
+    BlockList *bl;
     MapSessionData *sd = NULL;
     struct status_change *sc_data;
     //short *sc_count; //使ってない？
@@ -230,7 +230,7 @@ static void skill_status_change_timer(timer_id tid, tick_t tick, uint32_t id, in
     nullpo_retv(sc_data = battle_get_sc_data(bl));
 
     if (bl->type == BL_PC)
-        sd = reinterpret_cast<MapSessionData *>(bl);
+        sd = static_cast<MapSessionData *>(bl);
 
     //sc_count=battle_get_sc_count(bl); //使ってない？
 
@@ -270,7 +270,7 @@ static void skill_status_change_timer(timer_id tid, tick_t tick, uint32_t id, in
                         else if (bl->type == BL_MOB)
                         {
                             struct mob_data *md;
-                            if ((md = reinterpret_cast<struct mob_data *>(bl)) == NULL)
+                            if ((md = static_cast<struct mob_data *>(bl)) == NULL)
                                 break;
                             hp = 3 + hp / 200;
                             md->hp -= hp;
@@ -308,7 +308,7 @@ static void skill_status_change_timer(timer_id tid, tick_t tick, uint32_t id, in
  * ステータス異常開始
  *------------------------------------------
  */
-int skill_status_change_start(struct block_list *bl, int type, int val1,
+int skill_status_change_start(BlockList *bl, int type, int val1,
                                int val2, int val3, int val4, int tick,
                                int flag)
 {
@@ -316,7 +316,7 @@ int skill_status_change_start(struct block_list *bl, int type, int val1,
                                 0);
 }
 
-int skill_status_effect(struct block_list *bl, int type, int val1, int val2,
+int skill_status_effect(BlockList *bl, int type, int val1, int val2,
                          int val3, int val4, int tick, int flag,
                          int spell_invocation)
 {
@@ -347,7 +347,7 @@ int skill_status_effect(struct block_list *bl, int type, int val1, int val2,
         return 0;
     if (bl->type == BL_PC)
     {
-        sd = reinterpret_cast<MapSessionData *>(bl);
+        sd = static_cast<MapSessionData *>(bl);
     }
     else if (bl->type == BL_MOB)
     {
@@ -468,7 +468,7 @@ int skill_status_effect(struct block_list *bl, int type, int val1, int val2,
  * ステータス異常全解除
  *------------------------------------------
  */
-int skill_status_change_clear(struct block_list *bl, int type)
+int skill_status_change_clear(BlockList *bl, int type)
 {
     struct status_change *sc_data;
     short *sc_count, *option, *opt1, *opt2, *opt3;
@@ -542,6 +542,17 @@ static int scan_stat(char *statname)
     return 0;
 }
 
+static char *set_skill_name(int idx, const char *name)
+{
+    for (int i = 0; skill_names[i].id; i++)
+        if (skill_names[i].id == idx)
+        {
+            char *dup = strdup(name);
+            skill_names[i].desc = dup;
+            return dup;
+        }
+    return NULL;
+}
 /// read skill_db.txt
 static int skill_readdb(void)
 {
@@ -621,8 +632,9 @@ static int skill_readdb(void)
 
         skill_db[i].stat = scan_stat(split[16]);
 
-        char *s = strdup(split[17]);
-        skill_names[i].desc = s;
+        char *s = set_skill_name(i, split[17]);
+        if (!s)
+            continue;
         char *stest;
         // replace "_" by " "
         while ((stest = strchr(s, '_')))

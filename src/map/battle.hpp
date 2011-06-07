@@ -42,7 +42,7 @@ extern int attr_fix_table[4][10][10];
 
 class MapSessionData;
 struct mob_data;
-struct block_list;
+class BlockList;
 
 /// flags for battle_calc_damage
 const int
@@ -54,41 +54,41 @@ const int
     BF_WEAPONMASK = 0x000f,
     BF_RANGEMASK = 0x00f0;
 
-int battle_damage(struct block_list *bl, struct block_list *target, int damage);
-int battle_heal(struct block_list *bl, struct block_list *target, int hp, int sp);
+int battle_damage(BlockList *bl, BlockList *target, int damage);
+int battle_heal(BlockList *bl, BlockList *target, int hp, int sp);
 
-AttackResult battle_weapon_attack(struct block_list *bl, struct block_list *target, tick_t tick);
+AttackResult battle_weapon_attack(BlockList *bl, BlockList *target, tick_t tick);
 
-int battle_is_unarmed(struct block_list *bl);
-Direction battle_get_dir(struct block_list *bl);
-int battle_get_lv(struct block_list *bl);
-int battle_get_range(struct block_list *bl);
-int battle_get_hp(struct block_list *bl);
-int battle_get_max_hp(struct block_list *bl);
-int battle_get_str(struct block_list *bl);
-int battle_get_agi(struct block_list *bl);
-int battle_get_vit(struct block_list *bl);
-int battle_get_int(struct block_list *bl);
-int battle_get_dex(struct block_list *bl);
-int battle_get_luk(struct block_list *bl);
-int battle_get_def(struct block_list *bl);
-int battle_get_mdef(struct block_list *bl);
-int battle_get_speed(struct block_list *bl);
-int battle_get_adelay(struct block_list *bl);
-int battle_get_amotion(struct block_list *bl);
-int battle_get_dmotion(struct block_list *bl);
-int battle_get_element(struct block_list *bl);
-int battle_get_stat(int stat_id, struct block_list *bl);
+int battle_is_unarmed(BlockList *bl);
+Direction battle_get_dir(BlockList *bl);
+int battle_get_lv(BlockList *bl);
+int battle_get_range(BlockList *bl);
+int battle_get_hp(BlockList *bl);
+int battle_get_max_hp(BlockList *bl);
+int battle_get_str(BlockList *bl);
+int battle_get_agi(BlockList *bl);
+int battle_get_vit(BlockList *bl);
+int battle_get_int(BlockList *bl);
+int battle_get_dex(BlockList *bl);
+int battle_get_luk(BlockList *bl);
+int battle_get_def(BlockList *bl);
+int battle_get_mdef(BlockList *bl);
+int battle_get_speed(BlockList *bl);
+int battle_get_adelay(BlockList *bl);
+int battle_get_amotion(BlockList *bl);
+int battle_get_dmotion(BlockList *bl);
+int battle_get_element(BlockList *bl);
+int battle_get_stat(int stat_id, BlockList *bl);
 
-struct status_change *battle_get_sc_data(struct block_list *bl);
-short *battle_get_sc_count(struct block_list *bl);
-short *battle_get_opt1(struct block_list *bl);
-short *battle_get_opt2(struct block_list *bl);
-short *battle_get_opt3(struct block_list *bl);
-short *battle_get_option(struct block_list *bl);
+struct status_change *battle_get_sc_data(BlockList *bl);
+short *battle_get_sc_count(BlockList *bl);
+short *battle_get_opt1(BlockList *bl);
+short *battle_get_opt2(BlockList *bl);
+short *battle_get_opt3(BlockList *bl);
+short *battle_get_option(BlockList *bl);
 
-bool battle_check_target(struct block_list *src, struct block_list *target);
-bool battle_check_range(struct block_list *src, struct block_list *bl, int range);
+bool battle_check_target(BlockList *src, BlockList *target);
+bool battle_check_range(BlockList *src, BlockList *bl, int range);
 
 extern struct Battle_Config
 {

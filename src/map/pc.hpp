@@ -25,7 +25,7 @@ int pc_isGM(MapSessionData *sd);
 int pc_iskiller(MapSessionData *src, MapSessionData *target);   // [MouseJstr]
 
 void pc_invisibility(MapSessionData *sd, int enabled);    // [Fate]
-int pc_counttargeted(MapSessionData *sd, struct block_list *src,
+int pc_counttargeted(MapSessionData *sd, BlockList *src,
                      AttackResult target_lv);
 int pc_setrestartvalue(MapSessionData *sd, int type);
 int pc_makesavestatus(MapSessionData *);
@@ -91,7 +91,7 @@ int pc_unequipitem(MapSessionData *, int, int);
 int pc_unequipinvyitem(MapSessionData *, int, int);
 int pc_useitem(MapSessionData *, int);
 
-int pc_damage(struct block_list *, MapSessionData *, int);
+int pc_damage(BlockList *, MapSessionData *, int);
 int pc_heal(MapSessionData *, int, int);
 int pc_itemheal(MapSessionData *sd, int hp, int sp);
 int pc_percentheal(MapSessionData *sd, int, int);

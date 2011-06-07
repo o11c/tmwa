@@ -94,14 +94,14 @@ static const char *show_entity(entity_t * entity)
     switch (entity->type)
     {
         case BL_PC:
-            return reinterpret_cast<MapSessionData *>(entity)->status.name;
+            return static_cast<MapSessionData *>(entity)->status.name;
         case BL_NPC:
-            return reinterpret_cast<struct npc_data *>(entity)->name;
+            return static_cast<struct npc_data *>(entity)->name;
         case BL_MOB:
-            return reinterpret_cast<struct mob_data *>(entity)->name;
+            return static_cast<struct mob_data *>(entity)->name;
         case BL_ITEM:
             /// You should have seen this *before*
-            return itemdb_search(reinterpret_cast<struct flooritem_data *>(entity)->item_data.nameid)->name;
+            return itemdb_search(static_cast<struct flooritem_data *>(entity)->item_data.nameid)->name;
         case BL_SPELL:
             return "%invocation(ERROR:this-should-not-be-an-entity)";
         default:
@@ -157,7 +157,7 @@ static void stringify(val_t * v, int within_op)
         case TY_INVOCATION:
         {
             invocation_t *invocation = within_op
-                ? v->v.v_invocation : reinterpret_cast<invocation_t *>(map_id2bl(v->v.v_int));
+                ? v->v.v_invocation : static_cast<invocation_t *>(map_id2bl(v->v.v_int));
             buf = strdup(invocation->spell->name);
         }
             break;
@@ -757,7 +757,7 @@ static int fun_partner(env_t *, int, val_t *result, val_t *args)
 {
     if (ETY(0) == BL_PC && ARGPC(0)->status.partner_id)
     {
-        RESULTENTITY = &map_nick2sd(map_charid2nick(ARGPC(0)->status.partner_id))->bl;
+        RESULTENTITY = map_nick2sd(map_charid2nick(ARGPC(0)->status.partner_id));
         return 0;
     }
     else
@@ -788,13 +788,13 @@ static int fun_failed(env_t *, int, val_t *result, val_t *args)
 
 static int fun_npc(env_t *, int, val_t *result, val_t *args)
 {
-    RESULTENTITY = &npc_name2id(ARGSTR(0))->bl;
+    RESULTENTITY = npc_name2id(ARGSTR(0));
     return RESULTENTITY == NULL;
 }
 
 static int fun_pc(env_t *, int, val_t *result, val_t *args)
 {
-    RESULTENTITY = &map_nick2sd(ARGSTR(0))->bl;
+    RESULTENTITY = map_nick2sd(ARGSTR(0));
     return RESULTENTITY == NULL;
 }
 
@@ -842,7 +842,7 @@ static int fun_anchor(env_t *env, int, val_t *result, val_t *args)
 
 static int fun_line_of_sight(env_t *, int, val_t *result, val_t *args)
 {
-    entity_t e1, e2;
+    entity_t e1(BL_NUL), e2(BL_NUL);
 
     COPY_LOCATION(e1, ARGLOCATION(0));
     COPY_LOCATION(e2, ARGLOCATION(1));
@@ -934,7 +934,7 @@ static int fun_read_script_int(env_t *, int, val_t *result, val_t *args)
     if (subject_p->type != BL_PC)
         return 1;
 
-    RESULTINT = pc_readglobalreg(reinterpret_cast<character_t *>(subject_p), var_name);
+    RESULTINT = pc_readglobalreg(static_cast<character_t *>(subject_p), var_name);
     return 0;
 }
 
@@ -1217,8 +1217,8 @@ static int functions_are_sorted = 0;
 
 static int compare_fun(const void *lhs, const void *rhs)
 {
-    return strcmp(reinterpret_cast<const fun_t *>(lhs)->name,
-                  reinterpret_cast<const fun_t *>(rhs)->name);
+    return strcmp(static_cast<const fun_t *>(lhs)->name,
+                  static_cast<const fun_t *>(rhs)->name);
 }
 
 fun_t *magic_get_fun(const char *name, int *idx)
@@ -1240,7 +1240,7 @@ fun_t *magic_get_fun(const char *name, int *idx)
     }
 
     key.name = name;
-    result = reinterpret_cast<fun_t *>(
+    result = static_cast<fun_t *>(
             bsearch(&key, functions, functions_nr, sizeof(fun_t), compare_fun));
 
     if (result && idx)
@@ -1435,7 +1435,7 @@ int magic_signature_check(const char *opname, const char *funname, const char *s
         }
         else if (ty == TY_INVOCATION)
         {
-            arg->v.v_invocation = reinterpret_cast<invocation_t *>(map_id2bl(arg->v.v_int));
+            arg->v.v_invocation = static_cast<invocation_t *>(map_id2bl(arg->v.v_int));
             if (!arg->v.v_entity)
                 ty = arg->ty = TY_FAIL;
         }
@@ -1570,7 +1570,7 @@ void magic_eval(env_t *env, val_t *dest, expr_t *expr)
 
             if (v.ty == TY_INVOCATION)
             {
-                invocation_t *t = reinterpret_cast<invocation_t *>(map_id2bl(v.v.v_int));
+                invocation_t *t = static_cast<invocation_t *>(map_id2bl(v.v.v_int));
 
                 if (!t)
                     dest->ty = TY_UNDEF;

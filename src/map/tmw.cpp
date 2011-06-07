@@ -105,8 +105,7 @@ void tmw_AutoBan(MapSessionData *sd, const char *reason, int length)
                    sd->status.name, reason);
 
     gm_log("%s(%d,%d) Server : @autoban %s %dh (%s spam)",
-            maps[sd->bl.m].name, sd->bl.x, sd->bl.y,
-            sd->status.name, length, reason);
+           maps[sd->m].name, sd->x, sd->y, sd->status.name, length, reason);
 
     /* "You have been banned for %s spamming. Please do not spam." */
     snprintf(anotherbuf, sizeof(anotherbuf),

@@ -25,7 +25,7 @@ static void set_entity(val_t * v, entity_t * e)
 static void set_invocation(val_t * v, invocation_t * i)
 {
     v->ty = TY_INVOCATION;
-    v->v.v_int = i->bl.id;
+    v->v.v_int = i->id;
 }
 
 static void set_spell SETTER(spell_t *, TY_SPELL, v_spell);
@@ -59,8 +59,8 @@ char *magic_find_invocation(const char *spellname)
 
 static int spell_compare(const void *lhs, const void *rhs)
 {
-    return strcmp((*reinterpret_cast<spell_t *const *>(lhs))->invocation,
-                  (*reinterpret_cast<spell_t *const *>(rhs))->invocation);
+    return strcmp((*static_cast<spell_t *const *>(lhs))->invocation,
+                  (*static_cast<spell_t *const *>(rhs))->invocation);
 }
 
 spell_t *magic_find_spell(char *invocation)
@@ -78,7 +78,7 @@ spell_t *magic_find_spell(char *invocation)
 
     key.invocation = invocation;
 
-    retval = reinterpret_cast<spell_t **>(
+    retval = static_cast<spell_t **>(
             bsearch(&keyp, magic_conf.spells, magic_conf.spells_nr,
                     sizeof(spell_t *), spell_compare));
 
@@ -94,8 +94,8 @@ spell_t *magic_find_spell(char *invocation)
 
 static int compare_teleport_anchor(const void *lhs, const void *rhs)
 {
-    return strcmp((*reinterpret_cast<teleport_anchor_t *const *>(lhs))->invocation,
-                  (*reinterpret_cast<teleport_anchor_t *const *>(rhs))->invocation);
+    return strcmp((*static_cast<teleport_anchor_t *const *>(lhs))->invocation,
+                  (*static_cast<teleport_anchor_t *const *>(rhs))->invocation);
 }
 
 char *magic_find_anchor_invocation(const char *anchor_name)
@@ -124,7 +124,7 @@ teleport_anchor_t *magic_find_anchor(char *name)
 
     key.invocation = name;
 
-    retval = reinterpret_cast<teleport_anchor_t **>(
+    retval = static_cast<teleport_anchor_t **>(
             bsearch(&keyp, magic_conf.anchors, -magic_conf.anchors_nr,
                     sizeof(teleport_anchor_t *), compare_teleport_anchor));
 
@@ -183,7 +183,7 @@ env_t *spell_create_env(magic_conf_t * conf, spell_t * spell,
             character_t *subject = map_nick2sd(param);
             if (!subject)
                 subject = caster;
-            set_env_entity(spell->arg, &subject->bl);
+            set_env_entity(spell->arg, subject);
             free(param);
             break;
         }
@@ -198,7 +198,7 @@ env_t *spell_create_env(magic_conf_t * conf, spell_t * spell,
                      spell->spellarg_ty);
     }
 
-    set_env_entity(VAR_CASTER, &caster->bl);
+    set_env_entity(VAR_CASTER, caster);
     set_env_int(VAR_SPELLPOWER, spellpower);
     set_env_spell(VAR_SPELL, spell);
 
@@ -290,7 +290,7 @@ static int spellguard_can_satisfy(spellguard_check_t * check, character_t * cast
 
 /*
         fprintf(stderr, "MC(%d/%s)? %d%d%d%d (%u <= %u)\n",
-                caster->bl.id, caster->status.name,
+                caster->id, caster->status.name,
                 retval,
                 caster->cast_tick <= tick,
                 check->mana <= caster->status.sp,
@@ -442,18 +442,17 @@ void spell_update_location(invocation_t * invocation)
         return;
     else
     {
-        character_t *owner = reinterpret_cast<character_t *>(map_id2bl(invocation->subject));
+        character_t *owner = static_cast<character_t *>(map_id2bl(invocation->subject));
         if (!owner)
             return;
 
-        spell_set_location(invocation, reinterpret_cast<entity_t *>(owner));
+        spell_set_location(invocation, static_cast<entity_t *>(owner));
     }
 }
 
 invocation_t *spell_instantiate(effect_set_t * effect_set, env_t * env)
 {
-    invocation_t *retval;
-    CREATE(retval, invocation_t, 1);
+    invocation_t *retval = new invocation_t;
     entity_t *caster;
 
     retval->env = env;
@@ -466,13 +465,12 @@ invocation_t *spell_instantiate(effect_set_t * effect_set, env_t * env)
     retval->end_effect = effect_set->at_end;
 
     caster = map_id2bl(retval->caster);    // must still exist
-    retval->bl.id = map_addobject(&retval->bl);
-    retval->bl.type = BL_SPELL;
-    retval->bl.m = caster->m;
-    retval->bl.x = caster->x;
-    retval->bl.y = caster->y;
+    retval->id = map_addobject(retval);
+    retval->m = caster->m;
+    retval->x = caster->x;
+    retval->y = caster->y;
 
-    map_addblock(&retval->bl);
+    map_addblock(retval);
     set_env_invocation(VAR_INVOCATION, retval);
 
     return retval;
@@ -480,7 +478,7 @@ invocation_t *spell_instantiate(effect_set_t * effect_set, env_t * env)
 
 invocation_t *spell_clone_effect(invocation_t * base)
 {
-    invocation_t *retval = reinterpret_cast<invocation_t *>(malloc(sizeof(invocation_t)));
+    invocation_t *retval = static_cast<invocation_t *>(malloc(sizeof(invocation_t)));
     env_t *env;
 
     memcpy(retval, base, sizeof(invocation_t));
@@ -498,11 +496,11 @@ invocation_t *spell_clone_effect(invocation_t * base)
     retval->status_change_refs = NULL;
     retval->flags = 0;
 
-    retval->bl.id = 0;
-    retval->bl.prev = NULL;
-    retval->bl.next = NULL;
+    retval->id = 0;
+    retval->prev = NULL;
+    retval->next = NULL;
 
-    retval->bl.id = map_addobject(&retval->bl);
+    retval->id = map_addobject(retval);
     set_env_invocation(VAR_INVOCATION, retval);
 
     return retval;
@@ -528,10 +526,10 @@ void spell_bind(character_t * subject, invocation_t * invocation)
         invocation->next_invocation = subject->active_spells;
         subject->active_spells = invocation;
         invocation->flags |= INVOCATION_FLAG_BOUND;
-        invocation->subject = subject->bl.id;
+        invocation->subject = subject->id;
     }
 
-    spell_set_location(invocation, reinterpret_cast<entity_t *>(subject));
+    spell_set_location(invocation, static_cast<entity_t *>(subject));
 }
 
 int spell_unbind(character_t * subject, invocation_t * invocation)

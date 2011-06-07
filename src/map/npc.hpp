@@ -33,11 +33,6 @@ int npc_get_new_npc_id(void);
 // message is strdup'd within
 struct npc_data *npc_spawn_text(int m, int x, int y, int class_, const char *name, const char *message);
 
-/**
- * Uninstalls and frees an NPC
- */
-void npc_free(struct npc_data *npc);
-
 void npc_addsrcfile(char *);
 int do_init_npc(void);
 int npc_event_do_oninit(void);

@@ -41,7 +41,7 @@ static int itemdb_read_noequip(void);
 // name = item alias, so we should find items aliases first. if not found then look for "jname" (full name)
 static void itemdb_searchname_sub(db_key_t, db_val_t data, const char *str, struct item_data **dst)
 {
-    struct item_data *item = reinterpret_cast<struct item_data *>(data.p);
+    struct item_data *item = static_cast<struct item_data *>(data.p);
     if (strcasecmp(item->name, str) == 0)
         *dst = item;
 }
@@ -108,7 +108,7 @@ int itemdb_searchrandomid(int flags)
  */
 struct item_data *itemdb_exists(int nameid)
 {
-    return reinterpret_cast<struct item_data *>(numdb_search(item_db, nameid).p);
+    return static_cast<struct item_data *>(numdb_search(item_db, nameid).p);
 }
 
 /*==========================================
@@ -117,7 +117,7 @@ struct item_data *itemdb_exists(int nameid)
  */
 struct item_data *itemdb_search(int nameid)
 {
-    struct item_data *id = reinterpret_cast<struct item_data *>(numdb_search(item_db, nameid).p);
+    struct item_data *id = static_cast<struct item_data *>(numdb_search(item_db, nameid).p);
     if (id)
         return id;
 

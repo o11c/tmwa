@@ -8,9 +8,9 @@
 int magic_init(const char *conffile);   // must be called after itemdb initialisation
 
 typedef MapSessionData character_t;
-typedef struct block_list entity_t;
+typedef BlockList entity_t;
 
-struct invocation;              /* Spell invocation */
+class invocation_t;              /* Spell invocation */
 
 /**
  * Try to cast magic.
@@ -65,12 +65,12 @@ char *magic_find_anchor_invocation(const char *teleport_location);
 /**
  * Execute a spell invocation and sets up timers to finish
  */
-void spell_execute(struct invocation *invocation);
+void spell_execute(invocation_t *invocation);
 
 /**
  * Continue an NPC script embedded in a spell
  */
-void spell_execute_script(struct invocation *invocation);
+void spell_execute_script(invocation_t *invocation);
 
 /**
  * Stops all magic bound to the specified character
@@ -85,6 +85,6 @@ void magic_stop_completely(character_t * c);
  */
 int spell_attack(int caster, int target);
 
-void spell_free_invocation(struct invocation *invocation);
+void spell_free_invocation(invocation_t *invocation);
 
 #endif // MAGIC_H

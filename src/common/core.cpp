@@ -66,10 +66,12 @@ int main(int argc, char **argv)
     compat_signal(SIGTRAP, SIG_DFL);
     compat_signal(SIGILL, SIG_DFL);
 
+    update_current_tick();
     do_init(argc, argv);
     while (runflag)
     {
-        do_sendrecv(do_timer(gettick_nocache()));
+        interval_t until_next_timer = do_timer();
+        do_sendrecv(until_next_timer);
         do_parsepacket();
     }
 }

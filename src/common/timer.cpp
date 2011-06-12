@@ -33,7 +33,7 @@ void update_current_tick(void)
 {
     struct timespec spec;
     clock_gettime(CLOCK_MONOTONIC, &spec);
-    current_tick = static_cast<tick_t>(spec.tv_sec) * 1000 + spec.tv_nsec / 1000;
+    current_tick = static_cast<tick_t>(spec.tv_sec) * 1000 + spec.tv_nsec / 1000000;
 }
 
 
@@ -166,8 +166,10 @@ struct TimerData *get_timer(timer_id tid)
     return &timer_data[tid];
 }
 
-interval_t do_timer(tick_t tick)
+interval_t do_timer()
 {
+    update_current_tick();
+    tick_t tick = current_tick;
     timer_id i;
     /// Number of milliseconds until it calls this again
     // this says to wait 1 sec if all timers get popped

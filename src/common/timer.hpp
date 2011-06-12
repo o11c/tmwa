@@ -33,11 +33,6 @@ struct TimerData
 extern tick_t current_tick;
 void update_current_tick();
 
-inline tick_t gettick_nocache()
-{
-    update_current_tick();
-    return current_tick;
-}
 inline tick_t gettick(void)
 {
     return current_tick;
@@ -66,8 +61,9 @@ void delete_timer(timer_id);
 
 struct TimerData *get_timer(timer_id tid);
 
-/// Do all timers scheduled before tick, and return the number of milliseconds until the next timer happens
-interval_t do_timer(tick_t tick);
+/// Update the current tick, then do all pending timers
+/// Return how long until the next timer is due
+interval_t do_timer();
 
 
 

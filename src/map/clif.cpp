@@ -615,75 +615,23 @@ void clif_being_remove(BlockList *bl, BeingRemoveType type)
     }
 }
 
-static void clif_being_remove_delay_sub(timer_id, tick_t, BeingRemoveType type,
-                                        BlockList *bl)
-{
-    clif_being_remove(bl, type);
-    map_freeblock(bl);
-}
-
-void clif_being_remove_delay(tick_t tick, BlockList *bl, BeingRemoveType type)
-{
-    BlockList *tmpbl;
-    CREATE(tmpbl, BlockList, 1);
-
-    memcpy(tmpbl, bl, sizeof(BlockList));
-    add_timer(tick, clif_being_remove_delay_sub, type, tmpbl);
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-void clif_being_remove_id(int id, int type, int fd)
+/// A being disappears to one player
+void clif_being_remove_id(uint32_t id, BeingRemoveType type, int fd)
 {
     uint8_t buf[16];
 
     WBUFW(buf, 0) = 0x80;
     WBUFL(buf, 2) = id;
-    WBUFB(buf, 6) = type;
+    WBUFB(buf, 6) = type == BeingRemoveType::DEAD;
     memcpy(WFIFOP(fd, 0), buf, 7);
     WFIFOSET(fd, packet_len_table[0x80]);
 }
 
-/*
-static void current_weapon(MapSessionData *sd)
-{
-        if (sd->attack_spell_override)
-                return sd->attack_spell_look_override;
-        else {
-                return sd->status.weapon;
-        }
-}
-*/
-
-/*==========================================
- *
- *------------------------------------------
- */
-static uint16_t clif_set0078(MapSessionData *sd, uint8_t *buf)
+/// A player appears (or updates)
+// note: this packet is almost identical to the next
+static uint16_t clif_player_update(MapSessionData *sd, uint8_t *buf)
 {
     nullpo_ret(sd);
-
-    if (sd->disguise > 23 && sd->disguise < 4001)
-    {                           // mob disguises [Valaris]
-        WBUFW(buf, 0) = 0x78;
-        WBUFL(buf, 2) = sd->id;
-        WBUFW(buf, 6) = battle_get_speed(sd);
-        WBUFW(buf, 8) = sd->opt1;
-        WBUFW(buf, 10) = sd->opt2;
-        WBUFW(buf, 12) = sd->status.option;
-        WBUFW(buf, 14) = sd->disguise;
-        WBUFW(buf, 42) = 0;
-        WBUFB(buf, 44) = 0;
-        WBUFPOS(buf, 46, sd->x, sd->y, sd->dir);
-        WBUFB(buf, 49) = 5;
-        WBUFB(buf, 50) = 5;
-        WBUFB(buf, 51) = 0;
-        WBUFW(buf, 52) = std::min(battle_get_lv(sd), battle_config.max_lv);
-
-        return packet_len_table[0x78];
-    }
 
     WBUFW(buf, 0) = 0x1d8;
     WBUFL(buf, 2) = sd->id;
@@ -726,34 +674,11 @@ static uint16_t clif_set0078(MapSessionData *sd, uint8_t *buf)
     return packet_len_table[0x1d8];
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-static uint16_t clif_set007b(MapSessionData *sd, uint8_t *buf)
+/// A player moves
+// note: this packet is almost identical to the previous
+static uint16_t clif_player_move(MapSessionData *sd, uint8_t *buf)
 {
     nullpo_ret(sd);
-
-    if (sd->disguise > 23 && sd->disguise < 4001)
-    {                           // mob disguises [Valaris]
-        WBUFW(buf, 0) = 0x7b;
-        WBUFL(buf, 2) = sd->id;
-        WBUFW(buf, 6) = battle_get_speed(sd);
-        WBUFW(buf, 8) = sd->opt1;
-        WBUFW(buf, 10) = sd->opt2;
-        WBUFW(buf, 12) = sd->status.option;
-        WBUFW(buf, 14) = sd->disguise;
-        WBUFL(buf, 22) = gettick();
-        WBUFW(buf, 46) = 0;
-        WBUFB(buf, 48) = 0;
-        WBUFPOS2(buf, 50, sd->x, sd->y, sd->to_x, sd->to_y);
-        WBUFB(buf, 55) = 0;
-        WBUFB(buf, 56) = 5;
-        WBUFB(buf, 57) = 5;
-        WBUFW(buf, 58) = std::min(battle_get_lv(sd), battle_config.max_lv);
-
-        return packet_len_table[0x7b];
-    }
 
     WBUFW(buf, 0) = 0x1da;
     WBUFL(buf, 2) = sd->id;
@@ -785,24 +710,21 @@ static uint16_t clif_set007b(MapSessionData *sd, uint8_t *buf)
     WBUFB(buf, 48) = 0;//sd->status.karma;
     WBUFB(buf, 49) = sd->sex;
     WBUFPOS2(buf, 50, sd->x, sd->y, sd->to_x, sd->to_y);
-    WBUFW(buf, 55) = pc_isGM(sd) == 60 ? 0x80 : 0;
+    // this isn't needed, as players GM status is set in the other packet
+    // also, this was missing the 99 case
+    WBUFW(buf, 55) = 0; //pc_isGM(sd) == 60 ? 0x80 : 0;
     WBUFB(buf, 57) = 5;
     WBUFW(buf, 58) = 0;
 
     return packet_len_table[0x1da];
 }
 
-// mob equipment [Valaris]
-
-/*==========================================
- * MOB表示1
- *------------------------------------------
- */
-static uint16_t clif_mob0078(struct mob_data *md, uint8_t *buf)
+/// A mob appears (or updates)
+static uint16_t clif_mob_appear(struct mob_data *md, uint8_t *buf)
 {
-    memset(buf, 0, packet_len_table[0x78]);
-
     nullpo_ret(md);
+
+    memset(buf, 0, packet_len_table[0x78]);
 
     WBUFW(buf, 0) = 0x78;
     WBUFL(buf, 2) = md->id;
@@ -810,22 +732,7 @@ static uint16_t clif_mob0078(struct mob_data *md, uint8_t *buf)
     WBUFW(buf, 8) = md->opt1;
     WBUFW(buf, 10) = md->opt2;
     WBUFW(buf, 12) = md->option;
-    WBUFW(buf, 14) = mob_get_viewclass(md->mob_class);
-    if ((mob_get_viewclass(md->mob_class) <= 23)
-        || (mob_get_viewclass(md->mob_class) == 812)
-        || (mob_get_viewclass(md->mob_class) >= 4001))
-    {
-        WBUFW(buf, 12) |= mob_db[md->mob_class].option;
-        WBUFW(buf, 16) = mob_get_hair(md->mob_class);
-        WBUFW(buf, 18) = mob_get_weapon(md->mob_class);
-        WBUFW(buf, 20) = mob_get_head_buttom(md->mob_class);
-        WBUFW(buf, 22) = mob_get_shield(md->mob_class);
-        WBUFW(buf, 24) = mob_get_head_top(md->mob_class);
-        WBUFW(buf, 26) = mob_get_head_mid(md->mob_class);
-        WBUFW(buf, 28) = mob_get_hair_color(md->mob_class);
-        WBUFW(buf, 30) = mob_get_clothes_color(md->mob_class);    //Add for player monster dye - Valaris
-        WBUFB(buf, 45) = mob_get_sex(md->mob_class);
-    }
+    WBUFW(buf, 14) = md->mob_class;
 
     WBUFPOS(buf, 46, md->x, md->y, md->dir);
     WBUFB(buf, 49) = 5;
@@ -835,15 +742,12 @@ static uint16_t clif_mob0078(struct mob_data *md, uint8_t *buf)
     return packet_len_table[0x78];
 }
 
-/*==========================================
- * MOB表示2
- *------------------------------------------
- */
-static uint16_t clif_mob007b(struct mob_data *md, uint8_t *buf)
+/// A mob moves
+static uint16_t clif_mob_move(struct mob_data *md, uint8_t *buf)
 {
-    memset(buf, 0, packet_len_table[0x7b]);
-
     nullpo_ret(md);
+
+    memset(buf, 0, packet_len_table[0x7b]);
 
     WBUFW(buf, 0) = 0x7b;
     WBUFL(buf, 2) = md->id;
@@ -851,24 +755,9 @@ static uint16_t clif_mob007b(struct mob_data *md, uint8_t *buf)
     WBUFW(buf, 8) = md->opt1;
     WBUFW(buf, 10) = md->opt2;
     WBUFW(buf, 12) = md->option;
-    WBUFW(buf, 14) = mob_get_viewclass(md->mob_class);
-    if ((mob_get_viewclass(md->mob_class) < 24)
-        || (mob_get_viewclass(md->mob_class) > 4000))
-    {
-        WBUFW(buf, 12) |= mob_db[md->mob_class].option;
-        WBUFW(buf, 16) = mob_get_hair(md->mob_class);
-        WBUFW(buf, 18) = mob_get_weapon(md->mob_class);
-        WBUFW(buf, 20) = mob_get_head_buttom(md->mob_class);
-        WBUFL(buf, 22) = gettick();
-        WBUFW(buf, 26) = mob_get_shield(md->mob_class);
-        WBUFW(buf, 28) = mob_get_head_top(md->mob_class);
-        WBUFW(buf, 30) = mob_get_head_mid(md->mob_class);
-        WBUFW(buf, 32) = mob_get_hair_color(md->mob_class);
-        WBUFW(buf, 34) = mob_get_clothes_color(md->mob_class);    //Add for player monster dye - Valaris
-        WBUFB(buf, 49) = mob_get_sex(md->mob_class);
-    }
-    else
-        WBUFL(buf, 22) = gettick();
+    WBUFW(buf, 14) = md->mob_class;
+
+    WBUFL(buf, 22) = gettick();
 
     WBUFPOS2(buf, 50, md->x, md->y, md->to_x, md->to_y);
     WBUFB(buf, 56) = 5;
@@ -878,11 +767,8 @@ static uint16_t clif_mob007b(struct mob_data *md, uint8_t *buf)
     return packet_len_table[0x7b];
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-static uint16_t clif_npc0078(struct npc_data *nd, uint8_t *buf)
+/// An NPC appears (or updates)
+static uint16_t clif_npc_appear(struct npc_data *nd, uint8_t *buf)
 {
     nullpo_ret(nd);
 
@@ -892,91 +778,52 @@ static uint16_t clif_npc0078(struct npc_data *nd, uint8_t *buf)
     WBUFL(buf, 2) = nd->id;
     WBUFW(buf, 6) = nd->speed;
     WBUFW(buf, 14) = nd->npc_class;
-    WBUFPOS(buf, 46, nd->x, nd->y, Direction::S);
-    WBUFB(buf, 48) |= static_cast<int>(nd->dir) & 0x0f;
+    WBUFPOS(buf, 46, nd->x, nd->y, nd->dir);
     WBUFB(buf, 49) = 5;
     WBUFB(buf, 50) = 5;
 
     return packet_len_table[0x78];
 }
 
-/* These indices are derived from equip_pos in pc.c and some guesswork */
-static int equip_points[LOOK_LAST + 1] = {
-    -1,                         /* 0: base */
-    -1,                         /* 1: hair */
-    9,                          /* 2: weapon */
-    4,                          /* 3: head botom -- leg armour */
-    6,                          /* 4: head top -- hat */
-    5,                          /* 5: head mid -- torso armour */
-    -1,                         /* 6: hair colour */
-    -1,                         /* 6: clothes colour */
-    8,                          /* 6: shield */
-    2,                          /* 9: shoes */
-    3,                          /* gloves */
-    1,                          /* cape */
-    7,                          /* misc1 */
-    0,                          /* misc2 */
+/// These indices are derived from equip_pos in pc.c and some guesswork
+static int equip_points[LOOK_LAST + 1] =
+{
+    -1, /// 0: base
+    -1, /// 1: hair
+    9,  /// 2: weapon
+    4,  /// 3: head botom -- leg armour
+    6,  /// 4: head top -- hat
+    5,  /// 5: head mid -- torso armour
+    -1, /// 6: hair colour
+    -1, /// 7: clothes colour
+    8,  /// 8: shield
+    2,  /// 9: shoes
+    3,  /// 10: gloves
+    1,  /// 11: cape
+    7,  /// 12: misc1
+    0,  /// 13: misc2
 };
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Send everybody (else) a new PC's appearance
 void clif_spawnpc(MapSessionData *sd)
 {
-    uint8_t buf[128];
-
     nullpo_retv(sd);
 
-    if (sd->disguise > 23 && sd->disguise < 4001)
-    {                           // mob disguises [Valaris]
-        clif_being_remove(sd, BeingRemoveType::DISGUISE);
+    uint8_t buf[128];
+    int len = clif_player_update(sd, buf);
 
-        memset(buf, 0, packet_len_table[0x119]);
-
-        WBUFW(buf, 0) = 0x119;
-        WBUFL(buf, 2) = sd->id;
-        WBUFW(buf, 6) = 0;
-        WBUFW(buf, 8) = 0;
-        WBUFW(buf, 10) = 0x40;
-        WBUFB(buf, 12) = 0;
-
-        clif_send(buf, packet_len_table[0x119], sd, Whom::SELF);
-
-        memset(buf, 0, packet_len_table[0x7c]);
-
-        WBUFW(buf, 0) = 0x7c;
-        WBUFL(buf, 2) = sd->id;
-        WBUFW(buf, 6) = sd->speed;
-        WBUFW(buf, 8) = sd->opt1;
-        WBUFW(buf, 10) = sd->opt2;
-        WBUFW(buf, 12) = sd->status.option;
-        WBUFW(buf, 20) = sd->disguise;
-        WBUFPOS(buf, 36, sd->x, sd->y, Direction::S);
-        clif_send(buf, packet_len_table[0x7c], sd, Whom::AREA);
-    }
-
-    clif_set0078(sd, buf);
-
-    WBUFW(buf, 0) = 0x1d9;
-    WBUFW(buf, 51) = 0;
-    clif_send(buf, packet_len_table[0x1d9], sd, Whom::AREA_WOS);
+    clif_send(buf, len, sd, Whom::AREA_WOS);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Send everybody a new NPC
 void clif_spawnnpc(struct npc_data *nd)
 {
-    uint8_t buf[64];
-    int len;
-
     nullpo_retv(nd);
 
     if (nd->npc_class < 0 || nd->flag & 1 || nd->npc_class == INVISIBLE_CLASS)
         return;
 
+    uint8_t buf[64];
     memset(buf, 0, packet_len_table[0x7c]);
 
     WBUFW(buf, 0) = 0x7c;
@@ -987,19 +834,16 @@ void clif_spawnnpc(struct npc_data *nd)
 
     clif_send(buf, packet_len_table[0x7c], nd, Whom::AREA);
 
-    len = clif_npc0078(nd, buf);
+    int len = clif_npc_appear(nd, buf);
     clif_send(buf, len, nd, Whom::AREA);
 }
 
+/// Hack because the client (and protocol) don't support effects at an arbitrary position
 void clif_spawn_fake_npc_for_player(MapSessionData *sd, int fake_npc_id)
 {
-    int fd;
-
     nullpo_retv(sd);
 
-    fd = sd->fd;
-    if (!fd)
-        return;
+    int fd = sd->fd;
 
     WFIFOW(fd, 0) = 0x7c;
     WFIFOL(fd, 2) = fake_npc_id;
@@ -1026,33 +870,14 @@ void clif_spawn_fake_npc_for_player(MapSessionData *sd, int fake_npc_id)
     WFIFOSET(fd, packet_len_table[0x78]);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Show everybody a new mob
 void clif_spawnmob(struct mob_data *md)
 {
-    uint8_t buf[64];
-    int len;
-
     nullpo_retv(md);
 
-    if (mob_get_viewclass(md->mob_class) > 23)
-    {
-        memset(buf, 0, packet_len_table[0x7c]);
+    uint8_t buf[64];
 
-        WBUFW(buf, 0) = 0x7c;
-        WBUFL(buf, 2) = md->id;
-        WBUFW(buf, 6) = md->stats[MOB_SPEED];
-        WBUFW(buf, 8) = md->opt1;
-        WBUFW(buf, 10) = md->opt2;
-        WBUFW(buf, 12) = md->option;
-        WBUFW(buf, 20) = mob_get_viewclass(md->mob_class);
-        WBUFPOS(buf, 36, md->x, md->y, Direction::S);
-        clif_send(buf, packet_len_table[0x7c], md, Whom::AREA);
-    }
-
-    len = clif_mob0078(md, buf);
+    int len = clif_mob_appear(md, buf);
     clif_send(buf, len, md, Whom::AREA);
 }
 
@@ -1099,15 +924,9 @@ void clif_movechar(MapSessionData *sd)
 
     nullpo_retv(sd);
 
-    len = clif_set007b(sd, buf);
+    len = clif_player_move(sd, buf);
 
-    if (sd->disguise > 23 && sd->disguise < 4001)
-    {
-        clif_send(buf, len, sd, Whom::AREA);
-        return;
-    }
-    else
-        clif_send(buf, len, sd, Whom::AREA_WOS);
+    clif_send(buf, len, sd, Whom::AREA_WOS);
 }
 
 /*==========================================
@@ -1155,9 +974,6 @@ void clif_changemap(MapSessionData *sd, const char *mapname, int x, int y)
     WFIFOW(fd, 18) = x;
     WFIFOW(fd, 20) = y;
     WFIFOSET(fd, packet_len_table[0x91]);
-
-    if (sd->disguise > 23 && sd->disguise < 4001)   // mob disguises [Valaris]
-        clif_spawnpc(sd);
 }
 
 /*==========================================
@@ -1847,9 +1663,6 @@ void clif_changelook_towards(BlockList *bl, int type, int val,
     if (bl->type == BL_PC)
         sd = static_cast<MapSessionData *>(bl);
 
-    if (sd && sd->disguise > 23 && sd->disguise < 4001) // mob disguises [Valaris]
-        return;
-
     if (sd && sd->status.option & OPTION_INVISIBILITY)
         return;
 
@@ -2083,19 +1896,7 @@ void clif_changeoption(BlockList *bl)
     WBUFW(buf, 10) = option;
     WBUFB(buf, 12) = 0;        // ??
 
-    if (bl->type == BL_PC)
-    {                           // disguises [Valaris]
-        MapSessionData *sd = static_cast<MapSessionData *>(bl);
-        if (sd && sd->disguise > 23 && sd->disguise < 4001)
-        {
-            clif_send(buf, packet_len_table[0x119], bl, Whom::AREA_WOS);
-            clif_spawnpc(sd);
-        }
-        else
-            clif_send(buf, packet_len_table[0x119], bl, Whom::AREA);
-    }
-    else
-        clif_send(buf, packet_len_table[0x119], bl, Whom::AREA);
+    clif_send(buf, packet_len_table[0x119], bl, Whom::AREA);
 }
 
 /*==========================================
@@ -2359,12 +2160,12 @@ static void clif_getareachar_pc(MapSessionData *sd,
 
     if (dstsd->walktimer)
     {
-        len = clif_set007b(dstsd, WFIFOP(sd->fd, 0));
+        len = clif_player_move(dstsd, WFIFOP(sd->fd, 0));
         WFIFOSET(sd->fd, len);
     }
     else
     {
-        len = clif_set0078(dstsd, WFIFOP(sd->fd, 0));
+        len = clif_player_update(dstsd, WFIFOP(sd->fd, 0));
         WFIFOSET(sd->fd, len);
     }
 
@@ -2386,7 +2187,7 @@ static void clif_getareachar_npc(MapSessionData *sd, struct npc_data *nd)
     if (nd->npc_class < 0 || nd->flag & 1 || nd->npc_class == INVISIBLE_CLASS)
         return;
 
-    len = clif_npc0078(nd, WFIFOP(sd->fd, 0));
+    len = clif_npc_appear(nd, WFIFOP(sd->fd, 0));
     WFIFOSET(sd->fd, len);
 }
 
@@ -2399,7 +2200,7 @@ void clif_movemob(struct mob_data *md)
     nullpo_retv(md);
 
     uint8_t buf[256];
-    uint16_t len = clif_mob007b(md, buf);
+    uint16_t len = clif_mob_move(md, buf);
     clif_send(buf, len, md, Whom::AREA);
 }
 
@@ -2414,13 +2215,13 @@ void clif_fixmobpos(struct mob_data *md)
     if (md->state.state == MS_WALK)
     {
         uint8_t buf[256];
-        int len = clif_mob007b(md, buf);
+        int len = clif_mob_move(md, buf);
         clif_send(buf, len, md, Whom::AREA);
     }
     else
     {
         uint8_t buf[256];
-        int len = clif_mob0078(md, buf);
+        int len = clif_mob_appear(md, buf);
         clif_send(buf, len, md, Whom::AREA);
     }
 }
@@ -2436,13 +2237,13 @@ void clif_fixpcpos(MapSessionData *sd)
     if (sd->walktimer)
     {
         uint8_t buf[256];
-        int len = clif_set007b(sd, buf);
+        int len = clif_player_move(sd, buf);
         clif_send(buf, len, sd, Whom::AREA);
     }
     else
     {
         uint8_t buf[256];
-        int len = clif_set0078(sd, buf);
+        int len = clif_player_update(sd, buf);
         clif_send(buf, len, sd, Whom::AREA);
     }
     clif_changelook_accessories(sd, NULL);
@@ -2486,12 +2287,12 @@ static void clif_getareachar_mob(MapSessionData *sd, struct mob_data *md)
 
     if (md->state.state == MS_WALK)
     {
-        len = clif_mob007b(md, WFIFOP(sd->fd, 0));
+        len = clif_mob_move(md, WFIFOP(sd->fd, 0));
         WFIFOSET(sd->fd, len);
     }
     else
     {
-        len = clif_mob0078(md, WFIFOP(sd->fd, 0));
+        len = clif_mob_appear(md, WFIFOP(sd->fd, 0));
         WFIFOSET(sd->fd, len);
     }
 }
@@ -2570,16 +2371,16 @@ void clif_pcoutsight(BlockList *bl, MapSessionData *sd)
             dstsd = static_cast<MapSessionData *>(bl);
             if (sd != dstsd)
             {
-                clif_being_remove_id(dstsd->id, 0, sd->fd);
-                clif_being_remove_id(sd->id, 0, dstsd->fd);
+                clif_being_remove_id(dstsd->id, BeingRemoveType::ZERO, sd->fd);
+                clif_being_remove_id(sd->id, BeingRemoveType::ZERO, dstsd->fd);
             }
             break;
         case BL_NPC:
             if (static_cast<struct npc_data *>(bl)->npc_class != INVISIBLE_CLASS)
-                clif_being_remove_id(bl->id, 0, sd->fd);
+                clif_being_remove_id(bl->id, BeingRemoveType::ZERO, sd->fd);
             break;
         case BL_MOB:
-            clif_being_remove_id(bl->id, 0, sd->fd);
+            clif_being_remove_id(bl->id, BeingRemoveType::ZERO, sd->fd);
             break;
         case BL_ITEM:
             clif_clearflooritem(static_cast<struct flooritem_data *>(bl), sd->fd);
@@ -2632,7 +2433,7 @@ void clif_moboutsight(BlockList *bl, struct mob_data *md)
     if (bl->type == BL_PC)
     {
         MapSessionData *sd = static_cast<MapSessionData *>(bl);
-        clif_being_remove_id(md->id, 0, sd->fd);
+        clif_being_remove_id(md->id, BeingRemoveType::ZERO, sd->fd);
     }
 }
 
@@ -2757,13 +2558,6 @@ void clif_GMmessage(BlockList *bl, const char *mes, int len, int flag)
 void clif_resurrection(BlockList *bl, int type)
 {
     nullpo_retv(bl);
-
-    if (bl->type == BL_PC)
-    {                           // disguises [Valaris]
-        MapSessionData *sd = static_cast<MapSessionData *>(bl);
-        if (sd && sd->disguise > 23 && sd->disguise < 4001)
-            clif_spawnpc(sd);
-    }
 
     uint8_t buf[16];
     WBUFW(buf, 0) = 0x148;
@@ -3666,10 +3460,7 @@ static void clif_parse_ChangeDir(int fd, MapSessionData *sd)
     WBUFL(buf, 2) = sd->id;
     WBUFW(buf, 6) = 0;
     WBUFB(buf, 8) = static_cast<int>(dir);
-    if (sd->disguise > 23 && sd->disguise < 4001)   // mob disguises [Valaris]
-        clif_send(buf, packet_len_table[0x9c], sd, Whom::AREA);
-    else
-        clif_send(buf, packet_len_table[0x9c], sd, Whom::AREA_WOS);
+    clif_send(buf, packet_len_table[0x9c], sd, Whom::AREA_WOS);
 
 }
 

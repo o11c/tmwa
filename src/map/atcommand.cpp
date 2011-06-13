@@ -118,10 +118,6 @@ ATCOMMAND_FUNC(enablenpc);
 ATCOMMAND_FUNC(disablenpc);
 ATCOMMAND_FUNC(servertime);
 ATCOMMAND_FUNC(chardelitem);
-ATCOMMAND_FUNC(disguise);
-ATCOMMAND_FUNC(undisguise);
-ATCOMMAND_FUNC(chardisguise);
-ATCOMMAND_FUNC(charundisguise);
 ATCOMMAND_FUNC(email);
 ATCOMMAND_FUNC(effect);
 ATCOMMAND_FUNC(character_item_list);
@@ -176,10 +172,6 @@ static AtCommandInfo atcommand_info[] = {
     {"@model", 20,      atcommand_model,        ATCC_SELF,
     "hairstyle haircolor",
                         "Change your appearance."},
-    {"@disguise", 20,   atcommand_disguise,     ATCC_SELF,
-    "name|ID",          "Disguise yourself as a monster."},
-    {"@undisguise", 20, atcommand_undisguise,   ATCC_SELF,
-    "",                 "Return to your normal appearance."},
     {"@warp", 40,       atcommand_warp,         ATCC_SELF,
     "map x y",          "Warp yourself to a location on any map (random x,y if not specified)."},
     {"@jump", 40,       atcommand_jump,         ATCC_SELF,
@@ -312,10 +304,6 @@ static AtCommandInfo atcommand_info[] = {
     {"@chardelitem", 60, atcommand_chardelitem, ATCC_CHAR,
     "name|ID qty charname",
                         "Remove an amount of a specified item from a player's inventory."},
-    {"@chardisguise", 60, atcommand_chardisguise, ATCC_CHAR,
-    "name|ID charname", "Disguise a player as a monster."},
-    {"@charundisguise", 60, atcommand_charundisguise, ATCC_CHAR,
-    "charname",         "Return a player to their normal appearance."},
     {"@trade", 60,      atcommand_trade,        ATCC_CHAR,
     "charname",         "Open trade window with a player."},
     {"@charwipe", 60,   atcommand_char_wipe,    ATCC_CHAR,
@@ -3621,52 +3609,6 @@ int atcommand_chardelitem(int fd, MapSessionData *sd,
     return 0;
 }
 
-/// Make yourself appear as a monster to all other players
-int atcommand_disguise(int fd, MapSessionData *sd,
-                        const char *, const char *message)
-{
-
-    if (!message || !*message)
-        return -1;
-
-    int mob_id = mobdb_searchname(message);
-    if (!mob_id)
-        mob_id = atoi(message);
-    // NPCs are 46..1000, mobs are 1001..2000
-    // (this is hard-coded into the client)
-    if (mob_id <= 45 || mob_id > 2000)
-    {
-        clif_displaymessage(fd, "Monster/NPC name/id not found.");
-        return -1;
-    }
-
-    // disguiseflag is distinct to override items with a disguise script
-    // (is it *really* necessary?)
-    sd->disguiseflag = 1;
-    sd->disguise = mob_id;
-    pc_setpos(sd, sd->mapname, sd->x, sd->y, BeingRemoveType::WARP);
-    clif_displaymessage(fd, "Disguise applied.");
-
-    return 0;
-}
-
-/// Appear as yourself again
-int atcommand_undisguise(int fd, MapSessionData *sd,
-                          const char *, const char *)
-{
-    if (!sd->disguise)
-    {
-        clif_displaymessage(fd, "You're not disguised.");
-        return -1;
-    }
-    clif_being_remove(sd, BeingRemoveType::DISGUISE);
-    sd->disguise = 0;
-    pc_setpos(sd, sd->mapname, sd->x, sd->y, BeingRemoveType::WARP);
-    clif_displaymessage(fd, "Undisguise applied.");
-
-    return 0;
-}
-
 /// Broadcast a message, including name, to all map servers
 int atcommand_broadcast(int, MapSessionData *sd,
                          const char *, const char *message)
@@ -3694,83 +3636,6 @@ int atcommand_localbroadcast(int, MapSessionData *sd,
 
     // flag 1 becomes ALL_SAMEMAP
     clif_GMmessage(sd, output, strlen(output) + 1, 1);
-
-    return 0;
-}
-
-/// Make someone appear to everyone else as a monster
-int atcommand_chardisguise(int fd, MapSessionData *sd,
-                            const char *, const char *message)
-{
-    if (!message || !*message)
-        return -1;
-    char mob_name[100];
-    char character[100];
-    if (sscanf(message, "%99s %99[^\n]", mob_name, character) < 2)
-        return -1;
-
-    int mob_id = mobdb_searchname(mob_name);
-    if (!mob_id)
-        mob_id = atoi(mob_name);
-    // NPCs are 46..1000, mobs are 1001..2000
-    // (this is hard-coded into the client)
-    if (mob_id <= 45 || mob_id > 2000)
-    {
-        clif_displaymessage(fd, "Monster/NPC name/id not found.");
-        return -1;
-    }
-
-    MapSessionData *pl_sd = map_nick2sd(character);
-    if (!pl_sd)
-    {
-        clif_displaymessage(fd, "Character not found.");
-        return -1;
-    }
-    if (pc_isGM(sd) < pc_isGM(pl_sd))
-    {
-        clif_displaymessage(fd, "Your GM level don't authorise you to do this action on this player.");
-        return -1;
-    }
-    // disguiseflag is distinct to override items with a disguise script
-    // (is it *really* necessary?)
-    pl_sd->disguiseflag = 1;
-    pl_sd->disguise = mob_id;
-    pc_setpos(pl_sd, pl_sd->mapname, pl_sd->x, pl_sd->y, BeingRemoveType::WARP);
-    clif_displaymessage(fd, "Character's disguise applied.");
-
-    return 0;
-}
-
-/// Remove someone's disguise
-int atcommand_charundisguise(int fd, MapSessionData *sd,
-                              const char *, const char *message)
-{
-    if (!message || !*message)
-        return -1;
-    char character[100];
-    if (sscanf(message, "%99[^\n]", character) < 1)
-        return -1;
-
-    MapSessionData *pl_sd = map_nick2sd(character);
-    if (!pl_sd)
-    {
-        clif_displaymessage(fd, "Character not found.");
-        return -1;
-    }
-    if (pc_isGM(sd) < pc_isGM(pl_sd))
-    {
-        clif_displaymessage(fd, "Your GM level don't authorise you to do this action on this player.");
-        return -1;
-    }
-    if (!pl_sd->disguise)
-    {
-        clif_displaymessage(fd, "Character is not disguised.");
-        return -1;
-    }
-    clif_being_remove(pl_sd, BeingRemoveType::DISGUISE);
-    pl_sd->disguise = 0;
-    pc_setpos(pl_sd, pl_sd->mapname, pl_sd->x, pl_sd->y, BeingRemoveType::WARP);
-    clif_displaymessage(fd, "Character's undisguise applied.");
 
     return 0;
 }

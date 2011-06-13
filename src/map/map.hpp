@@ -230,7 +230,6 @@ public:
     int fame;
 
     short weapontype1, weapontype2;
-    short disguiseflag, disguise;   // [Valaris]
     int paramb[6], paramc[6], parame[6], paramcard[6];
     int hit, flee, flee2, aspd, amotion, dmotion;
     int watk, watk2;
@@ -655,7 +654,6 @@ enum SP
     SP_AGI_VIT          = 1074,
     SP_AGI_DEX_STR      = 1075,
     SP_PERFECT_HIDE     = 1076,
-    SP_DISGUISE         = 1077,
 
     SP_RESTART_FULL_RECORVER = 2000,
     SP_NO_CASTCANCEL    = 2001,

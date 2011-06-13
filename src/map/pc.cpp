@@ -905,18 +905,6 @@ int pc_calcstatus(MapSessionData *sd, int first)
     sd->magic_damage_return = 0;    //AppleGirl Was Here
     sd->random_attack_increase_add = sd->random_attack_increase_per = 0;
 
-    if (!sd->disguiseflag && sd->disguise)
-    {
-        sd->disguise = 0;
-        pc_set_weapon_look(sd);
-        clif_changelook(sd, LOOK_SHIELD, sd->status.shield);
-        clif_changelook(sd, LOOK_HEAD_BOTTOM, sd->status.head_bottom);
-        clif_changelook(sd, LOOK_HEAD_TOP, sd->status.head_top);
-        clif_changelook(sd, LOOK_HEAD_MID, sd->status.head_mid);
-        clif_being_remove(sd, BeingRemoveType::DISGUISE);
-        pc_setpos(sd, sd->mapname, sd->x, sd->y, BeingRemoveType::WARP);
-    }
-
     sd->spellpower_bonus_target = 0;
 
     for (i = 0; i < 10; i++)
@@ -1813,14 +1801,6 @@ int pc_bonus(MapSessionData *sd, int type, int val)
                 sd->perfect_hiding = 1;
             }
             break;
-        case SP_DISGUISE:      // Disguise script for items [Valaris]
-            if (sd->state.lr_flag != 2 && sd->disguiseflag == 0)
-            {
-                sd->disguise = val;
-                clif_being_remove(sd, BeingRemoveType::DISGUISE);
-                pc_setpos(sd, sd->mapname, sd->x, sd->y, BeingRemoveType::WARP);
-            }
-            break;
         case SP_UNBREAKABLE:
             if (sd->state.lr_flag != 2)
             {
@@ -2317,7 +2297,7 @@ int pc_setpos(MapSessionData *sd, const char *mapname_org, int x, int y,
               BeingRemoveType clrtype)
 {
     char mapname[24];
-    int m = 0, c = 0, disguise = 0;
+    int m = 0, c = 0;
 
     nullpo_ret(sd);
 
@@ -2332,13 +2312,6 @@ int pc_setpos(MapSessionData *sd, const char *mapname_org, int x, int y,
     skill_castcancel(sd);  // 詠唱中断
     pc_stop_walking(sd, 0);    // 歩行中断
     pc_stopattack(sd);         // 攻撃中断
-
-    if (sd->disguise)
-    {                           // clear disguises when warping [Valaris]
-        clif_being_remove(sd, BeingRemoveType::DISGUISE);
-        disguise = sd->disguise;
-        sd->disguise = 0;
-    }
 
     memcpy(mapname, mapname_org, 24);
     mapname[16] = 0;
@@ -2402,9 +2375,6 @@ int pc_setpos(MapSessionData *sd, const char *mapname_org, int x, int y,
         map_delblock(sd);
         clif_changemap(sd, maps[m].name, x, y); // [MouseJstr]
     }
-
-    if (disguise)               // disguise teleport fix [Valaris]
-        sd->disguise = disguise;
 
     memcpy(sd->mapname, mapname, 24);
     sd->m = m;

@@ -8,8 +8,6 @@
 
 #include "clif.hpp"
 
-#define MAX_RANDOMMONSTER 3
-
 struct mob_db
 {
     char name[24], jname[24];
@@ -27,10 +25,7 @@ struct mob_db
     {
         int nameid, p;
     } dropitem[8];
-    int view_class, sex;
-    short hair, hair_color, weapon, shield, head_top, head_mid, head_buttom, option, clothes_color; // [Valaris]
     int equip;                 // [Valaris]
-    int summonper[MAX_RANDOMMONSTER];
 };
 extern struct mob_db mob_db[];
 
@@ -49,16 +44,6 @@ int mob_stopattack(struct mob_data *);
 int mob_spawn(int);
 int mob_damage(BlockList *, struct mob_data *, int, int);
 int mob_heal(struct mob_data *, int);
-int mob_get_viewclass(int);
-int mob_get_sex(int);
-short mob_get_hair(int);
-short mob_get_hair_color(int);
-short mob_get_weapon(int);
-short mob_get_shield(int);
-short mob_get_head_top(int);
-short mob_get_head_mid(int);
-short mob_get_head_buttom(int);
-short mob_get_clothes_color(int);  //player mob dye [Valaris]
 int do_init_mob(void);
 
 int mob_delete(struct mob_data *md);

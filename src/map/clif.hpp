@@ -42,8 +42,7 @@ enum class BeingRemoveType
 class BlockList;
 
 void clif_being_remove(BlockList *, BeingRemoveType);
-void clif_being_remove_delay(tick_t, BlockList *, BeingRemoveType);
-void clif_being_remove_id(int, int, int);
+void clif_being_remove_id(uint32_t, BeingRemoveType, int fd);
 void clif_spawnpc(MapSessionData *);  //area
 void clif_spawnnpc(struct npc_data *); // area
 void clif_spawn_fake_npc_for_player(MapSessionData *sd, int fake_npc_id);

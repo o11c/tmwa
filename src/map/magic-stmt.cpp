@@ -1430,7 +1430,7 @@ static int spell_run(invocation_t * invocation, int allow_delete)
                     }
                     else
                         invocation->script_pos = 0;
-                    clif_being_remove_id(invocation->id, 1, caster->fd);
+                    clif_being_remove_id(invocation->id, BeingRemoveType::DEAD, caster->fd);
                 }
                 REFRESH_INVOCATION(); // Script may have killed the caster
                 break;

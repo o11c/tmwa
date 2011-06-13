@@ -25,6 +25,12 @@ struct TimerData
     TimerFunc func;
     /// Repeat rate
     interval_t interval;
+
+    bool operator <(const TimerData& rhs) const
+    {
+        // Note: the sense is inverted since the lowest tick is the highest priority
+        return DIFF_TICK(tick, rhs.tick) > 0;
+    }
 };
 
 

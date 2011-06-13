@@ -7,19 +7,14 @@
 
 #include <time.h>
 
+
+#include <queue>
+
 #include "timer.hpp"
 #include "utils.hpp"
 
-/// Okay, I think I understand this structure now:
-/// the timer heap is a magic queue that allows inserting timers and then popping them in order
-/// designed to copy only log2(N) entries instead of N
-// timer_heap_count is the size (greatest index into the heap)
-// timer_heap[0] is the first actual element
-// timer_heap_max increases 256 at a time and never decreases
-static uint32_t timer_heap_max = 0;
-/// FIXME: refactor the code to put the size in a separate variable
-//nontrivial because indices get multiplied
-static timer_id *timer_heap = NULL;
+
+static std::priority_queue<timer_id, std::vector<timer_id>, PointeeLess<timer_id>> timers;
 
 
 tick_t current_tick;
@@ -31,65 +26,21 @@ void update_current_tick(void)
     current_tick = static_cast<tick_t>(spec.tv_sec) * 1000 + spec.tv_nsec / 1000000;
 }
 
-static uint32_t timer_heap_count;
-
 static void push_timer_heap(timer_id data)
 {
-    if (timer_heap == NULL || timer_heap_count >= timer_heap_max)
-    {
-        timer_heap_max += 256;
-        RECREATE(timer_heap, timer_id, timer_heap_max);
-    }
-    timer_heap_count++;
-
-    uint32_t h = timer_heap_count - 1;
-    while (h)
-    {
-        uint32_t i = (h - 1) / 2;
-        if (DIFF_TICK(data->tick, timer_heap[i]->tick) >= 0)
-            break;
-        timer_heap[h] = timer_heap[i];
-        h = i;
-    }
-    timer_heap[h] = data;
+    timers.push(data);
 }
 
 static timer_id top_timer_heap(void)
 {
-    if (!timer_heap || !timer_heap_count)
+    if (timers.empty())
         return NULL;
-    return timer_heap[0];
+    return timers.top();
 }
 
 static void pop_timer_heap(void)
 {
-    if (!timer_heap || !timer_heap_count)
-        return;
-    timer_id last = timer_heap[timer_heap_count - 1];
-    timer_heap_count--;
-
-    uint32_t h, k;
-    for (h = 0, k = 2; k < timer_heap_count; k = k * 2 + 2)
-    {
-        if (DIFF_TICK(timer_heap[k]->tick, timer_heap[k - 1]->tick) > 0)
-            k--;
-        timer_heap[h] = timer_heap[k];
-        h = k;
-    }
-    if (k == timer_heap_count)
-    {
-        timer_heap[h] = timer_heap[k - 1];
-        h = k - 1;
-    }
-    while (h)
-    {
-        uint32_t i = (h - 1) / 2;
-        if (DIFF_TICK(timer_heap[i]->tick, last->tick) <= 0)
-            break;
-        timer_heap[h] = timer_heap[i];
-        h = i;
-    }
-    timer_heap[h] = last;
+    timers.pop();
 }
 
 timer_id add_timer_impl(tick_t tick, TimerFunc func, interval_t interval)
@@ -131,7 +82,10 @@ interval_t do_timer()
         }
         pop_timer_heap();
         if (!i->func)
+        {
+            delete i;
             continue;
+        }
         if (DIFF_TICK(i->tick, tick) < -1000)
         {
             // If we are too far past the requested tick, call with the current tick instead to fix reregistering problems
@@ -144,7 +98,6 @@ interval_t do_timer()
 
         if (!i->interval)
         {
-            i->func = NULL;
             delete i;
         }
         else

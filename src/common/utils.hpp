@@ -161,4 +161,13 @@ inline R sign_cast(A input)
     return sign_cast_impl<R, A>::do_cast(input);
 }
 
+template<class T>
+class PointeeLess
+{
+public:
+    bool operator () (const T& a, const T& b)
+    {
+        return *a < *b;
+    }
+};
 #endif //UTILS_H

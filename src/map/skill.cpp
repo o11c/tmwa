@@ -108,10 +108,10 @@ int skill_status_change_active(BlockList *bl, int type)
 
     nullpo_ret(sc_data = battle_get_sc_data(bl));
 
-    return sc_data[type].timer != -1;
+    return sc_data[type].timer != NULL;
 }
 
-int skill_status_change_end(BlockList *bl, int type, int tid)
+int skill_status_change_end(BlockList *bl, int type, timer_id tid)
 {
     struct status_change *sc_data;
     int opt_flag = 0, calc_flag = 0;
@@ -130,15 +130,15 @@ int skill_status_change_end(BlockList *bl, int type, int tid)
     nullpo_ret(opt2 = battle_get_opt2(bl));
     nullpo_ret(opt3 = battle_get_opt3(bl));
 
-    if ((*sc_count) > 0 && sc_data[type].timer != -1
-        && (sc_data[type].timer == tid || tid == -1))
+    if ((*sc_count) > 0 && sc_data[type].timer
+        && (sc_data[type].timer == tid || tid == NULL))
     {
 
-        if (tid == -1)          // タイマから呼ばれていないならタイマ削除をする
+        if (tid == NULL)          // タイマから呼ばれていないならタイマ削除をする
             delete_timer(sc_data[type].timer);
 
         /* 該当の異常を正常に戻す */
-        sc_data[type].timer = -1;
+        sc_data[type].timer = NULL;
         (*sc_count)--;
 
         switch (type)
@@ -166,7 +166,7 @@ int skill_status_change_end(BlockList *bl, int type, int tid)
                 break;
 
             case SC_SLOWPOISON:
-                if (sc_data[SC_POISON].timer != -1)
+                if (sc_data[SC_POISON].timer)
                     *opt2 |= 0x1;
                 *opt2 &= ~0x200;
                 opt_flag = 1;
@@ -234,11 +234,6 @@ static void skill_status_change_timer(timer_id tid, tick_t tick, uint32_t id, in
 
     //sc_count=battle_get_sc_count(bl); //使ってない？
 
-    if (sc_data[type].timer != tid)
-    {
-        map_log("%s: %d != %d\n", __func__, tid, sc_data[type].timer);
-    }
-
     if (sc_data[type].spell_invocation)
     {                           // Must report termination
         spell_effect_report_termination(sc_data[type].spell_invocation,
@@ -249,7 +244,7 @@ static void skill_status_change_timer(timer_id tid, tick_t tick, uint32_t id, in
     switch (type)
     {                           /* 特殊な処理になる場合 */
         case SC_POISON:
-            if (sc_data[SC_SLOWPOISON].timer == -1)
+            if (sc_data[SC_SLOWPOISON].timer == NULL)
             {
                 const int resist_poison =
                     skill_power_bl(bl, TMW_RESIST_POISON) >> 3;
@@ -358,7 +353,7 @@ int skill_status_effect(BlockList *bl, int type, int val1, int val2,
         return 0;
     }
 
-    if (sc_data[type].timer != -1)
+    if (sc_data[type].timer)
     {                           /* すでに同じ異常になっている場合タイマ解除 */
         if (sc_data[type].val1 > val1 && type != SC_SPEEDPOTION0 && type != SC_ATKPOT)
             return 0;
@@ -366,13 +361,13 @@ int skill_status_effect(BlockList *bl, int type, int val1, int val2,
             return 0;           /* 継ぎ足しができない状態異常である時は状態異常を行わない */
         (*sc_count)--;
         delete_timer(sc_data[type].timer);
-        sc_data[type].timer = -1;
+        sc_data[type].timer = NULL;
     }
 
     switch (type)
     {
         case SC_SLOWPOISON:
-            if (sc_data[SC_POISON].timer == -1)
+            if (sc_data[SC_POISON].timer == NULL)
                 return 0;
             break;
         case SC_SPEEDPOTION0:  /* 増速ポーション */
@@ -422,7 +417,7 @@ int skill_status_effect(BlockList *bl, int type, int val1, int val2,
     switch (type)
     {
         case SC_POISON:
-            if (sc_data[SC_SLOWPOISON].timer == -1)
+            if (sc_data[SC_SLOWPOISON].timer == NULL)
             {
                 *opt2 |= 0x1;
                 opt_flag = 1;
@@ -486,17 +481,9 @@ int skill_status_change_clear(BlockList *bl, int type)
         return 0;
     for (i = 0; i < MAX_STATUSCHANGE; i++)
     {
-        if (sc_data[i].timer != -1)
-        {                       /* 異常があるならタイマーを削除する */
-/*
-                        delete_timer(sc_data[i].timer, skill_status_change_timer);
-                        sc_data[i].timer = -1;
-
-                        if (!type && i < SC_SENDMAX)
-                                clif_status_change(bl, i, 0);
-*/
-
-            skill_status_change_end(bl, i, -1);
+        if (sc_data[i].timer)
+        {
+            skill_status_change_end(bl, i, NULL);
         }
     }
     *sc_count = 0;

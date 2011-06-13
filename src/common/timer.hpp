@@ -8,7 +8,7 @@
 // TODO replace with signed 64-bit to make code more clear and protect from the future
 typedef uint32_t tick_t;
 typedef uint32_t interval_t;
-typedef uint32_t timer_id;
+typedef struct TimerData *timer_id;
 
 /// This is needed to produce a signed result when 2 ticks are subtracted
 inline int32_t DIFF_TICK(tick_t a, tick_t b)
@@ -58,8 +58,6 @@ timer_id add_timer(tick_t tick, void (&func)(timer_id, tick_t, Args...), Args...
 }
 
 void delete_timer(timer_id);
-
-struct TimerData *get_timer(timer_id tid);
 
 /// Update the current tick, then do all pending timers
 /// Return how long until the next timer is due

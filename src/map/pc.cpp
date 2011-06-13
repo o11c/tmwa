@@ -159,29 +159,24 @@ static int distance(int x_0, int y_0, int x_1, int y_1)
     return dx > dy ? dx : dy;
 }
 
-static void pc_invincible_timer(timer_id tid, tick_t, uint32_t id)
+static void pc_invincible_timer(timer_id, tick_t, uint32_t id)
 {
     MapSessionData *sd = map_id2sd(id);
 
     if (!sd)
         return;
 
-    if (sd->invincible_timer != tid)
-    {
-        map_log("invincmap_logible_timer %d != %d\n", sd->invincible_timer, tid);
-        return;
-    }
-    sd->invincible_timer = -1;
+    sd->invincible_timer = NULL;
 }
 
 int pc_setinvincibletimer(MapSessionData *sd, int val)
 {
     nullpo_ret(sd);
 
-    if (sd->invincible_timer != -1)
+    if (sd->invincible_timer)
         delete_timer(sd->invincible_timer);
-    sd->invincible_timer =
-        add_timer(gettick() + val, pc_invincible_timer, sd->id);
+    sd->invincible_timer = add_timer(gettick() + val, pc_invincible_timer, sd->id);
+
     return 0;
 }
 
@@ -189,10 +184,10 @@ int pc_delinvincibletimer(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
-    if (sd->invincible_timer != -1)
+    if (sd->invincible_timer)
     {
         delete_timer(sd->invincible_timer);
-        sd->invincible_timer = -1;
+        sd->invincible_timer = NULL;
     }
     return 0;
 }
@@ -258,14 +253,14 @@ static void pc_counttargeted_sub(BlockList *bl, uint32_t id, int *c,
     if (bl->type == BL_PC)
     {
         MapSessionData *sd = static_cast<MapSessionData *>(bl);
-        if (sd && sd->attacktarget == id && sd->attacktimer != -1
+        if (sd && sd->attacktarget == id && sd->attacktimer
             && sd->attacktarget_lv >= target_lv)
             (*c)++;
     }
     else if (bl->type == BL_MOB)
     {
         struct mob_data *md = static_cast<struct mob_data *>(bl);
-        if (md && md->target_id == id && md->timer != -1
+        if (md && md->target_id == id && md->timer
             && md->state.state == MS_ATTACK && md->target_lv >= target_lv)
 
             (*c)++;
@@ -601,9 +596,9 @@ int pc_authok(int id, int login_id2, time_t connect_until_time,
     sd->dir = Direction::S;
     sd->head_dir = Direction::S;
     sd->state.auth = 1;
-    sd->walktimer = -1;
-    sd->attacktimer = -1;
-    sd->invincible_timer = -1;
+    sd->walktimer = NULL;
+    sd->attacktimer = NULL;
+    sd->invincible_timer = NULL;
 
     sd->deal_locked = 0;
     sd->trade_partner = 0;
@@ -635,7 +630,7 @@ int pc_authok(int id, int login_id2, time_t connect_until_time,
     // ステータス異常の初期化
     for (int i = 0; i < MAX_STATUSCHANGE; i++)
     {
-        sd->sc_data[i].timer = -1;
+        sd->sc_data[i].timer = NULL;
         sd->sc_data[i].val1 = sd->sc_data[i].val2 = sd->sc_data[i].val3 =
             sd->sc_data[i].val4 = 0;
     }
@@ -653,7 +648,7 @@ int pc_authok(int id, int login_id2, time_t connect_until_time,
     // イベント関係の初期化
     memset(sd->eventqueue, 0, sizeof(sd->eventqueue));
     for (int i = 0; i < MAX_EVENTTIMER; i++)
-        sd->eventtimer[i].tid = -1;
+        sd->eventtimer[i].tid = NULL;
 
     // 位置の設定
     pc_setpos(sd, sd->status.last_point.map, sd->status.last_point.x,
@@ -667,7 +662,7 @@ int pc_authok(int id, int login_id2, time_t connect_until_time,
     // pvpの設定
     sd->pvp_rank = 0;
     sd->pvp_point = 0;
-    sd->pvp_timer = -1;
+    sd->pvp_timer = NULL;
 
     // 通知
 
@@ -1340,21 +1335,21 @@ int pc_calcstatus(MapSessionData *sd, int first)
 
     if (sd->sc_count)
     {
-        if (sd->sc_data[SC_POISON].timer != -1) // 毒状態
+        if (sd->sc_data[SC_POISON].timer) // 毒状態
             sd->def2 = sd->def2 * 75 / 100;
 
-        if (sd->sc_data[SC_ATKPOT].timer != -1)
+        if (sd->sc_data[SC_ATKPOT].timer)
             sd->watk += sd->sc_data[SC_ATKPOT].val1;
 
-        if (sd->sc_data[i = SC_SPEEDPOTION0].timer != -1)
+        if (sd->sc_data[i = SC_SPEEDPOTION0].timer)
             aspd_rate -= sd->sc_data[i].val1;
 
-        if (sd->sc_data[SC_HASTE].timer != -1)
+        if (sd->sc_data[SC_HASTE].timer)
             aspd_rate -= sd->sc_data[SC_HASTE].val1;
 
         /// Slow down attacks if protected
         // because of this, many players don't want the protection spell
-        if (sd->sc_data[SC_PHYS_SHIELD].timer != -1)
+        if (sd->sc_data[SC_PHYS_SHIELD].timer)
             aspd_rate += sd->sc_data[SC_PHYS_SHIELD].val1;
     }
 
@@ -2240,7 +2235,7 @@ int pc_takeitem(MapSessionData *sd, struct flooritem_data *fitem)
         else
         {
             // 取得成功
-            if (sd->attacktimer != -1)
+            if (sd->attacktimer)
                 pc_stopattack(sd);
             clif_takeitem(sd, fitem);
             map_clearflooritem(fitem->id);
@@ -2503,7 +2498,7 @@ static int calc_next_walk_step(MapSessionData *sd)
  * 半歩進む(timer関数)
  *------------------------------------------
  */
-static void pc_walk(timer_id tid, tick_t tick, uint32_t id, uint8_t data)
+static void pc_walk(timer_id, tick_t tick, uint32_t id, uint8_t data)
 {
     MapSessionData *sd;
     int i, ctype;
@@ -2514,12 +2509,7 @@ static void pc_walk(timer_id tid, tick_t tick, uint32_t id, uint8_t data)
     if (sd == NULL)
         return;
 
-    if (sd->walktimer != tid)
-    {
-        map_log("pc_walmap_logk %d != %d\n", sd->walktimer, tid);
-        return;
-    }
-    sd->walktimer = -1;
+    sd->walktimer = NULL;
     if (sd->walkpath.path_pos >= sd->walkpath.path_len
         || sd->walkpath.path_pos != data)
         return;
@@ -2564,7 +2554,6 @@ static void pc_walk(timer_id tid, tick_t tick, uint32_t id, uint8_t data)
         moveblock = (x / BLOCK_SIZE != (x + dx) / BLOCK_SIZE
                      || y / BLOCK_SIZE != (y + dy) / BLOCK_SIZE);
 
-        sd->walktimer = 1;
         map_foreachinmovearea(clif_pcoutsight, sd->m, x - AREA_SIZE,
                               y - AREA_SIZE, x + AREA_SIZE, y + AREA_SIZE,
                               dx, dy, BL_NUL, sd);
@@ -2582,7 +2571,6 @@ static void pc_walk(timer_id tid, tick_t tick, uint32_t id, uint8_t data)
         map_foreachinmovearea(clif_pcinsight, sd->m, x - AREA_SIZE,
                               y - AREA_SIZE, x + AREA_SIZE, y + AREA_SIZE,
                               -dx, -dy, BL_NUL, sd);
-        sd->walktimer = -1;
 
         if (sd->status.party_id > 0)
         {                       // パーティのＨＰ情報通知検査
@@ -2658,7 +2646,7 @@ int pc_walktoxy(MapSessionData *sd, int x, int y)
     if (pc_issit(sd))
         pc_setstand(sd);
 
-    if (sd->walktimer != -1 && sd->state.change_walk_target == 0)
+    if (sd->walktimer && sd->state.change_walk_target == 0)
     {
         // 現在歩いている最中の目的地変更なのでマス目の中心に来た時に
         // timer関数からpc_walktoxy_subを呼ぶようにする
@@ -2680,10 +2668,10 @@ int pc_stop_walking(MapSessionData *sd, int type)
 {
     nullpo_ret(sd);
 
-    if (sd->walktimer != -1)
+    if (sd->walktimer)
     {
         delete_timer(sd->walktimer);
-        sd->walktimer = -1;
+        sd->walktimer = NULL;
     }
     sd->walkpath.path_len = 0;
     sd->to_x = sd->x;
@@ -2754,7 +2742,7 @@ int pc_checkequip(MapSessionData *sd, int pos)
  * PCの攻撃 (timer関数)
  *------------------------------------------
  */
-static void pc_attack_timer(timer_id tid, tick_t tick, uint32_t id)
+static void pc_attack_timer(timer_id, tick_t tick, uint32_t id)
 {
     MapSessionData *sd;
     BlockList *bl;
@@ -2765,12 +2753,7 @@ static void pc_attack_timer(timer_id tid, tick_t tick, uint32_t id)
     sd = map_id2sd(id);
     if (sd == NULL)
         return;
-    if (sd->attacktimer != tid)
-    {
-        map_log("pc_attmap_logack_timer %d != %d\n", sd->attacktimer, tid);
-        return;
-    }
-    sd->attacktimer = -1;
+    sd->attacktimer = NULL;
 
     if (sd->prev == NULL)
         return;
@@ -2838,7 +2821,7 @@ static void pc_attack_timer(timer_id tid, tick_t tick, uint32_t id)
             if (battle_config.pc_attack_direction_change)
                 sd->dir = sd->head_dir = map_calc_dir(sd, bl->x, bl->y);  // 向き設定
 
-            if (sd->walktimer != -1)
+            if (sd->walktimer)
                 pc_stop_walking(sd, 1);
 
             map_freeblock_lock();
@@ -2882,7 +2865,7 @@ int pc_attack(MapSessionData *sd, int target_id, int type)
 
     if (!battle_check_target(sd, bl))
         return 1;
-    if (sd->attacktimer != -1)
+    if (sd->attacktimer)
         pc_stopattack(sd);
     sd->attacktarget = target_id;
     sd->state.attack_continue = type;
@@ -2896,7 +2879,7 @@ int pc_attack(MapSessionData *sd, int target_id, int type)
     else
     {
         // 本来timer関数なので引数を合わせる
-        pc_attack_timer(-1, gettick(), sd->id);
+        pc_attack_timer(NULL, gettick(), sd->id);
     }
 
     return 0;
@@ -2910,10 +2893,10 @@ int pc_stopattack(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
-    if (sd->attacktimer != -1)
+    if (sd->attacktimer)
     {
         delete_timer(sd->attacktimer);
-        sd->attacktimer = -1;
+        sd->attacktimer = NULL;
     }
     sd->attacktarget = 0;
     sd->state.attack_continue = 0;
@@ -4623,7 +4606,7 @@ static void pc_eventtimer(timer_id tid, tick_t, uint32_t id, char *data)
     {
         if (sd->eventtimer[i].tid == tid)
         {
-            sd->eventtimer[i].tid = -1;
+            sd->eventtimer[i].tid = NULL;
             npc_event(sd, data, 0);
             break;
         }
@@ -4646,7 +4629,7 @@ int pc_addeventtimer(MapSessionData *sd, int tick, const char *name)
     nullpo_ret(sd);
 
     for (i = 0; i < MAX_EVENTTIMER; i++)
-        if (sd->eventtimer[i].tid == -1)
+        if (sd->eventtimer[i].tid == NULL)
             break;
 
     if (i < MAX_EVENTTIMER)
@@ -4674,10 +4657,10 @@ int pc_deleventtimer(MapSessionData *sd, const char *name)
     nullpo_ret(sd);
 
     for (i = 0; i < MAX_EVENTTIMER; i++)
-        if (sd->eventtimer[i].tid != -1 && strcmp(sd->eventtimer[i].name, name) == 0)
+        if (sd->eventtimer[i].tid && strcmp(sd->eventtimer[i].name, name) == 0)
         {
             delete_timer(sd->eventtimer[i].tid);
-            sd->eventtimer[i].tid = -1;
+            sd->eventtimer[i].tid = NULL;
             break;
         }
 
@@ -4695,10 +4678,10 @@ int pc_cleareventtimer(MapSessionData *sd)
     nullpo_ret(sd);
 
     for (i = 0; i < MAX_EVENTTIMER; i++)
-        if (sd->eventtimer[i].tid != -1)
+        if (sd->eventtimer[i].tid)
         {
             delete_timer(sd->eventtimer[i].tid);
-            sd->eventtimer[i].tid = -1;
+            sd->eventtimer[i].tid = NULL;
         }
 
     return 0;
@@ -4905,10 +4888,10 @@ int pc_unequipitem(MapSessionData *sd, int n, int type)
         }
         pc_signal_advanced_equipment_change(sd, n);
 
-        if (sd->sc_data[SC_BROKNWEAPON].timer != -1
+        if (sd->sc_data[SC_BROKNWEAPON].timer
             && sd->status.inventory[n].equip & 0x0002
             && sd->status.inventory[i].broken == 1)
-            skill_status_change_end(sd, SC_BROKNWEAPON, -1);
+            skill_status_change_end(sd, SC_BROKNWEAPON, NULL);
 
         clif_unequipitemack(sd, n, sd->status.inventory[n].equip, 1);
         sd->status.inventory[n].equip = 0;
@@ -5091,7 +5074,7 @@ void pc_calc_pvprank_timer(timer_id, tick_t, uint32_t id)
     sd = map_id2sd(id);
     if (sd == NULL)
         return;
-    sd->pvp_timer = -1;
+    sd->pvp_timer = NULL;
     if (pc_calc_pvprank(sd) > 0)
         sd->pvp_timer = add_timer(gettick() + PVP_CALCRANK_INTERVAL,
                                   pc_calc_pvprank_timer, id);
@@ -5236,7 +5219,7 @@ static int pc_natural_heal_hp(MapSessionData *sd)
     bhp = sd->status.hp;
     hp_flag = 0;
 
-    if (sd->walktimer == -1)
+    if (sd->walktimer == NULL)
     {
         inc_num = pc_hpheal(sd);
         sd->hp_sub += inc_num;
@@ -5323,7 +5306,7 @@ static int pc_natural_heal_sp(MapSessionData *sd)
 
     inc_num = pc_spheal(sd);
     sd->sp_sub += inc_num;
-    if (sd->walktimer == -1)
+    if (sd->walktimer == NULL)
         sd->inchealsptick += natural_heal_diff_tick;
     else
         sd->inchealsptick = 0;
@@ -5422,26 +5405,30 @@ static void pc_natural_heal_sub(MapSessionData *sd)
         pc_calcstatus(sd, 0);
     }
 
-    if (sd->sc_data[SC_HALT_REGENERATE].timer != -1)
+    if (sd->sc_data[SC_HALT_REGENERATE].timer)
         return;
 
     if (sd->quick_regeneration_hp.amount || sd->quick_regeneration_sp.amount)
     {
-        int hp_bonus = pc_quickregenerate_effect(&sd->quick_regeneration_hp,
-                                                   (sd->sc_data[SC_POISON].timer == -1 || sd->sc_data[SC_SLOWPOISON].timer != -1) ? sd->nhealhp : 1);   // [fate] slow down when poisoned
+        int hp_bonus =
+                pc_quickregenerate_effect(&sd->quick_regeneration_hp,
+                                          (sd->sc_data[SC_POISON].timer == NULL
+                                              || sd->sc_data[SC_SLOWPOISON].timer)
+                                          ? sd->nhealhp
+                                          : 1);   // [fate] slow down when poisoned
         int sp_bonus = pc_quickregenerate_effect(&sd->quick_regeneration_sp,
-                                                   sd->nhealsp);
+                                                 sd->nhealsp);
 
         pc_itemheal_effect(sd, hp_bonus, sp_bonus);
     }
     skill_update_heal_animation(sd);   // if needed.
 
-// -- moonsoul (if conditions below altered to disallow natural healing if under berserk status)
-    if ((sd->sc_data[SC_FLYING_BACKPACK].timer != -1
-         || battle_config.natural_heal_weight_rate > 100
-         || sd->weight * 100 / sd->max_weight <
-         battle_config.natural_heal_weight_rate) && !pc_isdead(sd)
-        && !pc_ishiding(sd) && sd->sc_data[SC_POISON].timer == -1)
+    if ((sd->sc_data[SC_FLYING_BACKPACK].timer
+            || battle_config.natural_heal_weight_rate > 100
+            || sd->weight * 100 / sd->max_weight < battle_config.natural_heal_weight_rate)
+        && !pc_isdead(sd)
+        && !pc_ishiding(sd)
+        && sd->sc_data[SC_POISON].timer == NULL)
     {
         pc_natural_heal_hp(sd);
         pc_natural_heal_sp(sd);
@@ -5901,7 +5888,7 @@ int pc_logout(MapSessionData *sd) // [fate] Player logs out
     if (!sd)
         return 0;
 
-    if (sd->sc_data[SC_POISON].timer != -1)
+    if (sd->sc_data[SC_POISON].timer)
         sd->status.hp = 1;      // Logging out while poisoned -> bad
 
     /*

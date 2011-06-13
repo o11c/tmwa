@@ -10,11 +10,6 @@
 #include "timer.hpp"
 #include "utils.hpp"
 
-static struct TimerData *timer_data;
-static uint32_t timer_data_max, timer_data_num;
-static timer_id *free_timer_list;
-static uint32_t free_timer_list_max, free_timer_list_pos;
-
 /// Okay, I think I understand this structure now:
 /// the timer heap is a magic queue that allows inserting timers and then popping them in order
 /// designed to copy only log2(N) entries instead of N
@@ -38,7 +33,7 @@ void update_current_tick(void)
 
 static uint32_t timer_heap_count;
 
-static void push_timer_heap(timer_id idx)
+static void push_timer_heap(timer_id data)
 {
     if (timer_heap == NULL || timer_heap_count >= timer_heap_max)
     {
@@ -51,22 +46,18 @@ static void push_timer_heap(timer_id idx)
     while (h)
     {
         uint32_t i = (h - 1) / 2;
-        // avoid wraparound problems, it really means this:
-        //   timer_data[idx].tick >= timer_data[timer_heap[i]].tick
-        if (DIFF_TICK(timer_data[idx].tick,
-                      timer_data[timer_heap[i]].tick
-                     ) >= 0)
+        if (DIFF_TICK(data->tick, timer_heap[i]->tick) >= 0)
             break;
         timer_heap[h] = timer_heap[i];
         h = i;
     }
-    timer_heap[h] = idx;
+    timer_heap[h] = data;
 }
 
 static timer_id top_timer_heap(void)
 {
     if (!timer_heap || !timer_heap_count)
-        return -1;
+        return NULL;
     return timer_heap[0];
 }
 
@@ -80,7 +71,7 @@ static void pop_timer_heap(void)
     uint32_t h, k;
     for (h = 0, k = 2; k < timer_heap_count; k = k * 2 + 2)
     {
-        if (DIFF_TICK(timer_data[timer_heap[k]].tick, timer_data[timer_heap[k - 1]].tick) > 0)
+        if (DIFF_TICK(timer_heap[k]->tick, timer_heap[k - 1]->tick) > 0)
             k--;
         timer_heap[h] = timer_heap[k];
         h = k;
@@ -93,7 +84,7 @@ static void pop_timer_heap(void)
     while (h)
     {
         uint32_t i = (h - 1) / 2;
-        if (DIFF_TICK(timer_data[timer_heap[i]].tick, timer_data[last].tick) <= 0)
+        if (DIFF_TICK(timer_heap[i]->tick, last->tick) <= 0)
             break;
         timer_heap[h] = timer_heap[i];
         h = i;
@@ -103,67 +94,21 @@ static void pop_timer_heap(void)
 
 timer_id add_timer_impl(tick_t tick, TimerFunc func, interval_t interval)
 {
-    timer_id i;
-
-    if (free_timer_list_pos)
-    {
-        // Retrieve a freed timer id instead of a new one
-        // I think it should be possible to avoid the loop somehow
-        do
-        {
-            i = free_timer_list[--free_timer_list_pos];
-        }
-        while (i >= timer_data_num && free_timer_list_pos > 0);
-    }
-    else
-        i = timer_data_num;
-
-    // I have no idea what this is doing
-    if (i >= timer_data_num)
-        for (i = timer_data_num; i < timer_data_max && timer_data[i].func; i++)
-            ;
-    if (i >= timer_data_num && i >= timer_data_max)
-    {
-        if (timer_data_max == 0)
-        {
-            timer_data_max = 256;
-            CREATE(timer_data, struct TimerData, timer_data_max);
-        }
-        else
-        {
-            timer_data_max += 256;
-            RECREATE(timer_data, struct TimerData, timer_data_max);
-            memset(timer_data + (timer_data_max - 256), 0,
-                    sizeof(struct TimerData) * 256);
-        }
-    }
-    timer_data[i].tick = tick;
-    timer_data[i].func = func;
-    timer_data[i].interval = interval;
+    TimerData *i = new TimerData;
+    i->tick = tick;
+    i->func = func;
+    i->interval = interval;
     push_timer_heap(i);
-    if (i >= timer_data_num)
-        timer_data_num = i + 1;
     return i;
 }
 
 void delete_timer(timer_id id)
 {
-    if (id == 0 || id >= timer_data_num)
-    {
-        fprintf(stderr, "delete_timer error : no such timer %d\n", id);
-        abort();
-    }
-    // "to let them disappear" - is this just in case?
-    // odd, this *doesn't* actually disabled the timer
-    // I guess it makes sense, since it's a part of the data structure ...
-    timer_data[id].func = NULL;
-    timer_data[id].interval = 0;
-    timer_data[id].tick = gettick();
-}
-
-struct TimerData *get_timer(timer_id tid)
-{
-    return &timer_data[tid];
+    // We can't actually delete them, we have to wait for it to be triggered
+    id->func = NULL;
+    id->interval = 0;
+    // I hopw this doesn't mess up anything
+    id->tick = gettick();
 }
 
 interval_t do_timer()
@@ -175,49 +120,42 @@ interval_t do_timer()
     // this says to wait 1 sec if all timers get popped
     interval_t nextmin = 1000;
 
-    while ((i = top_timer_heap()) != -1)
+    while ((i = top_timer_heap()))
     {
         // while the heap is not empty and
-        if (DIFF_TICK(timer_data[i].tick, tick) > 0)
+        if (DIFF_TICK(i->tick, tick) > 0)
         {
             /// Return the time until the next timer needs to goes off
-            nextmin = DIFF_TICK(timer_data[i].tick, tick);
+            nextmin = DIFF_TICK(i->tick, tick);
             break;
         }
         pop_timer_heap();
-        if (!timer_data[i].func)
+        if (!i->func)
             continue;
-        if (DIFF_TICK(timer_data[i].tick, tick) < -1000)
+        if (DIFF_TICK(i->tick, tick) < -1000)
         {
             // If we are too far past the requested tick, call with the current tick instead to fix reregistering problems
-            timer_data[i].func(i, tick);
+            i->func(i, tick);
         }
         else
         {
-            timer_data[i].func(i, timer_data[i].tick);
+            i->func(i, i->tick);
         }
 
-        if (!timer_data[i].interval)
+        if (!i->interval)
         {
-            timer_data[i].func = NULL;
-            if (free_timer_list_pos >= free_timer_list_max)
-            {
-                free_timer_list_max += 256;
-                RECREATE(free_timer_list, uint32_t, free_timer_list_max);
-                memset(free_timer_list + (free_timer_list_max - 256),
-                        0, 256 * sizeof(uint32_t));
-            }
-            free_timer_list[free_timer_list_pos++] = i;
+            i->func = NULL;
+            delete i;
         }
         else
         {
-            if (DIFF_TICK(timer_data[i].tick, tick) < -1000)
+            if (DIFF_TICK(i->tick, tick) < -1000)
             {
-                timer_data[i].tick = tick + timer_data[i].interval;
+                i->tick = tick + i->interval;
             }
             else
             {
-                timer_data[i].tick += timer_data[i].interval;
+                i->tick += i->interval;
             }
             push_timer_heap(i);
         }

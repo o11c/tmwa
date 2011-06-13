@@ -2357,7 +2357,7 @@ static void clif_getareachar_pc(MapSessionData *sd,
     nullpo_retv(sd);
     nullpo_retv(dstsd);
 
-    if (dstsd->walktimer != -1)
+    if (dstsd->walktimer)
     {
         len = clif_set007b(dstsd, WFIFOP(sd->fd, 0));
         WFIFOSET(sd->fd, len);
@@ -2433,7 +2433,7 @@ void clif_fixpcpos(MapSessionData *sd)
 {
     nullpo_retv(sd);
 
-    if (sd->walktimer != -1)
+    if (sd->walktimer)
     {
         uint8_t buf[256];
         int len = clif_set007b(sd, buf);
@@ -3339,7 +3339,7 @@ static void clif_parse_LoadEndAck(int, MapSessionData *sd)
     clif_updatestatus(sd, SP_WEIGHT);
 
     // pvp
-    if (sd->pvp_timer != -1 && !battle_config.pk_mode)
+    if (sd->pvp_timer && !battle_config.pk_mode)
         delete_timer(sd->pvp_timer);
     if (maps[sd->m].flag.pvp)
     {
@@ -3354,7 +3354,7 @@ static void clif_parse_LoadEndAck(int, MapSessionData *sd)
     }
     else
     {
-        sd->pvp_timer = -1;
+        sd->pvp_timer = NULL;
     }
 
     if (sd->state.connect_new)
@@ -3428,7 +3428,7 @@ static void clif_parse_WalkToXY(int fd, MapSessionData *sd)
     if (sd->status.option & 2)
         return;
 
-    if (sd->invincible_timer != -1)
+    if (sd->invincible_timer)
         pc_delinvincibletimer(sd);
 
     pc_stopattack(sd);
@@ -3746,7 +3746,7 @@ static void clif_parse_ActionRequest(int fd, MapSessionData *sd)
                     return;
                 }
             }
-            if (sd->invincible_timer != -1)
+            if (sd->invincible_timer)
                 pc_delinvincibletimer(sd);
             if (sd->attacktarget > 0)   // [Valaris]
                 sd->attacktarget = 0;
@@ -3953,7 +3953,7 @@ static void clif_parse_UseItem(int fd, MapSessionData *sd)
     if (sd->npc_id != 0 || sd->opt1 > 0)
         return;
 
-    if (sd->invincible_timer != -1)
+    if (sd->invincible_timer)
         pc_delinvincibletimer(sd);
 
     pc_useitem(sd, RFIFOW(fd, 2) - 2);
@@ -4013,11 +4013,11 @@ static void clif_parse_UnequipItem(int fd, MapSessionData *sd)
     }
     idx = RFIFOW(fd, 2) - 2;
     if (sd->status.inventory[idx].broken == 1 && sd->sc_data
-        && sd->sc_data[SC_BROKNWEAPON].timer != -1)
-        skill_status_change_end(sd, SC_BROKNWEAPON, -1);
+        && sd->sc_data[SC_BROKNWEAPON].timer)
+        skill_status_change_end(sd, SC_BROKNWEAPON, NULL);
     if (sd->status.inventory[idx].broken == 1 && sd->sc_data
-        && sd->sc_data[SC_BROKNARMOR].timer != -1)
-        skill_status_change_end(sd, SC_BROKNARMOR, -1);
+        && sd->sc_data[SC_BROKNARMOR].timer)
+        skill_status_change_end(sd, SC_BROKNARMOR, NULL);
 
     if (sd->npc_id != 0 || sd->opt1 > 0)
         return;

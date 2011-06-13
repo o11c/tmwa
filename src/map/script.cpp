@@ -4092,7 +4092,7 @@ int buildin_sc_end(struct script_state *st)
     int type;
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     bl = map_id2bl(st->rid);
-    skill_status_change_end(bl, type, -1);
+    skill_status_change_end(bl, type, NULL);
 //  if (battle_config.etc_log)
 //      printf("sc_end : %d %d\n",st->rid,type);
     return 0;
@@ -4389,7 +4389,7 @@ int buildin_pvpon(struct script_state *st)
 
         for (MapSessionData *pl_sd : auth_sessions)
         {
-            if (m == pl_sd->m && pl_sd->pvp_timer == -1)
+            if (m == pl_sd->m && pl_sd->pvp_timer == NULL)
             {
                 pl_sd->pvp_timer = add_timer(gettick() + 200, pc_calc_pvprank_timer, pl_sd->id);
                 pl_sd->pvp_rank = 0;
@@ -4419,10 +4419,10 @@ int buildin_pvpoff(struct script_state *st)
         {
             if (m == pl_sd->m)
             {
-                if (pl_sd->pvp_timer != -1)
+                if (pl_sd->pvp_timer)
                 {
                     delete_timer(pl_sd->pvp_timer);
-                    pl_sd->pvp_timer = -1;
+                    pl_sd->pvp_timer = NULL;
                 }
             }
         }

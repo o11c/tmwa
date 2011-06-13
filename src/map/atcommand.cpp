@@ -1739,10 +1739,10 @@ int atcommand_pvpoff(int fd, MapSessionData *sd,
     {
         if (sd->m != pl_sd->m)
             continue;
-        if (pl_sd->pvp_timer == -1)
+        if (pl_sd->pvp_timer == NULL)
             continue;
         delete_timer(pl_sd->pvp_timer);
-        pl_sd->pvp_timer = -1;
+        pl_sd->pvp_timer = NULL;
     }
     clif_displaymessage(fd, "PvP: Off.");
 
@@ -1772,7 +1772,7 @@ int atcommand_pvpon(int fd, MapSessionData *sd,
     maps[sd->m].flag.pvp = 1;
     for (MapSessionData *pl_sd : auth_sessions)
     {
-        if (sd->m != pl_sd->m || pl_sd->pvp_timer == -1)
+        if (sd->m != pl_sd->m || pl_sd->pvp_timer)
             continue;
         pl_sd->pvp_timer = add_timer(gettick() + 200, pc_calc_pvprank_timer, pl_sd->id);
         pl_sd->pvp_rank = 0;

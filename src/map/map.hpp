@@ -108,7 +108,7 @@ struct script_regstr
 };
 struct status_change
 {
-    int timer;
+    timer_id timer;
     int val1, val2, val3, val4;
     int spell_invocation;      /* [Fate] If triggered by a spell, record here */
 };
@@ -176,7 +176,7 @@ public:
     Direction dir, head_dir;
     unsigned int client_tick, server_tick;
     struct walkpath_data walkpath;
-    int walktimer;
+    timer_id walktimer;
     int npc_id, areanpc_id, npc_shopid;
     int npc_pos;
     int npc_menu;
@@ -191,7 +191,7 @@ public:
         unsigned divorce:1;
     } npc_flags;
 
-    int attacktimer;
+    timer_id attacktimer;
     int attacktarget;
     AttackResult attacktarget_lv;
     unsigned int attackabletime;
@@ -218,7 +218,7 @@ public:
     // [Fate] XP that can be extracted from this player by healing
     int heal_xp;               // i.e., OTHER players (healers) can partake in this player's XP
 
-    int invincible_timer;
+    timer_id invincible_timer;
     unsigned int canact_tick;
     unsigned int canmove_tick;
     unsigned int canlog_tick;
@@ -291,7 +291,8 @@ public:
 
     int catch_target_class;
 
-    int pvp_point, pvp_rank, pvp_timer, pvp_lastusers;
+    int pvp_point, pvp_rank, pvp_lastusers;
+    timer_id pvp_timer;
 
     char eventqueue[MAX_EVENTQUEUE][50];
     struct
@@ -350,7 +351,8 @@ struct npc_data : public BlockList
         {
             script_ptr script;
             short xs, ys;
-            int timer, timerid, timeramount, nexttimer;
+            timer_id timerid;
+            int timer, timeramount, nexttimer;
             unsigned int timertick;
             struct npc_timerevent_list *timer_event;
             int label_list_num;
@@ -422,7 +424,7 @@ struct mob_data : public BlockList
         unsigned walk_easy:1;
         unsigned special_mob_ai:3;
     } state;
-    int timer;
+    timer_id timer;
     short to_x, to_y;
     int hp;
     int target_id, attacked_id;
@@ -445,7 +447,7 @@ struct mob_data : public BlockList
     short sc_count;
     short opt1, opt2, opt3, option;
     short min_chase;
-    int deletetimer;
+    timer_id deletetimer;
 
     int def_ele;
     int master_id, master_dist;
@@ -532,7 +534,7 @@ struct map_data
 struct flooritem_data : public BlockList
 {
     short subx, suby;
-    int cleartimer;
+    timer_id cleartimer;
     int first_get_id, second_get_id, third_get_id;
     unsigned int first_get_tick, second_get_tick, third_get_tick;
     struct item item_data;
@@ -753,7 +755,7 @@ void map_log(const char *format, ...) __attribute__((format(printf, 1, 2)));
 void map_clearflooritem_timer(timer_id, tick_t, uint32_t);
 inline void map_clearflooritem(uint32_t id)
 {
-    map_clearflooritem_timer(-1, 0, id);
+    map_clearflooritem_timer(NULL, 0, id);
 }
 int map_addflooritem_any(struct item *, int amount, uint16_t m, uint16_t x, uint16_t y,
                            MapSessionData **owners,

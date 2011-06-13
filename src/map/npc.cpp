@@ -289,7 +289,7 @@ static int npc_addeventtimer(struct npc_data *nd, int tick, const char *name)
 {
     int i;
     for (i = 0; i < MAX_EVENTTIMER; i++)
-        if (nd->eventtimer[i].tid == -1)
+        if (nd->eventtimer[i].tid == NULL)
             break;
     if (i < MAX_EVENTTIMER)
     {
@@ -310,10 +310,10 @@ static int npc_deleventtimer(struct npc_data *nd, const char *name)
 {
     int i;
     for (i = 0; i < MAX_EVENTTIMER; i++)
-        if (nd->eventtimer[i].tid != -1 && strcmp(nd->eventtimer[i].name, name) == 0)
+        if (nd->eventtimer[i].tid && strcmp(nd->eventtimer[i].name, name) == 0)
         {
             delete_timer(nd->eventtimer[i].tid);
-            nd->eventtimer[i].tid = -1;
+            nd->eventtimer[i].tid = NULL;
             break;
         }
 
@@ -370,7 +370,7 @@ static void npc_timerevent(timer_id, tick_t tick, uint32_t id, int data)
     }
     nd->u.scr.timertick = tick;
     te = nd->u.scr.timer_event + nd->u.scr.nexttimer;
-    nd->u.scr.timerid = -1;
+    nd->u.scr.timerid = NULL;
 
     t = nd->u.scr.timer += data;
     nd->u.scr.nexttimer++;
@@ -426,9 +426,9 @@ int npc_timerevent_stop(struct npc_data *nd)
     {
         nd->u.scr.nexttimer = -1;
         nd->u.scr.timer += gettick() - nd->u.scr.timertick;
-        if (nd->u.scr.timerid != -1)
+        if (nd->u.scr.timerid)
             delete_timer(nd->u.scr.timerid);
-        nd->u.scr.timerid = -1;
+        nd->u.scr.timerid = NULL;
     }
     return 0;
 }
@@ -1488,7 +1488,7 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
         }
     }
     nd->u.scr.nexttimer = -1;
-    nd->u.scr.timerid = -1;
+    nd->u.scr.timerid = NULL;
 
     return 0;
 }
@@ -1626,7 +1626,7 @@ int npc_parse_mob(char *w1, char *, char *w3, char *w4)
         md->spawndelay2 = delay2;
 
         memset(&md->state, 0, sizeof(md->state));
-        md->timer = -1;
+        md->timer = NULL;
         md->target_id = 0;
         md->attacked_id = 0;
 

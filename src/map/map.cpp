@@ -559,7 +559,7 @@ void map_foreachobject_impl(MapForEachFunc func)
 /// Delete floor items
 void map_clearflooritem_timer(timer_id tid, tick_t, uint32_t id)
 {
-    bool flag = tid == -1;
+    bool flag = tid == NULL;
     struct flooritem_data *fitem = static_cast<struct flooritem_data *>(object[id]);
     if (!fitem || fitem->type != BL_ITEM)
     {

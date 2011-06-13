@@ -958,7 +958,7 @@ static int fun_running_status_update(env_t *, int, val_t *result, val_t *args)
     if (ETY(0) != BL_PC && ETY(0) != BL_MOB)
         return 1;
 
-    RESULTINT = battle_get_sc_data(ARGENTITY(0))[ARGINT(1)].timer != -1;
+    RESULTINT = battle_get_sc_data(ARGENTITY(0))[ARGINT(1)].timer != NULL;
     return 0;
 }
 

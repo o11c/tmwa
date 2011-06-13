@@ -331,7 +331,7 @@ int battle_get_def(BlockList *bl)
     struct status_change *sc_data = battle_get_sc_data(bl);
     if (sc_data)
     {
-        if (sc_data[SC_POISON].timer != -1 && bl->type != BL_PC)
+        if (sc_data[SC_POISON].timer && bl->type != BL_PC)
             percent_adjust(def, 75);
     }
     return std::max(0, def);
@@ -351,7 +351,7 @@ int battle_get_mdef(BlockList *bl)
     struct status_change *sc_data = battle_get_sc_data(bl);
     if (sc_data)
     {
-        if (mdef < 90 && sc_data[SC_MBARRIER].timer != -1)
+        if (mdef < 90 && sc_data[SC_MBARRIER].timer)
         {
             mdef += sc_data[SC_MBARRIER].val1;
             if (mdef > 90)
@@ -375,7 +375,7 @@ int battle_get_def2(BlockList *bl)
     struct status_change *sc_data = battle_get_sc_data(bl);
     if (sc_data)
     {
-        if (sc_data[SC_POISON].timer != -1 && bl->type != BL_PC)
+        if (sc_data[SC_POISON].timer && bl->type != BL_PC)
             percent_adjust(def2, 75);
     }
     return std::max(1, def2);
@@ -411,10 +411,10 @@ int battle_get_adelay(BlockList *bl)
 
     if (sc_data)
     {
-        if (sc_data[SC_SPEEDPOTION0].timer != -1)
+        if (sc_data[SC_SPEEDPOTION0].timer)
             aspd_rate -= sc_data[SC_SPEEDPOTION0].val1;
         // Fate's `haste' spell works the same as the above
-        if (sc_data[SC_HASTE].timer != -1)
+        if (sc_data[SC_HASTE].timer)
             aspd_rate -= sc_data[SC_HASTE].val1;
     }
 
@@ -438,9 +438,9 @@ int battle_get_amotion(BlockList *bl)
 
     if (sc_data)
     {
-        if (sc_data[SC_SPEEDPOTION0].timer != -1)
+        if (sc_data[SC_SPEEDPOTION0].timer)
             aspd_rate -= sc_data[SC_SPEEDPOTION0].val1;
-        if (sc_data[SC_HASTE].timer != -1)
+        if (sc_data[SC_HASTE].timer)
             aspd_rate -= sc_data[SC_HASTE].val1;
     }
 
@@ -1422,12 +1422,12 @@ AttackResult battle_weapon_attack(BlockList *src, BlockList *target, tick_t tick
 
     struct status_change *t_sc_data = battle_get_sc_data(target);
     // significantly increase injuries for hasted characters
-    if (wd.damage > 0 && (t_sc_data[SC_HASTE].timer != -1))
+    if (wd.damage > 0 && t_sc_data[SC_HASTE].timer)
     {
         per_unit_add<16>(wd.damage, t_sc_data[SC_HASTE].val1);
     }
 
-    if (wd.damage > 0 && t_sc_data[SC_PHYS_SHIELD].timer != -1 && tsd)
+    if (wd.damage > 0 && t_sc_data[SC_PHYS_SHIELD].timer && tsd)
     {
         int reduction = t_sc_data[SC_PHYS_SHIELD].val1;
         if (reduction > wd.damage)
@@ -1533,7 +1533,7 @@ bool battle_check_target(BlockList *src, BlockList *target)
     if (target->type == BL_MOB)
         tmd = static_cast<struct mob_data *>(target);
 
-    if (tsd && tsd->invincible_timer != -1)
+    if (tsd && tsd->invincible_timer)
         return 0;
 
     if (md && md->master_id)

@@ -44,7 +44,7 @@ int skill_status_change_start(BlockList *bl, int type, int val1,
                                 int val2, int val3, int val4, int tick,
                                int flag);
 int skill_status_change_active(BlockList *bl, int type);  // [fate]
-int skill_status_change_end(BlockList *bl, int type, int tid);
+int skill_status_change_end(BlockList *bl, int type, timer_id tid);
 int skill_status_change_clear(BlockList *bl, int type);
 
 void skill_update_heal_animation(MapSessionData *sd); // [Fate]  Check whether the healing flag must be updated, do so if needed

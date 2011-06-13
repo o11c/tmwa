@@ -482,7 +482,7 @@ static int op_stop_status_change(env_t *, int, val_t *args)
 {
     entity_t *subject = ARGENTITY(0);
 
-    skill_status_change_end(subject, ARGINT(1), -1);
+    skill_status_change_end(subject, ARGINT(1), NULL);
 
     return 0;
 }
@@ -1495,8 +1495,9 @@ static void spell_execute_d(invocation_t * invocation, int allow_deletion)
         if (invocation->timer)
         {
             fprintf(stderr,
-                     "[magic] FATAL ERROR: Trying to add multiple timers to the same spell! Already had timer: %d\n",
-                     invocation->timer);
+                    "[magic] FATAL ERROR: Trying to add multiple timers to the same spell! Already had timer: %p\n",
+                    invocation->timer);
+            abort();
             /* *((int *)0x0) = 0; */
         }
         invocation->timer = add_timer(gettick() + delta, invocation_timer_callback, invocation->id);

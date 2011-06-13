@@ -18,8 +18,8 @@ static uint32_t free_timer_list_max, free_timer_list_pos;
 /// Okay, I think I understand this structure now:
 /// the timer heap is a magic queue that allows inserting timers and then popping them in order
 /// designed to copy only log2(N) entries instead of N
-// timer_heap[0] is the size (greatest index into the heap)
-// timer_heap[1] is the first actual element
+// timer_heap_count is the size (greatest index into the heap)
+// timer_heap[0] is the first actual element
 // timer_heap_max increases 256 at a time and never decreases
 static uint32_t timer_heap_max = 0;
 /// FIXME: refactor the code to put the size in a separate variable
@@ -36,69 +36,69 @@ void update_current_tick(void)
     current_tick = static_cast<tick_t>(spec.tv_sec) * 1000 + spec.tv_nsec / 1000000;
 }
 
+static uint32_t timer_heap_count;
 
 static void push_timer_heap(timer_id idx)
 {
-    if (timer_heap == NULL || timer_heap[0] + 1 >= timer_heap_max)
+    if (timer_heap == NULL || timer_heap_count >= timer_heap_max)
     {
         timer_heap_max += 256;
         RECREATE(timer_heap, timer_id, timer_heap_max);
-        memset(timer_heap + (timer_heap_max - 256), 0, sizeof(timer_id) * 256);
     }
-// timer_heap[0] is the greatest index into the heap, which increases
-    timer_heap[0]++;
+    timer_heap_count++;
 
-    timer_id h = timer_heap[0]-1, i = (h - 1) / 2;
+    uint32_t h = timer_heap_count - 1;
     while (h)
     {
+        uint32_t i = (h - 1) / 2;
         // avoid wraparound problems, it really means this:
-        //   timer_data[idx].tick >= timer_data[timer_heap[i+1]].tick
-        if ( DIFF_TICK(timer_data[idx].tick, timer_data[timer_heap[i+1]].tick) >= 0)
+        //   timer_data[idx].tick >= timer_data[timer_heap[i]].tick
+        if (DIFF_TICK(timer_data[idx].tick,
+                      timer_data[timer_heap[i]].tick
+                     ) >= 0)
             break;
-        timer_heap[h + 1] = timer_heap[i + 1];
+        timer_heap[h] = timer_heap[i];
         h = i;
-        i = (h - 1) / 2;
     }
-    timer_heap[h + 1] = idx;
+    timer_heap[h] = idx;
 }
 
 static timer_id top_timer_heap(void)
 {
-    if (!timer_heap || !timer_heap[0])
+    if (!timer_heap || !timer_heap_count)
         return -1;
-    return timer_heap[1];
+    return timer_heap[0];
 }
 
-static timer_id pop_timer_heap(void)
+static void pop_timer_heap(void)
 {
-    if (!timer_heap || !timer_heap[0])
-        return -1;
-    timer_id ret = timer_heap[1];
-    timer_id last = timer_heap[timer_heap[0]];
-    timer_heap[0]--;
+    if (!timer_heap || !timer_heap_count)
+        return;
+    timer_id last = timer_heap[timer_heap_count - 1];
+    timer_heap_count--;
 
     uint32_t h, k;
-    for (h = 0, k = 2; k < timer_heap[0]; k = k * 2 + 2)
+    for (h = 0, k = 2; k < timer_heap_count; k = k * 2 + 2)
     {
-        if (DIFF_TICK(timer_data[timer_heap[k + 1]].tick, timer_data[timer_heap[k]].tick) > 0)
+        if (DIFF_TICK(timer_data[timer_heap[k]].tick, timer_data[timer_heap[k - 1]].tick) > 0)
             k--;
-        timer_heap[h + 1] = timer_heap[k + 1], h = k;
+        timer_heap[h] = timer_heap[k];
+        h = k;
     }
-    if (k == timer_heap[0])
-        timer_heap[h + 1] = timer_heap[k], h = k - 1;
-
-    uint32_t i = (h - 1) / 2;
+    if (k == timer_heap_count)
+    {
+        timer_heap[h] = timer_heap[k - 1];
+        h = k - 1;
+    }
     while (h)
     {
-        if (DIFF_TICK(timer_data[timer_heap[i + 1]].tick, timer_data[last].tick) <= 0)
+        uint32_t i = (h - 1) / 2;
+        if (DIFF_TICK(timer_data[timer_heap[i]].tick, timer_data[last].tick) <= 0)
             break;
-        timer_heap[h + 1] = timer_heap[i + 1];
+        timer_heap[h] = timer_heap[i];
         h = i;
-        i = (h - 1) / 2;
     }
-    timer_heap[h + 1] = last;
-
-    return ret;
+    timer_heap[h] = last;
 }
 
 timer_id add_timer_impl(tick_t tick, TimerFunc func, interval_t interval)

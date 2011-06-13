@@ -109,7 +109,7 @@ struct script_regstr
 struct status_change
 {
     timer_id timer;
-    int val1, val2, val3, val4;
+    int val1;
     int spell_invocation;      /* [Fate] If triggered by a spell, record here */
 };
 

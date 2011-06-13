@@ -37,12 +37,8 @@ int skill_get_max_raise(int id);
 int skill_castcancel(BlockList *bl);
 
 // ステータス異常
-int skill_status_effect(BlockList *bl, int type, int val1, int val2,
-                          int val3, int val4, int tick, int flag,
-                         int spell_invocation);
-int skill_status_change_start(BlockList *bl, int type, int val1,
-                                int val2, int val3, int val4, int tick,
-                               int flag);
+int skill_status_effect(BlockList *bl, int type, int val1, tick_t tick, int spell_invocation);
+int skill_status_change_start(BlockList *bl, int type, int val1, tick_t tick);
 int skill_status_change_active(BlockList *bl, int type);  // [fate]
 int skill_status_change_end(BlockList *bl, int type, timer_id tid);
 int skill_status_change_clear(BlockList *bl, int type);

@@ -500,8 +500,7 @@ int pc_breakweapon(MapSessionData *sd)
                 clif_emotion(sd, 23);
                 clif_displaymessage(sd->fd, output);
                 clif_equiplist(sd);
-                skill_status_change_start(sd, SC_BROKNWEAPON, 0, 0, 0,
-                                           0, 0, 0);
+                skill_status_change_start(sd, SC_BROKNWEAPON, 0, 0);
             }
         }
         if (sd->status.inventory[i].broken == 1)
@@ -543,8 +542,7 @@ int pc_breakarmor(MapSessionData *sd)
                 clif_emotion(sd, 23);
                 clif_displaymessage(sd->fd, output);
                 clif_equiplist(sd);
-                skill_status_change_start(sd, SC_BROKNARMOR, 0, 0, 0, 0,
-                                           0, 0);
+                skill_status_change_start(sd, SC_BROKNARMOR, 0, 0);
             }
         }
         if (sd->status.inventory[i].broken == 1)
@@ -631,8 +629,7 @@ int pc_authok(int id, int login_id2, time_t connect_until_time,
     for (int i = 0; i < MAX_STATUSCHANGE; i++)
     {
         sd->sc_data[i].timer = NULL;
-        sd->sc_data[i].val1 = sd->sc_data[i].val2 = sd->sc_data[i].val3 =
-            sd->sc_data[i].val4 = 0;
+        sd->sc_data[i].val1 = 0;
     }
     sd->sc_count = 0;
 

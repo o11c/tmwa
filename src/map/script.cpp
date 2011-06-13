@@ -4056,7 +4056,7 @@ int buildin_sc_start(struct script_state *st)
                         (st, &(st->stack->stack_data[st->start + 5])));
     else
         bl = map_id2bl(st->rid);
-    skill_status_change_start(bl, type, val1, 0, 0, 0, tick, 0);
+    skill_status_change_start(bl, type, val1, tick);
     return 0;
 }
 
@@ -4078,7 +4078,7 @@ int buildin_sc_start2(struct script_state *st)
     else
         bl = map_id2bl(st->rid);
     if (MRAND(10000) < per)
-        skill_status_change_start(bl, type, val1, 0, 0, 0, tick, 0);
+        skill_status_change_start(bl, type, val1, tick);
     return 0;
 }
 

@@ -3372,13 +3372,11 @@ static void clif_parse_LoadEndAck(int, MapSessionData *sd)
         if (sd->status.inventory[i].equip
             && sd->status.inventory[i].equip & 0x0002
             && sd->status.inventory[i].broken == 1)
-            skill_status_change_start(sd, SC_BROKNWEAPON, 0, 0, 0, 0, 0,
-                                       0);
+            skill_status_change_start(sd, SC_BROKNWEAPON, 0, 0);
         if (sd->status.inventory[i].equip
             && sd->status.inventory[i].equip & 0x0010
             && sd->status.inventory[i].broken == 1)
-            skill_status_change_start(sd, SC_BROKNARMOR, 0, 0, 0, 0, 0,
-                                       0);
+            skill_status_change_start(sd, SC_BROKNARMOR, 0, 0);
     }
 
 //        clif_changelook_accessories(sd, NULL);

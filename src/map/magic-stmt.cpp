@@ -468,9 +468,9 @@ static int op_status_change(env_t *env, int, val_t *args)
         ? VAR(VAR_INVOCATION).v.v_int : 0;
     invocation_t *invocation = static_cast<invocation_t *>(map_id2bl(invocation_id));
 
-    skill_status_effect(subject, ARGINT(1), ARGINT(2), ARGINT(3),
-                         ARGINT(4), ARGINT(5), ARGINT(6), 0,
-                         invocation_id);
+    skill_status_effect(subject, ARGINT(1), ARGINT(2),
+                        /* ARGINT(3), ARGINT(4), ARGINT(5), */
+                        ARGINT(6), invocation_id);
 
     if (invocation && subject->type == BL_PC)
         record_status_change(invocation, subject->id, ARGINT(1));

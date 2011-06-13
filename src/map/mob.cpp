@@ -1092,8 +1092,7 @@ int mob_spawn(int id)
     for (i = 0; i < MAX_STATUSCHANGE; i++)
     {
         md->sc_data[i].timer = NULL;
-        md->sc_data[i].val1 = md->sc_data[i].val2 = md->sc_data[i].val3 =
-            md->sc_data[i].val4 = 0;
+        md->sc_data[i].val1 = 0;
     }
     md->sc_count = 0;
     md->opt1 = md->opt2 = md->opt3 = md->option = 0;

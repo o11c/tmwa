@@ -303,17 +303,12 @@ static void skill_status_change_timer(timer_id tid, tick_t tick, uint32_t id, in
  * ステータス異常開始
  *------------------------------------------
  */
-int skill_status_change_start(BlockList *bl, int type, int val1,
-                               int val2, int val3, int val4, int tick,
-                               int flag)
+int skill_status_change_start(BlockList *bl, int type, int val1, tick_t tick)
 {
-    return skill_status_effect(bl, type, val1, val2, val3, val4, tick, flag,
-                                0);
+    return skill_status_effect(bl, type, val1, tick, 0);
 }
 
-int skill_status_effect(BlockList *bl, int type, int val1, int val2,
-                         int val3, int val4, int tick, int flag,
-                         int spell_invocation)
+int skill_status_effect(BlockList *bl, int type, int val1, tick_t tick, int spell_invocation)
 {
     MapSessionData *sd = NULL;
     struct status_change *sc_data;
@@ -387,15 +382,11 @@ int skill_status_effect(BlockList *bl, int type, int val1, int val2,
             /* option2 */
         case SC_POISON:        /* 毒 */
             calc_flag = 1;
-            if (!(flag & 2))
             {
                 int sc_def =
                     100 - (battle_get_vit(bl) + battle_get_luk(bl) / 5);
                 tick = tick * sc_def / 100;
             }
-            val3 = tick / 1000;
-            if (val3 < 1)
-                val3 = 1;
             tick = 1000;
             break;
         case SC_HASTE:
@@ -436,9 +427,6 @@ int skill_status_effect(BlockList *bl, int type, int val1, int val2,
     (*sc_count)++;              /* ステータス異常の数 */
 
     sc_data[type].val1 = val1;
-    sc_data[type].val2 = val2;
-    sc_data[type].val3 = val3;
-    sc_data[type].val4 = val4;
     if (sc_data[type].spell_invocation) // Supplant by newer spell
         spell_effect_report_termination(sc_data[type].spell_invocation,
                                          bl->id, type, 1);

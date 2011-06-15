@@ -174,7 +174,6 @@ public:
     short speed, prev_speed;
     short opt1, opt2, opt3;
     Direction dir, head_dir;
-    unsigned int client_tick, server_tick;
     struct walkpath_data walkpath;
     timer_id walktimer;
     int npc_id, areanpc_id, npc_shopid;

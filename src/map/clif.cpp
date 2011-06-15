@@ -345,7 +345,7 @@ static uint8_t *clif_validate_chat(MapSessionData *sd, int type,
 // (only called for PCs in the area)
 static void clif_send_sub(BlockList *bl,
                           uint8_t *buf,
-                          int len,
+                          uint16_t len,
                           BlockList *src_bl,
                           Whom type)
 {
@@ -369,7 +369,7 @@ static void clif_send_sub(BlockList *bl,
 }
 
 /// Send a packet to a certain set of people
-static void clif_send(uint8_t *buf, int len, BlockList *bl, Whom type)
+static void clif_send(uint8_t *buf, uint16_t len, BlockList *bl, Whom type)
 {
     // Validate packet
     if (!buf)
@@ -881,31 +881,12 @@ void clif_spawnmob(struct mob_data *md)
     clif_send(buf, len, md, Whom::AREA);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-static void clif_servertick(MapSessionData *sd)
+/// Player can walk to the requested destination
+void clif_walkok(MapSessionData *sd)
 {
     nullpo_retv(sd);
 
     int fd = sd->fd;
-    WFIFOW(fd, 0) = 0x7f;
-    WFIFOL(fd, 2) = sd->server_tick;
-    WFIFOSET(fd, packet_len_table[0x7f]);
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-void clif_walkok(MapSessionData *sd)
-{
-    int fd;
-
-    nullpo_retv(sd);
-
-    fd = sd->fd;
     WFIFOW(fd, 0) = 0x87;
     WFIFOL(fd, 2) = gettick();;
     WFIFOPOS2(fd, 6, sd->x, sd->y, sd->to_x, sd->to_y);
@@ -913,45 +894,27 @@ void clif_walkok(MapSessionData *sd)
     WFIFOSET(fd, packet_len_table[0x87]);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// A player moves
 void clif_movechar(MapSessionData *sd)
 {
-    int len;
-    uint8_t buf[256];
-
     nullpo_retv(sd);
 
-    len = clif_player_move(sd, buf);
+    uint8_t buf[256];
+    uint16_t len = clif_player_move(sd, buf);
 
     clif_send(buf, len, sd, Whom::AREA_WOS);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-static void clif_quitsave(int, MapSessionData *sd)
-{
-    map_quit(sd);
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
+/// Timer to close a connection
+// This exists so the server can finish sending the packets
+// surely there is a better way (perhaps a half shutdown?)
 static void clif_waitclose(timer_id, tick_t, int fd)
 {
     if (session[fd])
         session[fd]->eof = 1;
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Disconnect player after 5 seconds, to finish sending packets
 void clif_setwaitclose(int fd)
 {
     add_timer(gettick() + 5000, clif_waitclose, fd);
@@ -3071,8 +3034,12 @@ static void clif_parse_WantToConnection(int fd, MapSessionData *sd)
         session[fd]->session_data = sd;
         sd->fd = fd;
 
-        pc_setnewpc(sd, account_id, RFIFOL(fd, 6), RFIFOL(fd, 10),
-                     RFIFOL(fd, 14), RFIFOB(fd, 18), fd);
+        charid_t charid = RFIFOL(fd, 6);
+        uint32_t login1 = RFIFOL(fd, 10);
+        // uint32_t client_tick = RFIFOL(fd, 14);
+        uint8_t sex = RFIFOB(fd, 18);
+        pc_setnewpc(sd, account_id, charid, login1,
+                    sex);
 
         map_addiddb(sd);
 
@@ -3178,19 +3145,6 @@ static void clif_parse_LoadEndAck(int, MapSessionData *sd)
     map_foreachinarea(clif_getareachar, sd->m, sd->x - AREA_SIZE,
                       sd->y - AREA_SIZE, sd->x + AREA_SIZE,
                       sd->y + AREA_SIZE, BL_NUL, sd);
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-static void clif_parse_TickSend(int fd, MapSessionData *sd)
-{
-    nullpo_retv(sd);
-
-    sd->client_tick = RFIFOL(fd, 2);
-    sd->server_tick = gettick();
-    clif_servertick(sd);
 }
 
 /*==========================================
@@ -4339,7 +4293,7 @@ func_table clif_parse_func_table[0x220] =
     { 0, 0 }, // 7b
     { 0, 0 }, // 7c
     { -1, clif_parse_LoadEndAck }, // 7d
-    { 0, clif_parse_TickSend }, // 7e
+    { 0, 0 }, // 7e
     { 0, 0 }, // 7f
     { 0, 0 }, // 80
     { 0, 0 }, // 81
@@ -4993,7 +4947,7 @@ static void clif_parse(int fd)
         if (sd && sd->state.auth)
         {
             pc_logout(sd);
-            clif_quitsave(fd, sd);
+            map_quit(sd);
             if (sd->status.name != NULL)
                 printf("Player [%s] has logged off your server.\n", sd->status.name);  // Player logout display [Valaris]
             else

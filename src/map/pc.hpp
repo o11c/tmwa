@@ -29,7 +29,7 @@ int pc_counttargeted(MapSessionData *sd, BlockList *src,
                      AttackResult target_lv);
 int pc_setrestartvalue(MapSessionData *sd, int type);
 int pc_makesavestatus(MapSessionData *);
-int pc_setnewpc(MapSessionData *, int, int, int, int, int, int);
+int pc_setnewpc(MapSessionData *, account_t, charid_t, uint32_t, uint8_t);
 int pc_authok(int, int, time_t, short tmw_version, const struct mmo_charstatus *);
 int pc_authfail(int);
 

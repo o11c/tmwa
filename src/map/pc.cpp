@@ -325,8 +325,8 @@ int pc_makesavestatus(MapSessionData *sd)
  * 接続時の初期化
  *------------------------------------------
  */
-int pc_setnewpc(MapSessionData *sd, int account_id, int char_id,
-                 int login_id1, int client_tick, int sex, int)
+int pc_setnewpc(MapSessionData *sd, account_t account_id, charid_t char_id,
+                uint32_t login_id1, uint8_t sex)
 {
     nullpo_ret(sd);
 
@@ -334,7 +334,6 @@ int pc_setnewpc(MapSessionData *sd, int account_id, int char_id,
     sd->char_id = char_id;
     sd->login_id1 = login_id1;
     sd->login_id2 = 0;          // at this point, we can not know the value :(
-    sd->client_tick = client_tick;
     sd->sex = sex;
     sd->state.auth = 0;
     sd->canact_tick = sd->canmove_tick = gettick();

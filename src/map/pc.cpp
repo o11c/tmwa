@@ -297,12 +297,11 @@ int pc_makesavestatus(MapSessionData *sd)
     if (pc_isdead(sd))
     {
         pc_setrestartvalue(sd, 0);
-        memcpy(&sd->status.last_point, &sd->status.save_point,
-                sizeof(sd->status.last_point));
+        sd->status.last_point = sd->status.save_point;
     }
     else
     {
-        memcpy(sd->status.last_point.map, sd->mapname, 24);
+        sd->status.last_point.map = sd->mapname;
         sd->status.last_point.x = sd->x;
         sd->status.last_point.y = sd->y;
     }
@@ -311,12 +310,10 @@ int pc_makesavestatus(MapSessionData *sd)
     if (maps[sd->m].flag.nosave)
     {
         struct map_data *m = &maps[sd->m];
-        if (strcmp(m->save.map, "SavePoint") == 0)
-            memcpy(&sd->status.last_point, &sd->status.save_point,
-                    sizeof(sd->status.last_point));
+        if (strcmp(&m->save.map, "SavePoint") == 0)
+            sd->status.last_point = sd->status.save_point;
         else
-            memcpy(&sd->status.last_point, &m->save,
-                    sizeof(sd->status.last_point));
+            sd->status.last_point = m->save;
     }
     return 0;
 }
@@ -2292,10 +2289,9 @@ int pc_useitem(MapSessionData *sd, int n)
  * PCの位置設定
  *------------------------------------------
  */
-int pc_setpos(MapSessionData *sd, const char *mapname_org, int x, int y,
+int pc_setpos(MapSessionData *sd, const fixed_string<16>& mapname_org, int x, int y,
               BeingRemoveType clrtype)
 {
-    char mapname[24];
     int m = 0, c = 0;
 
     nullpo_ret(sd);
@@ -2312,11 +2308,10 @@ int pc_setpos(MapSessionData *sd, const char *mapname_org, int x, int y,
     pc_stop_walking(sd, 0);    // 歩行中断
     pc_stopattack(sd);         // 攻撃中断
 
-    memcpy(mapname, mapname_org, 24);
-    mapname[16] = 0;
-    if (strstr(mapname, ".gat") == NULL && strlen(mapname) < 16)
+    fixed_string<16> mapname = mapname_org;
+    if (!mapname.contains(".gat") && mapname.length() < 12)
     {
-        strcat(mapname, ".gat");
+        strcat(&mapname, ".gat");
     }
 
     m = map_mapname2mapid(mapname);
@@ -2330,7 +2325,7 @@ int pc_setpos(MapSessionData *sd, const char *mapname_org, int x, int y,
             {
                 clif_being_remove(sd, clrtype);
                 map_delblock(sd);
-                memcpy(sd->mapname, mapname, 24);
+                sd->mapname = mapname;
                 sd->x = x;
                 sd->y = y;
                 sd->state.waitingdisconnect = 1;
@@ -2375,7 +2370,7 @@ int pc_setpos(MapSessionData *sd, const char *mapname_org, int x, int y,
         clif_changemap(sd, maps[m].name, x, y); // [MouseJstr]
     }
 
-    memcpy(sd->mapname, mapname, 24);
+    sd->mapname = mapname;
     sd->m = m;
     sd->to_x = x;
     sd->to_y = y;
@@ -5426,12 +5421,11 @@ static void pc_natural_heal(timer_id, tick_t tick)
  * セーブポイントの保存
  *------------------------------------------
  */
-int pc_setsavepoint(MapSessionData *sd, const char *mapname, int x, int y)
+int pc_setsavepoint(MapSessionData *sd, const fixed_string<16>& mapname, int x, int y)
 {
     nullpo_ret(sd);
 
-    strncpy(sd->status.save_point.map, mapname, 23);
-    sd->status.save_point.map[23] = '\0';
+    sd->status.save_point.map = mapname;
     sd->status.save_point.x = x;
     sd->status.save_point.y = y;
 

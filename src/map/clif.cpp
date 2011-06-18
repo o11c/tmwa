@@ -920,32 +920,24 @@ void clif_setwaitclose(int fd)
     add_timer(gettick() + 5000, clif_waitclose, fd);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-void clif_changemap(MapSessionData *sd, const char *mapname, int x, int y)
+/// Player has moved to another map
+void clif_changemap(MapSessionData *sd, const fixed_string<16>& mapname, int x, int y)
 {
-    int fd;
-
     nullpo_retv(sd);
 
-    fd = sd->fd;
+    int fd = sd->fd;
 
     WFIFOW(fd, 0) = 0x91;
-    memcpy(WFIFOP(fd, 2), mapname, 16);
+    mapname.write_to(sign_cast<char *>(WFIFOP(fd, 2)));
     WFIFOW(fd, 18) = x;
     WFIFOW(fd, 20) = y;
     WFIFOSET(fd, packet_len_table[0x91]);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Player has moved to a map on another server
 void clif_changemapserver(MapSessionData *sd,
-                         const char *mapname, int x, int y,
-                         int ip, int port)
+                          const fixed_string<16>& mapname, int x, int y,
+                          in_addr_t ip, in_port_t port)
 {
     int fd;
 
@@ -953,7 +945,7 @@ void clif_changemapserver(MapSessionData *sd,
 
     fd = sd->fd;
     WFIFOW(fd, 0) = 0x92;
-    memcpy(WFIFOP(fd, 2), mapname, 16);
+    mapname.write_to(sign_cast<char *>(WFIFOP(fd, 2)));
     WFIFOW(fd, 18) = x;
     WFIFOW(fd, 20) = y;
     WFIFOL(fd, 22) = ip;
@@ -2812,9 +2804,9 @@ void clif_party_move(struct party *p, MapSessionData *sd, bool online)
     WBUFW(buf, 10) = sd->x;
     WBUFW(buf, 12) = sd->y;
     WBUFB(buf, 14) = !online;
-    memcpy(WBUFP(buf, 15), p->name, 24);
-    memcpy(WBUFP(buf, 39), sd->status.name, 24);
-    memcpy(WBUFP(buf, 63), maps[sd->m].name, 16);
+    STRZCPY2(sign_cast<char *>(WBUFP(buf, 15)), p->name);
+    STRZCPY2(sign_cast<char *>(WBUFP(buf, 39)), sd->status.name);
+    maps[sd->m].name.write_to(sign_cast<char *>(WBUFP(buf, 63)));
     clif_send(buf, packet_len_table[0x104], sd, Whom::PARTY);
 }
 
@@ -2856,7 +2848,7 @@ void clif_changemapcell(int m, int x, int y, int cell_type, int type)
     WBUFW(buf, 2) = x;
     WBUFW(buf, 4) = y;
     WBUFW(buf, 6) = cell_type;
-    memcpy(WBUFP(buf, 8), maps[m].name, 16);
+    maps[m].name.write_to(sign_cast<char *>(WBUFP(buf, 8)));
     if (!type)
         clif_send(buf, packet_len_table[0x192], &bl, Whom::AREA);
     else

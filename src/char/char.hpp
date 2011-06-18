@@ -5,6 +5,8 @@
 # include "../common/mmo.hpp"
 # include "../common/sanity.hpp"
 
+# include "../lib/fixed_string.hpp"
+
 # define CHAR_CONF_NAME "conf/char_athena.conf"
 # define LOGIN_LAN_CONF_NAME "conf/lan_support.conf"
 
@@ -23,8 +25,7 @@ struct mmo_map_server
     in_addr_t ip;
     in_port_t port;
     int users;
-    /// each map name is max 16 characters
-    char map[MAX_MAP_PER_SERVER][16];
+    fixed_string<16> map[MAX_MAP_PER_SERVER];
 };
 
 struct mmo_charstatus *character_by_name(const char *character_name);

@@ -141,7 +141,7 @@ static void stringify(val_t * v, int within_op)
 
         case TY_LOCATION:
             CREATE(buf, char, 128);
-            sprintf(buf, "<\"%s\", %d, %d>", maps[v->v.v_location.m].name,
+            sprintf(buf, "<\"%s\", %d, %d>", &maps[v->v.v_location.m].name,
                      v->v.v_location.x, v->v.v_location.y);
             break;
 
@@ -1049,7 +1049,7 @@ static int fun_map_level(env_t *, int, val_t *result, val_t *args)
 
 static int fun_map_nr(env_t *, int, val_t *result, val_t *args)
 {
-    const char *mapname = maps[ARGLOCATION(0).m].name;
+    const fixed_string<16>& mapname = maps[ARGLOCATION(0).m].name;
 
     RESULTINT = ((mapname[0] - '0') * 100)
         + ((mapname[1] - '0') * 10) + ((mapname[2] - '0'));
@@ -1260,7 +1260,9 @@ eval_location(env_t * env, location_t * dest, e_location_t * expr)
     if (CHECK_TYPE(&m, TY_STRING)
         && CHECK_TYPE(&x, TY_INT) && CHECK_TYPE(&y, TY_INT))
     {
-        int map_id = map_mapname2mapid(m.v.v_string);
+        fixed_string<16> mapname;
+        mapname.copy_from(m.v.v_string);
+        int map_id = map_mapname2mapid(mapname);
         magic_clear_var(&m);
         if (map_id < 0)
             return 1;

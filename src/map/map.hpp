@@ -12,6 +12,8 @@
 #include "../common/db.hpp"
 #include "../common/socket.hpp"
 
+#include "../lib/fixed_string.hpp"
+
 #include "script.hpp"
 #include "battle.hpp"
 
@@ -168,7 +170,7 @@ public:
     struct item_data *inventory_data[MAX_INVENTORY];
     short equip_index[11];
     int weight, max_weight;
-    char mapname[24];
+    fixed_string<16> mapname;
     int fd, new_fd;
     short to_x, to_y;
     short speed, prev_speed;
@@ -387,9 +389,9 @@ struct npc_data_warp : npc_data
 {
     struct
     {
-    short xs, ys;
-    short x, y;
-    char name[16];
+        short xs, ys;
+        short x, y;
+        fixed_string<16> name;
     } warp;
     npc_data_warp() : npc_data(WARP) {}
     ~npc_data_warp() {}
@@ -490,7 +492,7 @@ enum
 
 struct map_data
 {
-    char name[24];
+    fixed_string<16> name;
     // NULL for maps on other map servers
     uint8_t *gat;
     // TODO change this into subclasses
@@ -790,9 +792,9 @@ const char *map_charid2nick(charid_t);
 MapSessionData *map_id2sd(unsigned int);
 MapSessionData *map_id2authsd(unsigned int);
 BlockList *map_id2bl(unsigned int);
-int map_mapname2mapid(const char *);
-bool map_mapname2ipport(const char *, in_addr_t *, in_port_t *);
-bool map_setipport(const char *name, in_addr_t ip, in_port_t port);
+int map_mapname2mapid(const fixed_string<16>&);
+bool map_mapname2ipport(const fixed_string<16>&, in_addr_t *, in_port_t *);
+bool map_setipport(const fixed_string<16>& name, in_addr_t ip, in_port_t port);
 
 void map_addiddb(BlockList *);
 void map_deliddb(BlockList *bl);

@@ -6,62 +6,87 @@
 # Some are explicitly -Werror=foo
 -Werror
 
-# Fix later
--Wno-error=deprecated-declarations
-# Really annoying
--Wno-error=missing-field-initializers
-# Unavoidable, but it's still nice to know
--Wno-error=vla
--Wno-error=stack-protector
-
+# Core stuff
 -Werror=all
--Werror=implicit-function-declaration
 -Wextra
--Werror=c++-compat
--Werror=write-strings
 -Wunused
 -Wshadow
--Werror=strict-prototypes
--Werror=old-style-definition
+
+
+
+# Fix later
+-Wno-error=deprecated-declarations
+# Really annoying - needed for = {} zero initialization
+-Wno-error=missing-field-initializers
+
+
+# Unavoidable, but it's still nice to know
+-Wno-error=vla
 -Wvla
+-Wno-error=stack-protector
 -Wstack-protector
+
+# Impractical to avoid, because this disallows +=, -=, etc.
 -Wno-conversion
+# Wishlist
+-Wno-sign-conversion
+-Wno-sign-compare
+
+
+# This caught a bug with a bitmask
 -Wlogical-op
+
+# Not all format problems are specified in the default -Wformat
+# I really wish it was possible to turn off the warning for strftime
 -Wformat=2
--Winit-self
+# Always a bug
+-Werror=init-self
+# Not currently used, but probably a bug
 -Wmissing-include-dirs
+# Occasionally useful
 -Wsuggest-attribute=pure
 -Wsuggest-attribute=const
 -Wsuggest-attribute=noreturn
+# Don't use these
 -Wtrampolines
+# I'm trying to remove all floats, actually
 -Wfloat-equal
+# let -Wformat be useful
 -Wmissing-format-attribute
--Wredundant-decls
--Wno-sign-compare
 
--Wno-switch
+# Catch a lot of errors in C++ mode
+-Wredundant-decls
 -Wmissing-declarations
 
--Werror=unused-but-set-variable
+# we abuse enums sometimes
+-Wno-switch
 
--Wno-missing-field-initializers
-
-
+# Just in case
 -Wabi
+# General C++ errors
 -Wctor-dtor-privacy
 -Wnon-virtual-dtor
 -Wreorder
--Weffc++
--Wstrict-null-sentinel
--Wno-non-template-friend
--Wold-style-cast
 -Woverloaded-virtual
--Wno-pmf-conversions
+-Wpmf-conversions
+# Some useful and some annoying
+# -Weffc++
+-Wno-error=effc++
+# Not sure if this actually matters, since only GCC is supported
+-Wstrict-null-sentinel
+# I don't have bad code
+-Wno-non-template-friend
+# Essential since I'm superclassing - TODO remove all reinterpret_cast
+-Wold-style-cast
+# Best we can do
 -Wsign-promo
 
 # Bug in prerelease GCC 4.6.1 (shipped by debian) regarding scoped enum in switch
--Wno-abi
-# Because I *really* don't want to initialize all members in the constructor's list
-# But the other warnings are actually useful
--Wno-effc++
+# TODO use snapshots.debian.org to find the exact range of bad packages
+# Good: gcc 4.6.0 official release,
+# Good: gcc-4.6.0-3 or so
+# Bad: gcc-4.6.0-10,11
+# Good: gcc-4.6.0-13
+# Good: gcc 4.6.1 official release, gcc 4.7.0 official release (future)
+-Wno-error=abi
 

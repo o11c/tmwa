@@ -9,6 +9,8 @@
 
 #include "../common/socket.hpp"
 
+#include "../lib/fixed_string.hpp"
+
 #include "map.hpp"
 
 #include <iterator>
@@ -50,8 +52,8 @@ void clif_spawnmob(struct mob_data *); // area
 void clif_walkok(MapSessionData *);   // self
 void clif_movechar(MapSessionData *); // area
 void clif_movemob(struct mob_data *);  //area
-void clif_changemap(MapSessionData *, const char *, int, int);  //self
-void clif_changemapserver(MapSessionData *, const char *, int, int, int, int);  //self
+void clif_changemap(MapSessionData *, const fixed_string<16> &, int, int);
+void clif_changemapserver(MapSessionData *, const fixed_string<16>&, int, int, in_addr_t, in_port_t);  //self
 void clif_fixpos(BlockList *); // area
 void clif_fixmobpos(struct mob_data *md);
 void clif_fixpcpos(MapSessionData *sd);

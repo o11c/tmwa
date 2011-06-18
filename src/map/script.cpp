@@ -1840,7 +1840,7 @@ int buildin_isat(struct script_state *st)
 
     push_val(st->stack, C_INT,
               (x == sd->x)
-              && (y == sd->y) && (!strcmp(str, maps[sd->m].name)));
+              && (y == sd->y) && (!strcmp(str, &maps[sd->m].name)));
 
     return 0;
 }
@@ -1877,7 +1877,11 @@ int buildin_warp(struct script_state *st)
                   sd->status.save_point.x, sd->status.save_point.y, BeingRemoveType::WARP);
     }
     else
-        pc_setpos(sd, str, x, y, BeingRemoveType::ZERO);
+    {
+        fixed_string<16> fstr;
+        fstr.copy_from(str);
+        pc_setpos(sd, fstr, x, y, BeingRemoveType::ZERO);
+    }
     return 0;
 }
 
@@ -1885,9 +1889,9 @@ int buildin_warp(struct script_state *st)
  * エリア指定ワープ
  *------------------------------------------
  */
-static void buildin_areawarp_sub(BlockList *bl, const char *map, int x, int y)
+static void buildin_areawarp_sub(BlockList *bl, fixed_string<16> map, int x, int y)
 {
-    if (strcmp(map, "Random") == 0)
+    if (strcmp(&map, "Random") == 0)
         pc_randomwarp(static_cast<MapSessionData *>(bl), BeingRemoveType::WARP);
     else
         pc_setpos(static_cast<MapSessionData *>(bl), map, x, y, BeingRemoveType::ZERO);
@@ -1896,24 +1900,24 @@ static void buildin_areawarp_sub(BlockList *bl, const char *map, int x, int y)
 int buildin_areawarp(struct script_state *st)
 {
     int x, y, m;
-    const char *str;
-    const char *mapname;
     int x_0, y_0, x_1, y_1;
 
-    mapname = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> src_map;
+    src_map.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     x_0 = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     y_0 = conv_num(st, &(st->stack->stack_data[st->start + 4]));
     x_1 = conv_num(st, &(st->stack->stack_data[st->start + 5]));
     y_1 = conv_num(st, &(st->stack->stack_data[st->start + 6]));
-    str = conv_str(st, &(st->stack->stack_data[st->start + 7]));
+    fixed_string<16> dst_map;
+    dst_map.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 7])));
     x = conv_num(st, &(st->stack->stack_data[st->start + 8]));
     y = conv_num(st, &(st->stack->stack_data[st->start + 9]));
 
-    if ((m = map_mapname2mapid(mapname)) < 0)
+    if ((m = map_mapname2mapid(src_map)) < 0)
         return 0;
 
     map_foreachinarea(buildin_areawarp_sub,
-                      m, x_0, y_0, x_1, y_1, BL_PC, str, x, y);
+                      m, x_0, y_0, x_1, y_1, BL_PC, dst_map, x, y);
     return 0;
 }
 
@@ -2566,7 +2570,6 @@ int buildin_makeitem(struct script_state *st)
 {
     int nameid, amount, flag = 0;
     int x, y, m;
-    const char *mapname;
     struct item item_tmp;
     MapSessionData *sd;
     struct script_data *data;
@@ -2587,11 +2590,12 @@ int buildin_makeitem(struct script_state *st)
         nameid = conv_num(st, data);
 
     amount = conv_num(st, &(st->stack->stack_data[st->start + 3]));
-    mapname = conv_str(st, &(st->stack->stack_data[st->start + 4]));
+    fixed_string<16> mapname;
+    mapname.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 4])));
     x = conv_num(st, &(st->stack->stack_data[st->start + 5]));
     y = conv_num(st, &(st->stack->stack_data[st->start + 6]));
 
-    if (sd && strcmp(mapname, "this") == 0)
+    if (sd && strcmp(&mapname, "this") == 0)
         m = sd->m;
     else
         m = map_mapname2mapid(mapname);
@@ -3366,9 +3370,8 @@ int buildin_setoption(struct script_state *st)
 int buildin_savepoint(struct script_state *st)
 {
     int x, y;
-    const char *str;
-
-    str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> str;
+    str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     y = conv_num(st, &(st->stack->stack_data[st->start + 4]));
     pc_setsavepoint(script_rid2sd(st), str, x, y);
@@ -3532,9 +3535,10 @@ int buildin_getexp(struct script_state *st)
 int buildin_monster(struct script_state *st)
 {
     int mob_class, amount, x, y;
-    const char *str, *map, *event = "";
+    const char *str, *event = "";
 
-    map = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> map;
+    map.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     y = conv_num(st, &(st->stack->stack_data[st->start + 4]));
     str = conv_str(st, &(st->stack->stack_data[st->start + 5]));
@@ -3555,9 +3559,10 @@ int buildin_monster(struct script_state *st)
 int buildin_areamonster(struct script_state *st)
 {
     int mob_class, amount, x_0, y_0, x_1, y_1;
-    const char *str, *map, *event = "";
+    const char *str, *event = "";
 
-    map = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> map;
+    map.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     x_0 = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     y_0 = conv_num(st, &(st->stack->stack_data[st->start + 4]));
     x_1 = conv_num(st, &(st->stack->stack_data[st->start + 5]));
@@ -3596,9 +3601,10 @@ static void buildin_killmonster_sub(BlockList *bl, const char *event, bool allfl
 
 int buildin_killmonster(struct script_state *st)
 {
-    const char *mapname, *event;
+    const char *event;
     int m;
-    mapname = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> mapname;
+    mapname.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     event = conv_str(st, &(st->stack->stack_data[st->start + 3]));
     bool allflag = strcmp(event, "All") == 0;
 
@@ -3616,9 +3622,9 @@ static void buildin_killmonsterall_sub(BlockList *bl)
 
 int buildin_killmonsterall(struct script_state *st)
 {
-    const char *mapname;
     int m;
-    mapname = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> mapname;
+    mapname.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
 
     if ((m = map_mapname2mapid(mapname)) < 0)
         return 0;
@@ -3787,10 +3793,11 @@ static void buildin_mapannounce_sub(BlockList *bl, const char *str, size_t len, 
 
 int buildin_mapannounce(struct script_state *st)
 {
-    const char *mapname, *str;
+    const char *str;
     int flag, m;
 
-    mapname = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> mapname;
+    mapname.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     str = conv_str(st, &(st->stack->stack_data[st->start + 3]));
     flag = conv_num(st, &(st->stack->stack_data[st->start + 4]));
 
@@ -3808,11 +3815,12 @@ int buildin_mapannounce(struct script_state *st)
  */
 int buildin_areaannounce(struct script_state *st)
 {
-    const char *map, *str;
+    const char *str;
     int flag, m;
     int x_0, y_0, x_1, y_1;
 
-    map = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> map;
+    map.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     x_0 = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     y_0 = conv_num(st, &(st->stack->stack_data[st->start + 4]));
     x_1 = conv_num(st, &(st->stack->stack_data[st->start + 5]));
@@ -3857,9 +3865,9 @@ int buildin_getusers(struct script_state *st)
  */
 int buildin_getmapusers(struct script_state *st)
 {
-    const char *str;
     int m;
-    str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> str;
+    str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     if ((m = map_mapname2mapid(str)) < 0)
     {
         push_val(st->stack, C_INT, -1);
@@ -3880,9 +3888,9 @@ static void buildin_getareausers_sub(BlockList *, int *users)
 
 int buildin_getareausers(struct script_state *st)
 {
-    const char *str;
     int m, x_0, y_0, x_1, y_1, users = 0;
-    str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> str;
+    str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     x_0 = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     y_0 = conv_num(st, &(st->stack->stack_data[st->start + 4]));
     x_1 = conv_num(st, &(st->stack->stack_data[st->start + 5]));
@@ -3924,11 +3932,11 @@ static void buildin_getareadropitem_sub_anddelete(BlockList *bl, int item, int *
 
 int buildin_getareadropitem(struct script_state *st)
 {
-    const char *str;
     int m, x_0, y_0, x_1, y_1, item, amount = 0, delitems = 0;
     struct script_data *data;
 
-    str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> str;
+    str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     x_0 = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     y_0 = conv_num(st, &(st->stack->stack_data[st->start + 4]));
     x_1 = conv_num(st, &(st->stack->stack_data[st->start + 5]));
@@ -4240,17 +4248,16 @@ enum
 int buildin_setmapflagnosave(struct script_state *st)
 {
     int m, x, y;
-    const char *str, *str2;
-
-    str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
-    str2 = conv_str(st, &(st->stack->stack_data[st->start + 3]));
+    fixed_string<16> str, str2;
+    str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
+    str2.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 3])));
     x = conv_num(st, &(st->stack->stack_data[st->start + 4]));
     y = conv_num(st, &(st->stack->stack_data[st->start + 5]));
     m = map_mapname2mapid(str);
     if (m >= 0)
     {
         maps[m].flag.nosave = 1;
-        memcpy(maps[m].save.map, str2, 16);
+        maps[m].save.map = str2;
         maps[m].save.x = x;
         maps[m].save.y = y;
     }
@@ -4261,9 +4268,8 @@ int buildin_setmapflagnosave(struct script_state *st)
 int buildin_setmapflag(struct script_state *st)
 {
     int m, i;
-    const char *str;
-
-    str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> str;
+    str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     i = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     m = map_mapname2mapid(str);
     if (m >= 0)
@@ -4306,9 +4312,9 @@ int buildin_setmapflag(struct script_state *st)
 int buildin_removemapflag(struct script_state *st)
 {
     int m, i;
-    const char *str;
 
-    str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> str;
+    str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     i = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     m = map_mapname2mapid(str);
     if (m >= 0)
@@ -4351,9 +4357,9 @@ int buildin_removemapflag(struct script_state *st)
 int buildin_pvpon(struct script_state *st)
 {
     int m;
-    const char *str;
 
-    str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> str;
+    str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     m = map_mapname2mapid(str);
     if (m >= 0 && !maps[m].flag.pvp && !maps[m].flag.nopvp)
     {
@@ -4379,9 +4385,9 @@ int buildin_pvpon(struct script_state *st)
 int buildin_pvpoff(struct script_state *st)
 {
     int m;
-    const char *str;
 
-    str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> str;
+    str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     m = map_mapname2mapid(str);
     if (m >= 0 && maps[m].flag.pvp && maps[m].flag.nopvp)
     {
@@ -4600,24 +4606,24 @@ int buildin_failedremovecards(struct script_state *st)
 int buildin_mapwarp(struct script_state *st)   // Added by RoVeRT
 {
     int x, y, m;
-    const char *str;
-    const char *mapname;
     int x_0, y_0, x_1, y_1;
 
-    mapname = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> src_map;
+    src_map.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
+    if ((m = map_mapname2mapid(src_map)) < 0)
+        return 0;
+
     x_0 = 0;
     y_0 = 0;
-    x_1 = maps[map_mapname2mapid(mapname)].xs;
-    y_1 = maps[map_mapname2mapid(mapname)].ys;
-    str = conv_str(st, &(st->stack->stack_data[st->start + 3]));
+    x_1 = maps[m].xs;
+    y_1 = maps[m].ys;
+    fixed_string<16> dst_map;
+    dst_map.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 3])));
     x = conv_num(st, &(st->stack->stack_data[st->start + 4]));
     y = conv_num(st, &(st->stack->stack_data[st->start + 5]));
 
-    if ((m = map_mapname2mapid(mapname)) < 0)
-        return 0;
-
     map_foreachinarea(buildin_areawarp_sub,
-                      m, x_0, y_0, x_1, y_1, BL_PC, str, x, y);
+                      m, x_0, y_0, x_1, y_1, BL_PC, dst_map, x, y);
     return 0;
 }
 
@@ -4660,9 +4666,10 @@ static void buildin_mobcount_sub(BlockList *bl, const char *event, int *c)    //
 
 int buildin_mobcount(struct script_state *st)  // Added by RoVeRT
 {
-    const char *mapname, *event;
+    const char *event;
     int m, c = 0;
-    mapname = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> mapname;
+    mapname.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     event = conv_str(st, &(st->stack->stack_data[st->start + 3]));
 
     if ((m = map_mapname2mapid(mapname)) < 0)
@@ -5401,8 +5408,8 @@ int buildin_getsavepoint(struct script_state *st)
     switch (type)
     {
         case 0:
-            CREATE(mapname, char, 24);
-            strncpy(mapname, sd->status.save_point.map, 23);
+            CREATE(mapname, char, 16);
+            sd->status.save_point.map.write_to(mapname);
             push_str(st->stack, C_STR, mapname);
             break;
         case 1:
@@ -5428,10 +5435,10 @@ int buildin_areatimer(struct script_state *st)
 {
     int tick, m;
     const char *event;
-    const char *mapname;
     int x_0, y_0, x_1, y_1;
 
-    mapname = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    fixed_string<16> mapname;
+    mapname.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     x_0 = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     y_0 = conv_num(st, &(st->stack->stack_data[st->start + 4]));
     x_1 = conv_num(st, &(st->stack->stack_data[st->start + 5]));
@@ -5469,7 +5476,7 @@ int buildin_isin(struct script_state *st)
     push_val(st->stack, C_INT,
               (sd->x >= x_1 && sd->x <= x2)
               && (sd->y >= y_1 && sd->y <= y2)
-              && (!strcmp(str, maps[sd->m].name)));
+              && (!strcmp(str, &maps[sd->m].name)));
 
     return 0;
 }

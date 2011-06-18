@@ -939,7 +939,7 @@ int map_addnpc(int m, struct npc_data *nd)
             break;
     if (i == MAX_NPC_PER_MAP)
     {
-        map_log("too many NPCs in one map %s\n", maps[m].name);
+        map_log("too many NPCs in one map %s\n", &maps[m].name);
         return -1;
     }
     if (i == maps[m].npc_num)
@@ -957,18 +957,18 @@ int map_addnpc(int m, struct npc_data *nd)
 }
 
 // get a map index from map name
-int map_mapname2mapid(const char *name)
+int map_mapname2mapid(const fixed_string<16>& name)
 {
-    struct map_data *md = static_cast<struct map_data *>(strdb_search(map_db, name).p);
+    struct map_data *md = static_cast<struct map_data *>(strdb_search(map_db, &name).p);
     if (md == NULL || md->gat == NULL)
         return -1;
     return md->m;
 }
 
 /// Get IP/port of a map on another server
-bool map_mapname2ipport(const char *name, in_addr_t *ip, in_port_t *port)
+bool map_mapname2ipport(const fixed_string<16>& name, in_addr_t *ip, in_port_t *port)
 {
-    struct map_data *mdos = static_cast<struct map_data *>(strdb_search(map_db, name).p);
+    struct map_data *mdos = static_cast<struct map_data *>(strdb_search(map_db, &name).p);
     if (mdos == NULL || mdos->gat)
         return 0;
     *ip = mdos->ip;
@@ -1036,18 +1036,18 @@ void map_setcell(int m, int x, int y, uint8_t t)
 }
 
 /// know what to do for maps on other map-servers
-bool map_setipport(const char *name, in_addr_t ip, in_port_t port)
+bool map_setipport(const fixed_string<16>& name, in_addr_t ip, in_port_t port)
 {
-    struct map_data *md = static_cast<struct map_data *>(strdb_search(map_db, name).p);
+    struct map_data *md = static_cast<struct map_data *>(strdb_search(map_db, &name).p);
     if (!md)
     {
         // not exist -> add new data
         CREATE(md, struct map_data, 1);
-        STRZCPY(md->name, name);
+        md->name = name;
         md->gat = NULL;
         md->ip = ip;
         md->port = port;
-        strdb_insert(map_db, md->name, static_cast<void *>(md));
+        strdb_insert(map_db, &md->name, static_cast<void *>(md));
         return 0;
     }
     if (md->gat)
@@ -1101,7 +1101,7 @@ static bool map_readmap(int m, const char *filename)
     CREATE(maps[m].block_count, int, size);
     CREATE(maps[m].block_mob_count, int, size);
 
-    strdb_insert(map_db, maps[m].name, static_cast<void *>(&maps[m]));
+    strdb_insert(map_db, &maps[m].name, static_cast<void *>(&maps[m]));
 
     return 1;
 }
@@ -1115,7 +1115,7 @@ static void map_readallmap(void)
     for (int i = 0; i < map_num; i++)
     {
         // if (strstr(maps[i].name, ".gat") != NULL)
-        sprintf(fn, "data/%s", maps[i].name);
+        sprintf(fn, "data/%s", &maps[i].name);
         if (!map_readmap(i, fn))
         {
             i--;
@@ -1128,9 +1128,9 @@ static void map_readallmap(void)
 }
 
 /// Add a map to load
-static void map_addmap(const char *mapname)
+static void map_addmap(const fixed_string<16>& mapname)
 {
-    if (strcasecmp(mapname, "clear") == 0)
+    if (strcasecmp(&mapname, "clear") == 0)
     {
         map_num = 0;
         return;
@@ -1141,7 +1141,7 @@ static void map_addmap(const char *mapname)
         map_log("%s: too many maps\n", __func__);
         return;
     }
-    STRZCPY(maps[map_num].name, mapname);
+    maps[map_num].name = mapname;
     map_num++;
 }
 
@@ -1289,7 +1289,9 @@ static void map_config_read(const char *cfgName)
             }
             if (strcasecmp(w1, "map") == 0)
             {
-                map_addmap(w2);
+                fixed_string<16> mapname;
+                mapname.copy_from(w2);
+                map_addmap(mapname);
                 continue;
             }
             if (strcasecmp(w1, "npc") == 0)

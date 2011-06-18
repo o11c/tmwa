@@ -112,8 +112,8 @@ int start_zeny = 500;
 int start_weapon = 1201;
 int start_armor = 1202;
 
-// Initial position (it's possible to set it in conf file)
-struct point start_point = { "new_1-1.gat", 53, 111 };
+// Initial position (set it in conf file)
+struct point start_point;
 
 struct gm_account *gm_accounts = NULL;
 int GM_num = 0;
@@ -228,12 +228,12 @@ static void mmo_char_tofile(FILE *fp, struct mmo_charstatus *p)
              p->status_point, p->skill_point,   p->option, 0/*p->karma*/, 0/*p->manner*/,
              p->party_id, 0, 0,         p->hair, p->hair_color, 0/*p->clothes_color*/,
              p->weapon, p->shield, p->head_top, p->head_mid, p->head_bottom,
-             p->last_point.map, p->last_point.x, p->last_point.y,
-             p->save_point.map, p->save_point.x, p->save_point.y, p->partner_id);
+             &p->last_point.map, p->last_point.x, p->last_point.y,
+             &p->save_point.map, p->save_point.x, p->save_point.y, p->partner_id);
     for (int i = 0; i < 10; i++)
         if (p->memo_point[i].map[0])
         {
-            fprintf(fp, "%s,%d,%d ", p->memo_point[i].map,
+            fprintf(fp, "%s,%d,%d ", &p->memo_point[i].map,
                      p->memo_point[i].x, p->memo_point[i].y);
         }
     fprintf(fp, "\t");
@@ -295,8 +295,8 @@ static int mmo_char_fromstr(char *str, struct mmo_charstatus *p)
                       &p->status_point, &p->skill_point,        &p->option, &ign/*karma*/, &ign/*manner*/,
                       &p->party_id, &ign/*guild_id*/, &ign/*pet_id*/,   &p->hair, &p->hair_color, &ign/*clothes_color*/,
                       &p->weapon, &p->shield, &p->head_top, &p->head_mid, &p->head_bottom,
-                      p->last_point.map, &p->last_point.x, &p->last_point.y,
-                      p->save_point.map, &p->save_point.x, &p->save_point.y,
+                      &p->last_point.map, &p->last_point.x, &p->last_point.y,
+                      &p->save_point.map, &p->save_point.x, &p->save_point.y,
                       &p->partner_id, &next);
     if (set != 43)
         return 0;
@@ -338,7 +338,7 @@ static int mmo_char_fromstr(char *str, struct mmo_charstatus *p)
 
     for (int i = 0; str[0] && str[0] != '\t'; i++)
     {
-        if (sscanf(str, "%[^,],%hd,%hd%n", p->memo_point[i].map,
+        if (sscanf(str, "%[^,],%hd,%hd%n", &p->memo_point[i].map,
                     &p->memo_point[i].x, &p->memo_point[i].y, &next) != 3)
             return -3;
         str += next;
@@ -865,7 +865,7 @@ static void create_online_files(void)
             for (int j = 0; j < players; j++)
             {
                 /// Don't use strcasecmp as maps can't be the same except case
-                int cpm_result = strcmp(char_dat[i].last_point.map, char_dat[id[j]].last_point.map);
+                int cpm_result = char_dat[i].last_point.map == char_dat[id[j]].last_point.map;
                 if (cpm_result > 0)
                     continue;
                 if (cpm_result == 0 && strcasecmp(char_dat[i].name, char_dat[id[j]].name) > 0)
@@ -1019,25 +1019,25 @@ static void create_online_files(void)
         {
             // 8 or 16
             // prepare map name
-            char temp[16];
-            STRZCPY(temp, chardat->last_point.map);
-            if (strchr(temp, '.') != NULL)
-                *strchr(temp, '.') = '\0';
+            fixed_string<16> temp = chardat->last_point.map;
+            char *period = strchr(&temp, '.');
+            if (period)
+                *period = '\0';
             // write map name
             if (online_display_option & 16)
             {
                 // map-name AND coordinates
                 fprintf(html, "        <td>%s (%d, %d)</td>\n",
-                         temp, chardat->last_point.x,
+                         &temp, chardat->last_point.x,
                          chardat->last_point.y);
-                fprintf(txt, "%-12s (%3d,%3d) ", temp,
+                fprintf(txt, "%-12s (%3d,%3d) ", &temp,
                          chardat->last_point.x,
                          chardat->last_point.y);
             }
             else
             {
-                fprintf(html, "        <td>%s</td>\n", temp);
-                fprintf(txt, "%-12s ", temp);
+                fprintf(html, "        <td>%s</td>\n", &temp);
+                fprintf(txt, "%-12s ", &temp);
             }
         }
         // displaying number of zenys
@@ -1755,7 +1755,7 @@ static void parse_frommap(int fd)
                 int j = 0;
                 for (int i = 4; i < RFIFOW(fd, 2); i += 16)
                 {
-                    memcpy(server[id].map[j], RFIFOP(fd, i), 16);
+                    server[id].map[j].copy_from(sign_cast<const char *>(RFIFOP(fd, i)));
                     j++;
                 }
                 char ip[16];
@@ -1792,7 +1792,7 @@ static void parse_frommap(int fd)
                     int n = 0;
                     for (int i = 0; i < MAX_MAP_PER_SERVER; i++)
                         if (server[x].map[i][0])
-                            STRZCPY2(sign_cast<char *>(WFIFOP(fd, 10 + (n++) * 16)), server[x].map[i]);
+                            server[x].map[i].write_to(sign_cast<char *>(WFIFOP(fd, 10 + (n++) * 16)));
                     if (n)
                     {
                         WFIFOW(fd, 2) = n * 16 + 10;
@@ -2172,21 +2172,20 @@ static void parse_frommap(int fd)
 }
 
 /// Return index of the server with the given map
-static int search_mapserver(const char *map)
+static int search_mapserver(const fixed_string<16>& map)
 {
-    char temp_map[16];
-    STRZCPY(temp_map, map);
-    char *period = strchr(temp_map, '.');
+    fixed_string<16> temp_map = map;
+    char *period = strchr(&temp_map, '.');
     if (period)
         // suppress the '.gat', but conserve the '.' to be sure of the name of the map
-        period [1] = '\0';
+        period[1] = '\0';
 
     for (int i = 0; i < MAX_MAP_SERVERS; i++)
     {
         if (server_fd[i] < 0)
             continue;
         for (int j = 0; server[i].map[j][0]; j++)
-            if (strcmp(server[i].map[j], temp_map) == 0)
+            if (server[i].map[j] == temp_map)
             {
                 return i;
             }
@@ -2348,9 +2347,9 @@ static void parse_char(int fd)
                     if (server_fd[j] >= 0 && server[j].map[0][0])
                     {
                         i = j;
-                        STRZCPY(sd->found_char[ch]->last_point.map, server[j].map[0]);
+                        sd->found_char[ch]->last_point.map = server[j].map[0];
                         printf("Map-server #%d found with a map: '%s'.\n",
-                                j, server[j].map[0]);
+                                j, &server[j].map[0]);
                         // coordinates are unknown
                         goto gotmap_x66;
                     }
@@ -2364,7 +2363,7 @@ static void parse_char(int fd)
         gotmap_x66:
             WFIFOW(fd, 0) = 0x71;
             WFIFOL(fd, 2) = sd->found_char[ch]->char_id;
-            STRZCPY2(sign_cast<char *>(WFIFOP(fd, 6)), sd->found_char[ch]->last_point.map);
+            sd->found_char[ch]->last_point.map.write_to(sign_cast<char *>(WFIFOP(fd, 6)));
             printf("Character selection '%s' (account: %d, slot: %d) [%s]\n",
                     sd->found_char[ch]->name, sd->account_id, ch, ip);
             printf("--Send IP of map-server. ");
@@ -2913,12 +2912,12 @@ static void char_config_read(const char *cfgName)
         }
         if (strcasecmp(w1, "start_point") == 0)
         {
-            char map[32];
+            fixed_string<16> map;
             int x, y;
-            if (sscanf(w2, "%[^,],%d,%d", map, &x, &y) == 3 && strstr(map, ".gat"))
+            if (sscanf(w2, "%15[^,],%d,%d", &map, &x, &y) == 3 && map.contains(".gat"))
             {
                 // Verify at least if '.gat' is in the map name
-                memcpy(start_point.map, map, 16);
+                start_point.map = map;
                 start_point.x = x;
                 start_point.y = y;
                 continue;

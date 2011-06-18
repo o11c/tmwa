@@ -332,14 +332,14 @@ static void mob_init(struct mob_data *md)
  * The MOB appearance for one time(for scripts)
  *------------------------------------------
  */
-int mob_once_spawn(MapSessionData *sd, const char *mapname,
+int mob_once_spawn(MapSessionData *sd, const fixed_string<16>& mapname,
                     int x, int y, const char *mobname, int mob_class, int amount,
                     const char *event)
 {
     struct mob_data *md = NULL;
     int m, count, r = mob_class;
 
-    if (sd && strcmp(mapname, "this") == 0)
+    if (sd && strcmp(&mapname, "this") == 0)
         m = sd->m;
     else
         m = map_mapname2mapid(mapname);
@@ -396,7 +396,7 @@ int mob_once_spawn(MapSessionData *sd, const char *mapname,
  * The MOB appearance for one time(& area specification for scripts)
  *------------------------------------------
  */
-int mob_once_spawn_area(MapSessionData *sd, const char *mapname,
+int mob_once_spawn_area(MapSessionData *sd, const fixed_string<16>& mapname,
                          int x_0, int y_0, int x_1, int y_1,
                          const char *mobname, int mob_class, int amount,
                          const char *event)
@@ -404,7 +404,7 @@ int mob_once_spawn_area(MapSessionData *sd, const char *mapname,
     int x, y, i, c, max, lx = -1, ly = -1, id = 0;
     int m;
 
-    if (strcmp(mapname, "this") == 0)
+    if (strcmp(&mapname, "this") == 0)
         m = sd->m;
     else
         m = map_mapname2mapid(mapname);

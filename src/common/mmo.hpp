@@ -6,6 +6,8 @@
 # include <time.h>
 # include <arpa/inet.h>
 
+# include "../lib/fixed_string.hpp"
+
 # include "utils.hpp"
 
 # define FIFOSIZE_SERVERLINK    256*1024
@@ -72,7 +74,7 @@ struct item
 
 struct point
 {
-    char map[16];
+    fixed_string<16> map;
     short x, y;
 };
 

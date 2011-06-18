@@ -637,9 +637,9 @@ int npc_touch_areanpc(MapSessionData *sd, int m, int x, int y)
     switch (maps[m].npc[i]->subtype)
     {
         case WARP:
-            pc_setpos(sd, static_cast<npc_data_warp *>(maps[m].npc[i])->name,
-                      static_cast<npc_data_warp *>(maps[m].npc[i])->x,
-                      static_cast<npc_data_warp *>(maps[m].npc[i])->y,
+            pc_setpos(sd, static_cast<npc_data_warp *>(maps[m].npc[i])->warp.name,
+                      static_cast<npc_data_warp *>(maps[m].npc[i])->warp.x,
+                      static_cast<npc_data_warp *>(maps[m].npc[i])->warp.y,
                       BeingRemoveType::ZERO);
             break;
         case MESSAGE:
@@ -998,13 +998,12 @@ int npc_parse_warp(char *w1, const char *, char *w3, char *w4)
 {
     int x, y, xs, ys, to_x, to_y, m;
     int i, j;
-    char mapname[16], to_mapname[16];
+    fixed_string<16> mapname, to_mapname;
     struct npc_data_warp *nd;
 
     // 引数の個数チェック
-    if (sscanf(w1, "%[^,],%d,%d", mapname, &x, &y) != 3 ||
-        sscanf(w4, "%d,%d,%[^,],%d,%d", &xs, &ys, to_mapname, &to_x,
-                &to_y) != 5)
+    if (sscanf(w1, "%[^,],%d,%d", &mapname, &x, &y) != 3 ||
+        sscanf(w4, "%d,%d,%[^,],%d,%d", &xs, &ys, &to_mapname, &to_x, &to_y) != 5)
     {
         printf("bad warp line : %s\n", w3);
         return 1;
@@ -1032,7 +1031,7 @@ int npc_parse_warp(char *w1, const char *, char *w3, char *w4)
     nd->opt1 = 0;
     nd->opt2 = 0;
     nd->opt3 = 0;
-    STRZCPY(nd->warp.name, to_mapname);
+    nd->warp.name = to_mapname;
     xs += 2;
     ys += 2;
     nd->warp.x = to_x;
@@ -1069,11 +1068,11 @@ static int npc_parse_shop(char *w1, char *, char *w3, char *w4)
 {
     char *p;
     int x, y, dir, m;
-    char mapname[24];
+    fixed_string<16> mapname;
     struct npc_data_shop *nd;
 
     // 引数の個数チェック
-    if (sscanf(w1, "%[^,],%d,%d,%d", mapname, &x, &y, &dir) != 4 ||
+    if (sscanf(w1, "%[^,],%d,%d,%d", &mapname, &x, &y, &dir) != 4 ||
         strchr(w4, ',') == NULL)
     {
         printf("bad shop line : %s\n", w3);
@@ -1198,7 +1197,7 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
                              char *first_line, FILE * fp, int *lines)
 {
     int x, y, dir = 0, m, xs = 0, ys = 0, npc_class = 0;   // [Valaris] thanks to fov
-    char mapname[24];
+    fixed_string<16> mapname;
     script_ptr srcbuf = NULL, script;
     int srcsize = 65536;
     int startline = 0;
@@ -1220,7 +1219,7 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
     else
     {
         // 引数の個数チェック
-        if (sscanf(w1, "%[^,],%d,%d,%d", mapname, &x, &y, &dir) != 4 ||
+        if (sscanf(w1, "%[^,],%d,%d,%d", &mapname, &x, &y, &dir) != 4 ||
             (strcmp(w2, "script") == 0 && strchr(w4, ',') == NULL))
         {
             printf("bad script line : %s\n", w3);
@@ -1582,14 +1581,14 @@ int npc_parse_mob(char *w1, char *, char *w3, char *w4)
 {
     int m, x, y, xs, ys, mob_class, num, delay_1, delay2;
     int i;
-    char mapname[24];
+    fixed_string<16> mapname;
     char eventname[24] = "";
     struct mob_data *md;
 
     xs = ys = 0;
     delay_1 = delay2 = 0;
     // 引数の個数チェック
-    if (sscanf(w1, "%[^,],%d,%d,%d,%d", mapname, &x, &y, &xs, &ys) < 3 ||
+    if (sscanf(w1, "%[^,],%d,%d,%d,%d", &mapname, &x, &y, &xs, &ys) < 3 ||
         sscanf(w4, "%d,%d,%d,%d,%s", &mob_class, &num, &delay_1, &delay2,
                 eventname) < 2)
     {
@@ -1668,14 +1667,14 @@ int npc_parse_mob(char *w1, char *, char *w3, char *w4)
 static int npc_parse_mapflag(char *w1, char *, char *w3, char *w4)
 {
     int m;
-    char mapname[24], savemap[16];
+    fixed_string<16> mapname, savemap;
     int savex, savey;
     char drop_arg1[16], drop_arg2[16];
     int drop_id = 0, drop_type = 0, drop_per = 0;
 
     // 引数の個数チェック
 //  if (    sscanf(w1,"%[^,],%d,%d,%d",mapname,&x,&y,&dir) != 4 )
-    if (sscanf(w1, "%[^,]", mapname) != 1)
+    if (sscanf(w1, "%[^,]", &mapname) != 1)
         return 1;
 
     m = map_mapname2mapid(mapname);
@@ -1687,13 +1686,13 @@ static int npc_parse_mapflag(char *w1, char *, char *w3, char *w4)
     {
         if (strcmp(w4, "SavePoint") == 0)
         {
-            memcpy(maps[m].save.map, "SavePoint", 16);
+            maps[m].save.map.copy_from("SavePoint");
             maps[m].save.x = -1;
             maps[m].save.y = -1;
         }
-        else if (sscanf(w4, "%[^,],%d,%d", savemap, &savex, &savey) == 3)
+        else if (sscanf(w4, "%[^,],%d,%d", &savemap, &savex, &savey) == 3)
         {
-            memcpy(maps[m].save.map, savemap, 16);
+            maps[m].save.map = savemap;
             maps[m].save.x = savex;
             maps[m].save.y = savey;
         }
@@ -1904,7 +1903,8 @@ int do_init_npc(void)
         lines = 0;
         while (fgets(line, 1020, fp))
         {
-            char w1[1024], w2[1024], w3[1024], w4[1024], mapname[1024];
+            char w1[1024], w2[1024], w3[1024], w4[1024];
+            fixed_string<16> mapname;
             int i, j, w4pos, count;
             lines++;
 
@@ -1941,9 +1941,9 @@ int do_init_npc(void)
             // マップの存在確認
             if (strcmp(w1, "-") != 0 && strcasecmp(w1, "function") != 0)
             {
-                sscanf(w1, "%[^,]", mapname);
+                sscanf(w1, "%[^,]", &mapname);
                 m = map_mapname2mapid(mapname);
-                if (strlen(mapname) > 16 || m < 0)
+                if (m < 0)
                 {
                     // "mapname" is not assigned to this server
                     continue;

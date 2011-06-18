@@ -121,7 +121,7 @@ static void chrif_sendmap(int fd)
 {
     WFIFOW(fd, 0) = 0x2afa;
     for (int i = 0; i < map_num; i++)
-        STRZCPY2(sign_cast<char *>(WFIFOP(fd, 4 + i * 16)), maps[i].name);
+        maps[i].name.write_to(sign_cast<char *>(WFIFOP(fd, 4 + i * 16)));
     WFIFOW(fd, 2) = 4 + map_num * 16;
     WFIFOSET(fd, WFIFOW(fd, 2));
 }
@@ -137,7 +137,9 @@ static void chrif_recvmap(int fd)
     int j = 0;
     for (int i = 10; j < (RFIFOW(fd, 2) - 10) / 16; i += 16, j++)
     {
-        map_setipport(sign_cast<const char *>(RFIFOP(fd, i)), ip, port);
+        fixed_string<16> mapname;
+        mapname.copy_from(sign_cast<const char *>(RFIFOP(fd, i)));
+        map_setipport(mapname, ip, port);
     }
     uint8_t *p = reinterpret_cast<uint8_t *>(&ip);
     map_log("recv map on %hhu.%hhu.%hhu.%hhu:%hu (%d maps)\n", p[0], p[1], p[2], p[3], port, j);
@@ -145,7 +147,7 @@ static void chrif_recvmap(int fd)
 
 /// Arrange for a character to change to another map server
 void chrif_changemapserver(MapSessionData *sd,
-                           const char mapname[16], int x, int y,
+                           const fixed_string<16>& mapname, int x, int y,
                            in_addr_t ip, in_port_t port)
 {
     nullpo_retv(sd);
@@ -158,7 +160,7 @@ void chrif_changemapserver(MapSessionData *sd,
     WFIFOL(char_fd, 6) = sd->login_id1;
     WFIFOL(char_fd, 10) = sd->login_id2;
     WFIFOL(char_fd, 14) = sd->status.char_id;
-    strzcpy(sign_cast<char *>(WFIFOP(char_fd, 18)), mapname, 16);
+    mapname.write_to(sign_cast<char *>(WFIFOP(char_fd, 18)));
     WFIFOW(char_fd, 34) = x;
     WFIFOW(char_fd, 36) = y;
     WFIFOL(char_fd, 38) = ip;
@@ -183,8 +185,11 @@ static void chrif_changemapserverack(int fd)
         pc_authfail(sd->fd);
         return;
     }
-    clif_changemapserver(sd, sign_cast<const char *>(RFIFOP(fd, 18)), RFIFOW(fd, 34),
-                         RFIFOW(fd, 36), RFIFOL(fd, 38), RFIFOW(fd, 42));
+
+    fixed_string<16> mapname;
+    mapname.copy_from(sign_cast<const char *>(RFIFOP(fd, 18)));
+    clif_changemapserver(sd, mapname, RFIFOW(fd, 34), RFIFOW(fd, 36),
+                         RFIFOL(fd, 38), RFIFOW(fd, 42));
 }
 
 /// Result of trying to connect to the char server
@@ -769,7 +774,7 @@ void intif_create_party(MapSessionData *sd, const char *name)
     WFIFOL(char_fd, 2) = sd->status.account_id;
     strzcpy(sign_cast<char *>(WFIFOP(char_fd, 6)), name, 24);
     STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 30)), sd->status.name);
-    STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 54)), maps[sd->m].name);
+    maps[sd->m].name.write_to(sign_cast<char *>(WFIFOP(char_fd, 54)));
     WFIFOW(char_fd, 70) = sd->status.base_level;
     WFIFOSET(char_fd, 72);
 }
@@ -792,7 +797,7 @@ void intif_party_addmember(party_t party_id, account_t account_id)
     WFIFOL(char_fd, 2) = party_id;
     WFIFOL(char_fd, 6) = account_id;
     STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 10)), sd->status.name);
-    STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 34)), maps[sd->m].name);
+    maps[sd->m].name.write_to(sign_cast<char *>(WFIFOP(char_fd, 34)));
     WFIFOW(char_fd, 50) = sd->status.base_level;
     WFIFOSET(char_fd, 52);
 }
@@ -826,7 +831,7 @@ void intif_party_changemap(MapSessionData *sd, bool online)
     WFIFOW(char_fd, 0) = 0x3025;
     WFIFOL(char_fd, 2) = sd->status.party_id;
     WFIFOL(char_fd, 6) = sd->status.account_id;
-    STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 10)), maps[sd->m].name);
+    maps[sd->m].name.write_to(sign_cast<char *>(WFIFOP(char_fd, 10)));
     WFIFOB(char_fd, 26) = online;
     WFIFOW(char_fd, 27) = sd->status.base_level;
     WFIFOSET(char_fd, 29);

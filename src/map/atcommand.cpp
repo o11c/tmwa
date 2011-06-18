@@ -420,7 +420,7 @@ static AtCommandInfo atcommand_info[] = {
 /// Log an atcommand
 static void log_atcommand(MapSessionData *sd, const char *cmd, const char *arg)
 {
-    gm_log("%s(%d,%d) %s(%d) : %s %s", maps[sd->m].name, sd->x,
+    gm_log("%s(%d,%d) %s(%d) : %s %s", &maps[sd->m].name, sd->x,
                 sd->y, sd->status.name, sd->status.account_id, cmd, arg);
 }
 
@@ -640,17 +640,17 @@ int atcommand_setup(int fd, MapSessionData *sd,
 int atcommand_charwarp(int fd, MapSessionData *sd,
                         const char *, const char *message)
 {
-    char map_name[100];
     char character[100];
     int x, y;
 
+    fixed_string<16> map_name;
     if (!message || !*message
-        || sscanf(message, "%99s %d %d %99[^\n]", map_name, &x, &y,
+        || sscanf(message, "%15s %d %d %99[^\n]", &map_name, &x, &y,
                    character) < 4)
         return -1;
 
-    if (strstr(map_name, ".gat") == NULL && strlen(map_name) < 13)   // 16 - 4 (.gat)
-        strcat(map_name, ".gat");
+    if (!map_name.contains(".gat") && map_name.length() < 13)   // 16 - 4 (.gat)
+        strcat(&map_name, ".gat");
 
     MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
@@ -701,11 +701,11 @@ int atcommand_charwarp(int fd, MapSessionData *sd,
 int atcommand_warp(int fd, MapSessionData *sd,
                     const char *, const char *message)
 {
-    char map_name[100];
+    fixed_string<16> map_name;
     int x = 0, y = 0;
 
     if (!message || !*message
-        || sscanf(message, "%99s %d %d", map_name, &x, &y) < 1)
+        || sscanf(message, "%15s %d %d", &map_name, &x, &y) < 1)
         return -1;
 
     if (x <= 0)
@@ -713,8 +713,8 @@ int atcommand_warp(int fd, MapSessionData *sd,
     if (y <= 0)
         y = MRAND(399) + 1;
 
-    if (strstr(map_name, ".gat") == NULL && strlen(map_name) < 13)   // 16 - 4 (.gat)
-        strcat(map_name, ".gat");
+    if (!map_name.contains(".gat") && map_name.length() < 13)   // 16 - 4 (.gat)
+        strcat(&map_name, ".gat");
 
     int m = map_mapname2mapid(map_name);
     if (m >= 0 && maps[m].flag.nowarpto
@@ -759,7 +759,7 @@ int atcommand_where(int fd, MapSessionData *sd,
         clif_displaymessage(fd, "Character not found.");
         return -1;
     }
-    sprintf(output, "%s: %s (%d,%d)", pl_sd->status.name, pl_sd->mapname,
+    sprintf(output, "%s: %s (%d,%d)", pl_sd->status.name, &pl_sd->mapname,
              pl_sd->x, pl_sd->y);
     clif_displaymessage(fd, output);
 
@@ -856,10 +856,10 @@ int atcommand_who(int fd, MapSessionData *sd,
         if (pl_gm_level)
         sprintf(output, "Name: %s (GM:%d) | Location: %s %d %d",
                      pl_sd->status.name, pl_gm_level,
-                     pl_sd->mapname, pl_sd->x, pl_sd->y);
+                     &pl_sd->mapname, pl_sd->x, pl_sd->y);
         else
             sprintf(output, "Name: %s | Location: %s %d %d",
-                     pl_sd->status.name, pl_sd->mapname,
+                     pl_sd->status.name, &pl_sd->mapname,
                      pl_sd->x, pl_sd->y);
         clif_displaymessage(fd, output);
         count++;
@@ -936,10 +936,10 @@ int atcommand_whomap(int fd, MapSessionData *sd,
     int map_id = sd->m;
     if (message && *message)
     {
-        char map_name[100];
-        sscanf(message, "%99s", map_name);
-        if (strstr(map_name, ".gat") == NULL && strlen(map_name) < 13)   // 16 - 4 (.gat)
-            strcat(map_name, ".gat");
+        fixed_string<16> map_name;
+        sscanf(message, "%15s", &map_name);
+        if (!map_name.contains(".gat") && map_name.length() < 13)   // 16 - 4 (.gat)
+        strcat(&map_name, ".gat");
         int m = map_mapname2mapid(map_name);
         if (m >= 0)
             map_id = m;
@@ -961,10 +961,10 @@ int atcommand_whomap(int fd, MapSessionData *sd,
         if (pl_gm_level)
         sprintf(output, "Name: %s (GM:%d) | Location: %s %d %d",
                      pl_sd->status.name, pl_gm_level,
-                     pl_sd->mapname, pl_sd->x, pl_sd->y);
+                     &pl_sd->mapname, pl_sd->x, pl_sd->y);
         else
             sprintf(output, "Name: %s | Location: %s %d %d",
-                     pl_sd->status.name, pl_sd->mapname,
+                     pl_sd->status.name, &pl_sd->mapname,
                      pl_sd->x, pl_sd->y);
         clif_displaymessage(fd, output);
         count++;
@@ -972,12 +972,12 @@ int atcommand_whomap(int fd, MapSessionData *sd,
 
     char output[200];
     if (count == 0)
-        sprintf(output, "No player found in map '%s'.", maps[map_id].name);
+        sprintf(output, "No player found in map '%s'.", &maps[map_id].name);
     else if (count == 1)
-        sprintf(output, "1 player found in map '%s'.", maps[map_id].name);
+        sprintf(output, "1 player found in map '%s'.", &maps[map_id].name);
     else
     {
-        sprintf(output, "%d players found in map '%s'.", count, maps[map_id].name);
+        sprintf(output, "%d players found in map '%s'.", count, &maps[map_id].name);
     }
     clif_displaymessage(fd, output);
 
@@ -991,10 +991,10 @@ int atcommand_whomapgroup(int fd, MapSessionData *sd,
     int map_id = sd->m;
     if (message && *message)
     {
-        char map_name[100];
-        sscanf(message, "%99s", map_name);
-        if (strstr(map_name, ".gat") == NULL && strlen(map_name) < 13)   // 16 - 4 (.gat)
-            strcat(map_name, ".gat");
+        fixed_string<16> map_name;
+        sscanf(message, "%15s", &map_name);
+        if (!map_name.contains(".gat") && map_name.length() < 13)   // 16 - 4 (.gat)
+            strcat(&map_name, ".gat");
         int m = map_mapname2mapid(map_name);
         if (m >= 0)
             map_id = m;
@@ -1028,12 +1028,12 @@ int atcommand_whomapgroup(int fd, MapSessionData *sd,
 
     char output[200];
     if (count == 0)
-        sprintf(output, "No player found in map '%s'.", maps[map_id].name);
+        sprintf(output, "No player found in map '%s'.", &maps[map_id].name);
     else if (count == 1)
-        sprintf(output, "1 player found in map '%s'.", maps[map_id].name);
+        sprintf(output, "1 player found in map '%s'.", &maps[map_id].name);
     else
     {
-        sprintf(output, "%d players found in map '%s'.", count, maps[map_id].name);
+        sprintf(output, "%d players found in map '%s'.", count, &maps[map_id].name);
     }
     clif_displaymessage(fd, output);
 
@@ -1065,7 +1065,7 @@ int atcommand_whogm(int fd, MapSessionData *sd,
         char output[200];
         sprintf(output, "Name: %s (GM:%d) | Location: %s %d %d",
                  pl_sd->status.name, pl_gm_level,
-                 pl_sd->mapname, pl_sd->x, pl_sd->y);
+                 &pl_sd->mapname, pl_sd->x, pl_sd->y);
         clif_displaymessage(fd, output);
 
         struct party *p = party_search(pl_sd->status.party_id);
@@ -1889,7 +1889,9 @@ int atcommand_spawn(int fd, MapSessionData *sd,
                 my = sd->y + (MRAND(range) - (range / 2));
             else
                 my = y;
-            k = mob_once_spawn(sd, "this", mx,
+            fixed_string<16> ths;
+            ths.copy_from("this");
+            k = mob_once_spawn(sd, ths, mx,
                                 my, "", mob_id, 1, "");
         }
         count += k;
@@ -1919,10 +1921,10 @@ static void atcommand_killmonster_sub(int fd, MapSessionData *sd,
     int map_id = sd->m;
     if (message && *message)
     {
-        char map_name[100];
-        sscanf(message, "%99s", map_name);
-        if (strstr(map_name, ".gat") == NULL && strlen(map_name) < 13)   // 16 - 4 (.gat)
-            strcat(map_name, ".gat");
+        fixed_string<16> map_name;
+        sscanf(message, "%15s", &map_name);
+        if (!map_name.contains(".gat") && map_name.length() < 13)   // 16 - 4 (.gat)
+            strcat(&map_name, ".gat");
         int m = map_mapname2mapid(map_name);
         if (m >= 0)
             map_id = m;
@@ -1980,7 +1982,7 @@ static void atcommand_memo_sub(MapSessionData *sd)
         char output[200];
         if (sd->status.memo_point[i].map[0])
             sprintf(output, "%d - %s (%d,%d)", i,
-                     sd->status.memo_point[i].map, sd->status.memo_point[i].x,
+                     &sd->status.memo_point[i].map, sd->status.memo_point[i].x,
                      sd->status.memo_point[i].y);
         else
             sprintf(output, "%d - void", i);
@@ -2014,11 +2016,11 @@ int atcommand_memo(int fd, MapSessionData *sd,
     {
         char output[200];
         sprintf(output, "You replace previous memo position %d - %s (%d,%d).",
-                 position, sd->status.memo_point[position].map,
+                 position, &sd->status.memo_point[position].map,
                  sd->status.memo_point[position].x, sd->status.memo_point[position].y);
         clif_displaymessage(fd, output);
     }
-    STRZCPY(sd->status.memo_point[position].map, maps[sd->m].name);
+    sd->status.memo_point[position].map = maps[sd->m].name;
     sd->status.memo_point[position].x = sd->x;
     sd->status.memo_point[position].y = sd->y;
     atcommand_memo_sub(sd);
@@ -2038,7 +2040,7 @@ int atcommand_gat(int fd, MapSessionData *sd,
     for (y = -2; y <= 2; y++)
     {
         sprintf(output, "%s (x= %d, y= %d) %02X %02X %02X %02X %02X",
-                 maps[sd->m].name, sd->x - 2, sd->y + y,
+                 &maps[sd->m].name, sd->x - 2, sd->y + y,
                  map_getcell(sd->m, sd->x - 2, sd->y + y),
                  map_getcell(sd->m, sd->x - 1, sd->y + y),
                  map_getcell(sd->m, sd->x, sd->y + y),
@@ -2634,15 +2636,15 @@ int atcommand_character_save(int fd, MapSessionData *sd,
 {
     if (!message || !*message)
         return -1;
-    char map_name[100];
     int x, y;
     char character[100];
-    if (sscanf(message, "%99s %d %d %99[^\n]", map_name, &x, &y, character) < 4
+    fixed_string<16> map_name;
+    if (sscanf(message, "%15s %d %d %99[^\n]", &map_name, &x, &y, character) < 4
             || x < 0 || y < 0)
         return -1;
 
-    if (strstr(map_name, ".gat") == NULL && strlen(map_name) < 13)   // 16 - 4 (.gat)
-        strcat(map_name, ".gat");
+    if (!map_name.contains(".gat") && map_name.length() < 13)   // 16 - 4 (.gat)
+        strcat(&map_name, ".gat");
 
     MapSessionData *pl_sd = map_nick2sd(character);
 
@@ -3394,15 +3396,15 @@ int atcommand_mapinfo(int fd, MapSessionData *sd,
                        const char *, const char *message)
 {
     int list = 0;
-    char map_name[100];
-    sscanf(message, "%d %99[^\n]", &list, map_name);
+    fixed_string<16> map_name;
+    sscanf(message, "%d %15[^\n]", &list, &map_name);
     if (list < 0 || list > 2)
         return -1;
 
     if (map_name[0] == '\0')
-        strcpy(map_name, sd->mapname);
-    if (strstr(map_name, ".gat") == NULL && strlen(map_name) < 13)   // 16 - 4 (.gat)
-        strcat(map_name, ".gat");
+        map_name = sd->mapname;
+    if (!map_name.contains(".gat") && map_name.length() < 13)   // 16 - 4 (.gat)
+        strcat(&map_name, ".gat");
 
     int m_id = map_mapname2mapid(map_name);
     if (m_id < 0)
@@ -3413,7 +3415,7 @@ int atcommand_mapinfo(int fd, MapSessionData *sd,
 
     char output[200];
     clif_displaymessage(fd, "------ Map Info ------");
-    sprintf(output, "Map Name: %s", map_name);
+    sprintf(output, "Map Name: %s", &map_name);
     clif_displaymessage(fd, output);
     sprintf(output, "Players In Map: %d", maps[m_id].users);
     clif_displaymessage(fd, output);
@@ -4021,7 +4023,7 @@ int atcommand_addwarp(int fd, MapSessionData *sd,
         return -1;
 
     char w1[64], w3[64], w4[64];
-    sprintf(w1, "%s,%d,%d", sd->mapname, sd->x, sd->y);
+    sprintf(w1, "%15s,%d,%d", &sd->mapname, sd->x, sd->y);
     sprintf(w3, "%s%d%d%d%d", map, sd->x, sd->y, x, y);
     sprintf(w4, "1,1,%s.gat,%d,%d", map, x, y);
 
@@ -4127,7 +4129,9 @@ int atcommand_summon(int, MapSessionData *sd,
     int x = sd->x + (MRAND(10) - 5);
     int y = sd->y + (MRAND(10) - 5);
 
-    int id = mob_once_spawn(sd, "this", x, y, "--ja--", mob_id, 1, "");
+    fixed_string<16> ths;
+    ths.copy_from("this");
+    int id = mob_once_spawn(sd, ths, x, y, "--ja--", mob_id, 1, "");
     struct mob_data *md = static_cast<struct mob_data *>(map_id2bl(id));
     if (md)
     {
@@ -4531,7 +4535,7 @@ int atcommand_ipcheck(int fd, MapSessionData *,
 
         char output[200];
         snprintf(output, sizeof(output), "Name: %s | Location: %s %d %d",
-                  pl_sd->status.name, pl_sd->mapname, pl_sd->x, pl_sd->y);
+                  pl_sd->status.name, &pl_sd->mapname, pl_sd->x, pl_sd->y);
         clif_displaymessage(fd, output);
     }
 

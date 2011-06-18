@@ -46,9 +46,9 @@ int npc_event_do_l(const char *name, int rid, int argc,
 #define npc_event_doall(name) npc_event_doall_l(name, 0, 0, NULL)
 #define npc_event_do(name) npc_event_do_l(name, 0, 0, NULL)
 
-int npc_timerevent_start(struct npc_data *nd);
-int npc_timerevent_stop(struct npc_data *nd);
-int npc_gettimerevent_tick(struct npc_data *nd);
-int npc_settimerevent_tick(struct npc_data *nd, int newtimer);
+int npc_timerevent_start(struct npc_data_script *nd);
+int npc_timerevent_stop(struct npc_data_script *nd);
+int npc_gettimerevent_tick(struct npc_data_script *nd);
+int npc_settimerevent_tick(struct npc_data_script *nd, int newtimer);
 
 #endif // NPC_H

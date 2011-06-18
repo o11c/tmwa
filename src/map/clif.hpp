@@ -56,7 +56,7 @@ void clif_fixpos(BlockList *); // area
 void clif_fixmobpos(struct mob_data *md);
 void clif_fixpcpos(MapSessionData *sd);
 void clif_npcbuysell(MapSessionData *, int);  //self
-void clif_buylist(MapSessionData *, struct npc_data *);   //self
+void clif_buylist(MapSessionData *, struct npc_data_shop *);   //self
 void clif_selllist(MapSessionData *); //self
 void clif_scriptmes(MapSessionData *, int, const char *);   //self
 void clif_scriptnext(MapSessionData *, int);  //self

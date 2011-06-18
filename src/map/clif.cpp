@@ -997,7 +997,7 @@ void clif_npcbuysell(MapSessionData *sd, int id)
  *
  *------------------------------------------
  */
-void clif_buylist(MapSessionData *sd, struct npc_data *nd)
+void clif_buylist(MapSessionData *sd, struct npc_data_shop *nd)
 {
     struct item_data *id;
     int fd, i, val;
@@ -1007,14 +1007,14 @@ void clif_buylist(MapSessionData *sd, struct npc_data *nd)
 
     fd = sd->fd;
     WFIFOW(fd, 0) = 0xc6;
-    for (i = 0; nd->u.shop_item[i].nameid > 0; i++)
+    for (i = 0; nd->shop_item[i].nameid > 0; i++)
     {
-        id = itemdb_search(nd->u.shop_item[i].nameid);
-        val = nd->u.shop_item[i].value;
+        id = itemdb_search(nd->shop_item[i].nameid);
+        val = nd->shop_item[i].value;
         WFIFOL(fd, 4 + i * 11) = val;
         WFIFOL(fd, 8 + i * 11) = val;
         WFIFOB(fd, 12 + i * 11) = id->type;
-        WFIFOW(fd, 13 + i * 11) = nd->u.shop_item[i].nameid;
+        WFIFOW(fd, 13 + i * 11) = nd->shop_item[i].nameid;
     }
     WFIFOW(fd, 2) = i * 11 + 4;
     WFIFOSET(fd, WFIFOW(fd, 2));

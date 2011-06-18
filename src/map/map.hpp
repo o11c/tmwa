@@ -343,29 +343,6 @@ struct npc_data : public BlockList
     char exname[24];
     short opt1, opt2, opt3, option;
     short flag;
-    union
-    {
-        struct
-        {
-            script_ptr script;
-            short xs, ys;
-            timer_id timerid;
-            int timer, timeramount, nexttimer;
-            unsigned int timertick;
-            struct npc_timerevent_list *timer_event;
-            int label_list_num;
-            struct npc_label_list *label_list;
-            int src_id;
-        } scr;
-        struct npc_item_list *shop_item;
-        struct
-        {
-            short xs, ys;
-            short x, y;
-            char name[16];
-        } warp;
-        char *message;          // for MESSAGE: only send this message
-    } u;
     // ここにメンバを追加してはならない(shop_itemが可変長の為)
 
     char eventqueue[MAX_EVENTQUEUE][50];
@@ -377,8 +354,52 @@ struct npc_data : public BlockList
 
     short arenaflag;
 
+protected:
     npc_data(NPC_Subtype sub) : BlockList(BL_NPC), subtype(sub) {}
     ~npc_data();
+};
+
+struct npc_data_script : npc_data
+{
+    struct
+    {
+        script_ptr script;
+        short xs, ys;
+        timer_id timerid;
+        int timer, timeramount, nexttimer;
+        unsigned int timertick;
+        struct npc_timerevent_list *timer_event;
+        int label_list_num;
+        struct npc_label_list *label_list;
+        int src_id;
+    } scr;
+    npc_data_script() : npc_data(SCRIPT) {}
+    ~npc_data_script();
+};
+struct npc_data_shop : npc_data
+{
+    struct npc_item_list *shop_item;
+
+    npc_data_shop() : npc_data(SHOP) {}
+    ~npc_data_shop();
+};
+struct npc_data_warp : npc_data
+{
+    struct
+    {
+    short xs, ys;
+    short x, y;
+    char name[16];
+    } warp;
+    npc_data_warp() : npc_data(WARP) {}
+    ~npc_data_warp() {}
+};
+struct npc_data_message : npc_data
+{
+    char *message;          // for MESSAGE: only send this message
+
+    npc_data_message() : npc_data(MESSAGE) {}
+    ~npc_data_message();
 };
 
 #define MOB_MODE_SUMMONED                 0x1000

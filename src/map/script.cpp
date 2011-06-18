@@ -3683,12 +3683,7 @@ int buildin_deltimer(struct script_state *st)
  */
 int buildin_initnpctimer(struct script_state *st)
 {
-    struct npc_data *nd;
-    if (st->end > st->start + 2)
-        nd = npc_name2id(conv_str
-                          (st, &(st->stack->stack_data[st->start + 2])));
-    else
-        nd = static_cast<struct npc_data *>(map_id2bl(st->oid));
+    struct npc_data_script *nd = static_cast<struct npc_data_script *>(map_id2bl(st->oid));
 
     npc_settimerevent_tick(nd, 0);
     npc_timerevent_start(nd);
@@ -3701,12 +3696,7 @@ int buildin_initnpctimer(struct script_state *st)
  */
 int buildin_startnpctimer(struct script_state *st)
 {
-    struct npc_data *nd;
-    if (st->end > st->start + 2)
-        nd = npc_name2id(conv_str
-                          (st, &(st->stack->stack_data[st->start + 2])));
-    else
-        nd = static_cast<struct npc_data *>(map_id2bl(st->oid));
+    struct npc_data_script *nd = static_cast<struct npc_data_script *>(map_id2bl(st->oid));
 
     npc_timerevent_start(nd);
     return 0;
@@ -3718,12 +3708,7 @@ int buildin_startnpctimer(struct script_state *st)
  */
 int buildin_stopnpctimer(struct script_state *st)
 {
-    struct npc_data *nd;
-    if (st->end > st->start + 2)
-        nd = npc_name2id(conv_str
-                          (st, &(st->stack->stack_data[st->start + 2])));
-    else
-        nd = static_cast<struct npc_data *>(map_id2bl(st->oid));
+    struct npc_data_script *nd = static_cast<struct npc_data_script *>(map_id2bl(st->oid));
 
     npc_timerevent_stop(nd);
     return 0;
@@ -3735,14 +3720,9 @@ int buildin_stopnpctimer(struct script_state *st)
  */
 int buildin_getnpctimer(struct script_state *st)
 {
-    struct npc_data *nd;
     int type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     int val = 0;
-    if (st->end > st->start + 3)
-        nd = npc_name2id(conv_str
-                          (st, &(st->stack->stack_data[st->start + 3])));
-    else
-        nd = static_cast<struct npc_data *>(map_id2bl(st->oid));
+    struct npc_data_script *nd = static_cast<struct npc_data_script *>(map_id2bl(st->oid));
 
     switch (type)
     {
@@ -3750,10 +3730,10 @@ int buildin_getnpctimer(struct script_state *st)
             val = npc_gettimerevent_tick(nd);
             break;
         case 1:
-            val = (nd->u.scr.nexttimer >= 0);
+            val = (nd->scr.nexttimer >= 0);
             break;
         case 2:
-            val = nd->u.scr.timeramount;
+            val = nd->scr.timeramount;
             break;
     }
     push_val(st->stack, C_INT, val);
@@ -3766,14 +3746,8 @@ int buildin_getnpctimer(struct script_state *st)
  */
 int buildin_setnpctimer(struct script_state *st)
 {
-    int tick;
-    struct npc_data *nd;
-    tick = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    if (st->end > st->start + 3)
-        nd = npc_name2id(conv_str
-                          (st, &(st->stack->stack_data[st->start + 3])));
-    else
-        nd = static_cast<struct npc_data *>(map_id2bl(st->oid));
+    int tick = conv_num(st, &(st->stack->stack_data[st->start + 2]));
+    struct npc_data_script *nd = static_cast<struct npc_data_script *>(map_id2bl(st->oid));
 
     npc_settimerevent_tick(nd, tick);
     return 0;

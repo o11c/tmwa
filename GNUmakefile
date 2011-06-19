@@ -25,6 +25,8 @@ obj/common/%.o:         src/common/%.cpp        warnings        | obj/common/
 	$(COMPILE.cpp) -o $@ $<
 obj/ladmin/%.o:         src/ladmin/%.cpp        warnings        | obj/ladmin/
 	$(COMPILE.cpp) -o $@ $<
+obj/lib/%.o:            src/lib/%.cpp           warnings        | obj/lib/
+	$(COMPILE.cpp) -o $@ $<
 obj/login/%.o:          src/login/%.cpp         warnings        | obj/login/
 	$(COMPILE.cpp) -o $@ $<
 obj/map/%.o:            src/map/%.cpp           warnings        | obj/map/
@@ -42,6 +44,7 @@ all: ${PROGS}
 clean:
 	rm -rf ${PROGS} obj/
 common: obj/common/core.o obj/common/db.o obj/common/grfio.o obj/common/lock.o obj/common/md5calc.o obj/common/mt_rand.o obj/common/nullpo.o obj/common/socket.o obj/common/timer.o obj/common/utils.o
+lib: obj/lib/log.o
 
 # Top level programs
 login-server: obj/login/login
@@ -140,7 +143,7 @@ map.deps: src/map/magic-interpreter-parser.cpp src/map/magic-interpreter-lexer.c
 	    echo; \
 	done > $@
 
-include common.deps login.deps char.deps map.deps ladmin.deps
+include lib.deps common.deps login.deps char.deps map.deps ladmin.deps
 
 # It isn't feaible to fix this single use of strftime with nonconstant format string
 obj/map/script.o: override WARNINGS+=-Wno-error=format-nonliteral

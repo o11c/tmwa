@@ -152,7 +152,7 @@ const char *stamp_now(bool millis)
     static char tmpstr[DATE_FORMAT_MAX + 4];
     strftime(tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime(&tv.tv_sec));
     if (millis)
-        sprintf(tmpstr + DATE_FORMAT_MAX, ".%03u", static_cast<unsigned int>(tv.tv_usec / 1000));
+        sprintf(tmpstr + DATE_FORMAT_MAX - 1, ".%03u", static_cast<unsigned int>(tv.tv_usec / 1000));
     return tmpstr;
 }
 

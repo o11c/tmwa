@@ -40,7 +40,7 @@
 
 account_t account_id_count = START_ACCOUNT_NUM;
 int new_account_flag = 0;
-in_port_t login_port = 6900;
+in_port_t login_port = 6901;
 /// TODO make this in_addr_t
 char lan_char_ip[16];
 uint8_t subneti[4];
@@ -49,7 +49,7 @@ char update_host[128] = "";
 char main_server[20] = "";
 
 char account_filename[1024] = "save/account.txt";
-char GM_account_filename[1024] = "conf/GM_account.txt";
+char GM_account_filename[1024] = "save/gm_account.txt";
 const char login_log_filename[] = "log/login.log";
 const char login_log_unknown_packets_filename[] = "log/login_unknown_packets.log";
 

@@ -46,11 +46,9 @@ char userid[24];
 char passwd[24];
 char server_name[20];
 char whisper_server_name[24] = "Server";
-char login_ip_str[16];
-in_addr_t login_ip;
-in_port_t login_port = 6900;
-char char_ip_str[16];
-in_addr_t char_ip;
+IP_Address login_ip;
+in_port_t login_port = 6901;
+IP_Address char_ip;
 in_port_t char_port = 6121;
 int char_maintenance;
 int char_new;
@@ -59,9 +57,8 @@ char unknown_char_name[24] = "Unknown";
 const char char_log_filename[] = "log/char.log";
 const char char_log_unknown_packets_filename[] = "log/char_unknown_packets.log";
 //Added for lan support
-char lan_map_ip[128];
-uint8_t subneti[4];
-uint8_t subnetmaski[4];
+IP_Address lan_map_ip;
+IP_Mask lan_mask;
 /// Allow characters with same name but different case?
 // This option is misleading, true means case-sensitive, false means insensitive
 bool name_ignoring_case = 0;
@@ -91,7 +88,7 @@ struct auth_fifo
     account_t account_id;
     charid_t char_id;
     uint32_t login_id1, login_id2;
-    in_addr_t ip;
+    IP_Address ip;
     struct mmo_charstatus *char_pos;
     // 0: present, 1: deleted, 2: returning from map-server
     int delflag;
@@ -732,14 +729,11 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
             online_char_server_fd[j] = -1;
     }
 
-    char ip[16];
-    ip_to_str(session[fd]->client_addr.sin_addr.s_addr, ip);
-
     char_log("Creation of New Character: (connection #%d, account: %d) slot %hhu, character Name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu. [%s]\n",
-              fd, sd->account_id, dat.slot, name,
-              dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
-              dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
-              dat.hair_style, dat.hair_color, ip);
+             fd, sd->account_id, dat.slot, name,
+             dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
+             dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+             dat.hair_style, dat.hair_color, session[fd]->client_addr.to_string().c_str());
 
     struct mmo_charstatus *chardat = &char_dat[char_num];
     memset(chardat, 0, sizeof(struct mmo_charstatus));
@@ -1758,10 +1752,8 @@ static void parse_frommap(int fd)
                     server[id].map[j].copy_from(sign_cast<const char *>(RFIFOP(fd, i)));
                     j++;
                 }
-                char ip[16];
-                ip_to_str(server[id].ip, ip);
                 char_log("Map-Server %d connected: %d maps, from IP %s port %d.\n Map-server %d loading complete.\n",
-                          id, j, ip, server[id].port, id);
+                          id, j, server[id].ip.to_string().c_str(), server[id].port, id);
                 WFIFOW(fd, 0) = 0x2afb;
                 WFIFOB(fd, 2) = 0;
                 STRZCPY2(sign_cast<char *>(WFIFOP(fd, 3)), whisper_server_name);
@@ -1776,7 +1768,7 @@ static void parse_frommap(int fd)
                     uint8_t buf[j * 16 + 10];
                     WBUFW(buf, 0) = 0x2b04;
                     WBUFW(buf, 2) = j * 16 + 10;
-                    WBUFL(buf, 4) = server[id].ip;
+                    WBUFL(buf, 4) = server[id].ip.to_n();
                     WBUFW(buf, 8) = server[id].port;
                     memcpy(WBUFP(buf, 10), RFIFOP(fd, 4), j * 16);
                     mapif_sendallwos(fd, buf, WBUFW(buf, 2));
@@ -1787,7 +1779,7 @@ static void parse_frommap(int fd)
                     if (server_fd[x] < 0 || x == id)
                         continue;
                     WFIFOW(fd, 0) = 0x2b04;
-                    WFIFOL(fd, 4) = server[x].ip;
+                    WFIFOL(fd, 4) = server[x].ip.to_n();
                     WFIFOW(fd, 8) = server[x].port;
                     int n = 0;
                     for (int i = 0; i < MAX_MAP_PER_SERVER; i++)
@@ -1814,7 +1806,7 @@ static void parse_frommap(int fd)
                             auth_fifo[i].account_id != RFIFOL(fd, 2) ||
                             auth_fifo[i].char_id != RFIFOL(fd, 6) ||
                             auth_fifo[i].login_id1 != RFIFOL(fd, 10) ||
-                            auth_fifo[i].ip != RFIFOL(fd, 18))
+                            auth_fifo[i].ip.to_n() != RFIFOL(fd, 18))
                         continue;
                     // this is the only place where we might not know login_id2
                     // (map-server asks just after 0x72 packet, which doesn't given the value)
@@ -1917,7 +1909,7 @@ static void parse_frommap(int fd)
                 auth_fifo[auth_fifo_pos].delflag = 2;
                 auth_fifo[auth_fifo_pos].char_pos = 0;
                 auth_fifo[auth_fifo_pos].connect_until_time = 0;
-                auth_fifo[auth_fifo_pos].ip = RFIFOL(fd, 14);
+                auth_fifo[auth_fifo_pos].ip.from_n(RFIFOL(fd, 14));
                 auth_fifo_pos++;
                 WFIFOW(fd, 0) = 0x2b03;
                 WFIFOL(fd, 2) = RFIFOL(fd, 2);
@@ -1944,7 +1936,7 @@ static void parse_frommap(int fd)
                 auth_fifo[auth_fifo_pos].delflag = 0;
                 auth_fifo[auth_fifo_pos].sex = static_cast<enum gender>(RFIFOB(fd, 44));
                 auth_fifo[auth_fifo_pos].connect_until_time = 0;
-                auth_fifo[auth_fifo_pos].ip = RFIFOL(fd, 45);
+                auth_fifo[auth_fifo_pos].ip.from_n(RFIFOL(fd, 45));
                 for (int i = 0; i < char_num; i++)
                 {
                     if (char_dat[i].account_id != RFIFOL(fd, 2) ||
@@ -2195,17 +2187,9 @@ static int search_mapserver(const fixed_string<16>& map)
 
 /// Check if IP is LAN instead of WAN
 // (send alternate map IP)
-static bool lan_ip_check(uint8_t *p)
+static bool lan_ip_check(IP_Address addr)
 {
-    bool lancheck = 1;
-    for (int i = 0; i < 4; i++)
-    {
-        if ((subneti[i] & subnetmaski[i]) != (p[i] & subnetmaski[i]))
-        {
-            lancheck = 0;
-            break;
-        }
-    }
+    bool lancheck = lan_mask.covers(addr);
     printf("LAN test (result): %s source\033[0m.\n",
             lancheck ? "\033[1;36mLAN" : "\033[1;32mWAN");
     return lancheck;
@@ -2283,7 +2267,7 @@ static void parse_char(int fd)
                 if (auth_fifo[i].account_id != sd->account_id ||
                         auth_fifo[i].login_id1 != sd->login_id1 ||
                         auth_fifo[i].login_id2 != sd->login_id2 ||
-                        auth_fifo[i].ip != session[fd]->client_addr.sin_addr.s_addr ||
+                        auth_fifo[i].ip != session[fd]->client_addr ||
                         auth_fifo[i].delflag != 2)
                     continue;
                 auth_fifo[i].delflag = 1;
@@ -2312,7 +2296,7 @@ static void parse_char(int fd)
             WFIFOL(login_fd, 6) = sd->login_id1;
             WFIFOL(login_fd, 10) = sd->login_id2;
             WFIFOB(login_fd, 14) = sd->sex;
-            WFIFOL(login_fd, 15) = session[fd]->client_addr.sin_addr.s_addr;
+            WFIFOL(login_fd, 15) = session[fd]->client_addr.to_n();
             WFIFOSET(login_fd, 19);
         }
         end_x65:
@@ -2326,7 +2310,7 @@ static void parse_char(int fd)
                 return;
         {
             char ip[16];
-            ip_to_str(session[fd]->client_addr.sin_addr.s_addr, ip);
+            strcpy(ip, session[fd]->client_addr.to_string().c_str());
 
             int ch;
             for (ch = 0; ch < MAX_CHARS_PER_ACCOUNT; ch++)
@@ -2367,10 +2351,10 @@ static void parse_char(int fd)
             printf("Character selection '%s' (account: %d, slot: %d) [%s]\n",
                     sd->found_char[ch]->name, sd->account_id, ch, ip);
             printf("--Send IP of map-server. ");
-            if (lan_ip_check(reinterpret_cast<uint8_t *>(&session[fd]->client_addr.sin_addr)))
-                WFIFOL(fd, 22) = inet_addr(lan_map_ip);
+            if (lan_ip_check(session[fd]->client_addr))
+                WFIFOL(fd, 22) = lan_map_ip.to_n();
             else
-                WFIFOL(fd, 22) = server[i].ip;
+                WFIFOL(fd, 22) = server[i].ip.to_n();
             WFIFOW(fd, 26) = server[i].port;
             WFIFOSET(fd, 28);
             if (auth_fifo_pos >= AUTH_FIFO_SIZE)
@@ -2383,7 +2367,7 @@ static void parse_char(int fd)
             auth_fifo[auth_fifo_pos].char_pos = sd->found_char[ch];
             auth_fifo[auth_fifo_pos].sex = sd->sex;
             auth_fifo[auth_fifo_pos].connect_until_time = sd->connect_until_time;
-            auth_fifo[auth_fifo_pos].ip = session[fd]->client_addr.sin_addr.s_addr;
+            auth_fifo[auth_fifo_pos].ip = session[fd]->client_addr;
             auth_fifo[auth_fifo_pos].packet_tmw_version = sd->packet_tmw_version;
             auth_fifo_pos++;
         }
@@ -2554,7 +2538,7 @@ static void parse_char(int fd)
             if (anti_freeze_enable)
                 // Map anti-freeze system. Counter. 5 ok, 4...0 freezed
                 server_freezeflag[i] = 5;
-            server[i].ip = RFIFOL(fd, 54);
+            server[i].ip.from_n(RFIFOL(fd, 54));
             server[i].port = RFIFOW(fd, 58);
             server[i].users = 0;
             memset(server[i].map, 0, sizeof(server[i].map));
@@ -2681,7 +2665,7 @@ static void check_connect_login_server(timer_id, tick_t)
     STRZCPY2(sign_cast<char *>(WFIFOP(login_fd, 2)), userid);
     STRZCPY2(sign_cast<char *>(WFIFOP(login_fd, 26)), passwd);
     WFIFOL(login_fd, 50) = 0;
-    WFIFOL(login_fd, 54) = char_ip;
+    WFIFOL(login_fd, 54) = char_ip.to_n();
     WFIFOW(login_fd, 58) = char_port;
     STRZCPY2(sign_cast<char *>(WFIFOP(login_fd, 60)), server_name);
     WFIFOW(login_fd, 80) = 0;
@@ -2698,13 +2682,8 @@ static void check_connect_login_server(timer_id, tick_t)
 static void lan_config_read(const char *lancfgName)
 {
     // set default configuration
-    STRZCPY(lan_map_ip, "127.0.0.1");
-    subneti[0] = 127;
-    subneti[1] = 0;
-    subneti[2] = 0;
-    subneti[3] = 1;
-    for (int j = 0; j < 4; j++)
-        subnetmaski[j] = 255;
+    lan_map_ip.from_string("127.0.0.1");
+    lan_mask.from_string("127.0.0.1/32");
 
     FILE *fp = fopen_(lancfgName, "r");
 
@@ -2730,67 +2709,27 @@ static void lan_config_read(const char *lancfgName)
         // WARNING: I don't think this should be calling gethostbyname at all, it should just parse the IP
         if (strcasecmp(w1, "lan_map_ip") == 0)
         {
-            // Read map-server Lan IP Address
-            struct hostent *h = gethostbyname(w2);
-            if (h)
-            {
-                sprintf(lan_map_ip, "%hhu.%hhu.%hhu.%hhu",
-                         h->h_addr[0], h->h_addr[1],
-                         h->h_addr[2], h->h_addr[3]);
-            }
-            else
-            {
-                STRZCPY(lan_map_ip, w2);
-            }
-            printf("LAN IP of map-server: %s.\n", lan_map_ip);
+            lan_map_ip.from_string(w2);
+            printf("LAN IP of map-server: %s.\n", lan_map_ip.to_string().c_str());
         }
         else if (strcasecmp(w1, "subnet") == 0)
         {
-            // Read Subnetwork
-            for (int j = 0; j < 4; j++)
-                subneti[j] = 0;
-            struct hostent *h = gethostbyname(w2);
-            if (h)
-            {
-                for (int j = 0; j < 4; j++)
-                    subneti[j] = h->h_addr[j];
-            }
-            else
-            {
-                sscanf(w2, "%hhu.%hhu.%hhu.%hhu", &subneti[0], &subneti[1],
-                        &subneti[2], &subneti[3]);
-            }
-            printf("Sub-network of the map-server: %hhu.%hhu.%hhu.%hhu.\n",
-                    subneti[0], subneti[1], subneti[2], subneti[3]);
+            lan_mask.addr.from_string(w2);
+            printf("Sub-network of the map-server: %s.\n",
+                   lan_mask.addr.to_string().c_str());
         }
         else if (strcasecmp(w1, "subnetmask") == 0)
         {
-            // Read Subnetwork Mask
-            for (int j = 0; j < 4; j++)
-                subnetmaski[j] = 255;
-            struct hostent *h = gethostbyname(w2);
-            if (h)
-            {
-                for (int j = 0; j < 4; j++)
-                    subnetmaski[j] = h->h_addr[j];
-            }
-            else
-            {
-                sscanf(w2, "%hhu.%hhu.%hhu.%hhu", &subnetmaski[0], &subnetmaski[1],
-                        &subnetmaski[2], &subnetmaski[3]);
-            }
-            printf("Sub-network mask of the map-server: %hhu.%hhu.%hhu.%hhu.\n",
-                    subnetmaski[0], subnetmaski[1], subnetmaski[2],
-                    subnetmaski[3]);
+            lan_mask.mask.from_string(w2);
+            printf("Sub-network mask of the map-server: %s.\n",
+                   lan_mask.mask.to_string().c_str());
         }
     }
     fclose_(fp);
 
     // sub-network check of the map-server
-    uint8_t p[4];
-    sscanf(lan_map_ip, "%hhu.%hhu.%hhu.%hhu", &p[0], &p[1], &p[2], &p[3]);
     printf("LAN test of LAN IP of the map-server: ");
-    if (!lan_ip_check(p))
+    if (!lan_ip_check(lan_map_ip))
     {
         /// Actually, this could be considered a legitimate entry
         char_log("***ERROR: LAN IP of the map-server doesn't belong to the specified Sub-network.\n");
@@ -2845,16 +2784,9 @@ static void char_config_read(const char *cfgName)
         }
         if (strcasecmp(w1, "login_ip") == 0)
         {
-            struct hostent *h = gethostbyname(w2);
-            if (h)
-            {
-                printf("Login server IP address : %s -> %hhu.%hhu.%hhu.%hhu\n", w2,
-                        h->h_addr[0], h->h_addr[1], h->h_addr[2], h->h_addr[3]);
-                sprintf(login_ip_str, "%hhu.%hhu.%hhu.%hhu",
-                         h->h_addr[0], h->h_addr[1], h->h_addr[2], h->h_addr[3]);
-            }
-            else
-                STRZCPY(login_ip_str, w2);
+            login_ip.from_string(w2);
+            printf("Login server IP address : %s -> %s\n", w2,
+                   login_ip.to_string().c_str());
             continue;
         }
         if (strcasecmp(w1, "login_port") == 0)
@@ -2864,16 +2796,9 @@ static void char_config_read(const char *cfgName)
         }
         if (strcasecmp(w1, "char_ip") == 0)
         {
-            struct hostent *h = gethostbyname(w2);
-            if (h)
-            {
-                printf("Character server IP address : %s -> %hhu.%hhu.%hhu.%hhu\n",
-                        w2, h->h_addr[0], h->h_addr[1], h->h_addr[2], h->h_addr[3]);
-                sprintf(char_ip_str, "%hhu.%hhu.%hhu.%hhu",
-                         h->h_addr[0], h->h_addr[1], h->h_addr[2], h->h_addr[3]);
-            }
-            else
-                STRZCPY(char_ip_str, w2);
+            char_ip.from_string(w2);
+            printf("Character server IP address : %s -> %s\n",
+                   w2, char_ip.to_string().c_str());
             continue;
         }
         if (strcasecmp(w1, "char_port") == 0)
@@ -3052,9 +2977,6 @@ void do_init(int argc, char **argv)
     // FIXME: specifying config by position is deprecated
     char_config_read((argc > 1) ? argv[1] : CHAR_CONF_NAME);
     lan_config_read((argc > 3) ? argv[3] : LOGIN_LAN_CONF_NAME);
-
-    login_ip = inet_addr(login_ip_str);
-    char_ip = inet_addr(char_ip_str);
 
     for (int i = 0; i < MAX_MAP_SERVERS; i++)
     {

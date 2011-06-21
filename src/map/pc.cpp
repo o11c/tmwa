@@ -713,8 +713,6 @@ int pc_authok(int id, int login_id2, time_t connect_until_time,
     memset(sd->flood_rates, 0, sizeof(sd->flood_rates));
     sd->packet_flood_reset_due = sd->packet_flood_in = 0;
 
-    sd->ip = session[sd->fd]->client_addr.sin_addr.s_addr;
-
     // message of the limited time of the account
     if (connect_until_time != 0)
     {                           // don't display if it's unlimited or unknow value
@@ -2319,7 +2317,7 @@ int pc_setpos(MapSessionData *sd, const fixed_string<16>& mapname_org, int x, in
     {
         if (sd->mapname[0])
         {
-            in_addr_t ip;
+            IP_Address ip;
             in_port_t port;
             if (map_mapname2ipport(mapname, &ip, &port))
             {

@@ -316,8 +316,6 @@ public:
     time_t packet_flood_reset_due;
     int packet_flood_in;
 
-    in_addr_t ip;
-
     MapSessionData() : BlockList(BL_PC) {}
 };
 
@@ -501,7 +499,7 @@ public:
 class map_data_remote : public map_data
 {
 public:
-    in_addr_t ip;
+    IP_Address ip;
     in_port_t port;
 };
 class map_data_local : public map_data
@@ -790,8 +788,8 @@ MapSessionData *map_id2sd(unsigned int);
 MapSessionData *map_id2authsd(unsigned int);
 BlockList *map_id2bl(unsigned int);
 int map_mapname2mapid(const fixed_string<16>&);
-bool map_mapname2ipport(const fixed_string<16>&, in_addr_t *, in_port_t *);
-bool map_setipport(const fixed_string<16>& name, in_addr_t ip, in_port_t port);
+bool map_mapname2ipport(const fixed_string<16>&, IP_Address *, in_port_t *);
+bool map_setipport(const fixed_string<16>& name, IP_Address ip, in_port_t port);
 
 void map_addiddb(BlockList *);
 void map_deliddb(BlockList *bl);

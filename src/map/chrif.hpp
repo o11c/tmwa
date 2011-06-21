@@ -1,6 +1,7 @@
 #ifndef CHRIF_H
 #define CHRIF_H
 #include "../common/mmo.hpp"
+#include "../lib/ip.hpp"
 
 class MapSessionData;
 
@@ -8,7 +9,7 @@ void chrif_setuserid(const char *);
 void chrif_setpasswd(const char *);
 const char *chrif_getpasswd(void);
 
-void chrif_setip(const char *);
+void chrif_setip(IP_Address);
 void chrif_setport(in_port_t);
 
 bool chrif_isconnect(void);
@@ -19,7 +20,7 @@ void chrif_charselectreq(MapSessionData *);
 
 void chrif_changemapserver(MapSessionData *sd,
                            const fixed_string<16>& mapname, int x, int y,
-                           in_addr_t ip, in_port_t port);
+                           IP_Address ip, in_port_t port);
 
 void chrif_changegm(int id, const char *pass, int len);
 void chrif_changeemail(int id, const char *actual_email, const char *new_email);

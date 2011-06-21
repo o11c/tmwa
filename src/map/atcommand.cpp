@@ -4526,11 +4526,11 @@ int atcommand_ipcheck(int fd, MapSessionData *,
         return -1;
     }
 
-    in_addr_t ip = session[sd1->fd]->client_addr.sin_addr.s_addr;
+    IP_Address ip = session[sd1->fd]->client_addr;
 
     for (MapSessionData *pl_sd : auth_sessions)
     {
-        if (ip != session[pl_sd->fd]->client_addr.sin_addr.s_addr)
+        if (ip != session[pl_sd->fd]->client_addr)
             continue;
 
         char output[200];

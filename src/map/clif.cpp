@@ -292,16 +292,14 @@ static void WFIFOPOS2(int fd, size_t pos, uint16_t x_0, uint16_t y_0, uint16_t x
     WBUFPOS2(WFIFOP(fd, 0), pos, x_0, y_0, x_1, y_1);
 }
 
-static char map_ip_str[16];
-static in_addr_t map_ip;
+static IP_Address map_ip;
 static in_port_t map_port = 5121;
 int map_fd;
 
 /// Our public IP
-void clif_setip(const char *ip)
+void clif_setip(IP_Address ip)
 {
-    STRZCPY(map_ip_str, ip);
-    map_ip = inet_addr(map_ip_str);
+    map_ip = ip;
 }
 
 /// The port on which we listen
@@ -311,7 +309,7 @@ void clif_setport(uint16_t port)
 }
 
 /// Our public IP
-in_addr_t clif_getip(void)
+IP_Address clif_getip(void)
 {
     return map_ip;
 }
@@ -937,7 +935,7 @@ void clif_changemap(MapSessionData *sd, const fixed_string<16>& mapname, int x, 
 /// Player has moved to a map on another server
 void clif_changemapserver(MapSessionData *sd,
                           const fixed_string<16>& mapname, int x, int y,
-                          in_addr_t ip, in_port_t port)
+                          IP_Address ip, in_port_t port)
 {
     int fd;
 
@@ -948,7 +946,7 @@ void clif_changemapserver(MapSessionData *sd,
     mapname.write_to(sign_cast<char *>(WFIFOP(fd, 2)));
     WFIFOW(fd, 18) = x;
     WFIFOW(fd, 20) = y;
-    WFIFOL(fd, 22) = ip;
+    WFIFOL(fd, 22) = ip.to_n();
     WFIFOW(fd, 26) = port;
     WFIFOSET(fd, packet_len_table[0x92]);
 }
@@ -3268,12 +3266,12 @@ static void clif_parse_GetCharNameRequest(int fd, MapSessionData *sd)
 
             if (pc_isGM(sd) >= battle_config.hack_info_GM_level)
             {
-                in_addr_t ip = ssd->ip;
+                in_addr_t ip = session[ssd->fd]->client_addr.to_n();
                 WFIFOW(fd, 0) = 0x20C;
 
                 // Mask the IP using the char-server password
                 if (battle_config.mask_ip_gms)
-                    ip = MD5_ip(chrif_getpasswd(), ssd->ip);
+                    ip = MD5_ip(chrif_getpasswd(), ip);
 
                 WFIFOL(fd, 2) = account_id;
                 WFIFOL(fd, 6) = ip;

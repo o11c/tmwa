@@ -6,6 +6,7 @@
 # include "../common/sanity.hpp"
 
 # include "../lib/fixed_string.hpp"
+# include "../lib/ip.hpp"
 
 # define CHAR_CONF_NAME "conf/char_athena.conf"
 # define LOGIN_LAN_CONF_NAME "conf/lan_support.conf"
@@ -22,7 +23,7 @@ enum gender
 
 struct mmo_map_server
 {
-    in_addr_t ip;
+    IP_Address ip;
     in_port_t port;
     int users;
     fixed_string<16> map[MAX_MAP_PER_SERVER];

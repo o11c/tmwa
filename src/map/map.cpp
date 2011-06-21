@@ -966,7 +966,7 @@ int map_mapname2mapid(const fixed_string<16>& name)
 }
 
 /// Get IP/port of a map on another server
-bool map_mapname2ipport(const fixed_string<16>& name, in_addr_t *ip, in_port_t *port)
+bool map_mapname2ipport(const fixed_string<16>& name, IP_Address *ip, in_port_t *port)
 {
     map_data *md = static_cast<map_data *>(strdb_search(map_db, &name).p);
     if (md == NULL || md->gat)
@@ -1037,7 +1037,7 @@ void map_setcell(int m, int x, int y, uint8_t t)
 }
 
 /// know what to do for maps on other map-servers
-bool map_setipport(const fixed_string<16>& name, in_addr_t ip, in_port_t port)
+bool map_setipport(const fixed_string<16>& name, IP_Address ip, in_port_t port)
 {
     map_data *md = static_cast<map_data *>(strdb_search(map_db, &name).p);
     if (!md)
@@ -1260,7 +1260,7 @@ static void map_config_read(const char *cfgName)
                              h->h_addr[0], h->h_addr[1],
                              h->h_addr[2], h->h_addr[3]);
                 }
-                chrif_setip(w2);
+                chrif_setip(IP_Address(w2));
                 continue;
             }
             if (strcasecmp(w1, "char_port") == 0)
@@ -1270,17 +1270,14 @@ static void map_config_read(const char *cfgName)
             }
             if (strcasecmp(w1, "map_ip") == 0)
             {
+                IP_Address ip(w2);
                 struct hostent *h = gethostbyname(w2);
                 if (h)
                 {
-                    printf("Map server IP address : %s -> %hhu.%hhu.%hhu.%hhu\n", w2,
-                            h->h_addr[0], h->h_addr[1],
-                            h->h_addr[2], h->h_addr[3]);
-                    sprintf(w2, "%hhu.%hhu.%hhu.%hhu",
-                             h->h_addr[0], h->h_addr[1],
-                             h->h_addr[2], h->h_addr[3]);
+                    printf("Map server IP address : %s -> %s\n", w2,
+                           ip.to_string().c_str());
                 }
-                clif_setip(w2);
+                clif_setip(ip);
                 continue;
             }
             if (strcasecmp(w1, "map_port") == 0)

@@ -36,9 +36,8 @@
 
 int char_fd = -1;
 
-static char char_ip_str[16];
-static int char_ip;
-static int char_port = 6121;
+static IP_Address char_ip;
+static in_port_t char_port = 6121;
 static char userid[24], passwd[24];
 static int chrif_state;
 
@@ -62,10 +61,9 @@ const char *chrif_getpasswd(void)
 }
 
 /// Set the IP of the char server
-void chrif_setip(const char *ip)
+void chrif_setip(IP_Address ip)
 {
-    STRZCPY(char_ip_str, ip);
-    char_ip = inet_addr(char_ip_str);
+    char_ip = ip;
 }
 
 /// Set the port of the char server
@@ -111,7 +109,7 @@ static void chrif_connect(int fd)
     STRZCPY2(sign_cast<char *>(WFIFOP(fd, 2)), userid);
     STRZCPY2(sign_cast<char *>(WFIFOP(fd, 26)), passwd);
     WFIFOL(fd, 50) = 0;
-    WFIFOL(fd, 54) = clif_getip();
+    WFIFOL(fd, 54) = clif_getip().to_n();
     WFIFOW(fd, 58) = clif_getport();
     WFIFOSET(fd, 60);
 }
@@ -132,7 +130,8 @@ static void chrif_recvmap(int fd)
     if (chrif_state < 2)
         return;
 
-    in_addr_t ip = RFIFOL(fd, 4);
+    IP_Address ip;
+    ip.from_n(RFIFOL(fd, 4));
     in_port_t port = RFIFOW(fd, 8);
     int j = 0;
     for (int i = 10; j < (RFIFOW(fd, 2) - 10) / 16; i += 16, j++)
@@ -141,19 +140,17 @@ static void chrif_recvmap(int fd)
         mapname.copy_from(sign_cast<const char *>(RFIFOP(fd, i)));
         map_setipport(mapname, ip, port);
     }
-    uint8_t *p = reinterpret_cast<uint8_t *>(&ip);
-    map_log("recv map on %hhu.%hhu.%hhu.%hhu:%hu (%d maps)\n", p[0], p[1], p[2], p[3], port, j);
+    map_log("recv map on %s:%hu (%d maps)\n", ip.to_string().c_str(), port, j);
 }
 
 /// Arrange for a character to change to another map server
 void chrif_changemapserver(MapSessionData *sd,
                            const fixed_string<16>& mapname, int x, int y,
-                           in_addr_t ip, in_port_t port)
+                           IP_Address ip, in_port_t port)
 {
     nullpo_retv(sd);
 
     int i = sd->fd;
-    in_addr_t s_ip = session[i]->client_addr.sin_addr.s_addr;
 
     WFIFOW(char_fd, 0) = 0x2b05;
     WFIFOL(char_fd, 2) = sd->id;
@@ -163,10 +160,10 @@ void chrif_changemapserver(MapSessionData *sd,
     mapname.write_to(sign_cast<char *>(WFIFOP(char_fd, 18)));
     WFIFOW(char_fd, 34) = x;
     WFIFOW(char_fd, 36) = y;
-    WFIFOL(char_fd, 38) = ip;
+    WFIFOL(char_fd, 38) = ip.to_n();
     WFIFOL(char_fd, 42) = port;
     WFIFOB(char_fd, 44) = sd->status.sex;
-    WFIFOL(char_fd, 45) = s_ip;
+    WFIFOL(char_fd, 45) = session[i]->client_addr.to_n();
     WFIFOSET(char_fd, 49);
 }
 
@@ -188,8 +185,10 @@ static void chrif_changemapserverack(int fd)
 
     fixed_string<16> mapname;
     mapname.copy_from(sign_cast<const char *>(RFIFOP(fd, 18)));
+    IP_Address ip;
+    ip.from_n(RFIFOL(fd, 38));
     clif_changemapserver(sd, mapname, RFIFOW(fd, 34), RFIFOW(fd, 36),
-                         RFIFOL(fd, 38), RFIFOW(fd, 42));
+                         ip, RFIFOW(fd, 42));
 }
 
 /// Result of trying to connect to the char server
@@ -240,7 +239,7 @@ void chrif_authreq(MapSessionData *sd)
     WFIFOL(char_fd, 6) = sd->char_id;
     WFIFOL(char_fd, 10) = sd->login_id1;
     WFIFOL(char_fd, 14) = sd->login_id2;
-    WFIFOL(char_fd, 18) = session[i]->client_addr.sin_addr.s_addr;
+    WFIFOL(char_fd, 18) = session[i]->client_addr.to_n();
     WFIFOSET(char_fd, 22);
 }
 
@@ -256,13 +255,12 @@ void chrif_charselectreq(MapSessionData *sd)
         return;
 
     int i = sd->fd;
-    in_addr_t s_ip = session[i]->client_addr.sin_addr.s_addr;
 
     WFIFOW(char_fd, 0) = 0x2b02;
     WFIFOL(char_fd, 2) = sd->id;
     WFIFOL(char_fd, 6) = sd->login_id1;
     WFIFOL(char_fd, 10) = sd->login_id2;
-    WFIFOL(char_fd, 14) = s_ip;
+    WFIFOL(char_fd, 14) = session[i]->client_addr.to_n();
     WFIFOSET(char_fd, 18);
 }
 

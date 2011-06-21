@@ -72,7 +72,9 @@ obj/char/char: obj/char/char.o \
  obj/common/db.o \
  obj/common/lock.o \
  obj/common/mt_rand.o \
- obj/common/utils.o
+ obj/common/utils.o \
+ obj/lib/ip.o \
+
 obj/ladmin/ladmin: obj/ladmin/ladmin.o \
  obj/common/md5calc.o \
  obj/common/core.o \
@@ -80,7 +82,9 @@ obj/ladmin/ladmin: obj/ladmin/ladmin.o \
  obj/common/timer.o \
  obj/common/db.o \
  obj/common/mt_rand.o \
- obj/common/utils.o
+ obj/common/utils.o \
+ obj/lib/ip.o \
+
 obj/login/login: obj/login/login.o \
  obj/common/core.o \
  obj/common/socket.o \
@@ -89,7 +93,9 @@ obj/login/login: obj/login/login.o \
  obj/common/lock.o \
  obj/common/mt_rand.o \
  obj/common/md5calc.o \
- obj/common/utils.o
+ obj/common/utils.o \
+ obj/lib/ip.o \
+
 obj/map/map: obj/map/map.o \
  obj/map/tmw.o \
  obj/map/magic-interpreter-lexer.o \
@@ -123,8 +129,11 @@ obj/map/map: obj/map/map.o \
  obj/common/nullpo.o \
  obj/common/mt_rand.o \
  obj/common/md5calc.o \
- obj/common/utils.o
-obj/tool/eathena-monitor: obj/tool/eathena-monitor.o
+ obj/common/utils.o \
+ obj/lib/ip.o \
+
+obj/tool/eathena-monitor: obj/tool/eathena-monitor.o \
+
 obj/webserver/main: obj/webserver/main.o \
  obj/webserver/parse.o \
  obj/webserver/generate.o \
@@ -132,7 +141,8 @@ obj/webserver/main: obj/webserver/main.o \
  obj/webserver/logs.o \
  obj/webserver/pages/about.o \
  obj/webserver/pages/sample.o \
- obj/webserver/pages/notdone.o
+ obj/webserver/pages/notdone.o \
+
 
 map.deps: src/map/magic-interpreter-parser.cpp src/map/magic-interpreter-lexer.cpp
 %.deps: src/%/

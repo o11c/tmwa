@@ -242,7 +242,7 @@ char ladmin_log_filename[1024] = "log/ladmin.log";
 //
 //-------------------------------------------------------------------------
 int login_fd;
-int login_ip;
+IP_Address login_ip;
 int bytes_to_read = 0;         // flag to know if we waiting bytes from login-server
 char command_[1024];
 char parameters[1024];
@@ -3648,7 +3648,7 @@ static int ladmin_config_read(const char *cfgName)
     }
     fclose_(fp);
 
-    login_ip = inet_addr(loginserverip);
+    login_ip.from_string(loginserverip);
 
     Iprintf("---End reading of Ladmin configuration file.\n");
 

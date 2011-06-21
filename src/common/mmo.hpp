@@ -7,6 +7,7 @@
 # include <arpa/inet.h>
 
 # include "../lib/fixed_string.hpp"
+# include "../lib/ip.hpp"
 
 # include "utils.hpp"
 
@@ -111,7 +112,7 @@ struct mmo_charstatus
     short str, agi, vit, int_, dex, luk;
     uint8_t char_num, sex;
 
-    in_addr_t mapip;
+    IP_Address mapip;
     in_port_t mapport;
 
     struct point last_point, save_point, memo_point[10];

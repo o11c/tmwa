@@ -27,6 +27,10 @@
 /// for gethostbyname (obselete, currently used) or getaddrinfo (TODO use instead)
 #include <netdb.h>
 
+#include <vector>
+
+#include "../lib/ip.hpp"
+
 #include "../common/core.hpp"
 #include "../common/socket.hpp"
 #include "../common/timer.hpp"
@@ -35,21 +39,19 @@
 #include "../common/db.hpp"
 #include "../common/lock.hpp"
 #include "../common/mt_rand.hpp"
-
 #include "../common/md5calc.hpp"
 
 account_t account_id_count = START_ACCOUNT_NUM;
 int new_account_flag = 0;
 in_port_t login_port = 6901;
-/// TODO make this in_addr_t
-char lan_char_ip[16];
-uint8_t subneti[4];
-uint8_t subnetmaski[4];
+
+IP_Address lan_char_ip;
+IP_Mask lan_mask;
 char update_host[128] = "";
 char main_server[20] = "";
 
-char account_filename[1024] = "save/account.txt";
-char GM_account_filename[1024] = "save/gm_account.txt";
+const char account_filename[] = "save/account.txt";
+const char GM_account_filename[] = "save/gm_account.txt";
 const char login_log_filename[] = "log/login.log";
 const char login_log_unknown_packets_filename[] = "log/login_unknown_packets.log";
 
@@ -63,11 +65,11 @@ unsigned int gm_account_filename_check_timer = 15;
 
 bool display_parse_login = 0;
 bool display_parse_admin = 0;
-enum char_packets_display_t
+static enum char_packets_display_t
 {
-CP_NONE,
-CP_MOST,
-CP_ALL
+    CP_NONE,
+    CP_MOST,
+    CP_ALL
 } display_parse_fromchar = CP_NONE;
 
 // FIXME: merge the arrays into members of struct mmo_char_server
@@ -90,16 +92,12 @@ enum ACO
     ACO_MUTUAL_FAILURE,
 };
 
-typedef char access_entry[128];
-
 enum ACO access_order = ACO_DENY_ALLOW;
-unsigned int access_allownum = 0;
-unsigned int access_denynum = 0;
-access_entry *access_allow = NULL;
-access_entry *access_deny = NULL;
 
-unsigned int access_ladmin_allownum = 0;
-access_entry *access_ladmin_allow = NULL;
+std::vector<IP_Mask> access_allow;
+std::vector<IP_Mask> access_deny;
+
+std::vector<IP_Mask> access_ladmin_allow;
 
 // minimum level of player/GM (0: player, 1-99: gm) to connect on the server
 gm_level_t min_level_to_connect = 0;
@@ -128,7 +126,7 @@ struct auth_fifo
 {
     account_t account_id;
     uint32_t login_id1, login_id2;
-    in_addr_t ip;
+    IP_Address ip;
     enum gender sex;
     bool delflag;
 } auth_fifo[AUTH_FIFO_SIZE];
@@ -172,7 +170,7 @@ pid_t pid = 0; // For forked DB writes
 static const char *ip_of(int fd)
 {
     static char out[16];
-    ip_to_str(session[fd]->client_addr.sin_addr.s_addr, out);
+    strcpy(out, session[fd]->client_addr.to_string().c_str());
     return out;
 }
 
@@ -293,59 +291,25 @@ static void read_gm_account(void)
                GM_account_filename, count);
 }
 
-/// Check whether an IP is allowed by a mask
-// ip: IP address, network byte order
-// str: prefix x[.y[.z[.w]]] or mask x.x.x.x/# or x.x.x.x/y.y.y.y)
-static bool check_ipmask(in_addr_t ip, const char *str)
-{
-    uint8_t p[4];
-    int offset = 0;
-    switch (sscanf(str, "%hhu.%hhu.%hhu.%hhu%n", &p[0], &p[1], &p[2], &p[3], &offset))
-    {
-    case 0: return true;
-    case 1: return memcmp(&ip, p, 1) == 0;
-    case 2: return memcmp(&ip, p, 2) == 0;
-    case 3: return memcmp(&ip, p, 3) == 0;
-    case 4: break;
-    default: return false;
-    }
-    ip = ntohl(ip);
-    in_addr_t ip2 = ntohl(*reinterpret_cast<in_addr_t*>(p));
-    if (str[offset] != '/')
-        return ip == ip2;
-    offset++;
-
-    if (sscanf(str + offset, "%hhu.%hhu.%hhu.%hhu", &p[0], &p[1], &p[2], &p[3]) == 4)
-    {
-        in_addr_t mask = ntohl(*reinterpret_cast<in_addr_t*>(p));
-        return (ip & mask) == (ip2 & mask);
-    }
-    unsigned int bits;
-    if (sscanf(str + offset, "%u", &bits) == 1 && bits <= 32)
-        return !bits || (ip >> (32 - bits)) == (ip2 >> (32 - bits));
-    login_log("check_ipmask: invalid mask [%s].\n", str);
-    return 0;
-}
-
 /// Check whether an IP is allowed
-// ip: IP address, network byte order
 // You are allowed if both lists are empty, or
 // mode\ in list-> both    allow   deny    none
 // allow,deny      Y       Y       N       N
 // deny,allow      N       Y       N       Y
 // mutual-failure  N       Y       N       N
 
-static bool check_ip(in_addr_t ip)
+static bool check_ip(IP_Address ip)
 {
-    if (access_allownum == 0 && access_denynum == 0)
-        return 1;               // When there is no restriction, all IP are authorised.
+    // When there is no restriction, all IP are authorised.
+    if (access_allow.empty() && access_deny.empty())
+        return 1;
 
     /// Flag of whether the ip is in the allow or deny list
     bool allowed = false;
 
-    for (unsigned int i = 0; i < access_allownum; i++)
+    for (IP_Mask mask : access_allow)
     {
-        if (check_ipmask(ip, access_allow[i]))
+        if (mask.covers(ip))
         {
             if (access_order == ACO_ALLOW_DENY)
                 return 1;
@@ -355,21 +319,20 @@ static bool check_ip(in_addr_t ip)
         }
     }
 
-    for (unsigned int i = 0; i < access_denynum; i++)
-        if (check_ipmask(ip, access_deny[i]))
+    for (IP_Mask mask : access_deny)
+        if (mask.covers(ip))
             return 0;
 
     return allowed || access_order == ACO_DENY_ALLOW;
 }
 
 /// Check whether an IP is allowed for ladmin
-// ip: IP address, network byte order
-static bool check_ladminip(in_addr_t ip)
+static bool check_ladminip(IP_Address ip)
 {
-    if (access_ladmin_allownum == 0)
+    if (access_ladmin_allow.empty())
         return 1;
-    for (unsigned int i = 0; i < access_ladmin_allownum; i++)
-        if (check_ipmask(ip, access_ladmin_allow[i]))
+    for (IP_Mask mask : access_ladmin_allow)
+        if (mask.covers(ip))
             return 1;
     return 0;
 }
@@ -760,9 +723,7 @@ static account_t mmo_auth_new(struct mmo_account *account, const char *email)
 /// Try to authenticate a connection
 static enum auth_failure mmo_auth(struct mmo_account *account, int fd)
 {
-    char ip[16];
-    ip_to_str(session[fd]->client_addr.sin_addr.s_addr, ip);
-
+    const char *const ip = ip_of(fd);
 
     size_t len = strlen(account->userid) - 2;
     // Account creation with _M/_F
@@ -892,7 +853,7 @@ static void x2712(int fd, int id)
                 auth_fifo[i].login_id1 != RFIFOL(fd, 6) ||
                 auth_fifo[i].login_id2 != RFIFOL(fd, 10) ||
                 auth_fifo[i].sex != static_cast<enum gender>(RFIFOB(fd, 14)) ||
-                auth_fifo[i].ip != RFIFOL(fd, 15) ||
+                auth_fifo[i].ip.to_n() != RFIFOL(fd, 15) ||
                 auth_fifo[i].delflag)
             continue;
         auth_fifo[i].delflag = 1;
@@ -1728,7 +1689,7 @@ static void x7938(int fd)
     {
         if (server_fd[i] < 0)
             continue;
-        WFIFOL(fd, 4 + server_num * 32) = server[i].ip;
+        WFIFOL(fd, 4 + server_num * 32) = server[i].ip.to_n();
         WFIFOW(fd, 4 + server_num * 32 + 4) = server[i].port;
         STRZCPY2(sign_cast<char *>(WFIFOP(fd, 4 + server_num * 32 + 6)), server[i].name);
         WFIFOW(fd, 4 + server_num * 32 + 26) = server[i].users;
@@ -2627,18 +2588,10 @@ static void parse_admin(int fd)
 
 /// Check if IP is LAN instead of WAN
 // (send alternate char IP)
-static bool lan_ip_check(uint8_t *p)
+static bool lan_ip_check(IP_Address addr)
 {
-    bool lancheck = 1;
-    for (int i = 0; i < 4; i++)
-    {
-        if ((subneti[i] & subnetmaski[i]) != (p[i] & subnetmaski[i]))
-        {
-            lancheck = 0;
-            break;
-        }
-    }
-    printf("LAN test (result): %s source\033[0m.\n",
+    bool lancheck = lan_mask.covers(addr);
+    printf("LAN test (result): %s source\033[m.\n",
             lancheck ? "\033[1;36mLAN" : "\033[1;32mWAN");
     return lancheck;
 }
@@ -2674,7 +2627,7 @@ static void x64(int fd)
     login_log("Request for connection of %s (ip: %s).\n",
                account.userid, ip_of(fd));
 
-    if (!check_ip(session[fd]->client_addr.sin_addr.s_addr))
+    if (!check_ip(session[fd]->client_addr))
     {
         login_log("Connection refused: IP isn't authorised (deny/allow, ip: %s).\n",
                    ip_of(fd));
@@ -2762,10 +2715,10 @@ static void x64(int fd)
     {
         if (server_fd[i] < 0)
             continue;
-        if (lan_ip_check(reinterpret_cast<uint8_t *>(&session[fd]->client_addr.sin_addr)))
-            WFIFOL(fd, 47 + server_num * 32) = inet_addr(lan_char_ip);
+        if (lan_ip_check((session[fd]->client_addr)))
+            WFIFOL(fd, 47 + server_num * 32) = lan_char_ip.to_n();
         else
-            WFIFOL(fd, 47 + server_num * 32) = server[i].ip;
+            WFIFOL(fd, 47 + server_num * 32) = server[i].ip.to_n();
         WFIFOW(fd, 47 + server_num * 32 + 4) = server[i].port;
         STRZCPY2(sign_cast<char *>(WFIFOP(fd, 47 + server_num * 32 + 6)), server[i].name);
         WFIFOW(fd, 47 + server_num * 32 + 26) = server[i].users;
@@ -2805,7 +2758,7 @@ static void x64(int fd)
     auth_fifo[auth_fifo_pos].login_id2 = account.login_id2;
     auth_fifo[auth_fifo_pos].sex = account.sex;
     auth_fifo[auth_fifo_pos].delflag = 0;
-    auth_fifo[auth_fifo_pos].ip = session[fd]->client_addr.sin_addr.s_addr;
+    auth_fifo[auth_fifo_pos].ip = session[fd]->client_addr;
     auth_fifo_pos++;
 }
 
@@ -2878,7 +2831,7 @@ static void x2710(int fd)
 char_server_ok:
     login_log("Connection of the char-server '%s' accepted (account: %s, pass: %s, ip: %s)\n",
                server_name, account.userid, account.passwd, ip_of(fd));
-    server[account.account_id].ip = RFIFOL(fd, 54);
+    server[account.account_id].ip.from_n(RFIFOL(fd, 54));
     server[account.account_id].port = RFIFOW(fd, 58);
     STRZCPY(server[account.account_id].name, server_name);
     server[account.account_id].users = 0;
@@ -2918,7 +2871,7 @@ static void x7918(int fd)
 {
     WFIFOW(fd, 0) = 0x7919;
     WFIFOB(fd, 2) = 1;
-    if (!check_ladminip(session[fd]->client_addr.sin_addr.s_addr))
+    if (!check_ladminip(session[fd]->client_addr))
     {
         login_log("'ladmin'-login: Connection in administration mode refused: IP isn't authorised (ladmin_allow, ip: %s).\n",
                    ip_of(fd));
@@ -3119,13 +3072,8 @@ static void parse_login(int fd)
 static void login_lan_config_read(const char *lancfgName)
 {
     // set default configuration
-    STRZCPY(lan_char_ip, "127.0.0.1");
-    subneti[0] = 127;
-    subneti[1] = 0;
-    subneti[2] = 0;
-    subneti[3] = 1;
-    for (int j = 0; j < 4; j++)
-        subnetmaski[j] = 255;
+    lan_char_ip.from_string("127.0.0.1");
+    lan_mask.from_string("127.0.0.1/32");
 
     FILE *fp = fopen_(lancfgName, "r");
     if (!fp)
@@ -3152,74 +3100,32 @@ static void login_lan_config_read(const char *lancfgName)
         // WARNING: I don't think this should be calling gethostbyname at all, it should just parse the IP
         if (strcasecmp(w1, "lan_char_ip") == 0)
         {
-            // Read Char-Server Lan IP Address
-            struct hostent *h = gethostbyname(w2);
-            if (h)
-            {
-                sprintf(lan_char_ip, "%hhu.%hhu.%hhu.%hhu",
-                         h->h_addr[0], h->h_addr[1],
-                         h->h_addr[2], h->h_addr[3]);
-            }
-            else
-            {
-                STRZCPY(lan_char_ip, w2);
-            }
-            printf("LAN IP of char-server: %s.\n", lan_char_ip);
+            lan_char_ip.from_string(w2);
+            printf("LAN IP of char-server: %s.\n", lan_char_ip.to_string().c_str());
         }
         else if (strcasecmp(w1, "subnet") == 0)
         {
-            // Read Subnetwork
-            for (int j = 0; j < 4; j++)
-                subneti[j] = 0;
-            struct hostent *h = gethostbyname(w2);
-            if (h)
-            {
-                for (int j = 0; j < 4; j++)
-                    subneti[j] = h->h_addr[j];
-            }
-            else
-            {
-                sscanf(w2, "%hhu.%hhu.%hhu.%hhu", &subneti[0], &subneti[1],
-                        &subneti[2], &subneti[3]);
-            }
-            printf("LAN IP range: %hhu.%hhu.%hhu.%hhu.\n",
-                    subneti[0], subneti[1], subneti[2], subneti[3]);
+            lan_mask.addr.from_string(w2);
+            printf("LAN IP range: %s\n",
+                   lan_mask.addr.to_string().c_str());
         }
         else if (strcasecmp(w1, "subnetmask") == 0)
         {
-            // Read Subnetwork Mask
-            for (int j = 0; j < 4; j++)
-                subnetmaski[j] = 255;
-            struct hostent *h = gethostbyname(w2);
-            if (h)
-            {
-                for (int j = 0; j < 4; j++)
-                    subnetmaski[j] = h->h_addr[j];
-            }
-            else
-            {
-                sscanf(w2, "%hhu.%hhu.%hhu.%hhu", &subnetmaski[0], &subnetmaski[1],
-                        &subnetmaski[2], &subnetmaski[3]);
-            }
-            printf("Subnet mask to send LAN char-server IP: %hhu.%hhu.%hhu.%hhu.\n",
-                    subnetmaski[0], subnetmaski[1], subnetmaski[2],
-                    subnetmaski[3]);
+            lan_mask.mask.from_string(w2);
+            printf("Subnet mask to send LAN char-server IP: %s.\n",
+                   lan_mask.mask.to_string().c_str());
         }
     }
     fclose_(fp);
 
     // log the LAN configuration
     login_log("The LAN configuration of the server is set:\n");
-    login_log("- with LAN IP of char-server: %s.\n", lan_char_ip);
-    login_log("- with the sub-network of the char-server: %hhu.%hhu.%hhu.%hhu/%hhu.%hhu.%hhu.%hhu.\n",
-               subneti[0], subneti[1], subneti[2], subneti[3],
-               subnetmaski[0], subnetmaski[1], subnetmaski[2], subnetmaski[3]);
+    login_log("- with LAN IP of char-server: %s.\n", lan_char_ip.to_string().c_str());
+    login_log("- with the sub-network of the char-server: %s.\n",
+              lan_mask.to_string().c_str());
 
-    // sub-network check of the char-server
-    uint8_t p[4];
-    sscanf(lan_char_ip, "%hhu.%hhu.%hhu.%hhu", &p[0], &p[1], &p[2], &p[3]);
     printf("LAN test of LAN IP of the char-server: ");
-    if (!lan_ip_check(p))
+    if (!lan_ip_check(lan_char_ip))
     {
         /// Actually, this could be considered a legitimate setting
         login_log("***ERROR: LAN IP of the char-server doesn't belong to the specified Sub-network.\n");
@@ -3229,8 +3135,6 @@ static void login_lan_config_read(const char *lancfgName)
 }
 
 /// Read general configuration file
-// Note: DO NOT call login_log in here; its name is an option!
-//-----------------------------------
 static void login_config_read(const char *cfgName)
 {
     char line[1024], w1[1024], w2[1024];
@@ -3267,30 +3171,21 @@ static void login_config_read(const char *cfgName)
         {
             if (strcasecmp(w2, "clear") == 0)
             {
-                if (access_ladmin_allow)
-                    free(access_ladmin_allow);
-                access_ladmin_allow = NULL;
-                access_ladmin_allownum = 0;
+                access_ladmin_allow.empty();
                 continue;
             }
             if (strcasecmp(w2, "all") == 0)
             {
-                // reset all previous values
-                free(access_ladmin_allow);
-                // set to all (empty string matches prefix of everything)
-                CREATE(access_ladmin_allow, access_entry, 1);
-                access_ladmin_allownum = 1;
+                access_ladmin_allow = { IP_Mask() };
                 continue;
             }
             if (!w2[0])
                 continue;
             // don't add IP if already 'all'
-            if ((access_ladmin_allownum == 1 && access_ladmin_allow[0] == '\0'))
+            if ((access_ladmin_allow.size() == 1 && access_ladmin_allow[0].covers_all()))
                 continue;
 
-            RECREATE(access_ladmin_allow, access_entry, access_ladmin_allownum + 1);
-            STRZCPY(access_ladmin_allow[access_ladmin_allownum], w2);
-            access_ladmin_allownum++;
+            access_ladmin_allow.push_back(IP_Mask(w2));
             continue;
         }
         if (strcasecmp(w1, "gm_pass") == 0)
@@ -3311,16 +3206,6 @@ static void login_config_read(const char *cfgName)
         if (strcasecmp(w1, "login_port") == 0)
         {
             login_port = atoi(w2);
-            continue;
-        }
-        if (strcasecmp(w1, "account_filename") == 0)
-        {
-            STRZCPY(account_filename, w2);
-            continue;
-        }
-        if (strcasecmp(w1, "gm_account_filename") == 0)
-        {
-            STRZCPY(GM_account_filename, w2);
             continue;
         }
         if (strcasecmp(w1, "gm_account_filename_check_timer") == 0)
@@ -3391,55 +3276,39 @@ static void login_config_read(const char *cfgName)
         {
             if (strcasecmp(w2, "clear") == 0)
             {
-                free(access_allow);
-                access_allow = NULL;
-                access_allownum = 0;
+                access_allow.empty();
                 continue;
             }
             if (strcasecmp(w2, "all") == 0)
             {
-                // reset all previous values
-                free(access_allow);
-                // set to all
-                CREATE(access_allow, access_entry, 1);
-                access_allownum = 1;
+                access_allow = { IP_Mask() };
+                continue;
             }
             if (!w2[0])
                 continue;
             // don't add IP if already 'all'
-            if (access_allownum == 1 && access_allow[0] == '\0')
+            if ((access_allow.size() == 1 && access_allow[0].covers_all()))
                 continue;
-            RECREATE(access_allow, access_entry, access_allownum + 1);
-            STRZCPY(access_allow[access_allownum], w2);
-            access_allownum++;
+            access_allow.push_back(IP_Mask(w2));
             continue;
         }
         if (strcasecmp(w1, "deny") == 0)
         {
             if (strcasecmp(w2, "clear") == 0)
             {
-                free(access_deny);
-                access_deny = NULL;
-                access_denynum = 0;
+                access_deny.empty();
                 continue;
             }
             if (strcasecmp(w2, "all") == 0)
             {
-                // reset all previous values
-                free(access_deny);
-                // set to all
-                CREATE(access_deny, access_entry, 1);
-                access_denynum = 1;
+                access_deny = { IP_Mask() };
                 continue;
             }
             if (!w2[0])
                 continue;
-            // don't add IP if already 'all'
-            if (access_denynum == 1 && access_deny[0] == '\0')
+            if ((access_deny.size() == 1 && access_deny[0].covers_all()))
                 continue;
-            RECREATE(access_deny, access_entry, access_denynum + 1);
-            STRZCPY(access_deny[access_denynum], w2);
-            access_denynum++;
+            access_deny.push_back(IP_Mask(w2));
             continue;
         }
         if (strcasecmp(w1, "anti_freeze_enable") == 0)
@@ -3544,7 +3413,7 @@ static void display_conf_warnings(void)
 
     if (access_order == ACO_DENY_ALLOW)
     {
-        if (access_denynum == 1 && access_deny[0] == '\0')
+        if (access_deny.size() == 1 && access_deny[0].covers_all())
         {
             printf("***WARNING: The IP security order is 'deny,allow' (allow if not denied).\n");
             printf("            But you denied ALL IP!\n");
@@ -3552,7 +3421,7 @@ static void display_conf_warnings(void)
     }
     if (access_order == ACO_ALLOW_DENY)
     {
-        if (access_allownum == 0 && access_denynum != 0)
+        if (access_allow.empty() && !access_deny.empty())
         {
             printf("***WARNING: The IP security order is 'allow,deny' (deny if not allowed).\n");
             printf("            But you never allowed any IP!\n");
@@ -3561,13 +3430,13 @@ static void display_conf_warnings(void)
     else
     {
         // ACO_MUTUAL_FAILURE
-        if (access_allownum == 0 && access_denynum != 0)
+        if (access_allow.empty() && !access_deny.empty())
         {
             printf("***WARNING: The IP security order is 'mutual-failure'\n");
             printf("            (allow if in the allow list and not in the deny list).\n");
             printf("            But you never allowed any IP!\n");
         }
-        else if (access_denynum == 1 && access_deny[0] == '\0')
+        if (access_deny.size() == 1 && access_deny[0].covers_all())
         {
             printf("***WARNING: The IP security order is mutual-failure\n");
             printf("            (allow if in the allow list and not in the deny list).\n");
@@ -3595,15 +3464,15 @@ static void save_config_in_log(void)
     else
         login_log("- with a remote administration with the password of %d character(s).\n",
                    strlen(admin_pass));
-    if (access_ladmin_allownum == 0 || (access_ladmin_allownum == 1 && access_ladmin_allow[0] == '\0'))
+    if (access_ladmin_allow.empty() || (access_ladmin_allow.size() == 1 && access_ladmin_allow[0].covers_all()))
     {
         login_log("- to accept any IP for remote administration\n");
     }
     else
     {
         login_log("- to accept following IP for remote administration:\n");
-        for (int i = 0; i < access_ladmin_allownum; i++)
-            login_log("  %s\n", access_ladmin_allow[i]);
+        for (IP_Mask mask : access_ladmin_allow)
+            login_log("  %s\n", mask.to_string().c_str());
     }
 
     if (gm_pass[0] == '\0')
@@ -3680,66 +3549,66 @@ static void save_config_in_log(void)
 
     if (access_order == ACO_DENY_ALLOW)
     {
-        if (access_denynum == 0)
+        if (access_deny.empty())
         {
             login_log
                 ("- with the IP security order: 'deny,allow' (allow if not deny). You refuse no IP.\n");
         }
-        else if (access_denynum == 1 && access_deny[0] == '\0')
+        else if (access_deny.size() == 1 && access_deny[0].covers_all())
         {
             login_log("- with the IP security order: 'deny,allow' (allow if not deny). You refuse ALL IP.\n");
         }
         else
         {
             login_log("- with the IP security order: 'deny,allow' (allow if not deny). Refused IP are:\n");
-            for (int i = 0; i < access_denynum; i++)
-                login_log("  %s\n", access_deny[i]);
+            for (IP_Mask mask : access_deny)
+                login_log("  %s\n", mask.to_string().c_str());
         }
     }
     else if (access_order == ACO_ALLOW_DENY)
     {
-        if (access_allownum == 0)
+        if (access_allow.empty())
         {
             login_log("- with the IP security order: 'allow,deny' (deny if not allow). But, NO IP IS AUTHORISED!\n");
         }
-        else if (access_allownum == 1 && access_allow[0] == '\0')
+        else if (access_allow.size() == 1 && access_allow[0].covers_all())
         {
             login_log("- with the IP security order: 'allow,deny' (deny if not allow). You authorise ALL IP.\n");
         }
         else
         {
             login_log("- with the IP security order: 'allow,deny' (deny if not allow). Authorised IP are:\n");
-            for (int i = 0; i < access_allownum; i++)
-                login_log("  %s\n", access_allow[i]);
+            for (IP_Mask mask : access_allow)
+                login_log("  %s\n", mask.to_string().c_str());
         }
     }
     else
     {
         // ACO_MUTUAL_FAILURE
         login_log("- with the IP security order: 'mutual-failure' (allow if in the allow list and not in the deny list).\n");
-        if (access_allownum == 0)
+        if (access_allow.empty())
         {
             login_log("  But, NO IP IS AUTHORISED!\n");
         }
-        else if (access_denynum == 1 && access_deny[0] == '\0')
+        else if (access_deny.size() == 1 && access_deny[0].covers_all())
         {
             login_log("  But, you refuse ALL IP!\n");
         }
         else
         {
-            if (access_allownum == 1 && access_allow[0] == '\0')
+            if (access_allow.size() == 1 && access_allow[0].covers_all())
             {
                 login_log("  You authorise ALL IP.\n");
             }
             else
             {
                 login_log("  Authorised IP are:\n");
-                for (int i = 0; i < access_allownum; i++)
-                    login_log("    %s\n", access_allow[i]);
+                for (IP_Mask mask : access_allow)
+                    login_log("    %s\n", mask.to_string().c_str());
             }
             login_log("  Refused IP are:\n");
-            for (int i = 0; i < access_denynum; i++)
-                login_log("    %s\n", access_deny[i]);
+            for (IP_Mask mask : access_deny)
+                login_log("    %s\n", mask.to_string().c_str());
         }
     }
 }

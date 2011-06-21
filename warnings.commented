@@ -17,7 +17,7 @@
 # Fix later
 -Wno-error=deprecated-declarations
 # Really annoying - needed for = {} zero initialization
--Wno-error=missing-field-initializers
+-Wno-missing-field-initializers
 
 
 # Unavoidable, but it's still nice to know

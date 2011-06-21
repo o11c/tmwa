@@ -16,6 +16,8 @@
 #include "../common/sanity.hpp"
 #include "../common/mmo.hpp"
 
+#include "../lib/ip.hpp"
+
 enum gender
 {
     SEX_FEMALE,
@@ -65,7 +67,7 @@ struct mmo_account
 struct mmo_char_server
 {
     char name[20];
-    in_addr_t ip;
+    IP_Address ip;
     in_port_t port;
     uint32_t users;
     uint32_t maintenance;

@@ -11,6 +11,8 @@
 
 # include <time.h>
 
+# include "../lib/ip.hpp"
+
 // Struct declaration
 class SessionData
 {
@@ -40,7 +42,7 @@ struct socket_data
     /// Note that there is no need for a wdata_pos
     size_t rdata_pos;
 
-    struct sockaddr_in client_addr;
+    IP_Address client_addr;
 
     /// Send or recieve
     /// Only called when select() indicates the socket is ready
@@ -80,8 +82,7 @@ extern int fd_max;
 /// but exit if bind() or listen() fails
 int make_listen_port(uint16_t port);
 /// Connect to an address, return a connected socket or -1
-// FIXME - this is IPv4 only!
-int make_connection(uint32_t ip, uint16_t port);
+int make_connection(IP_Address ip, uint16_t port);
 /// free() the structure and close() the fd
 void delete_session(int);
 /// Make a the internal queues bigger

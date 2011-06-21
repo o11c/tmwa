@@ -168,7 +168,7 @@ static int add_path(int *heap, struct tmp_path *tp, int x, int y, int dist,
  * flag 0x10000 遠距離攻撃判定
  *------------------------------------------
  */
-static int can_place(struct map_data *m, int x, int y, int flag)
+static int can_place(map_data_local *m, int x, int y, int flag)
 {
     int c;
 
@@ -187,7 +187,7 @@ static int can_place(struct map_data *m, int x, int y, int flag)
  * (x_0,y_0)から(x_1,y_1)へ1歩で移動可能か計算
  *------------------------------------------
  */
-static int can_move(struct map_data *m, int x_0, int y_0, int x_1, int y_1,
+static int can_move(map_data_local *m, int x_0, int y_0, int x_1, int y_1,
                      int flag)
 {
     nullpo_ret(m);
@@ -214,11 +214,9 @@ static int can_move(struct map_data *m, int x_0, int y_0, int x_1, int y_1,
  */
 int path_blownpos(int m, int x_0, int y_0, int dx, int dy, int count)
 {
-    struct map_data *md;
-
     if (!maps[m].gat)
         return -1;
-    md = &maps[m];
+    map_data_local *md = &maps[m];
 
     if (count > 15)
     {                           // 最大10マスに制限
@@ -266,14 +264,13 @@ int path_search(struct walkpath_data *wpd, int m, int x_0, int y_0, int x_1,
     int heap[MAX_HEAP + 1];
     struct tmp_path tp[MAX_WALKPATH * MAX_WALKPATH];
     int i, rp, x, y;
-    struct map_data *md;
     int dx, dy;
 
     nullpo_ret(wpd);
 
     if (!maps[m].gat)
         return -1;
-    md = &maps[m];
+    map_data_local *md = &maps[m];
     if (x_1 < 0 || x_1 >= md->xs || y_1 < 0 || y_1 >= md->ys
         || (i = read_gatp(md, x_1, y_1)) == 1 || i == 5)
         return -1;

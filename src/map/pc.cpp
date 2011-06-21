@@ -309,7 +309,7 @@ int pc_makesavestatus(MapSessionData *sd)
     // セーブ禁止マップだったので指定位置に移動
     if (maps[sd->m].flag.nosave)
     {
-        struct map_data *m = &maps[sd->m];
+        map_data_local *m = &maps[sd->m];
         if (strcmp(&m->save.map, "SavePoint") == 0)
             sd->status.last_point = sd->status.save_point;
         else
@@ -5009,10 +5009,8 @@ static void pc_calc_pvprank_sub(BlockList *bl, MapSessionData *sd2)
  */
 int pc_calc_pvprank(MapSessionData *sd)
 {
-    struct map_data *m;
-
     nullpo_ret(sd);
-    nullpo_ret(m = &maps[sd->m]);
+    map_data_local *m = &maps[sd->m];
 
     if (!(m->flag.pvp))
         return 0;

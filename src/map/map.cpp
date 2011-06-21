@@ -50,7 +50,7 @@ static int block_free_count = 0, block_free_lock = 0;
 static BlockList *bl_list[BL_LIST_MAX];
 static int bl_list_count = 0;
 
-struct map_data maps[MAX_MAP_PER_SERVER];
+map_data_local maps[MAX_MAP_PER_SERVER];
 int map_num = 0;
 
 in_port_t map_port = 0;
@@ -959,18 +959,19 @@ int map_addnpc(int m, struct npc_data *nd)
 // get a map index from map name
 int map_mapname2mapid(const fixed_string<16>& name)
 {
-    struct map_data *md = static_cast<struct map_data *>(strdb_search(map_db, &name).p);
+    map_data *md = static_cast<map_data *>(strdb_search(map_db, &name).p);
     if (md == NULL || md->gat == NULL)
         return -1;
-    return md->m;
+    return static_cast<map_data_local *>(md)->m;
 }
 
 /// Get IP/port of a map on another server
 bool map_mapname2ipport(const fixed_string<16>& name, in_addr_t *ip, in_port_t *port)
 {
-    struct map_data *mdos = static_cast<struct map_data *>(strdb_search(map_db, &name).p);
-    if (mdos == NULL || mdos->gat)
+    map_data *md = static_cast<map_data *>(strdb_search(map_db, &name).p);
+    if (md == NULL || md->gat)
         return 0;
+    map_data_remote *mdos = static_cast<map_data_remote *>(md);
     *ip = mdos->ip;
     *port = mdos->port;
     return 1;
@@ -1038,16 +1039,16 @@ void map_setcell(int m, int x, int y, uint8_t t)
 /// know what to do for maps on other map-servers
 bool map_setipport(const fixed_string<16>& name, in_addr_t ip, in_port_t port)
 {
-    struct map_data *md = static_cast<struct map_data *>(strdb_search(map_db, &name).p);
+    map_data *md = static_cast<map_data *>(strdb_search(map_db, &name).p);
     if (!md)
     {
         // not exist -> add new data
-        CREATE(md, struct map_data, 1);
-        md->name = name;
-        md->gat = NULL;
-        md->ip = ip;
-        md->port = port;
-        strdb_insert(map_db, &md->name, static_cast<void *>(md));
+        map_data_remote *mdr = new map_data_remote;
+        mdr->name = name;
+        mdr->gat = NULL;
+        mdr->ip = ip;
+        mdr->port = port;
+        strdb_insert(map_db, &mdr->name, static_cast<void *>(mdr));
         return 0;
     }
     if (md->gat)
@@ -1060,8 +1061,9 @@ bool map_setipport(const fixed_string<16>& name, in_addr_t ip, in_port_t port)
         return 0;
     }
 
-    md->ip = ip;
-    md->port = port;
+    map_data_remote *mdr = static_cast<map_data_remote *>(md);
+    mdr->ip = ip;
+    mdr->port = port;
     return 0;
 }
 

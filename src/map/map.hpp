@@ -490,28 +490,25 @@ enum
 enum
 { NONE_ATTACKABLE, ATTACKABLE };
 
-struct map_data
+class map_data
 {
+public:
     fixed_string<16> name;
     // NULL for maps on other map servers
     uint8_t *gat;
-    // TODO change this into subclasses
-    // also, it would be nice if at least size info was available for remote maps
-    union
-    {
-        struct
-        {
-            in_addr_t ip;
-            in_port_t port;
-        };
-        // actually, all the remaining fields are only for maps on this server
-        // but I don't want to make the indentation too big
-        struct
-        {
-            BlockList **block;
-            BlockList **block_mob;
-        };
-    };
+};
+// it would be nice if at least size info was available for remote maps
+class map_data_remote : public map_data
+{
+public:
+    in_addr_t ip;
+    in_port_t port;
+};
+class map_data_local : public map_data
+{
+public:
+    BlockList **block;
+    BlockList **block_mob;
     int *block_count, *block_mob_count;
     int m;
     short xs, ys;
@@ -711,7 +708,7 @@ enum EQUIP
     EQUIP_WEAPON = 9
 };
 
-extern struct map_data maps[];
+extern map_data_local maps[];
 extern int map_num;
 extern int autosave_interval;
 

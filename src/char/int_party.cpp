@@ -117,7 +117,7 @@ bool inter_party_save(void)
     FILE *fp = lock_fopen(party_txt, &lock);
     if (!fp)
     {
-        char_log("int_party: can't write [%s] !!! data is lost !!!\n", party_txt);
+        char_log.error("int_party: can't write [%s] !!! data is lost !!!\n", party_txt);
         return 1;
     }
     numdb_foreach(party_db, inter_party_save_sub, fp);

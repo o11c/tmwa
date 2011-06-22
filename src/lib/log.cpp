@@ -113,6 +113,6 @@ Log root_log = Log(std::string());
 
 void init_log()
 {
-    root_log.add("stdout", false, Level::CONF, Level::CONF);
+    root_log.add("stdout", false, Level::CONF, Level::INFO);
     root_log.add("stderr", false, Level::WARNING);
 }

@@ -54,8 +54,8 @@ static bool storage_fromstr(const char *str, struct storage *p)
 
     if (p->storage_amount > MAX_STORAGE)
     {
-        char_log("%s: more than %d items on line, %d items dropped", __func__,
-                  MAX_STORAGE, p->storage_amount - MAX_STORAGE);
+        char_log.error("%s: more than %d items on line, %d items dropped", __func__,
+                       MAX_STORAGE, p->storage_amount - MAX_STORAGE);
         p->storage_amount = MAX_STORAGE;
     }
 
@@ -151,7 +151,7 @@ bool inter_storage_save(void)
     FILE *fp = lock_fopen(storage_txt, &lock);
     if (!fp)
     {
-        char_log("int_storage: %s: %m\n", storage_txt);
+        char_log.error("int_storage: %s: %m\n", storage_txt);
         return 1;
     }
     numdb_foreach(storage_db, inter_storage_save_sub, fp);
@@ -192,8 +192,8 @@ static void mapif_parse_save_storage(int fd)
     uint16_t len = RFIFOW(fd, 2);
     if (sizeof(struct storage) != len - 8)
     {
-        char_log("inter storage: data size error %d %d\n",
-                  sizeof(struct storage), len - 8);
+        char_log.error("inter storage: data size error %d %d\n",
+                       sizeof(struct storage), len - 8);
         return;
     }
     account_t account_id = RFIFOL(fd, 4);

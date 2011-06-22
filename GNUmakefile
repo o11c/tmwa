@@ -74,6 +74,7 @@ obj/char/char: obj/char/char.o \
  obj/common/mt_rand.o \
  obj/common/utils.o \
  obj/lib/ip.o \
+ obj/lib/log.o \
 
 obj/ladmin/ladmin: obj/ladmin/ladmin.o \
  obj/common/md5calc.o \
@@ -84,6 +85,7 @@ obj/ladmin/ladmin: obj/ladmin/ladmin.o \
  obj/common/mt_rand.o \
  obj/common/utils.o \
  obj/lib/ip.o \
+ obj/lib/log.o \
 
 obj/login/login: obj/login/login.o \
  obj/common/core.o \
@@ -95,6 +97,7 @@ obj/login/login: obj/login/login.o \
  obj/common/md5calc.o \
  obj/common/utils.o \
  obj/lib/ip.o \
+ obj/lib/log.o \
 
 obj/map/map: obj/map/map.o \
  obj/map/tmw.o \
@@ -131,6 +134,7 @@ obj/map/map: obj/map/map.o \
  obj/common/md5calc.o \
  obj/common/utils.o \
  obj/lib/ip.o \
+ obj/lib/log.o \
 
 obj/tool/eathena-monitor: obj/tool/eathena-monitor.o \
 

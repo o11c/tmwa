@@ -7,6 +7,7 @@
 
 # include "../lib/fixed_string.hpp"
 # include "../lib/ip.hpp"
+# include "../lib/log.hpp"
 
 # define CHAR_CONF_NAME "conf/char_athena.conf"
 # define LOGIN_LAN_CONF_NAME "conf/lan_support.conf"
@@ -36,7 +37,7 @@ const char *get_character_name(int index) __attribute__((deprecated));
 void mapif_sendallwos(int fd, const uint8_t *buf, unsigned int len);
 void mapif_send(int fd, const uint8_t *buf, unsigned int len);
 
-void char_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+extern Log char_log;
 
 extern int autosave_interval;
 

@@ -9,6 +9,8 @@
 
 #include <arpa/inet.h>
 
+#include "../lib/log.hpp"
+
 /*
 Notes about memory allocation in tmwAthena:
 There used to be 3 sources of allocation: these macros,
@@ -25,7 +27,7 @@ future calls should either use this or depend on the coming segfault.
       { perror("SYSERR: realloc failure"); abort(); } else(void)0
 
 /// Dump data in hex (without ascii)
-void hexdump(FILE *fp, const uint8_t *data, size_t len);
+void hexdump(Log& log, const uint8_t *data, size_t len);
 
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))
 #define MAX(a,b) (((a) > (b)) ? (a) : (b))
@@ -73,9 +75,6 @@ bool e_mail_check(const char *email);
 // TODO replace by config_parse_bool and config_parse_int?
 int config_switch (const char *str);
 
-/// Create a stream that discards all output and/or returns EOF for all input
-FILE *create_null_stream(const char *mode);
-
 const char *stamp_now(bool millis);
 
 const char *stamp_time(time_t when, const char *def = NULL);
@@ -84,8 +83,6 @@ static inline void log_time(FILE *fp)
 {
     fprintf(fp, "%s: ", stamp_now(true));
 }
-
-FILE *create_or_fake_or_die(const char *filename);
 
 template<int unit>
 inline void per_unit_adjust(int& val, int proportion)

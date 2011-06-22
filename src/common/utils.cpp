@@ -11,51 +11,55 @@
 #include <time.h>
 #include <sys/time.h>
 
-// for fopen_
-#include "socket.hpp"
-
 static const char hex[] = "0123456789abcdef";
 
-void hexdump(FILE *fp, const uint8_t *data, size_t len)
+void hexdump(Log& log, const uint8_t *data, size_t len)
 {
     if (len > 0x10000)
         len = 0x10000;
-    fputs("----  ?0 ?1 ?2 ?3  ?4 ?5 ?6 ?7  ?8 ?9 ?A ?B  ?C ?D ?E ?F\n", fp);
+    //         0         1         2         3         4         5         6
+    //         012345678901234567890123456789012345678901234567890123456789
+    log.debug("----  ?0 ?1 ?2 ?3  ?4 ?5 ?6 ?7  ?8 ?9 ?A ?B  ?C ?D ?E ?F\n");
     for (uint16_t i = 0; i < len/16; i++, data += 16)
     {
-        fputc(hex[(i>>8)%16], fp);
-        fputc(hex[(i>>4)%16], fp);
-        fputc(hex[i%16], fp);
-        fputc('?', fp);
+        char buf[56+1];
+        buf[0] = hex[(i>>8)%16];
+        buf[1] = hex[(i>>4)%16];
+        buf[2] = hex[i%16];
+        buf[3] = '?';
+
         for (uint8_t j=0; j<16; j++)
         {
             if (j%4 == 0)
-                fputc(' ', fp);
-            fputc(' ', fp);
-            fputc(hex[(i>>4)%16], fp);
-            fputc(hex[i%16], fp);
+                buf[4 + (j/4) * 13] = ' ';
+            buf[5 + j*13/4] = ' ';
+            buf[6 + j*13/4] = hex[(data[j]>>4)%16];
+            buf[7 + j*13/4] = hex[data[j]%16];
         }
+        buf[56] = '\0';
+        log.debug("%s", buf);
     }
     if (len%16)
     {
-        fputc(hex[((len/16)>>8)%16], fp);
-        fputc(hex[((len/16)>>4)%16], fp);
-        fputc(hex[(len/16)%16], fp);
-        fputc('?', fp);
-    }
-    for (uint8_t j=0; j< len%16; j++)
-    {
-        if (j%4 == 0)
-            fputc(' ', fp);
-        fputc(' ', fp);
-        fputc(hex[(j>>4)%16], fp);
-        fputc(hex[j%16], fp);
+        char buf[56+1];
+        buf[0] = hex[((len/16)>>8)%16];
+        buf[1] = hex[((len/16)>>4)%16];
+        buf[2] = hex[(len/16)%16];
+        buf[3] = '?';
+
+        for (uint8_t j=0; j < len%16; j++)
+        {
+            if (j%4 == 0)
+                buf[4 + (j/4) * 13] = ' ';
+            buf[5 + j*13/4] = ' ';
+            buf[6 + j*13/4] = hex[(data[j]>>4)%16];
+            buf[7 + j*13/4] = hex[data[j]%16];
+        }
+        buf[8 + (len%16 - 1) * 13/4] = '\0';
+        log.debug("%s\n", buf);
     }
 }
 
-// This would be in the header so it could be inlined, but
-// on old systems it requires _GNU_SOURCE and
-// I don't want to apply that globally
 bool strzcpy(char *dst, const char *src, size_t n)
 {
     if (!n) abort();
@@ -135,14 +139,6 @@ int config_switch(const char *str)
     return atoi(str);
 }
 
-// this is lower overhead than opening /dev/null
-// and much simpler to code than if we had to check for NULL FILE *
-FILE *create_null_stream(const char *mode)
-{
-    cookie_io_functions_t null_stream = {NULL, NULL, NULL, NULL};
-    return fopencookie(NULL, mode, null_stream);
-}
-
 #define DATE_FORMAT "%Y-%m-%d %H:%M:%S"
 #define DATE_FORMAT_MAX 20
 const char *stamp_now(bool millis)
@@ -163,17 +159,4 @@ const char *stamp_time(time_t when, const char *def)
     static char tmpstr[DATE_FORMAT_MAX];
     strftime(tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime(&when));
     return tmpstr;
-}
-
-FILE *create_or_fake_or_die(const char *filename)
-{
-    FILE *out = fopen_(filename, "a");
-    if (out)
-        return out;
-    fprintf(stderr, "Unable to open file: %s: %m\n", filename);
-    out = create_null_stream("w");
-    if (out)
-        return out;
-    fprintf(stderr, "Could not create a fake log: %m\n");
-    abort();
 }

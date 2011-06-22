@@ -136,27 +136,8 @@ time_t update_online;
 /// For forked DB writes
 pid_t pid = 0;
 
-static FILE *logfp;
-static FILE *unk_packets;
-
-/// Writing something to log file (with timestamp) and to stderr (without)
-void char_log(const char *fmt, ...)
-{
-    if (!fmt || !fmt[0])
-    {
-        fputc('\n', logfp);
-        return;
-    }
-    va_list ap;
-    va_start(ap, fmt);
-
-    log_time(logfp);
-
-    vfprintf(logfp, fmt, ap);
-    vfprintf(stderr, fmt, ap);
-    fflush(logfp);
-    va_end(ap);
-}
+Log char_log("char");
+Log unknown_packet_log("char.unknown");
 
 ///Return level of a GM (0 if not a GM)
 static gm_level_t isGM(int account_id)
@@ -321,10 +302,10 @@ static int mmo_char_fromstr(char *str, struct mmo_charstatus *p)
 
     if (strcasecmp(whisper_server_name, p->name) == 0)
     {
-        char_log("mmo_auth_init: ******WARNING: character name has whisper server name:\n"
-                  "Character name '%s' = whisper server name '%s'.\n",
-                  p->name, whisper_server_name);
-        char_log("               Character read. Suggestion: change the whisper server name.\n");
+        char_log.warn("mmo_auth_init: ******WARNING: character name has whisper server name:\n"
+                      "Character name '%s' = whisper server name '%s'.\n",
+                      p->name, whisper_server_name);
+        char_log.warn("               Character read. Suggestion: change the whisper server name.\n");
     }
 
     str += next;
@@ -431,8 +412,8 @@ static void mmo_char_init(void)
     FILE *fp = fopen_(char_txt, "r");
     if (!fp)
     {
-        char_log("Characters file not found: %s.\n", char_txt);
-        char_log("Id for the next created character: %d.\n", char_id_count);
+        char_log.warn("Characters file not found: %s.\n", char_txt);
+        char_log.info("Id for the next created character: %d.\n", char_id_count);
         return;
     }
 
@@ -479,48 +460,48 @@ static void mmo_char_init(void)
         switch (ret)
         {
         case -1:
-            char_log("Duplicate character id in the next character line (character not read):\n");
+            char_log.warn("Duplicate character id in the next character line (character not read):\n");
             break;
         case -2:
-            char_log("Duplicate character name in the next character line (character not read):\n");
+            char_log.warn("Duplicate character name in the next character line (character not read):\n");
             break;
         case -3:
-            char_log("Invalid memo point structure in the next character line (character not read):\n");
+            char_log.warn("Invalid memo point structure in the next character line (character not read):\n");
             break;
         case -4:
-            char_log("Invalid inventory item structure in the next character line (character not read):\n");
+            char_log.warn("Invalid inventory item structure in the next character line (character not read):\n");
             break;
         case -5:
-            char_log("Invalid cart item structure in the next character line (character not read):\n");
+            char_log.warn("Invalid cart item structure in the next character line (character not read):\n");
             break;
         case -6:
-            char_log("Invalid skill structure in the next character line (character not read):\n");
+            char_log.warn("Invalid skill structure in the next character line (character not read):\n");
             break;
         case -7:
-            char_log("Invalid register structure in the next character line (character not read):\n");
+            char_log.warn("Invalid register structure in the next character line (character not read):\n");
             break;
         default:       // 0
-            char_log("Unabled to get a character in the next line - Basic structure of line (before inventory) is incorrect (character not read):\n");
+            char_log.warn("Unabled to get a character in the next line - Basic structure of line (before inventory) is incorrect (character not read):\n");
             break;
         }
-        char_log("%s", line);
+        char_log.warn("%s", line);
     }
     fclose_(fp);
 
     if (char_num == 0)
     {
-        char_log("mmo_char_init: No character found in %s.\n", char_txt);
+        char_log.info("mmo_char_init: No character found in %s.\n", char_txt);
     }
     else if (char_num == 1)
     {
-        char_log("mmo_char_init: 1 character read in %s.\n", char_txt);
+        char_log.info("mmo_char_init: 1 character read in %s.\n", char_txt);
     }
     else
     {
-        char_log("mmo_char_init: %d characters read in %s.\n", char_num, char_txt);
+        char_log.info("mmo_char_init: %d characters read in %s.\n", char_num, char_txt);
     }
 
-    char_log("Id for the next created character: %d.\n", char_id_count);
+    char_log.info("Id for the next created character: %d.\n", char_id_count);
 }
 
 /// Save characters in athena.txt
@@ -551,7 +532,7 @@ static void mmo_char_sync(void)
     FILE *fp = lock_fopen(char_txt, &lock);
     if (!fp)
     {
-        char_log("WARNING: Server can't save characters.\n");
+        char_log.error("WARNING: Server can't save characters.\n");
         return;
     }
     for (int i = 0; i < char_num; i++)
@@ -616,8 +597,8 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
     name[23] = '\0';
     if (has_control_chars(name))
     {
-        char_log("Make new char error (control char received in the name): (connection #%d, account: %d).\n",
-                  fd, sd->account_id);
+        char_log.info("Make new char error (control char received in the name): (connection #%d, account: %d).\n",
+                      fd, sd->account_id);
         return NULL;
     }
 
@@ -629,8 +610,8 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
     // check length of character name
     if (strlen(name) < 4)
     {
-        char_log("Make new char error (character name too small): (connection #%d, account: %d, name: '%s').\n",
-                  fd, sd->account_id, name);
+        char_log.info("Make new char error (character name too small): (connection #%d, account: %d, name: '%s').\n",
+                      fd, sd->account_id, name);
         return NULL;
     }
 
@@ -640,8 +621,8 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
         for (int i = 0; name[i]; i++)
             if (strchr(char_name_letters, name[i]) == NULL)
             {
-                char_log("Make new char error (invalid letter in the name): (connection #%d, account: %d), name: %s, invalid letter: %c.\n",
-                          fd, sd->account_id, name, name[i]);
+                char_log.info("Make new char error (invalid letter in the name): (connection #%d, account: %d), name: %s, invalid letter: %c.\n",
+                              fd, sd->account_id, name, name[i]);
                 return NULL;
             }
         break;
@@ -649,8 +630,8 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
         for (int i = 0; name[i]; i++)
             if (strchr(char_name_letters, name[i]) != NULL)
             {
-                char_log("Make new char error (invalid letter in the name): (connection #%d, account: %d), name: %s, invalid letter: %c.\n",
-                          fd, sd->account_id, name, name[i]);
+                char_log.info("Make new char error (invalid letter in the name): (connection #%d, account: %d), name: %s, invalid letter: %c.\n",
+                              fd, sd->account_id, name, name[i]);
                     return NULL;
             }
         break;
@@ -660,12 +641,12 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
         dat.hair_style_high || dat.hair_style >= NUM_HAIR_STYLES ||
         dat.hair_color_high || dat.hair_color >= NUM_HAIR_COLORS)
     {
-        char_log("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu\n",
-                  "invalid values",
-                  fd, sd->account_id, dat.slot, name,
-                  dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
-                  dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
-                  dat.hair_style, dat.hair_color);
+        char_log.info("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu\n",
+                      "invalid values",
+                      fd, sd->account_id, dat.slot, name,
+                      dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
+                      dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+                      dat.hair_style, dat.hair_color);
         return NULL;
     }
 
@@ -674,12 +655,12 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
     {
         if (dat.stats[i] < 1 || dat.stats[i] > 9)
         {
-            char_log("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu\n",
-                      "invalid stat value: not between 1 to 9",
-                      fd, sd->account_id, dat.slot, name,
-                      dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
-                      dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
-                      dat.hair_style, dat.hair_color);
+            char_log.info("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu\n",
+                          "invalid stat value: not between 1 to 9",
+                          fd, sd->account_id, dat.slot, name,
+                          dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
+                          dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+                          dat.hair_style, dat.hair_color);
             return NULL;
         }
     }
@@ -688,35 +669,35 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
     {
         if (name_ignoring_case ? (strcmp(char_dat[i].name, name) == 0) : (strcasecmp(char_dat[i].name, name) == 0))
         {
-            char_log("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s (actual name of other char: %s), stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu.\n",
-                      "name already exists",
-                      fd, sd->account_id, dat.slot, name, char_dat[i].name,
-                      dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
-                      dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
-                      dat.hair_style, dat.hair_color);
+            char_log.info("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s (actual name of other char: %s), stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu.\n",
+                          "name already exists",
+                          fd, sd->account_id, dat.slot, name, char_dat[i].name,
+                          dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
+                          dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+                          dat.hair_style, dat.hair_color);
             return NULL;
         }
         if (char_dat[i].account_id == sd->account_id
             && char_dat[i].char_num == dat.slot)
         {
-            char_log("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s (name of other char: %s), stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu.\n",
-                      "slot already used",
-                      fd, sd->account_id, dat.slot, name, char_dat[i].name,
-                      dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
-                      dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
-                      dat.hair_style, dat.hair_color);
+            char_log.info("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s (name of other char: %s), stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu.\n",
+                          "slot already used",
+                          fd, sd->account_id, dat.slot, name, char_dat[i].name,
+                          dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
+                          dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+                          dat.hair_style, dat.hair_color);
             return NULL;
         }
     }
 
     if (strcmp(whisper_server_name, name) == 0)
     {
-        char_log("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu.\n",
-                  "name used is whisper name for server",
-                  fd, sd->account_id, dat.slot, name,
-                  dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
-                  dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
-                  dat.hair_style, dat.hair_color);
+        char_log.info("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu.\n",
+                      "name used is whisper name for server",
+                      fd, sd->account_id, dat.slot, name,
+                      dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
+                      dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+                      dat.hair_style, dat.hair_color);
         return NULL;
     }
 
@@ -729,11 +710,11 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
             online_char_server_fd[j] = -1;
     }
 
-    char_log("Creation of New Character: (connection #%d, account: %d) slot %hhu, character Name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu. [%s]\n",
-             fd, sd->account_id, dat.slot, name,
-             dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
-             dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
-             dat.hair_style, dat.hair_color, session[fd]->client_addr.to_string().c_str());
+    char_log.info("Creation of New Character: (connection #%d, account: %d) slot %hhu, character Name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu. [%s]\n",
+                  fd, sd->account_id, dat.slot, name,
+                  dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
+                  dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+                  dat.hair_style, dat.hair_color, session[fd]->client_addr.to_string().c_str());
 
     struct mmo_charstatus *chardat = &char_dat[char_num];
     memset(chardat, 0, sizeof(struct mmo_charstatus));
@@ -1263,14 +1244,13 @@ static void parse_tologin(int fd)
 {
     if (fd != login_fd)
     {
-        char_log("Error: %s called but isn't the login-server\n", __func__);
-        abort();
+        char_log.fatal("Error: %s called but isn't the login-server\n", __func__);
     }
 
     if (session[fd]->eof)
     {
-        printf("Char-server can't connect to login-server (connection #%d).\n",
-                fd);
+        char_log.info("Char-server can't connect to login-server (connection #%d).\n",
+                      fd);
         login_fd = -1;
         close(fd);
         delete_session(fd);
@@ -1428,14 +1408,14 @@ static void parse_tologin(int fd)
         {
             if (RFIFOL(fd, 4) < 1)
             {
-                char_log("Receiving a message for broadcast, but message is void.\n");
+                char_log.info("Receiving a message for broadcast, but message is void.\n");
                 goto end_x2726;
             }
             // at least 1 map-server
             for (int i = 0; i < MAX_MAP_SERVERS; i++)
                 if (server_fd[i] >= 0)
                     goto tmp_x2726;
-            char_log("'ladmin': Receiving a message for broadcast, but no map-server is online.\n");
+            char_log.info("'ladmin': Receiving a message for broadcast, but no map-server is online.\n");
             goto end_x2726;
         tmp_x2726: ;
             char message[RFIFOL(fd, 4) + 1];
@@ -1448,11 +1428,11 @@ static void parse_tologin(int fd)
             // if message is only composed of spaces
             if (p[0] == '\0')
             {
-                char_log("Receiving a message for broadcast, but message is only a lot of spaces.\n");
+                char_log.info("Receiving a message for broadcast, but message is only a lot of spaces.\n");
                 goto end_x2726;
             }
-            char_log("'ladmin': Receiving a message for broadcast: %s\n",
-                      message);
+            char_log.info("'ladmin': Receiving a message for broadcast: %s\n",
+                          message);
             // split message to max 80 char
             size_t len = strlen(p);
             while (p[0])
@@ -1512,13 +1492,11 @@ static void parse_tologin(int fd)
             const Version& server_version = *reinterpret_cast<const Version *>(RFIFOP(login_fd, 2));
             if (!(server_version.what_server & ATHENA_SERVER_LOGIN))
             {
-                char_log("Not a login server!");
-                abort();
+                char_log.fatal("Not a login server!");
             }
             if (server_version != tmwAthenaVersion)
             {
-                char_log("Version mismatch!");
-                abort();
+                char_log.fatal("Version mismatch!");
             }
         }
             RFIFOSKIP(fd, 10);
@@ -1553,9 +1531,9 @@ static void parse_tologin(int fd)
                         FIX(s->storage_[j].nameid);
 #undef FIX
                 if (changes)
-                    char_log("itemfrob(%d -> %d):  `%s'(%d, account %d): changed %d times\n",
-                              source_id, dest_id, c->name, c->char_id,
-                              c->account_id, changes);
+                    char_log.info("itemfrob(%d -> %d):  `%s'(%d, account %d): changed %d times\n",
+                                  source_id, dest_id, c->name, c->char_id,
+                                  c->account_id, changes);
             }
             mmo_char_sync();
             inter_storage_save();
@@ -1648,8 +1626,8 @@ static void parse_tologin(int fd)
                 gm_accounts[i].account_id = RFIFOL(fd, 4 + 5*i);
                 gm_accounts[i].level = RFIFOB(fd, 4 + 5*i + 4);
             }
-            char_log("From login-server: receiving of %d GM accounts information.\n",
-                      GM_num);
+            char_log.info("From login-server: receiving of %d GM accounts information.\n",
+                          GM_num);
             update_online = time(NULL) + 8;
             /// update online players files (perhaps some online players change of GM level)
             create_online_files();
@@ -1703,8 +1681,8 @@ static void map_anti_freeze_system(timer_id, tick_t)
             continue;
         if (!server_freezeflag[i]--)
         {
-            char_log("Map-server anti-freeze system: char-server #%d is freezed -> disconnection.\n",
-                      i);
+            char_log.warn("Map-server anti-freeze system: char-server #%d is freezed -> disconnection.\n",
+                          i);
             session[server_fd[i]]->eof = 1;
         }
     }
@@ -1752,15 +1730,15 @@ static void parse_frommap(int fd)
                     server[id].map[j].copy_from(sign_cast<const char *>(RFIFOP(fd, i)));
                     j++;
                 }
-                char_log("Map-Server %d connected: %d maps, from IP %s port %d.\n Map-server %d loading complete.\n",
-                          id, j, server[id].ip.to_string().c_str(), server[id].port, id);
+                char_log.info("Map-Server %d connected: %d maps, from IP %s port %d.\n Map-server %d loading complete.\n",
+                              id, j, server[id].ip.to_string().c_str(), server[id].port, id);
                 WFIFOW(fd, 0) = 0x2afb;
                 WFIFOB(fd, 2) = 0;
                 STRZCPY2(sign_cast<char *>(WFIFOP(fd, 3)), whisper_server_name);
                 WFIFOSET(fd, 27);
                 if (j == 0)
                 {
-                    char_log("WARNING: Map-Server %d has NO maps.\n", id);
+                    char_log.warn("WARNING: Map-Server %d has NO maps.\n", id);
                 }
                 else
                 {
@@ -1833,8 +1811,8 @@ static void parse_frommap(int fd)
                 WFIFOW(fd, 0) = 0x2afe;
                 WFIFOL(fd, 2) = RFIFOL(fd, 2);
                 WFIFOSET(fd, 6);
-                char_log("auth_fifo search error! account %d not authentified.\n",
-                          RFIFOL(fd, 2));
+                char_log.debug("auth_fifo search error! account %d not authentified.\n",
+                               RFIFOL(fd, 2));
             }
             end_x2afc:
                 RFIFOSKIP(fd, 22);
@@ -2199,8 +2177,7 @@ static void parse_char(int fd)
 {
     if (fd == login_fd)
     {
-        char_log("Login fd (%d) called %s", fd, __func__);
-        abort();
+        char_log.fatal("Login fd (%d) called %s", fd, __func__);
     }
     if (login_fd < 0 || session[fd]->eof)
     {
@@ -2244,7 +2221,7 @@ static void parse_char(int fd)
                 printf("Account Logged On; Account ID: %d.\n", acc);
             // TODO - can non-null sd happen?
             if (sd)
-                char_log("non-null session data on initial connection - I thought this couldn't happen");
+                char_log.error("non-null session data on initial connection - I thought this couldn't happen");
             if (!sd)
             {
                 sd = new CharSessionData;
@@ -2319,8 +2296,8 @@ static void parse_char(int fd)
                     break;
             if (ch == MAX_CHARS_PER_ACCOUNT)
                 goto end_x0066;
-            char_log("Character Selected, Account ID: %d, Character Slot: %d, Character Name: %s [%s]\n",
-                      sd->account_id, RFIFOB(fd, 2), sd->found_char[ch]->name, ip);
+            char_log.info("Character Selected, Account ID: %d, Character Slot: %d, Character Name: %s [%s]\n",
+                          sd->account_id, RFIFOB(fd, 2), sd->found_char[ch]->name, ip);
             // Try to find the map-server of where the player last was.
             // if that fails, warp the player to the first available map
             int i = search_mapserver(sd->found_char[ch]->last_point.map);
@@ -2732,7 +2709,7 @@ static void lan_config_read(const char *lancfgName)
     if (!lan_ip_check(lan_map_ip))
     {
         /// Actually, this could be considered a legitimate entry
-        char_log("***ERROR: LAN IP of the map-server doesn't belong to the specified Sub-network.\n");
+        char_log.error("***ERROR: LAN IP of the map-server doesn't belong to the specified Sub-network.\n");
     }
 
     printf("---End reading of Lan Support configuration...\n");
@@ -2969,10 +2946,10 @@ void term_func(void)
 
 void do_init(int argc, char **argv)
 {
-    logfp = create_or_fake_or_die(char_log_filename);
-    unk_packets = create_or_fake_or_die(char_log_unknown_packets_filename);
+    char_log.add(char_log_filename, true, Level::INFO);
+    unknown_packet_log.add(char_log_unknown_packets_filename, false, Level::DEBUG);
 
-    char_log("\nThe char-server starting...\n");
+    char_log.debug("\nThe char-server starting...\n");
 
     // FIXME: specifying config by position is deprecated
     char_config_read((argc > 1) ? argv[1] : CHAR_CONF_NAME);
@@ -3002,6 +2979,6 @@ void do_init(int argc, char **argv)
     if (anti_freeze_enable)
         add_timer_interval(gettick() + 1000, ANTI_FREEZE_INTERVAL * 1000, map_anti_freeze_system);
 
-    char_log("The char-server is ready (Server is listening on the port %d).\n",
-              char_port);
+    char_log.info("The char-server is ready (Server is listening on the port %d).\n",
+                  char_port);
 }

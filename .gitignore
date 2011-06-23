@@ -4,10 +4,10 @@
 /tags
 /obj/
 # Copied executables
-/char-server
-/ladmin
-/login-server
-/map-server
+/tmwa-char
+/tmwa-admin
+/tmwa-login
+/tmwa-map
 /eathena-monitor
 # Generated source files
 src/map/magic-interpreter-parser.hpp

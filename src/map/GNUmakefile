@@ -1,6 +1,6 @@
 .SUFFIXES:
 all:
-	make -C ../.. map-server
+	make -C ../.. tmwa-map
 clean:
 	rm -r ../../obj/map/
 %::

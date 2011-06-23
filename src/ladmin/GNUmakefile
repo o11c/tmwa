@@ -1,6 +1,6 @@
 .SUFFIXES:
 all:
-	make -C ../.. ladmin
+	make -C ../.. tmwa-admin
 clean:
 	rm -r ../../obj/ladmin/
 %::

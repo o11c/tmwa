@@ -1,6 +1,6 @@
 .SUFFIXES:
 all:
-	make -C ../.. char-server
+	make -C ../.. tmwa-char
 clean:
 	rm -r ../../obj/char/
 %::

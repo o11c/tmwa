@@ -1,9 +1,13 @@
-# defaults
+# defaults for compilation
 BISON = bison
 WARNINGS= @warnings
 CFLAGS = -pipe -g ${WARNINGS}
 CXXFLAGS = ${CFLAGS}
 LDFLAGS = -Wl,--as-needed
+
+# defaults for installation
+PREFIX=/usr/local
+PREFIX_BIN=${PREFIX}/bin
 
 # We edit the CXX variable instead of CXXFLAGS
 # because CXX is also used for dependency generation and linking

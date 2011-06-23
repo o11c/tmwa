@@ -1,6 +1,6 @@
 .SUFFIXES:
 all:
-	make -C ../.. login-server
+	make -C ../.. tmwa-login
 clean:
 	rm -r ../../obj/login/
 %::

@@ -73,7 +73,7 @@ struct item
     short broken;
 };
 
-struct point
+struct Point
 {
     fixed_string<16> map;
     short x, y;
@@ -115,7 +115,7 @@ struct mmo_charstatus
     IP_Address mapip;
     in_port_t mapport;
 
-    struct point last_point, save_point, memo_point[10];
+    Point last_point, save_point, memo_point[10];
     struct item inventory[MAX_INVENTORY];
     struct skill skill[MAX_SKILL];
     int global_reg_num;

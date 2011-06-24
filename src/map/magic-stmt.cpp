@@ -392,7 +392,7 @@ static void entity_warp(entity_t * target, int destm, int destx, int desty)
                 // Note that touching NPCs may have triggered warping and thereby updated x and y:
                 fixed_string<16>& map_name = maps[character->m].name;
 
-                pc_setpos(character, map_name, character->x, character->y, BeingRemoveType::ZERO);
+                pc_setpos(character, Point{map_name, character->x, character->y}, BeingRemoveType::ZERO);
                 break;
             }
             case BL_MOB:

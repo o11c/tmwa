@@ -9,7 +9,6 @@
 
 #include "../common/socket.hpp"
 
-#include "../lib/fixed_string.hpp"
 #include "../lib/ip.hpp"
 
 #include "map.hpp"
@@ -53,8 +52,8 @@ void clif_spawnmob(struct mob_data *); // area
 void clif_walkok(MapSessionData *);   // self
 void clif_movechar(MapSessionData *); // area
 void clif_movemob(struct mob_data *);  //area
-void clif_changemap(MapSessionData *, const fixed_string<16> &, int, int);
-void clif_changemapserver(MapSessionData *, const fixed_string<16>&, int, int, IP_Address, in_port_t);  //self
+void clif_changemap(MapSessionData *, const Point&);
+void clif_changemapserver(MapSessionData *, const Point&, IP_Address, in_port_t);  //self
 void clif_fixpos(BlockList *); // area
 void clif_fixmobpos(struct mob_data *md);
 void clif_fixpcpos(MapSessionData *sd);

@@ -637,9 +637,7 @@ int npc_touch_areanpc(MapSessionData *sd, int m, int x, int y)
     switch (maps[m].npc[i]->subtype)
     {
         case WARP:
-            pc_setpos(sd, static_cast<npc_data_warp *>(maps[m].npc[i])->warp.name,
-                      static_cast<npc_data_warp *>(maps[m].npc[i])->warp.x,
-                      static_cast<npc_data_warp *>(maps[m].npc[i])->warp.y,
+            pc_setpos(sd, static_cast<npc_data_warp *>(maps[m].npc[i])->warp.dst,
                       BeingRemoveType::ZERO);
             break;
         case MESSAGE:
@@ -1031,11 +1029,11 @@ int npc_parse_warp(char *w1, const char *, char *w3, char *w4)
     nd->opt1 = 0;
     nd->opt2 = 0;
     nd->opt3 = 0;
-    nd->warp.name = to_mapname;
+    nd->warp.dst.map = to_mapname;
     xs += 2;
     ys += 2;
-    nd->warp.x = to_x;
-    nd->warp.y = to_y;
+    nd->warp.dst.x = to_x;
+    nd->warp.dst.y = to_y;
     nd->warp.xs = xs;
     nd->warp.ys = ys;
 

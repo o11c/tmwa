@@ -919,23 +919,21 @@ void clif_setwaitclose(int fd)
 }
 
 /// Player has moved to another map
-void clif_changemap(MapSessionData *sd, const fixed_string<16>& mapname, int x, int y)
+void clif_changemap(MapSessionData *sd, const Point& point)
 {
     nullpo_retv(sd);
 
     int fd = sd->fd;
 
     WFIFOW(fd, 0) = 0x91;
-    mapname.write_to(sign_cast<char *>(WFIFOP(fd, 2)));
-    WFIFOW(fd, 18) = x;
-    WFIFOW(fd, 20) = y;
+    point.map.write_to(sign_cast<char *>(WFIFOP(fd, 2)));
+    WFIFOW(fd, 18) = point.x;
+    WFIFOW(fd, 20) = point.y;
     WFIFOSET(fd, packet_len_table[0x91]);
 }
 
 /// Player has moved to a map on another server
-void clif_changemapserver(MapSessionData *sd,
-                          const fixed_string<16>& mapname, int x, int y,
-                          IP_Address ip, in_port_t port)
+void clif_changemapserver(MapSessionData *sd, const Point& point, IP_Address ip, in_port_t port)
 {
     int fd;
 
@@ -943,9 +941,9 @@ void clif_changemapserver(MapSessionData *sd,
 
     fd = sd->fd;
     WFIFOW(fd, 0) = 0x92;
-    mapname.write_to(sign_cast<char *>(WFIFOP(fd, 2)));
-    WFIFOW(fd, 18) = x;
-    WFIFOW(fd, 20) = y;
+    point.map.write_to(sign_cast<char *>(WFIFOP(fd, 2)));
+    WFIFOW(fd, 18) = point.x;
+    WFIFOW(fd, 20) = point.y;
     WFIFOL(fd, 22) = ip.to_n();
     WFIFOW(fd, 26) = port;
     WFIFOSET(fd, packet_len_table[0x92]);
@@ -3515,9 +3513,7 @@ static void clif_parse_Restart(int fd, MapSessionData *sd)
             {
                 pc_setstand(sd);
                 pc_setrestartvalue(sd, 3);
-                pc_setpos(sd, sd->status.save_point.map,
-                          sd->status.save_point.x, sd->status.save_point.y,
-                          BeingRemoveType::QUIT);
+                pc_setpos(sd, sd->status.save_point, BeingRemoveType::QUIT);
             }
             break;
         case 0x01:

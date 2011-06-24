@@ -18,9 +18,7 @@ void chrif_authreq(MapSessionData *);
 void chrif_save(MapSessionData *);
 void chrif_charselectreq(MapSessionData *);
 
-void chrif_changemapserver(MapSessionData *sd,
-                           const fixed_string<16>& mapname, int x, int y,
-                           IP_Address ip, in_port_t port);
+void chrif_changemapserver(MapSessionData *, const Point&, IP_Address ip, in_port_t port);
 
 void chrif_changegm(int id, const char *pass, int len);
 void chrif_changeemail(int id, const char *actual_email, const char *new_email);

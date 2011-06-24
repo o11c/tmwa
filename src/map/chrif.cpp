@@ -144,9 +144,7 @@ static void chrif_recvmap(int fd)
 }
 
 /// Arrange for a character to change to another map server
-void chrif_changemapserver(MapSessionData *sd,
-                           const fixed_string<16>& mapname, int x, int y,
-                           IP_Address ip, in_port_t port)
+void chrif_changemapserver(MapSessionData *sd, const Point& point, IP_Address ip, in_port_t port)
 {
     nullpo_retv(sd);
 
@@ -157,9 +155,9 @@ void chrif_changemapserver(MapSessionData *sd,
     WFIFOL(char_fd, 6) = sd->login_id1;
     WFIFOL(char_fd, 10) = sd->login_id2;
     WFIFOL(char_fd, 14) = sd->status.char_id;
-    mapname.write_to(sign_cast<char *>(WFIFOP(char_fd, 18)));
-    WFIFOW(char_fd, 34) = x;
-    WFIFOW(char_fd, 36) = y;
+    point.map.write_to(sign_cast<char *>(WFIFOP(char_fd, 18)));
+    WFIFOW(char_fd, 34) = point.x;
+    WFIFOW(char_fd, 36) = point.y;
     WFIFOL(char_fd, 38) = ip.to_n();
     WFIFOL(char_fd, 42) = port;
     WFIFOB(char_fd, 44) = sd->status.sex;
@@ -187,7 +185,7 @@ static void chrif_changemapserverack(int fd)
     mapname.copy_from(sign_cast<const char *>(RFIFOP(fd, 18)));
     IP_Address ip;
     ip.from_n(RFIFOL(fd, 38));
-    clif_changemapserver(sd, mapname, RFIFOW(fd, 34), RFIFOW(fd, 36),
+    clif_changemapserver(sd, Point{mapname, RFIFOW(fd, 34), RFIFOW(fd, 36)},
                          ip, RFIFOW(fd, 42));
 }
 

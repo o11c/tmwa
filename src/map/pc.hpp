@@ -43,8 +43,8 @@ int pc_checkequip(MapSessionData *sd, int pos);
 
 int pc_walktoxy(MapSessionData *, int, int);
 int pc_stop_walking(MapSessionData *, int);
-int pc_setpos(MapSessionData *, const fixed_string<16>&, int, int, BeingRemoveType);
-int pc_setsavepoint(MapSessionData *, const fixed_string<16>&, int, int);
+int pc_setpos(MapSessionData *, const Point&, BeingRemoveType);
+int pc_setsavepoint(MapSessionData *, const Point&);
 int pc_randomwarp(MapSessionData *sd, BeingRemoveType type);
 
 int pc_checkadditem(MapSessionData *, int, int);

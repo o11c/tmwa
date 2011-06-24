@@ -641,11 +641,11 @@ int atcommand_charwarp(int fd, MapSessionData *sd,
                         const char *, const char *message)
 {
     char character[100];
-    int x, y;
+    short x, y;
 
     fixed_string<16> map_name;
     if (!message || !*message
-        || sscanf(message, "%15s %d %d %99[^\n]", &map_name, &x, &y,
+        || sscanf(message, "%15s %hd %hd %99[^\n]", &map_name, &x, &y,
                    character) < 4)
         return -1;
 
@@ -683,7 +683,7 @@ int atcommand_charwarp(int fd, MapSessionData *sd,
         clif_displaymessage(fd, "You are not authorised to warp this player from its current map.");
         return -1;
     }
-    if (pc_setpos(pl_sd, map_name, x, y, BeingRemoveType::WARP) == 0)
+    if (pc_setpos(pl_sd, Point{map_name, x, y}, BeingRemoveType::WARP) == 0)
     {
         clif_displaymessage(pl_sd->fd, "Warped.");
         clif_displaymessage(fd, "Player warped");
@@ -702,10 +702,10 @@ int atcommand_warp(int fd, MapSessionData *sd,
                     const char *, const char *message)
 {
     fixed_string<16> map_name;
-    int x = 0, y = 0;
+    short x = 0, y = 0;
 
     if (!message || !*message
-        || sscanf(message, "%15s %d %d", &map_name, &x, &y) < 1)
+        || sscanf(message, "%15s %hd %hd", &map_name, &x, &y) < 1)
         return -1;
 
     if (x <= 0)
@@ -730,7 +730,7 @@ int atcommand_warp(int fd, MapSessionData *sd,
         return -1;
     }
 
-    if (pc_setpos(sd, map_name, x, y, BeingRemoveType::WARP) == 0)
+    if (pc_setpos(sd, Point{map_name, x, y}, BeingRemoveType::WARP) == 0)
         clif_displaymessage(fd, "Warped.");
     else
     {
@@ -794,7 +794,7 @@ int atcommand_goto(int fd, MapSessionData *sd,
         clif_displaymessage(fd, "You are not authorised to warp from your current map.");
         return -1;
     }
-    pc_setpos(sd, pl_sd->mapname, pl_sd->x, pl_sd->y, BeingRemoveType::WARP);
+    pc_setpos(sd, Point{pl_sd->mapname, pl_sd->x, pl_sd->y}, BeingRemoveType::WARP);
 
     char output[200];
     sprintf(output, "Jump to %s", character);
@@ -806,10 +806,10 @@ int atcommand_goto(int fd, MapSessionData *sd,
 int atcommand_jump(int fd, MapSessionData *sd,
                     const char *, const char *message)
 {
-    int x = 0, y = 0;
+    short x = 0, y = 0;
 
     // parameters optional
-    sscanf(message, "%d %d", &x, &y);
+    sscanf(message, "%hd %hd", &x, &y);
 
     if (x <= 0 || x >= maps[sd->m].xs)
         x = MRAND(maps[sd->m].xs - 1) + 1;
@@ -823,7 +823,7 @@ int atcommand_jump(int fd, MapSessionData *sd,
         return -1;
     }
 
-    pc_setpos(sd, sd->mapname, x, y, BeingRemoveType::WARP);
+    pc_setpos(sd, Point{sd->mapname, x, y}, BeingRemoveType::WARP);
 
     char output[200];
     sprintf(output, "Jump to %d %d", x, y);
@@ -1099,7 +1099,7 @@ int atcommand_save(int fd, MapSessionData *sd,
 {
     nullpo_retr(-1, sd);
 
-    pc_setsavepoint(sd, sd->mapname, sd->x, sd->y);
+    pc_setsavepoint(sd, Point{sd->mapname, sd->x, sd->y});
     pc_makesavestatus(sd);
     chrif_save(sd);
     clif_displaymessage(fd, "Character data respawn point saved.");
@@ -1125,8 +1125,7 @@ int atcommand_load(int fd, MapSessionData *sd,
         return -1;
     }
 
-    pc_setpos(sd, sd->status.save_point.map, sd->status.save_point.x,
-              sd->status.save_point.y, BeingRemoveType::ZERO);
+    pc_setpos(sd, sd->status.save_point, BeingRemoveType::ZERO);
     clif_displaymessage(fd, "Warping to respawn point.");
 
     return 0;
@@ -2272,7 +2271,7 @@ int atcommand_recall(int fd, MapSessionData *sd,
         clif_displaymessage(fd, "You are not authorised to warp from this player's current map.");
         return -1;
     }
-    pc_setpos(pl_sd, sd->mapname, sd->x, sd->y, BeingRemoveType::QUIT);
+    pc_setpos(pl_sd, Point{sd->mapname, sd->x, sd->y}, BeingRemoveType::QUIT);
     char output[200];
     sprintf(output, "%s recalled!", character);
     clif_displaymessage(fd, output);
@@ -2636,10 +2635,10 @@ int atcommand_character_save(int fd, MapSessionData *sd,
 {
     if (!message || !*message)
         return -1;
-    int x, y;
+    short x, y;
     char character[100];
     fixed_string<16> map_name;
-    if (sscanf(message, "%15s %d %d %99[^\n]", &map_name, &x, &y, character) < 4
+    if (sscanf(message, "%15s %hd %hd %99[^\n]", &map_name, &x, &y, character) < 4
             || x < 0 || y < 0)
         return -1;
 
@@ -2669,7 +2668,7 @@ int atcommand_character_save(int fd, MapSessionData *sd,
         clif_displaymessage(fd, "You are not authorised to set this map as a save map.");
         return -1;
     }
-    pc_setsavepoint(pl_sd, map_name, x, y);
+    pc_setsavepoint(pl_sd, Point{map_name, x, y});
     clif_displaymessage(fd, "Character's respawn point changed.");
 
     return 0;
@@ -3320,7 +3319,7 @@ int atcommand_recallall(int fd, MapSessionData *sd,
         if (maps[pl_sd->m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd))
             count++;
         else
-            pc_setpos(pl_sd, sd->mapname, sd->x, sd->y, BeingRemoveType::QUIT);
+            pc_setpos(pl_sd, Point{sd->mapname, sd->x, sd->y}, BeingRemoveType::QUIT);
     }
 
     clif_displaymessage(fd, "All characters recalled!");
@@ -3369,7 +3368,7 @@ int atcommand_partyrecall(int fd, MapSessionData *sd,
         if (maps[pl_sd->m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd))
             count++;
         else
-            pc_setpos(pl_sd, sd->mapname, sd->x, sd->y, BeingRemoveType::QUIT);
+            pc_setpos(pl_sd, Point{sd->mapname, sd->x, sd->y}, BeingRemoveType::QUIT);
     }
     char output[200];
     sprintf(output, "All online characters of the %s party are near you.", p->name);
@@ -4357,7 +4356,7 @@ static int atcommand_jump_iterate(int fd, MapSessionData *sd,
         clif_displaymessage(fd, "You are not authorised to warp you from your actual map.");
         return -1;
     }
-    pc_setpos(sd, maps[pl_sd->m].name, pl_sd->x, pl_sd->y, BeingRemoveType::WARP);
+    pc_setpos(sd, Point{maps[pl_sd->m].name, pl_sd->x, pl_sd->y}, BeingRemoveType::WARP);
     sprintf(output, "Jump to %s", pl_sd->status.name);
     clif_displaymessage(fd, output);
 

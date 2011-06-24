@@ -388,8 +388,7 @@ struct npc_data_warp : npc_data
     struct
     {
         short xs, ys;
-        short x, y;
-        fixed_string<16> name;
+        Point dst;
     } warp;
     npc_data_warp() : npc_data(WARP) {}
     ~npc_data_warp() {}
@@ -535,7 +534,7 @@ public:
         unsigned no_player_drops:1; // [Jaxad0127]
         unsigned town:1;        // [remoitnane]
     } flag;
-    struct point save;
+    Point save;
     struct npc_data *npc[MAX_NPC_PER_MAP];
     struct
     {

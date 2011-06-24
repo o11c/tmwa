@@ -110,7 +110,7 @@ int start_weapon = 1201;
 int start_armor = 1202;
 
 // Initial position (set it in conf file)
-struct point start_point;
+Point start_point;
 
 struct gm_account *gm_accounts = NULL;
 int GM_num = 0;

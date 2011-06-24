@@ -1851,13 +1851,11 @@ int buildin_isat(struct script_state *st)
  */
 int buildin_warp(struct script_state *st)
 {
-    int x, y;
-    const char *str;
     MapSessionData *sd = script_rid2sd(st);
 
-    str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
-    x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
-    y = conv_num(st, &(st->stack->stack_data[st->start + 4]));
+    const char *str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
+    short x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
+    short y = conv_num(st, &(st->stack->stack_data[st->start + 4]));
     if (strcmp(str, "Random") == 0)
         pc_randomwarp(sd, BeingRemoveType::WARP);
     else if (strcmp(str, "SavePoint") == 0)
@@ -1865,22 +1863,20 @@ int buildin_warp(struct script_state *st)
         if (maps[sd->m].flag.noreturn)    // 蝶禁止
             return 0;
 
-        pc_setpos(sd, sd->status.save_point.map,
-                  sd->status.save_point.x, sd->status.save_point.y, BeingRemoveType::WARP);
+        pc_setpos(sd, sd->status.save_point, BeingRemoveType::WARP);
     }
     else if (strcmp(str, "Save") == 0)
     {
         if (maps[sd->m].flag.noreturn)    // 蝶禁止
             return 0;
 
-        pc_setpos(sd, sd->status.save_point.map,
-                  sd->status.save_point.x, sd->status.save_point.y, BeingRemoveType::WARP);
+        pc_setpos(sd, sd->status.save_point, BeingRemoveType::WARP);
     }
     else
     {
         fixed_string<16> fstr;
         fstr.copy_from(str);
-        pc_setpos(sd, fstr, x, y, BeingRemoveType::ZERO);
+        pc_setpos(sd, Point{fstr, x, y}, BeingRemoveType::ZERO);
     }
     return 0;
 }
@@ -1889,35 +1885,33 @@ int buildin_warp(struct script_state *st)
  * エリア指定ワープ
  *------------------------------------------
  */
-static void buildin_areawarp_sub(BlockList *bl, fixed_string<16> map, int x, int y)
+static void buildin_areawarp_sub(BlockList *bl, Point point)
 {
-    if (strcmp(&map, "Random") == 0)
+    if (strcmp(&point.map, "Random") == 0)
         pc_randomwarp(static_cast<MapSessionData *>(bl), BeingRemoveType::WARP);
     else
-        pc_setpos(static_cast<MapSessionData *>(bl), map, x, y, BeingRemoveType::ZERO);
+        pc_setpos(static_cast<MapSessionData *>(bl), point, BeingRemoveType::ZERO);
 }
 
 int buildin_areawarp(struct script_state *st)
 {
-    int x, y, m;
-    int x_0, y_0, x_1, y_1;
-
     fixed_string<16> src_map;
     src_map.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
-    x_0 = conv_num(st, &(st->stack->stack_data[st->start + 3]));
-    y_0 = conv_num(st, &(st->stack->stack_data[st->start + 4]));
-    x_1 = conv_num(st, &(st->stack->stack_data[st->start + 5]));
-    y_1 = conv_num(st, &(st->stack->stack_data[st->start + 6]));
+    int x_0 = conv_num(st, &(st->stack->stack_data[st->start + 3]));
+    int y_0 = conv_num(st, &(st->stack->stack_data[st->start + 4]));
+    int x_1 = conv_num(st, &(st->stack->stack_data[st->start + 5]));
+    int y_1 = conv_num(st, &(st->stack->stack_data[st->start + 6]));
     fixed_string<16> dst_map;
     dst_map.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 7])));
-    x = conv_num(st, &(st->stack->stack_data[st->start + 8]));
-    y = conv_num(st, &(st->stack->stack_data[st->start + 9]));
+    short x = conv_num(st, &(st->stack->stack_data[st->start + 8]));
+    short y = conv_num(st, &(st->stack->stack_data[st->start + 9]));
 
-    if ((m = map_mapname2mapid(src_map)) < 0)
+    int m = map_mapname2mapid(src_map);
+    if (m < 0)
         return 0;
 
     map_foreachinarea(buildin_areawarp_sub,
-                      m, x_0, y_0, x_1, y_1, BL_PC, dst_map, x, y);
+                      m, x_0, y_0, x_1, y_1, BL_PC, Point{dst_map, x, y});
     return 0;
 }
 
@@ -3369,12 +3363,11 @@ int buildin_setoption(struct script_state *st)
  */
 int buildin_savepoint(struct script_state *st)
 {
-    int x, y;
     fixed_string<16> str;
     str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
-    x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
-    y = conv_num(st, &(st->stack->stack_data[st->start + 4]));
-    pc_setsavepoint(script_rid2sd(st), str, x, y);
+    short x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
+    short y = conv_num(st, &(st->stack->stack_data[st->start + 4]));
+    pc_setsavepoint(script_rid2sd(st), Point{str, x, y});
     return 0;
 }
 
@@ -4605,25 +4598,23 @@ int buildin_failedremovecards(struct script_state *st)
 
 int buildin_mapwarp(struct script_state *st)   // Added by RoVeRT
 {
-    int x, y, m;
-    int x_0, y_0, x_1, y_1;
-
     fixed_string<16> src_map;
     src_map.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
-    if ((m = map_mapname2mapid(src_map)) < 0)
+    int m = map_mapname2mapid(src_map);
+    if (m < 0)
         return 0;
 
-    x_0 = 0;
-    y_0 = 0;
-    x_1 = maps[m].xs;
-    y_1 = maps[m].ys;
+    int x_0 = 0;
+    int y_0 = 0;
+    int x_1 = maps[m].xs;
+    int y_1 = maps[m].ys;
     fixed_string<16> dst_map;
     dst_map.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 3])));
-    x = conv_num(st, &(st->stack->stack_data[st->start + 4]));
-    y = conv_num(st, &(st->stack->stack_data[st->start + 5]));
+    short x = conv_num(st, &(st->stack->stack_data[st->start + 4]));
+    short y = conv_num(st, &(st->stack->stack_data[st->start + 5]));
 
     map_foreachinarea(buildin_areawarp_sub,
-                      m, x_0, y_0, x_1, y_1, BL_PC, dst_map, x, y);
+                      m, x_0, y_0, x_1, y_1, BL_PC, Point{dst_map, x, y});
     return 0;
 }
 

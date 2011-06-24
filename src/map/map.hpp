@@ -19,6 +19,7 @@
 
 #include <functional>
 #include <new>
+#include <vector>
 
 #ifndef MAX
 #  define MAX(x,y) (((x)>(y)) ? (x) : (y))
@@ -378,10 +379,9 @@ struct npc_data_script : npc_data
 };
 struct npc_data_shop : npc_data
 {
-    struct npc_item_list *shop_item;
+    std::vector<struct npc_item_list> shop_item;
 
     npc_data_shop() : npc_data(SHOP) {}
-    ~npc_data_shop();
 };
 struct npc_data_warp : npc_data
 {

@@ -827,12 +827,12 @@ int npc_buylist(MapSessionData *sd, int n,
 
     for (i = 0, w = 0, z = 0; i < n; i++)
     {
-        for (j = 0; nd->shop_item[j].nameid; j++)
+        for (j = 0; j < nd->shop_item.size(); j++)
         {
             if (nd->shop_item[j].nameid == item_list[i * 2 + 1])
                 break;
         }
-        if (nd->shop_item[j].nameid == 0)
+        if (j == nd->shop_item.size())
             return 3;
 
         z += static_cast<double>(nd->shop_item[j].value) * item_list[i * 2];
@@ -1079,8 +1079,7 @@ static int npc_parse_shop(char *w1, char *, char *w3, char *w4)
     m = map_mapname2mapid(mapname);
 
     nd = new npc_data_shop;
-    nd->shop_item = NULL;
-    std::vector<npc_item_list> shop_items;
+    std::vector<npc_item_list>& shop_items = nd->shop_item;
 
     p = strchr(w4, ',');
 
@@ -1140,10 +1139,6 @@ static int npc_parse_shop(char *w1, char *, char *w3, char *w4)
     nd->opt1 = 0;
     nd->opt2 = 0;
     nd->opt3 = 0;
-
-    nd->shop_item = new npc_item_list[shop_items.size() + 1];
-    for(int pos = 0; pos < shop_items.size(); pos++)
-        nd->shop_item[pos] = shop_items[pos];
 
     //printf("shop npc %s %d read done\n",mapname,nd->id);
     npc_shop++;
@@ -1849,11 +1844,6 @@ npc_data_script::~npc_data_script()
         free(scr.label_list);
     }
     npc_propagate_update(this);
-}
-
-npc_data_shop::~npc_data_shop()
-{
-    delete shop_item;
 }
 
 npc_data_message::~npc_data_message()

@@ -1699,8 +1699,6 @@ void builtin_close2(struct script_state *st)
  */
 void builtin_menu(struct script_state *st)
 {
-    char *buf;
-    int i, len = 0;            // [fate] len is the total # of bytes we need to transmit the string choices
     int menu_choices = 0;
     int finished_menu_items = 0;   // [fate] set to 1 after we hit the first empty string
 
@@ -1709,12 +1707,10 @@ void builtin_menu(struct script_state *st)
     sd = script_rid2sd(st);
 
     // We don't need to do this iteration if the player cancels, strictly speaking.
-    for (i = st->start + 2; i < st->end; i += 2)
+    for (int i = st->start + 2; i < st->end; i += 2)
     {
-        int choice_len;
         conv_str(st, &(st->stack->stack_data[i]));
-        choice_len = strlen(st->stack->stack_data[i].u.str);
-        len += choice_len + 1;  // count # of bytes we'll need for packet.  Only used if menu_or_input = 0.
+        size_t choice_len = strlen(st->stack->stack_data[i].u.str);
 
         if (choice_len && !finished_menu_items)
             ++menu_choices;
@@ -1727,15 +1723,12 @@ void builtin_menu(struct script_state *st)
         st->state = RERUNLINE;
         sd->state.menu_or_input = 1;
 
-        CREATE(buf, char, len + 1);
-        buf[0] = '\0';
-        for (i = st->start + 2; menu_choices > 0; i += 2, --menu_choices)
+        std::vector<std::string> choices;
+        for (int i = st->start + 2; menu_choices > 0; i += 2, --menu_choices)
         {
-            strcat(buf, st->stack->stack_data[i].u.str);
-            strcat(buf, ":");
+            choices.push_back(st->stack->stack_data[i].u.str);
         }
-        clif_scriptmenu(script_rid2sd(st), st->oid, buf);
-        free(buf);
+        clif_scriptmenu(script_rid2sd(st), st->oid, choices);
     }
     else if (sd->npc_menu == 0xff)
     {                           // cansel
@@ -1743,9 +1736,7 @@ void builtin_menu(struct script_state *st)
         st->state = END;
     }
     else
-    {                           // goto動作
-        // ragemu互換のため
-        pc_setreg(sd, add_str("l15"), sd->npc_menu);
+    {
         pc_setreg(sd, add_str("@menu"), sd->npc_menu);
         sd->state.menu_or_input = 0;
         if (sd->npc_menu > 0 && sd->npc_menu <= menu_choices)

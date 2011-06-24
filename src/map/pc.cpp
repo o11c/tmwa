@@ -2635,7 +2635,7 @@ int pc_stop_walking(MapSessionData *sd, int type)
     sd->to_x = sd->x;
     sd->to_y = sd->y;
     if (type & 0x01)
-        clif_fixpos(sd);
+        clif_stop(sd);
     if (type & 0x02 && battle_config.pc_damage_delay)
     {
         unsigned int tick = gettick();

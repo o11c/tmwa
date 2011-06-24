@@ -54,7 +54,7 @@ void clif_movechar(MapSessionData *); // area
 void clif_movemob(struct mob_data *);  //area
 void clif_changemap(MapSessionData *, const Point&);
 void clif_changemapserver(MapSessionData *, const Point&, IP_Address, in_port_t);  //self
-void clif_fixpos(BlockList *); // area
+void clif_stop(MapSessionData *); // area
 void clif_fixmobpos(struct mob_data *md);
 void clif_fixpcpos(MapSessionData *sd);
 void clif_npcbuysell(MapSessionData *, int);  //self
@@ -63,7 +63,7 @@ void clif_selllist(MapSessionData *); //self
 void clif_scriptmes(MapSessionData *, int, const char *);   //self
 void clif_scriptnext(MapSessionData *, int);  //self
 void clif_scriptclose(MapSessionData *, int); //self
-void clif_scriptmenu(MapSessionData *, int, const char *);  //self
+void clif_scriptmenu(MapSessionData *, int, const std::vector<std::string>&);  //self
 void clif_scriptinput(MapSessionData *, int); //self
 void clif_scriptinputstr(MapSessionData *sd, int npcid);  // self
 void clif_additem(MapSessionData *, int, int, int);   //self

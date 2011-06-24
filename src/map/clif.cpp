@@ -20,6 +20,7 @@
 #include "../common/nullpo.hpp"
 #include "../common/md5calc.hpp"
 #include "../common/mt_rand.hpp"
+#include "../lib/strings.hpp"
 
 #include "atcommand.hpp"
 #include "battle.hpp"
@@ -935,11 +936,9 @@ void clif_changemap(MapSessionData *sd, const Point& point)
 /// Player has moved to a map on another server
 void clif_changemapserver(MapSessionData *sd, const Point& point, IP_Address ip, in_port_t port)
 {
-    int fd;
-
     nullpo_retv(sd);
 
-    fd = sd->fd;
+    int fd = sd->fd;
     WFIFOW(fd, 0) = 0x92;
     point.map.write_to(sign_cast<char *>(WFIFOP(fd, 2)));
     WFIFOW(fd, 18) = point.x;
@@ -949,16 +948,12 @@ void clif_changemapserver(MapSessionData *sd, const Point& point, IP_Address ip,
     WFIFOSET(fd, packet_len_table[0x92]);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-void clif_fixpos(BlockList *bl)
+/// Player has stopped walking
+void clif_stop(MapSessionData *bl)
 {
-    uint8_t buf[16];
-
     nullpo_retv(bl);
 
+    uint8_t buf[16];
     WBUFW(buf, 0) = 0x88;
     WBUFL(buf, 2) = bl->id;
     WBUFW(buf, 6) = bl->x;
@@ -967,10 +962,7 @@ void clif_fixpos(BlockList *bl)
     clif_send(buf, packet_len_table[0x88], bl, Whom::AREA);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// An chatted NPC indicates a shop rather than a script
 void clif_npcbuysell(MapSessionData *sd, int id)
 {
     nullpo_retv(sd);
@@ -981,51 +973,41 @@ void clif_npcbuysell(MapSessionData *sd, int id)
     WFIFOSET(fd, packet_len_table[0xc4]);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Player wants to buy from the NPC: list the NPC's wares
 void clif_buylist(MapSessionData *sd, struct npc_data_shop *nd)
 {
-    struct item_data *id;
-    int fd, i, val;
-
     nullpo_retv(sd);
     nullpo_retv(nd);
 
-    fd = sd->fd;
+    int fd = sd->fd;
     WFIFOW(fd, 0) = 0xc6;
-    for (i = 0; nd->shop_item[i].nameid > 0; i++)
+    for (int i = 0; i < nd->shop_item.size(); i++)
     {
-        id = itemdb_search(nd->shop_item[i].nameid);
-        val = nd->shop_item[i].value;
+        struct item_data *id = itemdb_search(nd->shop_item[i].nameid);
+        int val = nd->shop_item[i].value;
         WFIFOL(fd, 4 + i * 11) = val;
         WFIFOL(fd, 8 + i * 11) = val;
         WFIFOB(fd, 12 + i * 11) = id->type;
         WFIFOW(fd, 13 + i * 11) = nd->shop_item[i].nameid;
     }
-    WFIFOW(fd, 2) = i * 11 + 4;
+    WFIFOW(fd, 2) = nd->shop_item.size() * 11 + 4;
     WFIFOSET(fd, WFIFOW(fd, 2));
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Player wants to sell to an NPC: list sellable items
 void clif_selllist(MapSessionData *sd)
 {
-    int fd, i, c = 0, val;
-
     nullpo_retv(sd);
 
-    fd = sd->fd;
+    int fd = sd->fd;
     WFIFOW(fd, 0) = 0xc7;
-    for (i = 0; i < MAX_INVENTORY; i++)
+    int c = 0;
+    for (int i = 0; i < MAX_INVENTORY; i++)
     {
         if (sd->status.inventory[i].nameid > 0 && sd->inventory_data[i])
         {
-            val = sd->inventory_data[i]->value_sell;
-            if (val < 0)
+            int val = sd->inventory_data[i]->value_sell;
+            if (val <= 0)
                 continue;
             WFIFOW(fd, 4 + c * 10) = i + 2;
             WFIFOL(fd, 6 + c * 10) = val;
@@ -1037,17 +1019,12 @@ void clif_selllist(MapSessionData *sd)
     WFIFOSET(fd, WFIFOW(fd, 2));
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Append another line of NPC dialog
 void clif_scriptmes(MapSessionData *sd, int npcid, const char *mes)
 {
-    int fd;
-
     nullpo_retv(sd);
 
-    fd = sd->fd;
+    int fd = sd->fd;
     WFIFOW(fd, 0) = 0xb4;
     WFIFOW(fd, 2) = strlen(mes) + 9;
     WFIFOL(fd, 4) = npcid;
@@ -1055,26 +1032,18 @@ void clif_scriptmes(MapSessionData *sd, int npcid, const char *mes)
     WFIFOSET(fd, WFIFOW(fd, 2));
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Pause in NPC dialog/script - wait for player to click "next"
 void clif_scriptnext(MapSessionData *sd, int npcid)
 {
-    int fd;
-
     nullpo_retv(sd);
 
-    fd = sd->fd;
+    int fd = sd->fd;
     WFIFOW(fd, 0) = 0xb5;
     WFIFOL(fd, 2) = npcid;
     WFIFOSET(fd, packet_len_table[0xb5]);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// NPC script ends - wait for client to reply
 void clif_scriptclose(MapSessionData *sd, int npcid)
 {
     nullpo_retv(sd);
@@ -1085,26 +1054,33 @@ void clif_scriptclose(MapSessionData *sd, int npcid)
     WFIFOSET(fd, packet_len_table[0xb6]);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-void clif_scriptmenu(MapSessionData *sd, int npcid, const char *mes)
+/// NPC script menu - wait for player to choose something
+// the values are separated by colons, so we need to do some magic
+void clif_scriptmenu(MapSessionData *sd, int npcid, const std::vector<std::string>& options)
 {
     nullpo_retv(sd);
 
+    if (options.empty())
+        abort();
+
+    std::string mes;
+    for (std::string str : options)
+    {
+        // "modifer letter colon" looks close enough
+        replace_all(str, ":", "\ua789");
+        mes += str;
+        mes += ':';
+    }
+
     int fd = sd->fd;
     WFIFOW(fd, 0) = 0xb7;
-    WFIFOW(fd, 2) = strlen(mes) + 8;
+    WFIFOW(fd, 2) = mes.size() + 8;
     WFIFOL(fd, 4) = npcid;
-    strcpy(sign_cast<char *>(WFIFOP(fd, 8)), mes);
+    memcpy(WFIFOP(fd, 8), mes.data(), mes.size());
     WFIFOSET(fd, WFIFOW(fd, 2));
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Request for numeric input
 void clif_scriptinput(MapSessionData *sd, int npcid)
 {
     nullpo_retv(sd);
@@ -1115,10 +1091,7 @@ void clif_scriptinput(MapSessionData *sd, int npcid)
     WFIFOSET(fd, packet_len_table[0x142]);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Request for string input
 void clif_scriptinputstr(MapSessionData *sd, int npcid)
 {
     nullpo_retv(sd);

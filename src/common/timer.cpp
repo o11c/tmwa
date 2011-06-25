@@ -1,21 +1,10 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-
-#include <sys/socket.h>
-
-#include <time.h>
-
+#include "timer.hpp"
 
 #include <queue>
 
-#include "timer.hpp"
 #include "utils.hpp"
 
-
 static std::priority_queue<timer_id, std::vector<timer_id>, PointeeLess<timer_id>> timers;
-
 
 tick_t current_tick;
 

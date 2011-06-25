@@ -2,10 +2,7 @@
 
 #include <sys/time.h>
 
-#include <cstdio>
-
 #include <map>
-#include <vector>
 
 struct LogSink
 {

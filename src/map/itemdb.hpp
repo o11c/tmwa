@@ -1,40 +1,7 @@
-#ifndef ITEMDB_H
-#define ITEMDB_H
+#ifndef ITEMDB_HPP
+#define ITEMDB_HPP
 
-#include "script.hpp"
-#include "map.hpp"
-
-struct item_data
-{
-    int nameid;
-    char name[24], jname[24];
-    char prefix[24], suffix[24];
-    char cardillustname[64];
-    int value_buy;
-    int value_sell;
-    int type;
-    int sex;
-    int equip;
-    int weight;
-    int atk;
-    int def;
-    int range;
-    int magic_bonus;
-    int slot;
-    int look;
-    int elv;
-    int wlv;
-    int refine;
-    script_ptr use_script;
-    script_ptr equip_script;
-    struct
-    {
-        unsigned available:1;
-        unsigned no_equip:3;
-        unsigned no_drop:1;
-        unsigned no_use:1;
-    } flag;
-};
+# include "itemdb.structs.hpp"
 
 struct item_data *itemdb_searchname(const char *name);
 struct item_data *itemdb_search(int nameid);
@@ -62,4 +29,4 @@ int itemdb_isequip3(int);
 
 void do_init_itemdb(void);
 
-#endif // ITEMDB_H
+#endif // ITEMDB_HPP

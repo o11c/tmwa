@@ -1,16 +1,16 @@
 #include "trade.hpp"
 
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 
-#include "clif.hpp"
-#include "itemdb.hpp"
-#include "map.hpp"
-#include "pc.hpp"
-#include "npc.hpp"
-#include "battle.hpp"
-#include "storage.hpp"
 #include "../common/nullpo.hpp"
+
+#include "battle.hpp"
+#include "clif.hpp"
+#include "map.hpp"
+#include "npc.hpp"
+#include "pc.hpp"
+#include "storage.hpp"
 
 /*==========================================
  * 取引要請を相手に送る

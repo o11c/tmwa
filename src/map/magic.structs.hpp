@@ -1,50 +1,34 @@
-#ifndef MAGIC_INTERPRETER_H
-#define MAGIC_INTERPRETER_H
+#ifndef MAGIC_STRUCTS
+#define MAGIC_STRUCTS
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
+# include "map.structs.hpp"
 
-#include "../common/nullpo.hpp"
+# include "../common/timer.structs.hpp"
+# include "../common/socket.structs.hpp"
 
-#include "battle.hpp"
-#include "chrif.hpp"
-#include "clif.hpp"
-#include "intif.hpp"
-#include "itemdb.hpp"
-#include "magic.hpp"
-#include "map.hpp"
-#include "mob.hpp"
-#include "npc.hpp"
-#include "pc.hpp"
-#include "party.hpp"
-#include "script.hpp"
-#include "skill.hpp"
-#include "storage.hpp"
-#include "trade.hpp"
+# define MAGIC_CONFIG_FILE "conf/magic.conf"
 
-#include "../common/timer.hpp"
-#include "../common/socket.hpp"
-
-#define SPELLARG_NONE   0       /* No spell parameter */
-#define SPELLARG_PC     1       /* Spell parameter describes pc (defaults to self) */
-#define SPELLARG_STRING 2       /* Spell parameter describes pc (defaults to self) */
+# define SPELLARG_NONE   0       /* No spell parameter */
+# define SPELLARG_PC     1       /* Spell parameter describes pc (defaults to self) */
+# define SPELLARG_STRING 2       /* Spell parameter describes pc (defaults to self) */
 
 /* ------ */
 /* Values */
 /* ------ */
 
-#define TY_UNDEF      0
-#define TY_INT        1
-#define TY_DIR        2
-#define TY_STRING     3
-#define TY_ENTITY     5
-#define TY_LOCATION   6
-#define TY_AREA       7
-#define TY_SPELL      8
-#define TY_INVOCATION 9
-#define TY_FAIL     127
+# define TY_UNDEF      0
+# define TY_INT        1
+# define TY_DIR        2
+# define TY_STRING     3
+# define TY_ENTITY     5
+# define TY_LOCATION   6
+# define TY_AREA       7
+# define TY_SPELL      8
+# define TY_INVOCATION 9
+# define TY_FAIL     127
+
+typedef MapSessionData character_t;
+typedef BlockList entity_t;
 
 struct expr;
 struct val;
@@ -59,10 +43,10 @@ typedef struct location
     int x, y;
 } location_t;
 
-#define AREA_LOCATION 0
-#define AREA_UNION    1
-#define AREA_RECT     2
-#define AREA_BAR      3
+# define AREA_LOCATION 0
+# define AREA_UNION    1
+# define AREA_RECT     2
+# define AREA_BAR      3
 
 typedef struct area
 {
@@ -105,14 +89,14 @@ typedef struct val
 /* Expressions */
 /* ----------- */
 
-#define MAX_ARGS 7              /* Max. # of args used in builtin primitive functions */
+# define MAX_ARGS 7              /* Max. # of args used in builtin primitive functions */
 
-#define EXPR_VAL        0
-#define EXPR_LOCATION   1
-#define EXPR_AREA       2
-#define EXPR_FUNAPP     3
-#define EXPR_ID         4
-#define EXPR_SPELLFIELD 5
+# define EXPR_VAL        0
+# define EXPR_LOCATION   1
+# define EXPR_AREA       2
+# define EXPR_FUNAPP     3
+# define EXPR_ID         4
+# define EXPR_SPELLFIELD 5
 
 typedef struct e_location
 {
@@ -166,25 +150,25 @@ typedef struct expr
 /* Effects */
 /* ------- */
 
-#define EFFECT_SKIP    0
-#define EFFECT_ABORT   1
-#define EFFECT_ASSIGN  2
-#define EFFECT_FOREACH 3
-#define EFFECT_FOR     4
-#define EFFECT_IF      5
-#define EFFECT_SLEEP   6
-#define EFFECT_SCRIPT  7
-#define EFFECT_BREAK   8
-#define EFFECT_OP      9
-#define EFFECT_END    10
-#define EFFECT_CALL   11
+# define EFFECT_SKIP    0
+# define EFFECT_ABORT   1
+# define EFFECT_ASSIGN  2
+# define EFFECT_FOREACH 3
+# define EFFECT_FOR     4
+# define EFFECT_IF      5
+# define EFFECT_SLEEP   6
+# define EFFECT_SCRIPT  7
+# define EFFECT_BREAK   8
+# define EFFECT_OP      9
+# define EFFECT_END    10
+# define EFFECT_CALL   11
 
-#define FOREACH_FILTER_MOB    1
-#define FOREACH_FILTER_PC     2
-#define FOREACH_FILTER_ENTITY 3
-#define FOREACH_FILTER_TARGET 4
-#define FOREACH_FILTER_SPELL  5
-#define FOREACH_FILTER_NPC    6
+# define FOREACH_FILTER_MOB    1
+# define FOREACH_FILTER_PC     2
+# define FOREACH_FILTER_ENTITY 3
+# define FOREACH_FILTER_TARGET 4
+# define FOREACH_FILTER_SPELL  5
+# define FOREACH_FILTER_NPC    6
 
 typedef struct effect
 {
@@ -215,7 +199,7 @@ typedef struct effect
             struct effect *true_branch, *false_branch;
         } e_if;
         expr_t *e_sleep;        /* sleep time */
-        script_ptr e_script;
+        char *e_script;
         struct
         {
             int id;
@@ -248,13 +232,13 @@ typedef struct component
 /* Spellguards */
 /* ----------- */
 
-#define SPELLGUARD_CONDITION  0
-#define SPELLGUARD_COMPONENTS 1
-#define SPELLGUARD_CATALYSTS  2
-#define SPELLGUARD_CHOICE     3
-#define SPELLGUARD_MANA       4
-#define SPELLGUARD_CASTTIME   5
-#define SPELLGUARD_EFFECT     6
+# define SPELLGUARD_CONDITION  0
+# define SPELLGUARD_COMPONENTS 1
+# define SPELLGUARD_CATALYSTS  2
+# define SPELLGUARD_CHOICE     3
+# define SPELLGUARD_MANA       4
+# define SPELLGUARD_CASTTIME   5
+# define SPELLGUARD_EFFECT     6
 
 typedef struct effect_set
 {
@@ -287,9 +271,9 @@ typedef struct letdef
     expr_t *expr;
 } letdef_t;
 
-#define SPELL_FLAG_LOCAL    (1 << 0)    // spell associated not with caster but with place
-#define SPELL_FLAG_SILENT   (1 << 1)    // spell invocation never uttered
-#define SPELL_FLAG_NONMAGIC (1 << 2)    // `magic word' only:  don't require spellcasting ability
+# define SPELL_FLAG_LOCAL    (1 << 0)    // spell associated not with caster but with place
+# define SPELL_FLAG_SILENT   (1 << 1)    // spell invocation never uttered
+# define SPELL_FLAG_NONMAGIC (1 << 2)    // `magic word' only:  don't require spellcasting ability
 
 typedef struct spell
 {
@@ -339,15 +323,15 @@ typedef struct
 
 /* Execution environment */
 
-#define VAR_MIN_CASTTIME   0
-#define VAR_OBSCURE_CHANCE 1
-#define VAR_CASTER         2
-#define VAR_SPELLPOWER     3
-#define VAR_SPELL          4
-#define VAR_INVOCATION     5
-#define VAR_TARGET         6
-#define VAR_SCRIPTTARGET   7
-#define VAR_LOCATION       8
+# define VAR_MIN_CASTTIME   0
+# define VAR_OBSCURE_CHANCE 1
+# define VAR_CASTER         2
+# define VAR_SPELLPOWER     3
+# define VAR_SPELL          4
+# define VAR_INVOCATION     5
+# define VAR_TARGET         6
+# define VAR_SCRIPTTARGET   7
+# define VAR_LOCATION       8
 
 struct magic_config;
 
@@ -357,11 +341,13 @@ typedef struct env
     val_t *vars;
 } env_t;
 
-#define MAX_STACK_SIZE 32
+# define VAR(i) ((!env->vars || env->vars[i].ty == TY_UNDEF)? env->base_env->vars[i] : env->vars[i])
 
-#define CONT_STACK_FOREACH 0
-#define CONT_STACK_FOR     1
-#define CONT_STACK_PROC    2
+# define MAX_STACK_SIZE 32
+
+# define CONT_STACK_FOREACH 0
+# define CONT_STACK_FOR     1
+# define CONT_STACK_PROC    2
 
 typedef struct cont_activation_record
 {
@@ -398,9 +384,9 @@ typedef struct status_change_ref
     int bl_id;
 } status_change_ref_t;
 
-#define INVOCATION_FLAG_BOUND      (1 << 0)    /* Bound directly to the caster (i.e., ignore its location) */
-#define INVOCATION_FLAG_ABORTED    (1 << 1)    /* Used `abort' to terminate */
-#define INVOCATION_FLAG_STOPATTACK (1 << 2)    /* On magical attacks:  if we run out of steam, stop attacking altogether */
+# define INVOCATION_FLAG_BOUND      (1 << 0)    /* Bound directly to the caster (i.e., ignore its location) */
+# define INVOCATION_FLAG_ABORTED    (1 << 1)    /* Used `abort' to terminate */
+# define INVOCATION_FLAG_STOPATTACK (1 << 2)    /* On magical attacks:  if we run out of steam, stop attacking altogether */
 
 struct invocation_t : public BlockList
 {
@@ -432,44 +418,6 @@ struct invocation_t : public BlockList
 extern magic_conf_t magic_conf; /* Global magic conf */
 extern env_t magic_default_env; /* Fake default environment */
 
-/**
- * Adds a component selection to a component holder(which may initially be NULL)
- */
-void magic_add_component(component_t ** component_holder, int id, int count);
-
-teleport_anchor_t *magic_find_anchor(char *name);
-
-/**
- * The parameter `param' must have been dynamically allocated; ownership is transferred to the resultant env_t.
- */
-env_t *spell_create_env(magic_conf_t * conf, spell_t * spell,
-                        character_t * caster, int spellpower, char *param);
-
-void magic_free_env(env_t * env);
-
-/**
- * near_miss is set to nonzero iff the spell only failed due to ephemereal issues(spell delay in effect, out of mana, out of components)
- */
-effect_set_t *spell_trigger(spell_t * spell, character_t * caster,
-                            env_t * env, int *near_miss);
-
-invocation_t *spell_instantiate(effect_set_t * effect, env_t * env);
-
-/**
- * Bind a spell to a subject(this is a no-op for `local' spells).
- */
-void spell_bind(character_t * subject, invocation_t * invocation);
-
-int                            // 1 on failure
-     spell_unbind(character_t * subject, invocation_t * invocation);
-
-/**
- * Clones a spell to run the at_effect field
- */
-invocation_t *spell_clone_effect(invocation_t * source);
-
-spell_t *magic_find_spell(char *invocation);
-
 /* The following is used only by the parser: */
 typedef struct args_rec
 {
@@ -485,6 +433,4 @@ typedef struct
     effect_t *body;
 } proc_t;
 
-void spell_update_location(invocation_t * invocation);
-
-#endif // MAGIC_INTERPRETER_H
+#endif // MAGIC_STRUCTS

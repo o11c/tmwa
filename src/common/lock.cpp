@@ -1,6 +1,5 @@
-#include <unistd.h>
-#include <stdio.h>
 #include "lock.hpp"
+
 #include "socket.hpp"
 
 /// Protected file writing

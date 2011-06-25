@@ -1,18 +1,14 @@
 #include "party.hpp"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "../common/db.hpp"
-#include "../common/timer.hpp"
-#include "../common/socket.hpp"
 #include "../common/nullpo.hpp"
-#include "pc.hpp"
-#include "map.hpp"
+#include "../common/timer.hpp"
+#include "../common/utils.hpp"
+
 #include "battle.hpp"
-#include "intif.hpp"
+#include "chrif.hpp"
 #include "clif.hpp"
+#include "map.hpp"
+#include "pc.hpp"
 #include "skill.hpp"
 #include "tmw.hpp"
 
@@ -20,8 +16,6 @@
 
 static int party_check_conflict(MapSessionData *sd);
 static int party_send_xy_clear(struct party *p);
-
-
 
 static struct dbt *party_db;
 

@@ -1,7 +1,13 @@
+#include "magic-base.hpp"
+
+#include "../common/timer.hpp"
+#include "../common/utils.hpp"
+
+#include "map.hpp"
+#include "pc.hpp"
+
 #include "magic.hpp"
-#include "magic-interpreter.hpp"
 #include "magic-expr.hpp"
-#include "magic-interpreter-aux.hpp"
 
 static void set_int_p(val_t * v, int i, int t)
 {

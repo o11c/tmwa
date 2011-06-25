@@ -1,9 +1,9 @@
 #ifndef LOG_HPP
 #define LOG_HPP
 
-#include <string>
+# include <cstdarg>
 
-#include <cstdarg>
+# include <string>
 
 enum class Level
 {
@@ -116,4 +116,5 @@ inline void Log::fatal(const char *format, ...)
 extern Log root_log;
 
 void init_log();
+
 #endif //LOG_HPP

@@ -45,8 +45,9 @@
 //
 */
 
-#include <time.h>
 #include "mt_rand.hpp"
+
+#include <ctime>
 
 #define N              624                  // length of state vector
 #define M              397                  // a period parameter

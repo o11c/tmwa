@@ -1,5 +1,5 @@
-#ifndef INTER_H
-#define INTER_H
+#ifndef INTER_HPP
+#define INTER_HPP
 
 void inter_init(const char *file);
 void inter_save(void);
@@ -8,8 +8,8 @@ void inter_mapif_init(int fd) __attribute__((deprecated));
 
 int inter_check_length(int fd, int length);
 
-#define inter_cfgName "conf/inter_athena.conf"
+# define inter_cfgName "conf/inter_athena.conf"
 
 extern int party_share_level;
 
-#endif
+#endif // INTER_HPP

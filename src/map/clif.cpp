@@ -1,39 +1,23 @@
 #include "clif.hpp"
 
-#include <stdio.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
-#include <sys/types.h>
-
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
-#include <time.h>
-
-#include "../common/socket.hpp"
-#include "../common/timer.hpp"
-#include "../common/version.hpp"
-#include "../common/nullpo.hpp"
-#include "../common/md5calc.hpp"
-#include "../common/mt_rand.hpp"
 #include "../lib/strings.hpp"
+
+#include "../common/md5calc.hpp"
+#include "../common/nullpo.hpp"
+#include "../common/timer.hpp"
+#include "../common/utils.hpp"
+#include "../common/version.hpp"
 
 #include "atcommand.hpp"
 #include "battle.hpp"
 #include "chrif.hpp"
-#include "intif.hpp"
 #include "itemdb.hpp"
 #include "magic.hpp"
+#include "magic-stmt.hpp"
 #include "map.hpp"
-#include "mob.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "pc.hpp"
-#include "script.hpp"
 #include "skill.hpp"
 #include "storage.hpp"
 #include "tmw.hpp"
@@ -736,7 +720,7 @@ static uint16_t clif_mob_appear(struct mob_data *md, uint8_t *buf)
     WBUFPOS(buf, 46, md->x, md->y, md->dir);
     WBUFB(buf, 49) = 5;
     WBUFB(buf, 50) = 5;
-    WBUFW(buf, 52) = std::min(battle_get_lv(md), battle_config.max_lv);
+    WBUFW(buf, 52) = MIN(battle_get_lv(md), battle_config.max_lv);
 
     return packet_len_table[0x78];
 }
@@ -761,7 +745,7 @@ static uint16_t clif_mob_move(struct mob_data *md, uint8_t *buf)
     WBUFPOS2(buf, 50, md->x, md->y, md->to_x, md->to_y);
     WBUFB(buf, 56) = 5;
     WBUFB(buf, 57) = 5;
-    WBUFW(buf, 58) = std::min(battle_get_lv(md), battle_config.max_lv);
+    WBUFW(buf, 58) = MIN(battle_get_lv(md), battle_config.max_lv);
 
     return packet_len_table[0x7b];
 }

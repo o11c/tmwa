@@ -1,8 +1,7 @@
 # defaults for compilation
 BISON = bison
 WARNINGS= @warnings
-CFLAGS = -pipe -g ${WARNINGS}
-CXXFLAGS = ${CFLAGS}
+CXXFLAGS = -pipe -g ${WARNINGS}
 LDFLAGS = -Wl,--as-needed
 
 # defaults for installation
@@ -21,13 +20,14 @@ override CXX += -std=c++0x
 
 # for clock_gettime
 override LDLIBS += -lrt
+
 # Needed for the implicit linking rule
 override CC = ${CXX}
 
-# TODO check if this is actually needed - I don't think it should be
-ifeq ($(findstring CYGWIN,$(shell uname)), CYGWIN)
-  override CFLAGS += -DFD_SETSIZE=4096 -DCYGWIN
-else
-  override CFLAGS += -fstack-protector
-endif
+# I'm not *that* confident in the code
+override CXXFLAGS += -fstack-protector
+
+# I'm probably going to get rid of this header eventually
+# Also, it is pretty stupid if you only check sanity when you remember
+override CXXFLAGS += -include src/common/sanity.hpp
 

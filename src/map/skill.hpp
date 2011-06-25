@@ -1,15 +1,14 @@
-#ifndef SKILL_H
-#define SKILL_H
+#ifndef SKILL_HPP
+#define SKILL_HPP
 
-#include "../common/mmo.hpp"
-#include "../common/timer.hpp"
+# include "../common/mmo.hpp"
+# include "../common/timer.structs.hpp"
 
-#include "map.hpp"
-#include "magic.hpp"
+# include "map.structs.hpp"
 
-#define SKILL_POOL_FLAG      0x1 // is a pool skill
-#define SKILL_POOL_ACTIVE    0x2 // is an active pool skill
-#define SKILL_POOL_ACTIVATED 0x4 // pool skill has been activated (used for clif)
+# define SKILL_POOL_FLAG      0x1 // is a pool skill
+# define SKILL_POOL_ACTIVE    0x2 // is an active pool skill
+# define SKILL_POOL_ACTIVATED 0x4 // pool skill has been activated (used for clif)
 
 // スキルデータベース
 struct skill_db
@@ -120,4 +119,4 @@ int skill_power(MapSessionData *sd, int skill);  // Yields the power of a skill.
 int skill_power_bl(BlockList *bl, int skill); // Yields the power of a skill.  This is zero if the skill is unknown or if it's a pool skill that is outside of the skill pool,
                              // otherwise a value from 0 to 255 (with 200 being the `normal maximum')
 
-#endif // SKILL_H
+#endif // SKILL_HPP

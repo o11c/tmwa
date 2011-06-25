@@ -1,30 +1,18 @@
 #include "tmw.hpp"
 
-#include <string.h>
-#include <ctype.h>
-#include <stdarg.h>
+#include <cstdarg>
 
-#include "../common/socket.hpp"
-#include "../common/timer.hpp"
-#include "../common/version.hpp"
 #include "../common/nullpo.hpp"
 
 #include "atcommand.hpp"
 #include "battle.hpp"
 #include "chrif.hpp"
 #include "clif.hpp"
-#include "intif.hpp"
 #include "itemdb.hpp"
-#include "magic.hpp"
 #include "map.hpp"
 #include "mob.hpp"
-#include "npc.hpp"
-#include "party.hpp"
 #include "pc.hpp"
-#include "script.hpp"
-#include "skill.hpp"
-#include "storage.hpp"
-#include "trade.hpp"
+
 static int tmw_ShorterStrlen(const char *s1, const char *s2);
 static int tmw_CheckChatLameness(const char *message);
 static void tmw_AutoBan(MapSessionData *sd, const char *reason, int length);

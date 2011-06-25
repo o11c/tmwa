@@ -1,16 +1,14 @@
 #include "inter.hpp"
 
-#include "../common/mmo.hpp"
-#include "char.hpp"
+#include "../common/db.hpp"
+#include "../common/lock.hpp"
 #include "../common/socket.hpp"
 #include "../common/timer.hpp"
-#include "../common/db.hpp"
-#include <string.h>
-#include <stdlib.h>
+#include "../common/utils.hpp"
 
+#include "char.hpp"
 #include "int_party.hpp"
 #include "int_storage.hpp"
-#include "../common/lock.hpp"
 
 // how long to hold whisper data, awaiting answers from map servers
 #define WHISPER_DATA_TTL (60*1000)

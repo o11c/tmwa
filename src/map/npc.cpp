@@ -1,29 +1,16 @@
 #include "npc.hpp"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <string.h>
-#include <math.h>
-#include <time.h>
-
-#include <algorithm>
-#include <vector>
-
 #include "../common/nullpo.hpp"
 #include "../common/timer.hpp"
+#include "../common/utils.hpp"
 
 #include "battle.hpp"
 #include "clif.hpp"
-#include "../common/db.hpp"
-#include "intif.hpp"
 #include "itemdb.hpp"
 #include "map.hpp"
 #include "mob.hpp"
 #include "pc.hpp"
 #include "script.hpp"
-#include "skill.hpp"
-#include "../common/socket.hpp"
 
 static void npc_event_timer(timer_id, tick_t, uint32_t, char *);
 static int npc_checknear(MapSessionData *, int);
@@ -1175,7 +1162,7 @@ static void npc_convertlabel_db(db_key_t key, db_val_t data, struct npc_data_scr
     {
         RECREATE(lst, struct npc_label_list, num + 1);
     }
-    strzcpy(lst[num].name, lname, std::min(static_cast<size_t>(p - lname), sizeof(lst[num].name)-1));
+    strzcpy(lst[num].name, lname, MIN(static_cast<size_t>(p - lname), sizeof(lst[num].name)-1));
 
     lst[num].pos = pos;
     nd->scr.label_list = lst;
@@ -1191,7 +1178,7 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
 {
     int x, y, dir = 0, m, xs = 0, ys = 0, npc_class = 0;   // [Valaris] thanks to fov
     fixed_string<16> mapname;
-    script_ptr srcbuf = NULL, script;
+    char *srcbuf = NULL, *script;
     int srcsize = 65536;
     int startline = 0;
     char line[1024];
@@ -1499,7 +1486,7 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
 static int npc_parse_function(char *, char *, char *w3, char *,
                                char *first_line, FILE * fp, int *lines)
 {
-    script_ptr srcbuf = NULL, script;
+    char *srcbuf = NULL, *script;
     int srcsize = 65536;
     int startline = 0;
     char line[1024];

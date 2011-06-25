@@ -1,16 +1,13 @@
-#ifndef MAGIC_H
-#define MAGIC_H
+#ifndef MAGIC_HPP
+#define MAGIC_HPP
 
-#include "clif.hpp"
-#include "intif.hpp"
+# include "magic.structs.hpp"
 
-#define MAGIC_CONFIG_FILE "conf/magic.conf"
-int magic_init(const char *conffile);   // must be called after itemdb initialisation
+# include "battle.structs.hpp"
+# include "map.structs.hpp"
 
-typedef MapSessionData character_t;
-typedef BlockList entity_t;
-
-class invocation_t;              /* Spell invocation */
+// actually in magic-parser.ypp
+void magic_init(const char *conffile);   // must be called after itemdb initialisation
 
 /**
  * Try to cast magic.
@@ -26,65 +23,8 @@ class invocation_t;              /* Spell invocation */
 int magic_message(character_t * caster, char *spell, size_t spell_len);
 
 /**
- * Removes the shroud from a character
- *
- * \param character The character to remove the shroud from
- */
-void magic_unshroud(character_t * character);
-
-/**
- * Notifies a running spell that a status_change timer triggered by the spell has expired
- *
- * \param invocation The invocation to notify
- * \param bl_id ID of the PC for whom this happened
- * \param type sc_id ID of the status change entry that finished
- * \param supplanted Whether the status_change finished normally(0) or was supplanted by a new status_change(1)
- */
-void spell_effect_report_termination(int invocation, int bl_id, int sc_id,
-                                     int supplanted);
-
-/**
  * Initialise all spells, read config data
  */
 void do_init_magic(void);
 
-/**
- * Identifies the invocation used to trigger a spell
- *
- * Returns NULL if not found
- */
-char *magic_find_invocation(const char *spellame);
-
-/**
- * Identifies the invocation used to denote a teleport location
- *
- * Returns NULL if not found
- */
-char *magic_find_anchor_invocation(const char *teleport_location);
-
-/**
- * Execute a spell invocation and sets up timers to finish
- */
-void spell_execute(invocation_t *invocation);
-
-/**
- * Continue an NPC script embedded in a spell
- */
-void spell_execute_script(invocation_t *invocation);
-
-/**
- * Stops all magic bound to the specified character
- *
- */
-void magic_stop_completely(character_t * c);
-
-/**
- * Attacks with a magical spell charged to the character
- *
- * Returns 0 if there is no charged spell or the spell is depleted.
- */
-int spell_attack(int caster, int target);
-
-void spell_free_invocation(invocation_t *invocation);
-
-#endif // MAGIC_H
+#endif // MAGIC_HPP

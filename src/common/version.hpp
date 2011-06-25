@@ -1,5 +1,5 @@
-#ifndef VERSION_H
-#define VERSION_H
+#ifndef VERSION_HPP
+#define VERSION_HPP
 
 // Note: char server is also inter server - splitting them is not supported
 # define ATHENA_SERVER_LOGIN     1
@@ -78,4 +78,5 @@ const Version tmwAthenaVersion =
     // 0 for official tmwA
     0
 };
-#endif // VERSION_H
+
+#endif // VERSION_HPP

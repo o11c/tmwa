@@ -1,14 +1,25 @@
 #include "magic-expr.hpp"
 
-#include <math.h>
+#include <cmath>
 #include <climits>
 
-#include "magic-expr-eval.hpp"
 #include "itemdb.hpp"
 
 #include "../common/mt_rand.hpp"
+#include "../common/utils.hpp"
+
+#include "battle.hpp"
+#include "magic-base.hpp"
+#include "map.hpp"
+#include "npc.hpp"
+#include "pc.hpp"
+
+#define CHECK_TYPE(v, t) ((v)->ty == t)
 
 #define IS_SOLID(c) ((c) == 1 || (c) == 5)
+
+static int heading_x[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
+static int heading_y[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
 
 static int magic_location_in_area(int m, int x, int y, area_t * area);
 
@@ -515,7 +526,7 @@ void magic_area_rect(int *m, int *x, int *y, int *width, int *height,
     }
 }
 
-int magic_location_in_area(int m, int x, int y, area_t * area)
+static int magic_location_in_area(int m, int x, int y, area_t * area)
 {
     switch (area->ty)
     {
@@ -1249,8 +1260,8 @@ fun_t *magic_get_fun(const char *name, int *idx)
     return result;
 }
 
-static int                     // 1 on failure
-eval_location(env_t * env, location_t * dest, e_location_t * expr)
+// 1 on failure
+static int eval_location(env_t * env, location_t * dest, e_location_t * expr)
 {
     val_t m, x, y;
     magic_eval(env, &m, expr->m);

@@ -1,35 +1,9 @@
-#ifndef MAGIC_EXPR_H
-#define MAGIC_EXPR_H
-#include "magic-interpreter.hpp"
-#include "magic-interpreter-aux.hpp"
+#ifndef MAGIC_EXPR_HPP
+#define MAGIC_EXPR_HPP
 
-/*
- * Argument types:
- *  i : int
- *  d : dir
- *  s : string
- *  e : entity
- *  l : location
- *  a : area
- *  S : spell
- *  I : invocation
- *  . : any, except for fail/undef
- *  _ : any, including fail, but not undef
- */
-typedef struct fun
-{
-    const char *name;
-    const char *signature;
-    char ret_ty;
-    int (*fun)(env_t *env, int args_nr, val_t *result, val_t* args);
-} fun_t;
+# include "magic-expr.structs.hpp"
 
-typedef struct op
-{
-    const char *name;
-    const char *signature;
-    int (*op)(env_t *env, int args_nr, val_t *args);
-} op_t;
+# include "magic.structs.hpp"
 
 /**
  * Retrieves a function by name
@@ -73,6 +47,38 @@ void magic_random_location(location_t * dest, area_t * area);
 /// ret -1: not a string, ret 1: no such item, ret 0: OK
 int magic_find_item(val_t * args, int index, struct item *item, int *stackable);
 
-#define GET_ARG_ITEM(index, dest, stackable) switch (magic_find_item(args, index, &dest, &stackable)) { case -1 : return 1; case 1 : return 0; }
+# define GET_ARG_ITEM(index, dest, stackable) switch (magic_find_item(args, index, &dest, &stackable)) { case -1 : return 1; case 1 : return 0; }
 
-#endif // MAGIC_EXPR_H
+int magic_signature_check(const char *opname, const char *funname, const char *signature,
+                          int args_nr, val_t * args, int line, int column);
+
+void magic_area_rect(int *m, int *x, int *y, int *width, int *height, area_t *area);
+
+# define ARGINT(x) args[x].v.v_int
+# define ARGDIR(x) args[x].v.v_int
+# define ARGSTR(x) args[x].v.v_string
+# define ARGENTITY(x) args[x].v.v_entity
+# define ARGLOCATION(x) args[x].v.v_location
+# define ARGAREA(x) args[x].v.v_area
+# define ARGSPELL(x) args[x].v.v_spell
+# define ARGINVOCATION(x) args[x].v.v_invocation
+
+# define RESULTINT result->v.v_int
+# define RESULTDIR result->v.v_int
+# define RESULTSTR result->v.v_string
+# define RESULTENTITY result->v.v_entity
+# define RESULTLOCATION result->v.v_location
+# define RESULTAREA result->v.v_area
+# define RESULTSPELL result->v.v_spell
+# define RESULTINVOCATION result->v.v_invocation
+
+# define TY(x) args[x].ty
+# define ETY(x) ARGENTITY(x)->type
+
+# define ARGPC(x)    static_cast<MapSessionData *>(ARGENTITY(x))
+# define ARGNPC(x)   static_cast<struct npc_data *>(ARGENTITY(x))
+# define ARGMOB(x)   static_cast<struct mob_data *>(ARGENTITY(x))
+
+# define ARG_MAY_BE_AREA(x) (TY(x) == TY_AREA || TY(x) == TY_LOCATION)
+
+#endif // MAGIC_EXPR_HPP

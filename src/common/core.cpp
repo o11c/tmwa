@@ -1,15 +1,10 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <signal.h>
+#include "core.hpp"
+
 #include <sys/wait.h>
 
-#include "core.hpp"
+#include "mt_rand.hpp"
 #include "socket.hpp"
 #include "timer.hpp"
-#include "version.hpp"
-#include "mt_rand.hpp"
-#include "nullpo.hpp"
 
 static void chld_proc(int)
 {

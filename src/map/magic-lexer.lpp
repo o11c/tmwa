@@ -1,10 +1,7 @@
 %{
-#include "magic-interpreter.hpp"
-#include "magic-interpreter-parser.hpp"
+#include "magic-lexer.hpp"
 
-#ifdef HEADING
-#  undef HEADING
-#endif
+#include "magic-parser.hpp"
 
 #define FIXLOC magic_frontend_lloc.first_line = magic_frontend_lineno
 
@@ -133,7 +130,7 @@
 
 "#".*$          /* Ignore comments */
 "//".*$         /* Ignore comments */
-[ \n\t\r]       /* ignore whitespace */        
+[ \n\t\r]       /* ignore whitespace */
 .               fprintf(stderr, "%s: Unexpected character in line %d\n", MAGIC_CONFIG_FILE, magic_frontend_lineno);
 
 

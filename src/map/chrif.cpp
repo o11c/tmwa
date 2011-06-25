@@ -1,38 +1,17 @@
 #include "chrif.hpp"
-#include "intif.hpp"
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-
-#include <sys/time.h>
-#include <sys/ioctl.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-
-#include <signal.h>
-#include <fcntl.h>
-#include <string.h>
-
-#include <time.h>
 
 #include "../common/nullpo.hpp"
-#include "../common/version.hpp"
-#include "../common/socket.hpp"
 #include "../common/timer.hpp"
-#include "map.hpp"
+#include "../common/utils.hpp"
+#include "../common/version.hpp"
+
 #include "battle.hpp"
 #include "clif.hpp"
+#include "map.hpp"
 #include "npc.hpp"
-#include "pc.hpp"
 #include "party.hpp"
+#include "pc.hpp"
 #include "storage.hpp"
-#include "itemdb.hpp"
-
-#include "../login/login.hpp"
 
 int char_fd = -1;
 

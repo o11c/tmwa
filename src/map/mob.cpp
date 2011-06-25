@@ -1,29 +1,21 @@
 #include "mob.hpp"
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
+#include <cmath>
 
-#include "../common/timer.hpp"
-#include "../common/socket.hpp"
-#include "../common/db.hpp"
-#include "../common/nullpo.hpp"
 #include "../common/mt_rand.hpp"
-#include "map.hpp"
-#include "clif.hpp"
-#include "intif.hpp"
-#include "pc.hpp"
-#include "itemdb.hpp"
-#include "skill.hpp"
-#include "battle.hpp"
-#include "party.hpp"
-#include "npc.hpp"
+#include "../common/nullpo.hpp"
+#include "../common/timer.hpp"
+#include "../common/utils.hpp"
 
-#ifndef max
-#define max( a, b ) ( ((a) > (b)) ? (a) : (b) )
-#endif
+#include "battle.hpp"
+#include "clif.hpp"
+#include "itemdb.hpp"
+#include "map.hpp"
+#include "npc.hpp"
+#include "party.hpp"
+#include "path.hpp"
+#include "pc.hpp"
+#include "skill.hpp"
 
 #define MIN_MOBTHINKTIME 100
 

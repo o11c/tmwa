@@ -1,13 +1,9 @@
-#ifndef PARTY_H
-#define PARTY_H
+#ifndef PARTY_HPP
+#define PARTY_HPP
 
-#include "../common/mmo.hpp"
+# include "../common/mmo.hpp"
 
-#include <stdarg.h>
-
-struct party;
-class MapSessionData;
-class BlockList;
+# include "map.structs.hpp"
 
 void do_init_party(void);
 struct party *party_search(int party_id);
@@ -43,4 +39,4 @@ void party_send_hp_check(BlockList *bl, party_t, bool *);
 
 int party_exp_share(struct party *p, int map, int base_exp, int job_exp);
 
-#endif // PARTY_H
+#endif // PARTY_HPP

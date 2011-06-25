@@ -45,8 +45,23 @@ PROGS = tmwa-login tmwa-char tmwa-map tmwa-admin
 all: ${PROGS}
 clean:
 	rm -rf ${PROGS} obj/
-common: obj/common/core.o obj/common/db.o obj/common/grfio.o obj/common/lock.o obj/common/md5calc.o obj/common/mt_rand.o obj/common/nullpo.o obj/common/socket.o obj/common/timer.o obj/common/utils.o
-lib: obj/lib/log.o obj/lib/ip.o
+
+common: \
+obj/common/core.o \
+obj/common/db.o \
+obj/common/lock.o \
+obj/common/md5calc.o \
+obj/common/mt_rand.o \
+obj/common/nullpo.o \
+obj/common/socket.o \
+obj/common/timer.o \
+obj/common/utils.o \
+
+
+lib: \
+obj/lib/ip.o \
+obj/lib/log.o \
+
 
 # Top level programs
 tmwa-login: obj/login/login
@@ -73,71 +88,70 @@ obj/char/char: obj/char/char.o \
  obj/char/int_party.o \
  obj/char/int_storage.o \
  obj/common/core.o \
- obj/common/socket.o \
- obj/common/timer.o \
  obj/common/db.o \
  obj/common/lock.o \
  obj/common/mt_rand.o \
+ obj/common/socket.o \
+ obj/common/timer.o \
  obj/common/utils.o \
  obj/lib/ip.o \
  obj/lib/log.o \
 
 obj/ladmin/ladmin: obj/ladmin/ladmin.o \
- obj/common/md5calc.o \
  obj/common/core.o \
+ obj/common/db.o \
+ obj/common/md5calc.o \
+ obj/common/mt_rand.o \
  obj/common/socket.o \
  obj/common/timer.o \
- obj/common/db.o \
- obj/common/mt_rand.o \
  obj/common/utils.o \
  obj/lib/ip.o \
  obj/lib/log.o \
 
 obj/login/login: obj/login/login.o \
  obj/common/core.o \
- obj/common/socket.o \
- obj/common/timer.o \
  obj/common/db.o \
  obj/common/lock.o \
- obj/common/mt_rand.o \
  obj/common/md5calc.o \
+ obj/common/mt_rand.o \
+ obj/common/socket.o \
+ obj/common/timer.o \
  obj/common/utils.o \
  obj/lib/ip.o \
  obj/lib/log.o \
 
 obj/map/map: obj/map/map.o \
- obj/map/tmw.o \
- obj/map/magic-interpreter-lexer.o \
- obj/map/magic-interpreter-parser.o \
- obj/map/magic-interpreter-base.o \
- obj/map/magic-expr.o \
- obj/map/magic-stmt.o \
+ obj/map/magic-lexer.o \
+ obj/map/magic-parser.o \
  obj/map/magic.o \
- obj/map/map.o \
+ obj/map/magic-expr.o \
+ obj/map/magic-base.o \
+ obj/map/magic-stmt.o \
+ \
+ obj/map/atcommand.o \
+ obj/map/battle.o \
  obj/map/chrif.o \
  obj/map/clif.o \
- obj/map/pc.o \
- obj/map/npc.o \
- obj/map/path.o \
+ obj/map/grfio.o \
  obj/map/itemdb.o \
  obj/map/mob.o \
+ obj/map/npc.o \
+ obj/map/party.o \
+ obj/map/path.o \
+ obj/map/pc.o \
  obj/map/script.o \
  obj/map/storage.o \
  obj/map/skill.o \
- obj/map/skill-pools.o \
- obj/map/atcommand.o \
- obj/map/battle.o \
+ obj/map/tmw.o \
  obj/map/trade.o \
- obj/map/party.o \
  obj/common/core.o \
- obj/common/socket.o \
- obj/common/timer.o \
- obj/common/grfio.o \
  obj/common/db.o \
  obj/common/lock.o \
- obj/common/nullpo.o \
- obj/common/mt_rand.o \
  obj/common/md5calc.o \
+ obj/common/mt_rand.o \
+ obj/common/nullpo.o \
+ obj/common/socket.o \
+ obj/common/timer.o \
  obj/common/utils.o \
  obj/lib/ip.o \
  obj/lib/log.o \
@@ -154,8 +168,9 @@ obj/webserver/main: obj/webserver/main.o \
  obj/webserver/pages/notdone.o \
 
 
-map.deps: src/map/magic-interpreter-parser.cpp src/map/magic-interpreter-lexer.cpp
+map.deps: src/map/magic-parser.cpp src/map/magic-lexer.cpp
 %.deps: src/%/
+	set -o pipefail; \
 	for F in `find $< -name '*.cpp' | sort`; do \
 	    ${CXX} -MM "$$F" -MT "$$(sed 's/src/obj/;s/\.cpp/.o/' <<< "$$F")" \
 	        | sed 's/[^\]$$/& \\/;s/\([^:]\) \([^\]\)/\1 \\\n \2/g;s_/[a-z]\+/../_/_g' \
@@ -163,18 +178,24 @@ map.deps: src/map/magic-interpreter-parser.cpp src/map/magic-interpreter-lexer.c
 	    echo; \
 	done > $@
 
-include lib.deps common.deps login.deps char.deps map.deps ladmin.deps
+include char.deps
+include common.deps
+include ladmin.deps
+include lib.deps
+include login.deps
+include map.deps
 
 # It isn't feasible to fix this single use of strftime with nonconstant format string
 obj/map/script.o: override WARNINGS+=-Wno-error=format-nonliteral
 # Not our code :(
-obj/map/magic-interpreter-lexer.o: override WARNINGS+=-Wno-error=unused-but-set-variable
+obj/map/magic-lexer.o: override WARNINGS+=-Wno-error=unused-but-set-variable
 
+# SIG_DFL or generated: unavoidable
 obj/common/core.o \
 obj/common/socket.o \
 obj/tool/eathena-monitor.o \
-obj/map/magic-interpreter-lexer.o \
-obj/map/magic-interpreter-parser.o \
+obj/map/magic-lexer.o \
+obj/map/magic-parser.o \
 : override WARNINGS+=-Wno-error=old-style-cast
 
 warnings: warnings.commented

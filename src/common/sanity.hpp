@@ -1,10 +1,10 @@
-/// return wrappers for unexpected NULL pointers
-#ifndef SANITY_H
-#define SANITY_H
+#ifndef SANITY_HPP
+#define SANITY_HPP
 
 # ifndef __cplusplus
 #  error "Please compile as C++"
 # endif
+
 # if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 5)
 // Requires decent C++0x support
 #  error "Please upgrade your compiler to at least GCC 4.5"
@@ -24,8 +24,8 @@
 # endif
 
 /// Convert type assumptions to use the standard types here
-# include <stdint.h>
+# include <cstdint>
 /// size_t, NULL
-# include <stddef.h>
+# include <cstddef>
 
-#endif // SANITY_H
+#endif // SANITY_HPP

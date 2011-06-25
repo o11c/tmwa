@@ -1,37 +1,32 @@
 #include "map.hpp"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
+#include <sys/time.h>
 #include <netdb.h>
 
 #include "../common/core.hpp"
-#include "../common/timer.hpp"
-#include "../common/db.hpp"
-#include "../common/grfio.hpp"
 #include "../common/mt_rand.hpp"
+#include "../common/nullpo.hpp"
+#include "../common/timer.hpp"
+#include "../common/utils.hpp"
+
+#include "atcommand.hpp"
+#include "battle.hpp"
 #include "chrif.hpp"
 #include "clif.hpp"
-#include "intif.hpp"
-#include "npc.hpp"
-#include "pc.hpp"
-#include "mob.hpp"
+#include "grfio.hpp"
 #include "itemdb.hpp"
-#include "storage.hpp"
-#include "skill.hpp"
-#include "trade.hpp"
-#include "party.hpp"
-#include "battle.hpp"
-#include "script.hpp"
-#include "atcommand.hpp"
-#include "../common/nullpo.hpp"
-#include "../common/socket.hpp"
 #include "magic.hpp"
-#include "magic-interpreter.hpp"
+#include "magic-stmt.hpp"
+#include "mob.hpp"
+#include "npc.hpp"
+#include "party.hpp"
+#include "pc.hpp"
+#include "script.hpp"
+#include "skill.hpp"
+#include "storage.hpp"
+#include "trade.hpp"
 
 static void map_helpscreen() __attribute__((noreturn));
-
 
 static struct dbt *id_db = NULL;
 static struct dbt *map_db = NULL;
@@ -1146,8 +1141,6 @@ static void map_addmap(const fixed_string<16>& mapname)
     maps[map_num].name = mapname;
     map_num++;
 }
-
-extern char *gm_logfile_name;
 
 #define LOGFILE_SECONDS_PER_CHUNK_SHIFT 10
 

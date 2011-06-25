@@ -1,11 +1,27 @@
-#include "magic-interpreter.hpp"
+#include "magic-stmt.hpp"
+
+#include "../common/timer.hpp"
+#include "../common/utils.hpp"
+
+#include "battle.hpp"
+#include "clif.hpp"
+#include "map.hpp"
+#include "mob.hpp"
+#include "npc.hpp"
+#include "pc.hpp"
+#include "script.hpp"
+#include "skill.hpp"
+
+#include "magic.structs.hpp"
+#include "magic-base.hpp"
 #include "magic-expr.hpp"
-#include "magic-expr-eval.hpp"
-#include "magic-interpreter-aux.hpp"
 
 #define INVISIBLE_NPC 127       /* used for local spell effects */
 
 //#define DEBUG
+
+static int heading_x[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
+static int heading_y[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
 
 #ifdef DEBUG
 static void print_val(val_t * v)
@@ -801,7 +817,8 @@ static int op_gain_exp(env_t *, int, val_t *args)
     return 0;
 }
 
-static op_t operations[] = {
+static op_t operations[] =
+{
     {"sfx", ".ii", op_sfx},
     {"instaheal", "eii", op_instaheal},
     {"itemheal", "eii", op_itemheal},

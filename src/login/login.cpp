@@ -1,46 +1,103 @@
-#include "login.hpp"
-
-#include <stdio.h>
-#include <stdlib.h>
-/// for gmtime()
-#include <time.h>
-#include <unistd.h>
-#include <signal.h>
-#include <fcntl.h>
-#include <string.h>
-#include <errno.h>
-
-#include <sys/types.h>
-#include <sys/socket.h>
-
-/// for gettimeofday()
-#include <sys/time.h>
 /// for stat(), used on the GM_account file
 #include <sys/stat.h>
 /// for waitpid()
 #include <sys/wait.h>
 
-/// for in_addr_t, etc.; for htonl(), etc.; for inet_addr()
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
-/// for gethostbyname (obselete, currently used) or getaddrinfo (TODO use instead)
-#include <netdb.h>
-
 #include <vector>
 
-#include "../lib/ip.hpp"
-#include "../lib/log.hpp"
-
 #include "../common/core.hpp"
-#include "../common/socket.hpp"
-#include "../common/timer.hpp"
-#include "../common/mmo.hpp"
-#include "../common/version.hpp"
 #include "../common/db.hpp"
 #include "../common/lock.hpp"
-#include "../common/mt_rand.hpp"
 #include "../common/md5calc.hpp"
+#include "../common/mt_rand.hpp"
+#include "../common/socket.hpp"
+#include "../common/timer.hpp"
+#include "../common/version.hpp"
+
+
+/// Max number of char servers to accept
+# define MAX_SERVERS 30
+
+# define LOGIN_CONF_NAME "conf/login_athena.conf"
+# define LAN_CONF_NAME "conf/lan_support.conf"
+/// Start and end of user accounts
+// TODO figure out why it is like this
+# define START_ACCOUNT_NUM 2000000
+# define END_ACCOUNT_NUM 100000000
+
+#include <netinet/in.h>
+
+# include "../common/utils.hpp"
+# include "../common/mmo.hpp"
+
+#include "../lib/ip.hpp"
+
+enum gender
+{
+    SEX_FEMALE,
+    SEX_MALE,
+    SEX_SERVER,
+    SEX_ERROR,
+};
+
+static inline enum gender sex_from_char(char c)
+{
+    switch (c | 0x20)
+    {
+        case 's': return SEX_SERVER;
+        case 'm': return SEX_MALE;
+        case 'f': return SEX_FEMALE;
+        default: return SEX_ERROR;
+    }
+}
+
+static inline char sex_to_char(enum gender sex)
+{
+    switch (sex)
+    {
+        case SEX_FEMALE: return 'F';
+        case SEX_MALE: return 'M';
+        case SEX_SERVER: return 'S';
+        default: return '\0';
+    }
+}
+
+struct mmo_account
+{
+    char userid[24];
+    char passwd[24];
+
+    account_t account_id;
+    /// magic cookies used to authenticate?
+    uint32_t login_id1, login_id2;
+    // ? This is not used by the login server ...
+    uint32_t char_id;
+    // why is this needed?
+    char lastlogin[24];
+    // this is used redundantly ...
+    enum gender sex;
+};
+
+struct mmo_char_server
+{
+    char name[20];
+    IP_Address ip;
+    in_port_t port;
+    uint32_t users;
+    uint32_t maintenance;
+    uint32_t is_new;
+};
+
+enum passwd_failure
+{
+    PASSWD_NO_ACCOUNT = 0,
+    PASSWD_OK = 1,
+    PASSWD_WRONG_PASSWD = 2,
+    PASSWD_TOO_SHORT = 3,
+};
+
+
+
 
 account_t account_id_count = START_ACCOUNT_NUM;
 int new_account_flag = 0;

@@ -1,7 +1,7 @@
-#ifndef INT_STORAGE_H
-#define INT_STORAGE_H
+#ifndef INT_STORAGE_HPP
+#define INT_STORAGE_HPP
 
-#include "../common/mmo.hpp"
+# include "../common/mmo.hpp"
 
 bool inter_storage_init(void);
 void inter_storage_final(void);
@@ -13,4 +13,4 @@ bool inter_storage_parse_frommap(int fd);
 
 extern char storage_txt[1024];
 
-#endif
+#endif // INT_STORAGE_HPP

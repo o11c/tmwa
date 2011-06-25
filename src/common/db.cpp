@@ -1,12 +1,8 @@
 #include "db.hpp"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstring>
 
 #include "utils.hpp"
-
-#define ROOT_SIZE 4096
 
 static int strdb_cmp(const char *a, const char* b)
 {

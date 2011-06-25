@@ -1,18 +1,18 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "path.hpp"
 
-#include "map.hpp"
-#include "battle.hpp"
 #include "../common/nullpo.hpp"
 
+#include "map.hpp"
+
 #define MAX_HEAP 150
+
 struct tmp_path
 {
     short x, y, dist, before, cost;
     Direction dir;
     char flag;
 };
+
 #define calc_index(x,y) (((x)+(y)*MAX_WALKPATH) & (MAX_WALKPATH*MAX_WALKPATH-1))
 
 /*==========================================

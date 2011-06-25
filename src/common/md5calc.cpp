@@ -1,5 +1,7 @@
 #include "md5calc.hpp"
-#include <string.h>
+
+#include <cstring>
+
 #include "mt_rand.hpp"
 
 // auxilary data

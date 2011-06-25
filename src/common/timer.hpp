@@ -1,14 +1,7 @@
-#ifndef TIMER_H
-#define TIMER_H
+#ifndef TIMER_HPP
+#define TIMER_HPP
 
-# include "sanity.hpp"
-
-# include <functional>
-
-// TODO replace with signed 64-bit to make code more clear and protect from the future
-typedef uint32_t tick_t;
-typedef uint32_t interval_t;
-typedef struct TimerData *timer_id;
+# include "timer.structs.hpp"
 
 /// This is needed to produce a signed result when 2 ticks are subtracted
 inline int32_t DIFF_TICK(tick_t a, tick_t b)
@@ -16,22 +9,12 @@ inline int32_t DIFF_TICK(tick_t a, tick_t b)
     return static_cast<int32_t>(a-b);
 }
 
-typedef std::function<void (timer_id, tick_t)> TimerFunc;
-struct TimerData
+inline bool operator <(const TimerData& lhs, const TimerData& rhs)
 {
-    /// When it will be triggered
-    tick_t tick;
-    /// What will be done
-    TimerFunc func;
-    /// Repeat rate
-    interval_t interval;
-
-    bool operator <(const TimerData& rhs) const
-    {
-        // Note: the sense is inverted since the lowest tick is the highest priority
-        return DIFF_TICK(tick, rhs.tick) > 0;
-    }
-};
+    // Note: the sense is inverted since the lowest tick is the highest priority
+    // TODO delete this operator and just use a manual comparator
+    return DIFF_TICK(lhs.tick, rhs.tick) > 0;
+}
 
 
 /// Server time, in milliseconds, since the epoch,
@@ -69,6 +52,4 @@ void delete_timer(timer_id);
 /// Return how long until the next timer is due
 interval_t do_timer();
 
-
-
-#endif // TIMER_H
+#endif // TIMER_HPP

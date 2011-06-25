@@ -1,8 +1,8 @@
-#ifndef NPC_H
-#define NPC_H
+#ifndef NPC_HPP
+#define NPC_HPP
 
 #include "../common/mmo.hpp"
-#include "../common/timer.hpp"
+#include "../common/timer.structs.hpp"
 
 #define START_NPC_NUM 110000000
 
@@ -38,7 +38,6 @@ int do_init_npc(void);
 int npc_event_do_oninit(void);
 int npc_do_ontimer(int, MapSessionData *, bool);
 
-struct argrec;
 int npc_event_doall_l(const char *name, int rid, int argc,
                        struct argrec *argv);
 int npc_event_do_l(const char *name, int rid, int argc,
@@ -51,4 +50,4 @@ int npc_timerevent_stop(struct npc_data_script *nd);
 int npc_gettimerevent_tick(struct npc_data_script *nd);
 int npc_settimerevent_tick(struct npc_data_script *nd, int newtimer);
 
-#endif // NPC_H
+#endif // NPC_HPP

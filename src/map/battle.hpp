@@ -1,48 +1,17 @@
-#ifndef BATTLE_H
-#define BATTLE_H
+#ifndef BATTLE_HPP
+#define BATTLE_HPP
 
-#include "../common/timer.hpp"
+# include "battle.structs.hpp"
 
-enum class Direction
-{
-    S,
-    SW,
-    W,
-    NW,
-    N,
-    NE,
-    E,
-    SE,
-};
+# include "map.structs.hpp"
 
-enum class AttackResult
-{
-    // what is this first?
-    ZERO,
-    LUCKY,
-    FLEE,
-    DEF
-};
 inline bool operator < (AttackResult lhs, AttackResult rhs) { return static_cast<int>(lhs) < static_cast<int>(rhs); }
 inline bool operator <= (AttackResult lhs, AttackResult rhs) { return static_cast<int>(lhs) <= static_cast<int>(rhs); }
 inline bool operator > (AttackResult lhs, AttackResult rhs) { return static_cast<int>(lhs) > static_cast<int>(rhs); }
 inline bool operator >= (AttackResult lhs, AttackResult rhs) { return static_cast<int>(lhs) >= static_cast<int>(rhs); }
 
-struct Damage
-{
-    int damage, damage2;
-    int type, div_;
-    int amotion, dmotion;
-    int flag;
-    AttackResult dmg_lv;
-};
-
 /// Elemental damage modifiers (read in pc.cpp)
 extern int attr_fix_table[4][10][10];
-
-class MapSessionData;
-struct mob_data;
-class BlockList;
 
 /// flags for battle_calc_damage
 const int
@@ -206,4 +175,4 @@ extern struct Battle_Config
 
 int battle_config_read(const char *cfgName);
 
-#endif // BATTLE_H
+#endif // BATTLE_HPP

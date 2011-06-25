@@ -4,28 +4,14 @@
 // if you modify this software, modify ladmin in tool too.
 ///////////////////////////////////////////////////////////////////////////
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <netinet/in.h>
 #include <sys/time.h>           // gettimeofday
-#include <time.h>
-#include <sys/ioctl.h>
-#include <unistd.h>             // close
-#include <signal.h>
-#include <fcntl.h>
-#include <string.h>             // str*
-#include <arpa/inet.h>          // inet_addr
 #include <netdb.h>              // gethostbyname
-#include <stdarg.h>             // valist
-#include <ctype.h>              // tolower
 
 #include "../common/core.hpp"
-#include "../common/socket.hpp"
-#include "../common/version.hpp"
-#include "../common/mmo.hpp"
 #include "../common/md5calc.hpp"
+#include "../common/socket.hpp"
+#include "../common/utils.hpp"
+#include "../common/version.hpp"
 
 
 /// config file

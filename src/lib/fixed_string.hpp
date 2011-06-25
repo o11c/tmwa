@@ -1,6 +1,6 @@
 #ifndef FIXED_STRING_HPP
 #define FIXED_STRING_HPP
-#include <cstddef>
+
 #include <cstring>
 
 /// A string taking exactly sz bytes of memory

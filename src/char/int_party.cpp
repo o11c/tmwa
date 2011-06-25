@@ -1,15 +1,12 @@
 #include "int_party.hpp"
 
-#include "inter.hpp"
-#include "../common/mmo.hpp"
-#include "char.hpp"
-#include "../common/socket.hpp"
 #include "../common/db.hpp"
 #include "../common/lock.hpp"
+#include "../common/socket.hpp"
+#include "../common/utils.hpp"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "inter.hpp"
+#include "char.hpp"
 
 char party_txt[1024] = "save/party.txt";
 

@@ -1,7 +1,9 @@
-#ifndef STORAGE_H
-#define STORAGE_H
+#ifndef STORAGE_HPP
+#define STORAGE_HPP
 
-#include "../common/mmo.hpp"
+# include "../common/mmo.hpp"
+
+# include "map.structs.hpp"
 
 int storage_storageopen(MapSessionData *sd);
 int storage_storageadd(MapSessionData *sd, int index, int amount);
@@ -14,4 +16,4 @@ int storage_storage_quit(MapSessionData *sd);
 int storage_storage_save(int account_id, int final);
 int storage_storage_saved(int account_id);    //Ack from char server that guild store was saved.
 
-#endif // STORAGE_H
+#endif // STORAGE_HPP

@@ -1,15 +1,8 @@
-#include "sanity.hpp"
-// for fopencookie()
-// we don't want/need to enable this globally
-// but, in C++ it enables it by default
-#ifndef _GNU_SOURCE
-# define _GNU_SOURCE
-#endif
-
 #include "utils.hpp"
 
-#include <time.h>
 #include <sys/time.h>
+
+#include <cstring>
 
 static const char hex[] = "0123456789abcdef";
 

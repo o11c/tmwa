@@ -1,69 +1,16 @@
-#ifndef SOCKET_H
-#define SOCKET_H
+#ifndef SOCKET_HPP
+#define SOCKET_HPP
 
-# include "sanity.hpp"
+# include "socket.structs.hpp"
 
-# include <stdio.h>
+# include <cstdio>
 
-# include <sys/types.h>
-# include <sys/socket.h>
-# include <netinet/in.h>
-
-# include <time.h>
-
-# include "../lib/ip.hpp"
-
-// Struct declaration
-class SessionData
+inline void socket_data::rfifo_change_packet(uint16_t newpacket)
 {
-    SessionData(SessionData&) = delete;
-protected:
-    SessionData() {}
-public:
-    virtual ~SessionData() {}
-};
+    *reinterpret_cast<uint16_t *>(rdata + rdata_pos) = newpacket;
+}
 
-struct socket_data
-{
-    /// Checks whether a newly-connected socket actually does anything
-    time_t created;
-    bool connected;
-
-    /// Flag needed since structure must be freed in a server-dependent manner
-    bool eof;
-
-    /// Since this is a single-threaded application, it can't block
-    /// These are the read/write queues
-    uint8_t *rdata, *wdata;
-    size_t max_rdata, max_wdata;
-    /// How much is actually in the queue
-    size_t rdata_size, wdata_size;
-    /// How much has already been read from the queue
-    /// Note that there is no need for a wdata_pos
-    size_t rdata_pos;
-
-    IP_Address client_addr;
-
-    /// Send or recieve
-    /// Only called when select() indicates the socket is ready
-    /// If, after that, nothing is read, it sets eof
-    // These could probably be hard-coded with a little work
-    void (*func_recv)(int);
-    void (*func_send)(int);
-    /// This is the important one
-    /// Set to different functions depending on whether the connection
-    /// is a player or a server/ladmin
-    /// Can be set explicitly or via set_defaultparse
-    void (*func_parse)(int);
-    /// Server-specific data type
-    SessionData *session_data;
-
-    // used when forwarding a packet with different ID
-    void rfifo_change_packet(uint16_t newpacket)
-    {
-        *reinterpret_cast<uint16_t *>(rdata + rdata_pos) = newpacket;
-    }
-};
+# define FIFOSIZE_SERVERLINK    256*1024
 
 // save file descriptors for important stuff
 # define SOFT_LIMIT (FD_SETSIZE - 50)
@@ -192,4 +139,4 @@ inline uint32_t& WBUFL(uint8_t *p, size_t pos)
     return *reinterpret_cast<uint32_t*>(WBUFP(p,pos));
 }
 
-#endif // SOCKET_H
+#endif // SOCKET_HPP

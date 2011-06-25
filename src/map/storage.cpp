@@ -1,19 +1,13 @@
 #include "storage.hpp"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "../common/db.hpp"
 #include "../common/nullpo.hpp"
+#include "../common/utils.hpp"
 
 #include "chrif.hpp"
-#include "itemdb.hpp"
 #include "clif.hpp"
-#include "intif.hpp"
+#include "itemdb.hpp"
+#include "map.hpp"
 #include "pc.hpp"
-#include "battle.hpp"
-#include "atcommand.hpp"
 
 static int storage_delete(int account_id);
 static int storage_comp_item(const void *_i1, const void *_i2);

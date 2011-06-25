@@ -1,19 +1,15 @@
-#ifndef CLIF_H
-#define CLIF_H
+#ifndef CLIF_HPP
+#define CLIF_HPP
 
-#include <sys/types.h>
+# include "clif.structs.hpp"
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+# include "map.structs.hpp"
 
-#include "../common/socket.hpp"
+# include "../common/socket.hpp"
 
-#include "../lib/ip.hpp"
+# include "../lib/ip.hpp"
 
-#include "map.hpp"
-
-#include <iterator>
+# include <iterator>
 
 /// What the client uses to connect to us
 void clif_setip(IP_Address);
@@ -29,29 +25,6 @@ void clif_authfail_fd(int, int);
 void clif_charselectok(int);
 void clif_dropflooritem(struct flooritem_data *);
 void clif_clearflooritem(struct flooritem_data *, int);
-
-// these need better names
-// the only one that is fully accurate is DEAD
-enum class BeingRemoveType
-{
-    NEGATIVE = -1,
-    ZERO = 0,
-    DEAD = 1,
-    QUIT = 2,
-    WARP = 3,
-    DISGUISE = 9,
-};
-class BlockList;
-enum class PickupFail : uint8_t
-{
-    OKAY = 0,
-    BAD_ITEM = 1,
-    TOO_HEAVY = 2,
-    TOO_FAR = 3,
-    INV_FULL = 4,
-    STACK_FULL = 5,
-    DROP_STEAL = 6,
-};
 
 void clif_being_remove(BlockList *, BeingRemoveType);
 void clif_being_remove_id(uint32_t, BeingRemoveType, int fd);
@@ -109,7 +82,6 @@ void clif_tradecancelled(MapSessionData *sd);
 void clif_tradecompleted(MapSessionData *sd, int fail);
 
 // storage
-#include "storage.hpp"
 void clif_storageitemlist(MapSessionData *sd, struct storage *stor);
 void clif_storageequiplist(MapSessionData *sd,
                            struct storage *stor);
@@ -217,4 +189,4 @@ public:
 extern Sessions<true> auth_sessions;
 extern Sessions<false> all_sessions;
 
-#endif // CLIF_H
+#endif // CLIF_HPP

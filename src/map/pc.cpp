@@ -1,28 +1,19 @@
 #include "pc.hpp"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <time.h>
-
-#include "../common/socket.hpp"             // [Valaris]
-#include "../common/timer.hpp"
-#include "../common/db.hpp"
-
-#include "../common/nullpo.hpp"
 #include "../common/mt_rand.hpp"
+#include "../common/nullpo.hpp"
+#include "../common/timer.hpp"
+#include "../common/utils.hpp"
 
-#include "atcommand.hpp"
 #include "battle.hpp"
 #include "chrif.hpp"
 #include "clif.hpp"
-#include "intif.hpp"
 #include "itemdb.hpp"
+#include "magic-stmt.hpp"
 #include "map.hpp"
-#include "mob.hpp"
 #include "npc.hpp"
 #include "party.hpp"
+#include "path.hpp"
 #include "script.hpp"
 #include "skill.hpp"
 #include "storage.hpp"

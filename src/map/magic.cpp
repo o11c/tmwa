@@ -1,9 +1,15 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
+#include "magic.hpp"
 
-#include "magic-interpreter.hpp"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+
+#include "magic.structs.hpp"
+#include "magic-stmt.hpp"
+#include "magic-base.hpp"
+#include "map.hpp"
+#include "pc.hpp"
 
 static char *magic_preprocess_message(character_t * character, char *start,
                                        char *end)

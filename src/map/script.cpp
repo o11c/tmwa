@@ -1,26 +1,18 @@
 #include "script.hpp"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
+#include <cmath>
 
-#include <time.h>
-#include <math.h>
-
-#include "../common/socket.hpp"
-#include "../common/timer.hpp"
 #include "../common/lock.hpp"
 #include "../common/mt_rand.hpp"
+#include "../common/timer.hpp"
+#include "../common/utils.hpp"
 
 #include "atcommand.hpp"
 #include "battle.hpp"
 #include "chrif.hpp"
 #include "clif.hpp"
-#include "../common/db.hpp"
-#include "intif.hpp"
 #include "itemdb.hpp"
-#include "../common/lock.hpp"
+#include "magic-base.hpp"
 #include "map.hpp"
 #include "mob.hpp"
 #include "npc.hpp"
@@ -30,6 +22,7 @@
 #include "storage.hpp"
 
 #define SCRIPT_BLOCK_SIZE 256
+
 enum
 { LABEL_NEXTLINE = 1, LABEL_START };
 static char *script_buf;
@@ -720,10 +713,10 @@ static int startline;
  * エラーメッセージ出力
  *------------------------------------------
  */
-static void disp_error_message(const char *mes, script_ptr pos)
+static void disp_error_message(const char *mes, char *pos)
 {
     int line, c = 0, i;
-    script_ptr p, linestart, lineend;
+    char *p, *linestart, *lineend;
 
     for (line = startline, p = startptr; p && *p; line++)
     {
@@ -783,7 +776,7 @@ static char *parse_simpleexpr(char *p)
     }
     else if (isdigit(*p) || ((*p == '-' || *p == '+') && isdigit(p[1])))
     {
-        script_ptr np;
+        char *np;
         i = strtoul(p, &np, 0);
         add_scripti(i);
         p = np;
@@ -814,7 +807,7 @@ static char *parse_simpleexpr(char *p)
     else
     {
         int c, l;
-        script_ptr p2;
+        char *p2;
         // label , register , function etc
         if (skip_word(p) == p)
         {
@@ -871,7 +864,7 @@ static char *parse_simpleexpr(char *p)
 char *parse_subexpr(char *p, int limit)
 {
     int op, opl, len;
-    script_ptr tmpp;
+    char *tmpp;
 
     p = skip_space(p);
 
@@ -919,7 +912,7 @@ char *parse_subexpr(char *p, int limit)
         if (op == C_FUNC)
         {
             int i = 0, func = parse_cmd;
-            script_ptr plist[128];
+            char *plist[128];
 
             if (str_data[func].type != C_FUNC)
             {
@@ -1003,8 +996,8 @@ static char *parse_expr(char *p)
 static char *parse_line(char *p)
 {
     int i = 0, cmd;
-    script_ptr plist[128];
-    script_ptr p2;
+    char *plist[128];
+    char *p2;
 
     p = skip_space(p);
     if (*p == ';')
@@ -1581,7 +1574,7 @@ void builtin_goto(struct script_state *st)
  */
 void builtin_callfunc(struct script_state *st)
 {
-    script_ptr scr;
+    char *scr;
     const char *str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
 
     if ((scr = static_cast<char *>(strdb_search(script_get_userfunc_db(), str).p)))
@@ -4708,9 +4701,6 @@ void builtin_getactivatedpoolskilllist(struct script_state *st)
     pc_setreg(sd, add_str("@skilllist_count"), count);
 }
 
-extern int skill_pool_skills[];
-extern int skill_pool_skills_size;
-
 void builtin_getunactivatedpoolskilllist(struct script_state *st)
 {
     MapSessionData *sd = script_rid2sd(st);
@@ -5637,8 +5627,8 @@ int run_func(struct script_state *st)
  * スクリプトの実行メイン部分
  *------------------------------------------
  */
-static int run_script_main(script_ptr script, int pos, int, int,
-                     struct script_state *st, script_ptr rootscript)
+static int run_script_main(char *script, int pos, int, int,
+                           struct script_state *st, char *rootscript)
 {
     int c, rerun_pos;
     int cmdcount = script_config.check_cmdcount;
@@ -5785,13 +5775,13 @@ int run_script(char *script, int pos, int rid, int oid)
     return run_script_l(script, pos, rid, oid, 0, NULL);
 }
 
-int run_script_l(script_ptr script, int pos, int rid, int oid,
-                  int args_nr, argrec_t * args)
+int run_script_l(char *script, int pos, int rid, int oid,
+                 int args_nr, argrec_t * args)
 {
     struct script_stack stack;
     struct script_state st;
     MapSessionData *sd = map_id2sd(rid);
-    script_ptr rootscript = script;
+    char *rootscript = script;
     int i;
     if (script == NULL || pos < 0)
         return -1;

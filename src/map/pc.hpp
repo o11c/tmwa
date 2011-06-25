@@ -1,22 +1,24 @@
-#ifndef PC_H
-#define PC_H
+#ifndef PC_HPP
+#define PC_HPP
 
-#include "map.hpp"
-#include "clif.hpp"
+# include "pc.structs.hpp"
 
-#define OPTION_MASK 0xd7b8
+# include "map.structs.hpp"
+# include "clif.structs.hpp"
 
-#define pc_setdead(sd) ((sd)->state.dead_sit = 1)
-#define pc_setsit(sd) ((sd)->state.dead_sit = 2)
-//#define pc_setstand(sd) ((sd)->state.dead_sit = 0)
-#define pc_isdead(sd) ((sd)->state.dead_sit == 1)
-#define pc_issit(sd) ((sd)->state.dead_sit == 2)
-#define pc_setdir(sd,b) ((sd)->dir = (b))
-#define pc_setchatid(sd,n) ((sd)->chatID = n)
-#define pc_ishiding(sd) ((sd)->status.option&0x4006)
-#define pc_isinvisible(sd) ((sd)->status.option&0x0040)
-#define pc_is50overweight(sd) (sd->weight*2 >= sd->max_weight)
-#define pc_is90overweight(sd) (sd->weight*10 >= sd->max_weight*9)
+# define OPTION_MASK 0xd7b8
+
+# define pc_setdead(sd) ((sd)->state.dead_sit = 1)
+# define pc_setsit(sd) ((sd)->state.dead_sit = 2)
+//# define pc_setstand(sd) ((sd)->state.dead_sit = 0)
+# define pc_isdead(sd) ((sd)->state.dead_sit == 1)
+# define pc_issit(sd) ((sd)->state.dead_sit == 2)
+# define pc_setdir(sd,b) ((sd)->dir = (b))
+# define pc_setchatid(sd,n) ((sd)->chatID = n)
+# define pc_ishiding(sd) ((sd)->status.option&0x4006)
+# define pc_isinvisible(sd) ((sd)->status.option&0x0040)
+# define pc_is50overweight(sd) (sd->weight*2 >= sd->max_weight)
+# define pc_is90overweight(sd) (sd->weight*10 >= sd->max_weight*9)
 
 void pc_touch_all_relevant_npcs(MapSessionData *sd);  /* Checks all npcs/warps at the same location to see whether they
                                                                  ** should do something with the specified player. */
@@ -71,9 +73,9 @@ int pc_stopattack(MapSessionData *);
 
 int pc_gainexp(MapSessionData *, int, int);
 
-#define PC_GAINEXP_REASON_KILLING 0
-#define PC_GAINEXP_REASON_HEALING 1
-#define PC_GAINEXP_REASON_SCRIPT  2
+# define PC_GAINEXP_REASON_KILLING 0
+# define PC_GAINEXP_REASON_HEALING 1
+# define PC_GAINEXP_REASON_SCRIPT  2
 int pc_gainexp_reason(MapSessionData *, int, int, int reason);
 int pc_extract_healer_exp(MapSessionData *, int max);    // [Fate] Used by healers: extract healer-xp from the target, return result (up to max)
 
@@ -133,7 +135,4 @@ int pc_logout(MapSessionData *sd);   // [fate] Player logs out
 
 int do_init_pc(void);
 
-enum
-{ ADDITEM_EXIST, ADDITEM_NEW, ADDITEM_OVERAMOUNT };
-
-#endif // PC_H
+#endif // PC_HPP

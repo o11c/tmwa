@@ -1,13 +1,9 @@
-// Reads .gat files by name-mapping .wlk files
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-
-#include "utils.hpp"
 #include "grfio.hpp"
-#include "mmo.hpp"
-#include "socket.hpp"
+
+// Reads .gat files by name-mapping .wlk files
+
+#include "../common/socket.hpp"
+#include "../common/utils.hpp"
 
 //----------------------------
 //  file entry table struct

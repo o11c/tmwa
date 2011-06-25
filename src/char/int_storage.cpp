@@ -1,14 +1,11 @@
 #include "int_storage.hpp"
 
-#include <string.h>
-#include <stdlib.h>
-
-#include "../common/mmo.hpp"
-#include "../common/socket.hpp"
 #include "../common/db.hpp"
 #include "../common/lock.hpp"
+#include "../common/socket.hpp"
+#include "../common/utils.hpp"
+
 #include "char.hpp"
-#include "inter.hpp"
 
 char storage_txt[1024] = "save/storage.txt";
 

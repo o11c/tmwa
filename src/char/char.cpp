@@ -1,33 +1,17 @@
 #include "char.hpp"
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <netinet/in.h>
-#include <sys/time.h>
-#include <time.h>
-#include <sys/ioctl.h>
-#include <unistd.h>
-#include <signal.h>
-#include <fcntl.h>
-#include <string.h>
-#include <netdb.h>
-#include <stdarg.h>
 #include <sys/wait.h>
 
-#include "../common/utils.hpp"
 #include "../common/core.hpp"
+#include "../common/lock.hpp"
 #include "../common/socket.hpp"
 #include "../common/timer.hpp"
-#include "../common/mmo.hpp"
+#include "../common/utils.hpp"
 #include "../common/version.hpp"
-#include "../common/lock.hpp"
 
 #include "inter.hpp"
 #include "int_party.hpp"
 #include "int_storage.hpp"
-
 
 struct mmo_map_server server[MAX_MAP_SERVERS];
 int server_fd[MAX_MAP_SERVERS];

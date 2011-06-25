@@ -1,12 +1,9 @@
 #ifndef IP_HPP
 #define IP_HPP
 
-# include <cstddef>
 # include <cstring>
 
-# include <sys/socket.h>
 # include <netinet/in.h>
-# include <arpa/inet.h>
 
 # include <string>
 
@@ -92,4 +89,5 @@ public:
     }
     std::string to_string() const;
 };
-#endif //IP_HPP
+
+#endif // IP_HPP

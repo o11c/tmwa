@@ -1,21 +1,10 @@
 /// Global structures and defines
 // BUG: many of these are only applicable for one of the servers
-#ifndef MMO_H
-#define MMO_H
-
-# include <time.h>
-# include <arpa/inet.h>
+#ifndef MMO_HPP
+#define MMO_HPP
 
 # include "../lib/fixed_string.hpp"
 # include "../lib/ip.hpp"
-
-# include "utils.hpp"
-
-# define FIFOSIZE_SERVERLINK    256*1024
-
-// set to 0 to not check IP of player between each server.
-// set to another value if you want to check (1)
-# define CMP_AUTHFIFO_IP 1
 
 # define MAX_MAP_PER_SERVER 512
 # define MAX_INVENTORY 100
@@ -38,20 +27,6 @@
 // # define MAX_CLOTH_COLOR battle_config.max_cloth_color
 # define NUM_HAIR_STYLES 20
 # define NUM_HAIR_COLORS 12
-
-// for produce
-# define MIN_ATTRIBUTE 0
-# define MAX_ATTRIBUTE 4
-# define ATTRIBUTE_NORMAL 0
-# define MIN_STAR 0
-# define MAX_STAR 3
-
-# define MIN_PORTAL_MEMO 0
-# define MAX_PORTAL_MEMO 2
-
-# define MAX_STATUS_TYPE 5
-
-# define CHAR_CONF_NAME  "conf/char_athena.conf"
 
 typedef uint32_t account_t;
 typedef uint8_t gm_level_t;
@@ -135,8 +110,6 @@ struct storage
     struct item storage_[MAX_STORAGE];
 };
 
-struct map_session_data;
-
 struct gm_account
 {
     account_t account_id;
@@ -185,4 +158,4 @@ enum auth_failure
     AUTH_ID_ERASED = 100,
 };
 
-#endif // MMO_H
+#endif // MMO_HPP

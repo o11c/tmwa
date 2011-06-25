@@ -1,39 +1,26 @@
 #include "atcommand.hpp"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <math.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <time.h>
-#include <unistd.h>
+#include <cmath>
 
-#include "../common/socket.hpp"
-#include "../common/timer.hpp"
-#include "../common/nullpo.hpp"
+#include "../common/core.hpp" // runflag
 #include "../common/mt_rand.hpp"
+#include "../common/nullpo.hpp"
+#include "../common/timer.hpp"
+#include "../common/utils.hpp"
 
 #include "battle.hpp"
-#include "clif.hpp"
 #include "chrif.hpp"
-#include "intif.hpp"
+#include "clif.hpp"
 #include "itemdb.hpp"
 #include "map.hpp"
 #include "mob.hpp"
 #include "npc.hpp"
-#include "pc.hpp"
 #include "party.hpp"
-#include "script.hpp"
+#include "pc.hpp"
 #include "skill.hpp"
-#include "trade.hpp"
-
-#include "../common/core.hpp"
+#include "storage.hpp"
 #include "tmw.hpp"
-
-#define STATE_BLIND 0x10
+#include "trade.hpp"
 
 #define ATCOMMAND_FUNC(x) static int atcommand_##x(int fd, MapSessionData* sd, const char* command, const char* message)
 ATCOMMAND_FUNC(setup);

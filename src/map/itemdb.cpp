@@ -1,18 +1,10 @@
 #include "itemdb.hpp"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "../common/db.hpp"
-#include "../common/grfio.hpp"
-#include "../common/nullpo.hpp"
-#include "map.hpp"
-#include "battle.hpp"
-#include "script.hpp"
-#include "pc.hpp"
 #include "../common/socket.hpp"
-#include "../common/mt_rand.hpp"
+#include "../common/utils.hpp"
+
+#include "script.hpp"
 
 #define MAX_RANDITEM    2000
 

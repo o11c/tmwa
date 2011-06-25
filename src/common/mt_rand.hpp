@@ -1,7 +1,5 @@
-#ifndef MT_RAND_H
-#define MT_RAND_H
-
-# include "sanity.hpp"
+#ifndef MT_RAND_HPP
+#define MT_RAND_HPP
 
 /// Initialize the generator (called automatically with time() if you don't)
 void mt_seed(uint32_t seed);
@@ -23,4 +21,4 @@ inline uint32_t MPRAND(uint32_t add, uint32_t mod)
 {
     return add + MRAND(mod);
 }
-#endif // MT_RAND_H
+#endif // MT_RAND_HPP

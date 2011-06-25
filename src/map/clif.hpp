@@ -42,6 +42,16 @@ enum class BeingRemoveType
     DISGUISE = 9,
 };
 class BlockList;
+enum class PickupFail : uint8_t
+{
+    OKAY = 0,
+    BAD_ITEM = 1,
+    TOO_HEAVY = 2,
+    TOO_FAR = 3,
+    INV_FULL = 4,
+    STACK_FULL = 5,
+    DROP_STEAL = 6,
+};
 
 void clif_being_remove(BlockList *, BeingRemoveType);
 void clif_being_remove_id(uint32_t, BeingRemoveType, int fd);
@@ -66,7 +76,7 @@ void clif_scriptclose(MapSessionData *, int); //self
 void clif_scriptmenu(MapSessionData *, int, const std::vector<std::string>&);  //self
 void clif_scriptinput(MapSessionData *, int); //self
 void clif_scriptinputstr(MapSessionData *sd, int npcid);  // self
-void clif_additem(MapSessionData *, int, int, int);   //self
+void clif_additem(MapSessionData *, int, int, PickupFail);   //self
 void clif_delitem(MapSessionData *, int, int);    //self
 void clif_updatestatus(MapSessionData *, int);    //self
 void clif_damage(BlockList *, BlockList *, unsigned int, int, int, int, int, int, int);    // area

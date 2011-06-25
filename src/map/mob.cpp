@@ -2030,8 +2030,6 @@ struct delay_item_drop2
 static void mob_delay_item_drop(timer_id, tick_t, struct delay_item_drop *ditem)
 {
     struct item temp_item;
-    int flag;
-
     nullpo_retv(ditem);
 
     memset(&temp_item, 0, sizeof(temp_item));
@@ -2041,14 +2039,16 @@ static void mob_delay_item_drop(timer_id, tick_t, struct delay_item_drop *ditem)
 
     if (battle_config.item_auto_get == 1)
     {
-        if (ditem->first_sd
-            && (flag =
-                pc_additem(ditem->first_sd, &temp_item, ditem->amount)))
+        if (ditem->first_sd)
         {
-            clif_additem(ditem->first_sd, 0, 0, flag);
-            map_addflooritem(&temp_item, 1, ditem->m, ditem->x, ditem->y,
-                              ditem->first_sd, ditem->second_sd,
-                              ditem->third_sd);
+            PickupFail flag = pc_additem(ditem->first_sd, &temp_item, ditem->amount);
+            if (flag != PickupFail::OKAY)
+            {
+                clif_additem(ditem->first_sd, 0, 0, flag);
+                map_addflooritem(&temp_item, 1, ditem->m, ditem->x, ditem->y,
+                                 ditem->first_sd, ditem->second_sd,
+                                 ditem->third_sd);
+            }
         }
         free(ditem);
         return;
@@ -2066,21 +2066,20 @@ static void mob_delay_item_drop(timer_id, tick_t, struct delay_item_drop *ditem)
  */
 static void mob_delay_item_drop2(timer_id, tick_t, struct delay_item_drop2 *ditem)
 {
-    int flag;
-
     nullpo_retv(ditem);
 
     if (battle_config.item_auto_get == 1)
     {
-        if (ditem->first_sd
-            && (flag =
-                pc_additem(ditem->first_sd, &ditem->item_data,
-                            ditem->item_data.amount)))
+        if (ditem->first_sd)
         {
-            clif_additem(ditem->first_sd, 0, 0, flag);
-            map_addflooritem(&ditem->item_data, ditem->item_data.amount,
-                              ditem->m, ditem->x, ditem->y, ditem->first_sd,
-                              ditem->second_sd, ditem->third_sd);
+            PickupFail flag = pc_additem(ditem->first_sd, &ditem->item_data, ditem->item_data.amount);
+            if (flag != PickupFail::OKAY)
+            {
+                clif_additem(ditem->first_sd, 0, 0, flag);
+                map_addflooritem(&ditem->item_data, ditem->item_data.amount,
+                                 ditem->m, ditem->x, ditem->y, ditem->first_sd,
+                                 ditem->second_sd, ditem->third_sd);
+            }
         }
         free(ditem);
         return;

@@ -36,12 +36,6 @@ struct item_data
     } flag;
 };
 
-struct random_item_data
-{
-    int nameid;
-    int per;
-};
-
 struct item_data *itemdb_searchname(const char *name);
 struct item_data *itemdb_search(int nameid);
 struct item_data *itemdb_exists(int nameid);
@@ -59,8 +53,6 @@ struct item_data *itemdb_exists(int nameid);
 #define itemdb_available(n) (itemdb_exists(n) && itemdb_search(n)->flag.available)
 #define itemdb_viewid(n) (itemdb_search(n)->view_id)
 
-int itemdb_searchrandomid(int flags);
-
 #define itemdb_value_buy(n) itemdb_search(n)->value_buy
 #define itemdb_value_sell(n) itemdb_search(n)->value_sell
 
@@ -68,6 +60,6 @@ int itemdb_isequip(int);
 int itemdb_isequip2(struct item_data *);
 int itemdb_isequip3(int);
 
-int do_init_itemdb(void);
+void do_init_itemdb(void);
 
 #endif // ITEMDB_H

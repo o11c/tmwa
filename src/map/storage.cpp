@@ -230,7 +230,6 @@ int storage_storageadd(MapSessionData *sd, int idx, int amount)
 int storage_storageget(MapSessionData *sd, int idx, int amount)
 {
     struct storage *stor;
-    int flag;
 
     nullpo_ret(sd);
     nullpo_ret(stor = account2storage2(sd->status.account_id));
@@ -244,7 +243,8 @@ int storage_storageget(MapSessionData *sd, int idx, int amount)
     if (amount < 1 || amount > stor->storage_[idx].amount)
         return 0;
 
-    if ((flag = pc_additem(sd, &stor->storage_[idx], amount)) == 0)
+    PickupFail flag = pc_additem(sd, &stor->storage_[idx], amount);
+    if (flag == PickupFail::OKAY)
         storage_delitem(sd, stor, idx, amount);
     else
         clif_additem(sd, 0, 0, flag);

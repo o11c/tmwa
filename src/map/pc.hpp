@@ -51,7 +51,7 @@ int pc_checkadditem(MapSessionData *, int, int);
 int pc_inventoryblank(MapSessionData *);
 int pc_search_inventory(MapSessionData *sd, int item_id);
 int pc_payzeny(MapSessionData *, int);
-int pc_additem(MapSessionData *, struct item *, int);
+PickupFail pc_additem(MapSessionData *, struct item *, int);
 int pc_getzeny(MapSessionData *, int);
 int pc_delitem(MapSessionData *, int, int, int);
 int pc_checkitem(MapSessionData *);

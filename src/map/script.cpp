@@ -2366,7 +2366,7 @@ void builtin_checkweight(struct script_state *st)
  */
 void builtin_getitem(struct script_state *st)
 {
-    int nameid, amount, flag = 0;
+    int nameid, amount;
     struct item item_tmp;
     MapSessionData *sd;
     struct script_data *data;
@@ -2391,27 +2391,19 @@ void builtin_getitem(struct script_state *st)
     {
         return;               //return if amount <=0, skip the useles iteration
     }
-    //Violet Box, Blue Box, etc - random item pick
-    if (nameid < 0)
-    {                           // ランダム
-        nameid = itemdb_searchrandomid(-nameid);
-        flag = 1;
-    }
 
     if (nameid > 0)
     {
         memset(&item_tmp, 0, sizeof(item_tmp));
         item_tmp.nameid = nameid;
-        if (!flag)
-            item_tmp.identify = 1;
-        else
-            item_tmp.identify = !itemdb_isequip3(nameid);
+        item_tmp.identify = 1;
         if (st->end > st->start + 5)    //アイテムを指定したIDに渡す
             sd = map_id2sd(conv_num
                             (st, &(st->stack->stack_data[st->start + 5])));
         if (sd == NULL)         //アイテムを渡す相手がいなかったらお帰り
             return;
-        if ((flag = pc_additem(sd, &item_tmp, amount)))
+        PickupFail flag = pc_additem(sd, &item_tmp, amount);
+        if (flag != PickupFail::OKAY)
         {
             clif_additem(sd, 0, 0, flag);
             map_addflooritem(&item_tmp, amount, sd->m, sd->x, sd->y,
@@ -2426,7 +2418,7 @@ void builtin_getitem(struct script_state *st)
  */
 void builtin_getitem2(struct script_state *st)
 {
-    int nameid, amount, flag = 0;
+    int nameid, amount;
     int iden, ref, attr, c1, c2, c3, c4;
     struct item item_tmp;
     MapSessionData *sd;
@@ -2461,12 +2453,6 @@ void builtin_getitem2(struct script_state *st)
     if (sd == NULL)             //アイテムを渡す相手がいなかったらお帰り
         return;
 
-    if (nameid < 0)
-    {                           // ランダム
-        nameid = itemdb_searchrandomid(-nameid);
-        flag = 1;
-    }
-
     if (nameid > 0)
     {
         memset(&item_tmp, 0, sizeof(item_tmp));
@@ -2489,17 +2475,15 @@ void builtin_getitem2(struct script_state *st)
         }
 
         item_tmp.nameid = nameid;
-        if (!flag)
-            item_tmp.identify = iden;
-        else if (item_data->type == 4 || item_data->type == 5)
-            item_tmp.identify = 0;
+        item_tmp.identify = iden;
         item_tmp.refine = ref;
         item_tmp.attribute = attr;
         item_tmp.card[0] = c1;
         item_tmp.card[1] = c2;
         item_tmp.card[2] = c3;
         item_tmp.card[3] = c4;
-        if ((flag = pc_additem(sd, &item_tmp, amount)))
+        PickupFail flag = pc_additem(sd, &item_tmp, amount);
+        if (flag != PickupFail::OKAY)
         {
             clif_additem(sd, 0, 0, flag);
             map_addflooritem(&item_tmp, amount, sd->m, sd->x, sd->y,
@@ -2514,7 +2498,7 @@ void builtin_getitem2(struct script_state *st)
  */
 void builtin_makeitem(struct script_state *st)
 {
-    int nameid, amount, flag = 0;
+    int nameid, amount;
     int x, y, m;
     struct item item_tmp;
     MapSessionData *sd;
@@ -2546,22 +2530,12 @@ void builtin_makeitem(struct script_state *st)
     else
         m = map_mapname2mapid(mapname);
 
-    if (nameid < 0)
-    {                           // ランダム
-        nameid = itemdb_searchrandomid(-nameid);
-        flag = 1;
-    }
-
     if (nameid > 0)
     {
         memset(&item_tmp, 0, sizeof(item_tmp));
         item_tmp.nameid = nameid;
-        if (!flag)
-            item_tmp.identify = 1;
-        else
-            item_tmp.identify = !itemdb_isequip3(nameid);
+        item_tmp.identify = 1;
 
-//      clif_additem(sd,0,0,flag);
         map_addflooritem(&item_tmp, amount, m, x, y, NULL, NULL, NULL);
     }
 }
@@ -3047,7 +3021,7 @@ void builtin_successrefitem(struct script_state *st)
         sd->status.inventory[i].refine++;
         pc_unequipitem(sd, i, 0);
         clif_delitem(sd, i, 1);
-        clif_additem(sd, i, 1, 0);
+        clif_additem(sd, i, 1, PickupFail::OKAY);
         pc_equipitem(sd, i, ep);
         clif_misceffect(sd, 3);
     }
@@ -4294,7 +4268,7 @@ void builtin_getequipcardcnt(struct script_state *st)
  */
 void builtin_successremovecards(struct script_state *st)
 {
-    int i, num, cardflag = 0, flag;
+    int i, num, cardflag = 0;
     MapSessionData *sd;
     struct item item_tmp;
     int c = 4;
@@ -4320,7 +4294,8 @@ void builtin_successremovecards(struct script_state *st)
             item_tmp.card[0] = 0, item_tmp.card[1] = 0, item_tmp.card[2] =
                 0, item_tmp.card[3] = 0;
 
-            if ((flag = pc_additem(sd, &item_tmp, 1)))
+            PickupFail flag = pc_additem(sd, &item_tmp, 1);
+            if (flag != PickupFail::OKAY)
             {                   // 持てないならドロップ
                 clif_additem(sd, 0, 0, flag);
                 map_addflooritem(&item_tmp, 1, sd->m, sd->x, sd->y,
@@ -4332,7 +4307,6 @@ void builtin_successremovecards(struct script_state *st)
 
     if (cardflag == 1)
     {                           // カードを取り除いたアイテム所得
-        flag = 0;
         item_tmp.id = 0, item_tmp.nameid = sd->status.inventory[i].nameid;
         item_tmp.equip = 0, item_tmp.identify = 1, item_tmp.refine =
             sd->status.inventory[i].refine;
@@ -4340,7 +4314,8 @@ void builtin_successremovecards(struct script_state *st)
         item_tmp.card[0] = 0, item_tmp.card[1] = 0, item_tmp.card[2] =
             0, item_tmp.card[3] = 0;
         pc_delitem(sd, i, 1, 0);
-        if ((flag = pc_additem(sd, &item_tmp, 1)))
+        PickupFail flag = pc_additem(sd, &item_tmp, 1);
+        if (flag != PickupFail::OKAY)
         {                       // もてないならドロップ
             clif_additem(sd, 0, 0, flag);
             map_addflooritem(&item_tmp, 1, sd->m, sd->x, sd->y,
@@ -4358,7 +4333,7 @@ void builtin_successremovecards(struct script_state *st)
  */
 void builtin_failedremovecards(struct script_state *st)
 {
-    int i, num, cardflag = 0, flag, typefail;
+    int i, num, cardflag = 0, typefail;
     MapSessionData *sd;
     struct item item_tmp;
     int c = 4;
@@ -4388,7 +4363,8 @@ void builtin_failedremovecards(struct script_state *st)
                 item_tmp.attribute = 0;
                 item_tmp.card[0] = 0, item_tmp.card[1] = 0, item_tmp.card[2] =
                     0, item_tmp.card[3] = 0;
-                if ((flag = pc_additem(sd, &item_tmp, 1)))
+                PickupFail flag = pc_additem(sd, &item_tmp, 1);
+                if (flag != PickupFail::OKAY)
                 {
                     clif_additem(sd, 0, 0, flag);
                     map_addflooritem(&item_tmp, 1, sd->m, sd->x,
@@ -4410,7 +4386,6 @@ void builtin_failedremovecards(struct script_state *st)
         }
         if (typefail == 1)
         {                       // カードのみ損失（武具を返す）
-            flag = 0;
             item_tmp.id = 0, item_tmp.nameid = sd->status.inventory[i].nameid;
             item_tmp.equip = 0, item_tmp.identify = 1, item_tmp.refine =
                 sd->status.inventory[i].refine;
@@ -4418,7 +4393,8 @@ void builtin_failedremovecards(struct script_state *st)
             item_tmp.card[0] = 0, item_tmp.card[1] = 0, item_tmp.card[2] =
                 0, item_tmp.card[3] = 0;
             pc_delitem(sd, i, 1, 0);
-            if ((flag = pc_additem(sd, &item_tmp, 1)))
+            PickupFail flag = pc_additem(sd, &item_tmp, 1);
+            if (flag != PickupFail::OKAY)
             {
                 clif_additem(sd, 0, 0, flag);
                 map_addflooritem(&item_tmp, 1, sd->m, sd->x, sd->y,

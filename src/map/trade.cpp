@@ -270,15 +270,14 @@ void trade_tradecancel(MapSessionData *sd)
             if (sd->deal_item_amount[trade_i] != 0)
             {
                 clif_additem(sd, sd->deal_item_index[trade_i] - 2,
-                              sd->deal_item_amount[trade_i], 0);
+                             sd->deal_item_amount[trade_i], PickupFail::OKAY);
                 sd->deal_item_index[trade_i] = 0;
                 sd->deal_item_amount[trade_i] = 0;
             }
             if (target_sd->deal_item_amount[trade_i] != 0)
             {
-                clif_additem(target_sd,
-                              target_sd->deal_item_index[trade_i] - 2,
-                              target_sd->deal_item_amount[trade_i], 0);
+                clif_additem(target_sd, target_sd->deal_item_index[trade_i] - 2,
+                             target_sd->deal_item_amount[trade_i], PickupFail::OKAY);
                 target_sd->deal_item_index[trade_i] = 0;
                 target_sd->deal_item_amount[trade_i] = 0;
             }
@@ -349,34 +348,26 @@ void trade_tradecommit(MapSessionData *sd)
                     if (sd->deal_item_amount[trade_i] != 0)
                     {
                         int n = sd->deal_item_index[trade_i] - 2;
-                        int flag;
-                        flag =
-                            pc_additem(target_sd, &sd->status.inventory[n],
-                                        sd->deal_item_amount[trade_i]);
-                        if (flag == 0)
-                            pc_delitem(sd, n, sd->deal_item_amount[trade_i],
-                                        1);
+                        PickupFail flag = pc_additem(target_sd,
+                                                     &sd->status.inventory[n],
+                                                     sd->deal_item_amount[trade_i]);
+                        if (flag == PickupFail::OKAY)
+                            pc_delitem(sd, n, sd->deal_item_amount[trade_i], 1);
                         else
-                            clif_additem(sd, n,
-                                          sd->deal_item_amount[trade_i], 0);
+                            clif_additem(sd, n, sd->deal_item_amount[trade_i], PickupFail::OKAY);
                         sd->deal_item_index[trade_i] = 0;
                         sd->deal_item_amount[trade_i] = 0;
                     }
                     if (target_sd->deal_item_amount[trade_i] != 0)
                     {
                         int n = target_sd->deal_item_index[trade_i] - 2;
-                        int flag;
-                        flag =
-                            pc_additem(sd, &target_sd->status.inventory[n],
-                                        target_sd->deal_item_amount[trade_i]);
-                        if (flag == 0)
-                            pc_delitem(target_sd, n,
-                                        target_sd->deal_item_amount[trade_i],
-                                        1);
+                        PickupFail flag = pc_additem(sd,
+                                                     &target_sd->status.inventory[n],
+                                                     target_sd->deal_item_amount[trade_i]);
+                        if (flag == PickupFail::OKAY)
+                            pc_delitem(target_sd, n, target_sd->deal_item_amount[trade_i], 1);
                         else
-                            clif_additem(target_sd, n,
-                                          target_sd->deal_item_amount
-                                          [trade_i], 0);
+                            clif_additem(target_sd, n, target_sd->deal_item_amount[trade_i], PickupFail::OKAY);
                         target_sd->deal_item_index[trade_i] = 0;
                         target_sd->deal_item_amount[trade_i] = 0;
                     }

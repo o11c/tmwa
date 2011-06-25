@@ -1102,34 +1102,28 @@ void clif_scriptinputstr(MapSessionData *sd, int npcid)
     WFIFOSET(fd, packet_len_table[0x1d4]);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-void clif_additem(MapSessionData *sd, int n, int amount, int fail)
+/// Add an item to player's inventory
+void clif_additem(MapSessionData *sd, int n, int amount, PickupFail fail)
 {
-    uint8_t *buf;
-
     nullpo_retv(sd);
 
     int fd = sd->fd;
-    buf = WFIFOP(fd, 0);
-    if (fail)
+    if (fail != PickupFail::OKAY)
     {
-        WBUFW(buf, 0) = 0xa0;
-        WBUFW(buf, 2) = n + 2;
-        WBUFW(buf, 4) = amount;
-        WBUFW(buf, 6) = 0;
-        WBUFB(buf, 8) = 0;
-        WBUFB(buf, 9) = 0;
-        WBUFB(buf, 10) = 0;
-        WBUFW(buf, 11) = 0;
-        WBUFW(buf, 13) = 0;
-        WBUFW(buf, 15) = 0;
-        WBUFW(buf, 17) = 0;
-        WBUFW(buf, 19) = 0;
-        WBUFB(buf, 21) = 0;
-        WBUFB(buf, 22) = fail;
+        WFIFOW(fd, 0) = 0xa0;
+        WFIFOW(fd, 2) = n + 2;
+        WFIFOW(fd, 4) = amount;
+        WFIFOW(fd, 6) = 0;
+        WFIFOB(fd, 8) = 0;
+        WFIFOB(fd, 9) = 0;
+        WFIFOB(fd, 10) = 0;
+        WFIFOW(fd, 11) = 0;
+        WFIFOW(fd, 13) = 0;
+        WFIFOW(fd, 15) = 0;
+        WFIFOW(fd, 17) = 0;
+        WFIFOW(fd, 19) = 0;
+        WFIFOB(fd, 21) = 0;
+        WFIFOB(fd, 22) = static_cast<uint8_t>(fail);
     }
     else
     {
@@ -1137,25 +1131,24 @@ void clif_additem(MapSessionData *sd, int n, int amount, int fail)
             || sd->inventory_data[n] == NULL)
             return;
 
-        WBUFW(buf, 0) = 0xa0;
-        WBUFW(buf, 2) = n + 2;
-        WBUFW(buf, 4) = amount;
-        WBUFW(buf, 6) = sd->status.inventory[n].nameid;
-        WBUFB(buf, 8) = sd->status.inventory[n].identify;
+        WFIFOW(fd, 0) = 0xa0;
+        WFIFOW(fd, 2) = n + 2;
+        WFIFOW(fd, 4) = amount;
+        WFIFOW(fd, 6) = sd->status.inventory[n].nameid;
+        WFIFOB(fd, 8) = sd->status.inventory[n].identify;
         if (sd->status.inventory[n].broken == 1)
-            WBUFB(buf, 9) = 1; // is weapon broken [Valaris]
+            WFIFOB(fd, 9) = 1; // is weapon broken [Valaris]
         else
-            WBUFB(buf, 9) = sd->status.inventory[n].attribute;
-        WBUFB(buf, 10) = sd->status.inventory[n].refine;
-        WBUFW(buf, 11) = sd->status.inventory[n].card[0];
-        WBUFW(buf, 13) = sd->status.inventory[n].card[1];
-        WBUFW(buf, 15) = sd->status.inventory[n].card[2];
-        WBUFW(buf, 17) = sd->status.inventory[n].card[3];
-        WBUFW(buf, 19) = pc_equippoint(sd, n);
-        WBUFB(buf, 21) =
-            (sd->inventory_data[n]->type ==
-             7) ? 4 : sd->inventory_data[n]->type;
-        WBUFB(buf, 22) = fail;
+            WFIFOB(fd, 9) = sd->status.inventory[n].attribute;
+        WFIFOB(fd, 10) = sd->status.inventory[n].refine;
+        WFIFOW(fd, 11) = sd->status.inventory[n].card[0];
+        WFIFOW(fd, 13) = sd->status.inventory[n].card[1];
+        WFIFOW(fd, 15) = sd->status.inventory[n].card[2];
+        WFIFOW(fd, 17) = sd->status.inventory[n].card[3];
+        WFIFOW(fd, 19) = pc_equippoint(sd, n);
+        WFIFOB(fd, 21) =
+            (sd->inventory_data[n]->type == 7) ? 4 : sd->inventory_data[n]->type;
+        WFIFOB(fd, 22) = static_cast<uint8_t>(fail);
     }
 
     WFIFOSET(fd, packet_len_table[0xa0]);
@@ -1190,35 +1183,35 @@ void clif_itemlist(MapSessionData *sd)
 
     int fd = sd->fd;
     buf = WFIFOP(fd, 0);
-    WBUFW(buf, 0) = 0x1ee;
+    WFIFOW(fd, 0) = 0x1ee;
     for (i = 0, n = 0; i < MAX_INVENTORY; i++)
     {
         if (sd->status.inventory[i].nameid <= 0
             || sd->inventory_data[i] == NULL
             || itemdb_isequip2(sd->inventory_data[i]))
             continue;
-        WBUFW(buf, n * 18 + 4) = i + 2;
-        WBUFW(buf, n * 18 + 6) = sd->status.inventory[i].nameid;
-        WBUFB(buf, n * 18 + 8) = sd->inventory_data[i]->type;
-        WBUFB(buf, n * 18 + 9) = sd->status.inventory[i].identify;
-        WBUFW(buf, n * 18 + 10) = sd->status.inventory[i].amount;
+        WFIFOW(fd, n * 18 + 4) = i + 2;
+        WFIFOW(fd, n * 18 + 6) = sd->status.inventory[i].nameid;
+        WFIFOB(fd, n * 18 + 8) = sd->inventory_data[i]->type;
+        WFIFOB(fd, n * 18 + 9) = sd->status.inventory[i].identify;
+        WFIFOW(fd, n * 18 + 10) = sd->status.inventory[i].amount;
         if (sd->inventory_data[i]->equip == 0x8000)
         {
-            WBUFW(buf, n * 18 + 12) = 0x8000;
+            WFIFOW(fd, n * 18 + 12) = 0x8000;
             if (sd->status.inventory[i].equip)
                 arrow = i;      // ついでに矢装備チェック
         }
         else
-            WBUFW(buf, n * 18 + 12) = 0;
-        WBUFW(buf, n * 18 + 14) = sd->status.inventory[i].card[0];
-        WBUFW(buf, n * 18 + 16) = sd->status.inventory[i].card[1];
-        WBUFW(buf, n * 18 + 18) = sd->status.inventory[i].card[2];
-        WBUFW(buf, n * 18 + 20) = sd->status.inventory[i].card[3];
+            WFIFOW(fd, n * 18 + 12) = 0;
+        WFIFOW(fd, n * 18 + 14) = sd->status.inventory[i].card[0];
+        WFIFOW(fd, n * 18 + 16) = sd->status.inventory[i].card[1];
+        WFIFOW(fd, n * 18 + 18) = sd->status.inventory[i].card[2];
+        WFIFOW(fd, n * 18 + 20) = sd->status.inventory[i].card[3];
         n++;
     }
     if (n)
     {
-        WBUFW(buf, 2) = 4 + n * 18;
+        WFIFOW(fd, 2) = 4 + n * 18;
         WFIFOSET(fd, WFIFOW(fd, 2));
     }
     if (arrow >= 0)
@@ -1238,35 +1231,35 @@ void clif_equiplist(MapSessionData *sd)
 
     fd = sd->fd;
     buf = WFIFOP(fd, 0);
-    WBUFW(buf, 0) = 0xa4;
+    WFIFOW(fd, 0) = 0xa4;
     for (i = 0, n = 0; i < MAX_INVENTORY; i++)
     {
         if (sd->status.inventory[i].nameid <= 0
             || sd->inventory_data[i] == NULL
             || !itemdb_isequip2(sd->inventory_data[i]))
             continue;
-        WBUFW(buf, n * 20 + 4) = i + 2;
-        WBUFW(buf, n * 20 + 6) = sd->status.inventory[i].nameid;
-        WBUFB(buf, n * 20 + 8) =
+        WFIFOW(fd, n * 20 + 4) = i + 2;
+        WFIFOW(fd, n * 20 + 6) = sd->status.inventory[i].nameid;
+        WFIFOB(fd, n * 20 + 8) =
             (sd->inventory_data[i]->type ==
              7) ? 4 : sd->inventory_data[i]->type;
-        WBUFB(buf, n * 20 + 9) = sd->status.inventory[i].identify;
-        WBUFW(buf, n * 20 + 10) = pc_equippoint(sd, i);
-        WBUFW(buf, n * 20 + 12) = sd->status.inventory[i].equip;
+        WFIFOB(fd, n * 20 + 9) = sd->status.inventory[i].identify;
+        WFIFOW(fd, n * 20 + 10) = pc_equippoint(sd, i);
+        WFIFOW(fd, n * 20 + 12) = sd->status.inventory[i].equip;
         if (sd->status.inventory[i].broken == 1)
-            WBUFB(buf, n * 20 + 14) = 1;   // is weapon broken [Valaris]
+            WFIFOB(fd, n * 20 + 14) = 1;   // is weapon broken [Valaris]
         else
-            WBUFB(buf, n * 20 + 14) = sd->status.inventory[i].attribute;
-        WBUFB(buf, n * 20 + 15) = sd->status.inventory[i].refine;
-        WBUFW(buf, n * 20 + 16) = sd->status.inventory[i].card[0];
-        WBUFW(buf, n * 20 + 18) = sd->status.inventory[i].card[1];
-        WBUFW(buf, n * 20 + 20) = sd->status.inventory[i].card[2];
-        WBUFW(buf, n * 20 + 22) = sd->status.inventory[i].card[3];
+            WFIFOB(fd, n * 20 + 14) = sd->status.inventory[i].attribute;
+        WFIFOB(fd, n * 20 + 15) = sd->status.inventory[i].refine;
+        WFIFOW(fd, n * 20 + 16) = sd->status.inventory[i].card[0];
+        WFIFOW(fd, n * 20 + 18) = sd->status.inventory[i].card[1];
+        WFIFOW(fd, n * 20 + 20) = sd->status.inventory[i].card[2];
+        WFIFOW(fd, n * 20 + 22) = sd->status.inventory[i].card[3];
         n++;
     }
     if (n)
     {
-        WBUFW(buf, 2) = 4 + n * 20;
+        WFIFOW(fd, 2) = 4 + n * 20;
         WFIFOSET(fd, WFIFOW(fd, 2));
     }
 }
@@ -1286,7 +1279,7 @@ void clif_storageitemlist(MapSessionData *sd, struct storage *stor)
 
     fd = sd->fd;
     buf = WFIFOP(fd, 0);
-    WBUFW(buf, 0) = 0x1f0;
+    WFIFOW(fd, 0) = 0x1f0;
     for (i = 0, n = 0; i < MAX_STORAGE; i++)
     {
         if (stor->storage_[i].nameid <= 0)
@@ -1295,21 +1288,21 @@ void clif_storageitemlist(MapSessionData *sd, struct storage *stor)
         if (itemdb_isequip2(id))
             continue;
 
-        WBUFW(buf, n * 18 + 4) = i + 1;
-        WBUFW(buf, n * 18 + 6) = stor->storage_[i].nameid;
-        WBUFB(buf, n * 18 + 8) = id->type;
-        WBUFB(buf, n * 18 + 9) = stor->storage_[i].identify;
-        WBUFW(buf, n * 18 + 10) = stor->storage_[i].amount;
-        WBUFW(buf, n * 18 + 12) = 0;
-        WBUFW(buf, n * 18 + 14) = stor->storage_[i].card[0];
-        WBUFW(buf, n * 18 + 16) = stor->storage_[i].card[1];
-        WBUFW(buf, n * 18 + 18) = stor->storage_[i].card[2];
-        WBUFW(buf, n * 18 + 20) = stor->storage_[i].card[3];
+        WFIFOW(fd, n * 18 + 4) = i + 1;
+        WFIFOW(fd, n * 18 + 6) = stor->storage_[i].nameid;
+        WFIFOB(fd, n * 18 + 8) = id->type;
+        WFIFOB(fd, n * 18 + 9) = stor->storage_[i].identify;
+        WFIFOW(fd, n * 18 + 10) = stor->storage_[i].amount;
+        WFIFOW(fd, n * 18 + 12) = 0;
+        WFIFOW(fd, n * 18 + 14) = stor->storage_[i].card[0];
+        WFIFOW(fd, n * 18 + 16) = stor->storage_[i].card[1];
+        WFIFOW(fd, n * 18 + 18) = stor->storage_[i].card[2];
+        WFIFOW(fd, n * 18 + 20) = stor->storage_[i].card[3];
         n++;
     }
     if (n)
     {
-        WBUFW(buf, 2) = 4 + n * 18;
+        WFIFOW(fd, 2) = 4 + n * 18;
         WFIFOSET(fd, WFIFOW(fd, 2));
     }
 }
@@ -1329,7 +1322,7 @@ void clif_storageequiplist(MapSessionData *sd, struct storage *stor)
 
     fd = sd->fd;
     buf = WFIFOP(fd, 0);
-    WBUFW(buf, 0) = 0xa6;
+    WFIFOW(fd, 0) = 0xa6;
     for (i = 0, n = 0; i < MAX_STORAGE; i++)
     {
         if (stor->storage_[i].nameid <= 0)
@@ -1337,38 +1330,38 @@ void clif_storageequiplist(MapSessionData *sd, struct storage *stor)
         nullpo_retv(id = itemdb_search(stor->storage_[i].nameid));
         if (!itemdb_isequip2(id))
             continue;
-        WBUFW(buf, n * 20 + 4) = i + 1;
-        WBUFW(buf, n * 20 + 6) = stor->storage_[i].nameid;
-        WBUFB(buf, n * 20 + 8) = id->type;
-        WBUFB(buf, n * 20 + 9) = stor->storage_[i].identify;
-        WBUFW(buf, n * 20 + 10) = id->equip;
-        WBUFW(buf, n * 20 + 12) = stor->storage_[i].equip;
+        WFIFOW(fd, n * 20 + 4) = i + 1;
+        WFIFOW(fd, n * 20 + 6) = stor->storage_[i].nameid;
+        WFIFOB(fd, n * 20 + 8) = id->type;
+        WFIFOB(fd, n * 20 + 9) = stor->storage_[i].identify;
+        WFIFOW(fd, n * 20 + 10) = id->equip;
+        WFIFOW(fd, n * 20 + 12) = stor->storage_[i].equip;
         if (stor->storage_[i].broken == 1)
-            WBUFB(buf, n * 20 + 14) = 1;   //is weapon broken [Valaris]
+            WFIFOB(fd, n * 20 + 14) = 1;   //is weapon broken [Valaris]
         else
-            WBUFB(buf, n * 20 + 14) = stor->storage_[i].attribute;
-        WBUFB(buf, n * 20 + 15) = stor->storage_[i].refine;
+            WFIFOB(fd, n * 20 + 14) = stor->storage_[i].attribute;
+        WFIFOB(fd, n * 20 + 15) = stor->storage_[i].refine;
         if (stor->storage_[i].card[0] == 0x00ff
             || stor->storage_[i].card[0] == 0x00fe
             || stor->storage_[i].card[0] == static_cast<short>(0xff00))
         {
-            WBUFW(buf, n * 20 + 16) = stor->storage_[i].card[0];
-            WBUFW(buf, n * 20 + 18) = stor->storage_[i].card[1];
-            WBUFW(buf, n * 20 + 20) = stor->storage_[i].card[2];
-            WBUFW(buf, n * 20 + 22) = stor->storage_[i].card[3];
+            WFIFOW(fd, n * 20 + 16) = stor->storage_[i].card[0];
+            WFIFOW(fd, n * 20 + 18) = stor->storage_[i].card[1];
+            WFIFOW(fd, n * 20 + 20) = stor->storage_[i].card[2];
+            WFIFOW(fd, n * 20 + 22) = stor->storage_[i].card[3];
         }
         else
         {
-            WBUFW(buf, n * 20 + 16) = stor->storage_[i].card[0];
-            WBUFW(buf, n * 20 + 18) = stor->storage_[i].card[1];
-            WBUFW(buf, n * 20 + 20) = stor->storage_[i].card[2];
-            WBUFW(buf, n * 20 + 22) = stor->storage_[i].card[3];
+            WFIFOW(fd, n * 20 + 16) = stor->storage_[i].card[0];
+            WFIFOW(fd, n * 20 + 18) = stor->storage_[i].card[1];
+            WFIFOW(fd, n * 20 + 20) = stor->storage_[i].card[2];
+            WFIFOW(fd, n * 20 + 22) = stor->storage_[i].card[3];
         }
         n++;
     }
     if (n)
     {
-        WBUFW(buf, 2) = 4 + n * 20;
+        WFIFOW(fd, 2) = 4 + n * 20;
         WFIFOSET(fd, WFIFOW(fd, 2));
     }
 }

@@ -1371,8 +1371,8 @@ int atcommand_item(int fd, MapSessionData *sd,
         struct item item_tmp = {};
         item_tmp.nameid = item_id;
         item_tmp.identify = 1;
-        int flag = pc_additem(sd, &item_tmp, get_count);
-        if (flag)
+        PickupFail flag = pc_additem(sd, &item_tmp, get_count);
+        if (flag != PickupFail::OKAY)
             clif_additem(sd, 0, 0, flag);
     }
     clif_displaymessage(fd, "Item created.");

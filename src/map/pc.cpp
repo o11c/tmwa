@@ -1995,24 +1995,23 @@ int pc_remove_items(MapSessionData *player, int item_id, int count)
  * アイテム追加。個数のみitem構造体の数字を無視
  *------------------------------------------
  */
-int pc_additem(MapSessionData *sd, struct item *item_data,
-                int amount)
+PickupFail pc_additem(MapSessionData *sd, struct item *item_data,
+                      int amount)
 {
-    struct item_data *data;
-    int i, w;
 
     MAP_LOG_PC(sd, "PICKUP %d %d", item_data->nameid, amount);
 
-    nullpo_retr(1, sd);
-    nullpo_retr(1, item_data);
+    nullpo_retr(PickupFail::BAD_ITEM, sd);
+    nullpo_retr(PickupFail::BAD_ITEM, item_data);
 
     if (item_data->nameid <= 0 || amount <= 0)
-        return 1;
-    data = itemdb_search(item_data->nameid);
-    if ((w = data->weight * amount) + sd->weight > sd->max_weight)
-        return 2;
+        return PickupFail::BAD_ITEM;
+    struct item_data *data = itemdb_search(item_data->nameid);
+    int w = data->weight * amount;
+    if (w + sd->weight > sd->max_weight)
+        return PickupFail::TOO_HEAVY;
 
-    i = MAX_INVENTORY;
+    int i = MAX_INVENTORY;
 
     if (!itemdb_isequip2(data))
     {
@@ -2025,9 +2024,9 @@ int pc_additem(MapSessionData *sd, struct item *item_data,
                 && sd->status.inventory[i].card[3] == item_data->card[3])
             {
                 if (sd->status.inventory[i].amount + amount > MAX_AMOUNT)
-                    return 5;
+                    return PickupFail::STACK_FULL;
                 sd->status.inventory[i].amount += amount;
-                clif_additem(sd, i, amount, 0);
+                clif_additem(sd, i, amount, PickupFail::OKAY);
                 break;
             }
     }
@@ -2045,15 +2044,15 @@ int pc_additem(MapSessionData *sd, struct item *item_data,
 
             sd->status.inventory[i].amount = amount;
             sd->inventory_data[i] = data;
-            clif_additem(sd, i, amount, 0);
+            clif_additem(sd, i, amount, PickupFail::OKAY);
         }
         else
-            return 4;
+            return PickupFail::INV_FULL;
     }
     sd->weight += w;
     clif_updatestatus(sd, SP_WEIGHT);
 
-    return 0;
+    return PickupFail::OKAY;
 }
 
 /*==========================================
@@ -2163,7 +2162,6 @@ static int can_pick_item_up_from(MapSessionData *self, int other_id)
 
 int pc_takeitem(MapSessionData *sd, struct flooritem_data *fitem)
 {
-    int flag;
     unsigned int tick = gettick();
     int can_take;
 
@@ -2197,9 +2195,8 @@ int pc_takeitem(MapSessionData *sd, struct flooritem_data *fitem)
     if (can_take)
     {
         /* Can pick up */
-
-        if ((flag =
-             pc_additem(sd, &fitem->item_data, fitem->item_data.amount)))
+        PickupFail flag = pc_additem(sd, &fitem->item_data, fitem->item_data.amount);
+        if (flag != PickupFail::OKAY)
             // 重量overで取得失敗
             clif_additem(sd, 0, 0, flag);
         else
@@ -2214,7 +2211,7 @@ int pc_takeitem(MapSessionData *sd, struct flooritem_data *fitem)
     }
 
     /* Otherwise, we can't pick up */
-    clif_additem(sd, 0, 0, 6);
+    clif_additem(sd, 0, 0, PickupFail::DROP_STEAL);
     return 0;
 }
 

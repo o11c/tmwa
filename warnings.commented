@@ -90,3 +90,5 @@
 # Good: gcc 4.6.1 official release, gcc 4.7.0 official release (future)
 -Wno-error=abi
 
+# Debian's GCC doesn't imply this from -Werror -Wunused-but-set-variable
+-Werror=unused-but-set-variable

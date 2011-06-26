@@ -1161,12 +1161,10 @@ void clif_delitem(MapSessionData *sd, int n, int amount)
 void clif_itemlist(MapSessionData *sd)
 {
     int i, n, arrow = -1;
-    uint8_t *buf;
 
     nullpo_retv(sd);
 
     int fd = sd->fd;
-    buf = WFIFOP(fd, 0);
     WFIFOW(fd, 0) = 0x1ee;
     for (i = 0, n = 0; i < MAX_INVENTORY; i++)
     {
@@ -1209,12 +1207,10 @@ void clif_itemlist(MapSessionData *sd)
 void clif_equiplist(MapSessionData *sd)
 {
     int i, n, fd;
-    uint8_t *buf;
 
     nullpo_retv(sd);
 
     fd = sd->fd;
-    buf = WFIFOP(fd, 0);
     WFIFOW(fd, 0) = 0xa4;
     for (i = 0, n = 0; i < MAX_INVENTORY; i++)
     {
@@ -1256,13 +1252,11 @@ void clif_storageitemlist(MapSessionData *sd, struct storage *stor)
 {
     struct item_data *id;
     int i, n, fd;
-    uint8_t *buf;
 
     nullpo_retv(sd);
     nullpo_retv(stor);
 
     fd = sd->fd;
-    buf = WFIFOP(fd, 0);
     WFIFOW(fd, 0) = 0x1f0;
     for (i = 0, n = 0; i < MAX_STORAGE; i++)
     {
@@ -1299,13 +1293,11 @@ void clif_storageequiplist(MapSessionData *sd, struct storage *stor)
 {
     struct item_data *id;
     int i, n, fd;
-    uint8_t *buf;
 
     nullpo_retv(sd);
     nullpo_retv(stor);
 
     fd = sd->fd;
-    buf = WFIFOP(fd, 0);
     WFIFOW(fd, 0) = 0xa6;
     for (i = 0, n = 0; i < MAX_STORAGE; i++)
     {

@@ -11,7 +11,7 @@
 #include "map.hpp"
 #include "pc.hpp"
 
-static char *magic_preprocess_message(character_t * character, char *start,
+static char *magic_preprocess_message(MapSessionData *character, char *start,
                                        char *end)
 {
     if (character->state.shroud_active
@@ -58,7 +58,7 @@ static char *magic_tokenise(char *src, char **parameter)
     return retval;
 }
 
-int magic_message(character_t * caster, char *spell_, size_t)
+int magic_message(MapSessionData *caster, char *spell_, size_t)
 {
     if (pc_isdead(caster))
         return 0;
@@ -66,31 +66,29 @@ int magic_message(character_t * caster, char *spell_, size_t)
     int power = caster->matk1;
     char *invocation_base = spell_;
     char *source_invocation = 1 + invocation_base + strlen(caster->status.name);
-    spell_t *spell;
-    char *parameter;
-    char *spell_invocation;
-
-    if (!source_invocation)
-        return 0;
 
     /* Pre-message filter in case some spell alters output */
-    source_invocation =
-        magic_preprocess_message(caster, invocation_base, source_invocation);
+    source_invocation = magic_preprocess_message(caster, invocation_base, source_invocation);
 
-    spell_invocation = magic_tokenise(source_invocation, &parameter);
-    parameter = parameter ? strdup(parameter) : strdup("");
+    spell_t *spell;
+    POD_string parameter;
+    parameter.init();
+    {
+        POD_string spell_invocation;
+        char *parm;
+        spell_invocation.take_ownership(magic_tokenise(source_invocation, &parm));
+        parameter.assign(parm);
 
-    spell = magic_find_spell(spell_invocation);
-    free(spell_invocation);
-
+        spell = magic_find_spell(spell_invocation);
+        spell_invocation.free();
+    }
     if (spell)
     {
         int near_miss;
-        env_t *env =
-            spell_create_env(&magic_conf, spell, caster, power, parameter);
+        env_t *env = spell_create_env(spell, caster, power, parameter);
         effect_set_t *effects;
 
-        if ((spell->flags & SPELL_FLAG_NONMAGIC) || (power >= 1))
+        if ((spell->flags & SpellFlag::NONMAGIC) || (power >= 1))
             effects = spell_trigger(spell, caster, env, &near_miss);
         else
             effects = NULL;
@@ -99,7 +97,7 @@ int magic_message(character_t * caster, char *spell_, size_t)
             return 0;           // No spellcasting while hidden
 
         MAP_LOG_PC(caster, "CAST %s %s",
-                    spell->name, effects ? "SUCCESS" : "FAILURE");
+                    spell->name.c_str(), effects ? "SUCCESS" : "FAILURE");
 
         if (effects)
         {
@@ -108,7 +106,7 @@ int magic_message(character_t * caster, char *spell_, size_t)
             spell_bind(caster, invocation);
             spell_execute(invocation);
 
-            return (spell->flags & SPELL_FLAG_SILENT) ? -1 : 1;
+            return (spell->flags & SpellFlag::SILENT) ? -1 : 1;
         }
         else
             magic_free_env(env);
@@ -116,7 +114,7 @@ int magic_message(character_t * caster, char *spell_, size_t)
         return 1;
     }
     else
-        free(parameter);
+        parameter.free();
 
     return 0;                   /* Not a spell */
 }

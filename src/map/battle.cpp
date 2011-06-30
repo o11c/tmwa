@@ -131,9 +131,9 @@ int battle_get_agi(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
-        MAX(0, static_cast<struct mob_data *>(bl)->stats[MOB_AGI]);
+        return MAX(0, static_cast<struct mob_data *>(bl)->stats[MOB_AGI]);
     if (bl->type == BL_PC)
-        MAX(0, static_cast<MapSessionData *>(bl)->paramc[1]);
+        return MAX(0, static_cast<MapSessionData *>(bl)->paramc[1]);
     return 0;
 }
 
@@ -142,9 +142,9 @@ int battle_get_vit(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
-        MAX(0, static_cast<struct mob_data *>(bl)->stats[MOB_VIT]);
+        return MAX(0, static_cast<struct mob_data *>(bl)->stats[MOB_VIT]);
     if (bl->type == BL_PC)
-        MAX(0, static_cast<MapSessionData *>(bl)->paramc[2]);
+        return MAX(0, static_cast<MapSessionData *>(bl)->paramc[2]);
     return 0;
 }
 
@@ -153,9 +153,9 @@ int battle_get_int(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
-        MAX(0, static_cast<struct mob_data *>(bl)->stats[MOB_INT]);
+        return MAX(0, static_cast<struct mob_data *>(bl)->stats[MOB_INT]);
     if (bl->type == BL_PC)
-        MAX(0, static_cast<MapSessionData *>(bl)->paramc[3]);
+        return MAX(0, static_cast<MapSessionData *>(bl)->paramc[3]);
     return 0;
 }
 
@@ -164,9 +164,9 @@ int battle_get_dex(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
-        MAX(0, static_cast<struct mob_data *>(bl)->stats[MOB_DEX]);
+        return MAX(0, static_cast<struct mob_data *>(bl)->stats[MOB_DEX]);
     if (bl->type == BL_PC)
-        MAX(0, static_cast<MapSessionData *>(bl)->paramc[4]);
+        return MAX(0, static_cast<MapSessionData *>(bl)->paramc[4]);
     return 0;
 }
 
@@ -175,9 +175,9 @@ int battle_get_luk(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
-        MAX(0, static_cast<struct mob_data *>(bl)->stats[MOB_LUK]);
+        return MAX(0, static_cast<struct mob_data *>(bl)->stats[MOB_LUK]);
     if (bl->type == BL_PC)
-        MAX(0, static_cast<MapSessionData *>(bl)->paramc[5]);
+        return MAX(0, static_cast<MapSessionData *>(bl)->paramc[5]);
     return 0;
 }
 

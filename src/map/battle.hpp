@@ -28,7 +28,7 @@ int battle_heal(BlockList *bl, BlockList *target, int hp, int sp);
 
 AttackResult battle_weapon_attack(BlockList *bl, BlockList *target, tick_t tick);
 
-int battle_is_unarmed(BlockList *bl);
+int battle_is_unarmed(BlockList *bl) __attribute__((pure));
 Direction battle_get_dir(BlockList *bl);
 int battle_get_lv(BlockList *bl);
 int battle_get_range(BlockList *bl);

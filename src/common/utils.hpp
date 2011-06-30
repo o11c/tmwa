@@ -100,6 +100,8 @@ struct max_type<A, A>
 
 /// safe comparison between signed and unsigned integers
 template<class A, class B>
+bool lt(A a, B b) __attribute__((const));
+template<class A, class B>
 bool lt(A a, B b)
 {
     if (a <= 0 && b > 0)
@@ -110,11 +112,15 @@ bool lt(A a, B b)
 }
 
 template<class A, class B>
+typename min_type<A, B>::type MIN(A a, B b) __attribute__((const));
+template<class A, class B>
 typename min_type<A, B>::type MIN(A a, B b)
 {
     return lt(a, b) ? a : b;
 }
 
+template<class A, class B>
+typename max_type<A, B>::type MAX(A a, B b) __attribute__((const));
 template<class A, class B>
 typename max_type<A, B>::type MAX(A a, B b)
 {
@@ -152,11 +158,11 @@ struct is_an_array<false>
 /// Make a string safe by replacing control characters with _
 void remove_control_chars(char *str);
 /// Check if there are any control chars
-bool has_control_chars(char *str);
+bool has_control_chars(char *str) __attribute__((pure));
 
 
 /// Check whether it looks like a valid email
-bool e_mail_check(const char *email);
+bool e_mail_check(const char *email) __attribute__((pure));
 
 /// Convert string to number
 // Parses booleans: on/off and yes/no in english, français, deutsch, español

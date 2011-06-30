@@ -1,7 +1,7 @@
 .SUFFIXES:
 all:
-	make -C ../.. lib
+	${MAKE} -C ../.. lib
 clean:
 	rm -r ../../obj/lib/
 %::
-	make -C ../.. obj/lib/$@
+	${MAKE} -C ../.. obj/lib/$@

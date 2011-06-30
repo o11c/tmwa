@@ -50,6 +50,7 @@ static int16_t filelist_hash[256] =
 };
 
 /// Hash a filename
+static uint8_t filehash(const char *fname) __attribute__((pure));
 static uint8_t filehash(const char *fname)
 {
     // Larger than the return type - upper bits are used in the process
@@ -63,6 +64,7 @@ static uint8_t filehash(const char *fname)
 }
 
 /// Find the filelist entry for the given filename, or NULL if it is not
+static FILELIST *filelist_find(const char *fname) __attribute__((pure));
 static FILELIST *filelist_find(const char *fname)
 {
     int16_t idx = filelist_hash[filehash(fname)];

@@ -3,11 +3,11 @@
 
 #include "script.structs.hpp"
 
-char *parse_script(char *, int);
-int run_script_l(char *, int, int, int, int, argrec_t * args);
-int run_script(char *, int, int, int);
+const char *parse_script(const char *, int);
+int run_script_l(const char *, int, int, int, int, argrec_t *args);
+int run_script(const char *, int, int, int);
 
-struct dbt *script_get_label_db(void);
+struct dbt *script_get_label_db(void) __attribute__((pure));
 struct dbt *script_get_userfunc_db(void);
 
 int script_config_read(const char *cfgName);

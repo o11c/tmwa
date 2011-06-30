@@ -4039,7 +4039,7 @@ int atcommand_chareffect(int fd, MapSessionData *,
         return -1;
 
     clif_specialeffect(pl_sd, type, 0);
-    clif_displaymessage(fd, "Effect changed.");
+    clif_displaymessage(fd, "EffectType changed.");
 
     return 0;
 }

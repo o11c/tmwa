@@ -334,6 +334,7 @@ static void read_gm_account(void)
 // deny,allow      N       Y       N       Y
 // mutual-failure  N       Y       N       N
 
+static bool check_ip(IP_Address ip) __attribute__((pure));
 static bool check_ip(IP_Address ip)
 {
     // When there is no restriction, all IP are authorised.
@@ -363,6 +364,7 @@ static bool check_ip(IP_Address ip)
 }
 
 /// Check whether an IP is allowed for ladmin
+static bool check_ladminip(IP_Address ip) __attribute__((pure));
 static bool check_ladminip(IP_Address ip)
 {
     if (access_ladmin_allow.empty())
@@ -381,6 +383,7 @@ static bool check_ladminip(IP_Address ip)
 //   and returns index if only 1 account is found
 //   and similar to the searched name.
 //-----------------------------------------------
+static struct auth_dat *account_by_name(const char *account_name) __attribute__((pure));
 static struct auth_dat *account_by_name(const char *account_name)
 {
     int quantity = 0;
@@ -399,6 +402,7 @@ static struct auth_dat *account_by_name(const char *account_name)
     return quantity == 1 ? loose : NULL;
 }
 
+static struct auth_dat *account_by_id(account_t acc) __attribute__((pure));
 static struct auth_dat *account_by_id(account_t acc)
 {
     for (int i = 0; i < auth_num; i++)

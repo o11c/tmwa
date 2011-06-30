@@ -82,7 +82,7 @@ public:
     {
         from_string(str);
     }
-    bool covers(IP_Address test);
+    bool covers(IP_Address test) __attribute__((pure));
     bool covers_all()
     {
         return mask == IP_Address();

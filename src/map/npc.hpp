@@ -21,7 +21,7 @@ int npc_selllist(MapSessionData *, int, const unsigned short *);
 int npc_parse_warp(char *w1, const char *w2, char *w3, char *w4);
 
 int npc_enable(const char *name, int flag);
-struct npc_data *npc_name2id(const char *name);
+struct npc_data *npc_name2id(const char *name) __attribute__((pure));
 
 int npc_get_new_npc_id(void);
 

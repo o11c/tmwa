@@ -14,10 +14,10 @@
 /// What the client uses to connect to us
 void clif_setip(IP_Address);
 void clif_setport(in_port_t);
-IP_Address clif_getip(void);
-in_port_t clif_getport(void);
+IP_Address clif_getip(void) __attribute__((pure));
+in_port_t clif_getport(void) __attribute__((pure));
 
-unsigned int clif_countusers(void);
+unsigned int clif_countusers(void) __attribute__((pure));
 void clif_setwaitclose(int);
 
 void clif_authok(MapSessionData *);
@@ -174,17 +174,21 @@ template<bool auth_required>
 class Sessions
 {
 public:
-    SessionIterator<auth_required> begin()
-    {
-        SessionIterator<auth_required> out(-1);
-        ++out;
-        return out;
-    }
-    SessionIterator<auth_required> end()
-    {
-        return SessionIterator<auth_required>(fd_max);
-    }
+    SessionIterator<auth_required> begin() __attribute__((pure));
+    SessionIterator<auth_required> end() __attribute__((pure));
 };
+template<bool auth_required>
+SessionIterator<auth_required> Sessions<auth_required>::begin()
+{
+    SessionIterator<auth_required> out(-1);
+    ++out;
+    return out;
+}
+template<bool auth_required>
+SessionIterator<auth_required> Sessions<auth_required>::end()
+{
+    return SessionIterator<auth_required>(fd_max);
+}
 
 extern Sessions<true> auth_sessions;
 extern Sessions<false> all_sessions;

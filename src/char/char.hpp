@@ -12,8 +12,7 @@
 # define DEFAULT_AUTOSAVE_INTERVAL 300*1000
 # define MAX_CHARS_PER_ACCOUNT 9
 
-struct mmo_charstatus *character_by_name(const char *character_name);
-const char *get_character_name(int index) __attribute__((deprecated));
+struct mmo_charstatus *character_by_name(const char *character_name) __attribute__((pure));
 
 void mapif_sendallwos(int fd, const uint8_t *buf, unsigned int len);
 inline void mapif_sendall(const uint8_t *buf, unsigned int len)

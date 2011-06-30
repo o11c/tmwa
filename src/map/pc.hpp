@@ -23,7 +23,7 @@
 void pc_touch_all_relevant_npcs(MapSessionData *sd);  /* Checks all npcs/warps at the same location to see whether they
                                                                  ** should do something with the specified player. */
 
-int pc_isGM(MapSessionData *sd);
+int pc_isGM(MapSessionData *sd) __attribute__((pure));
 int pc_iskiller(MapSessionData *src, MapSessionData *target);   // [MouseJstr]
 
 void pc_invisibility(MapSessionData *sd, int enabled);    // [Fate]
@@ -40,7 +40,7 @@ int pc_equippoint(MapSessionData *sd, int n);
 int pc_breakweapon(MapSessionData *sd);  // weapon breaking [Valaris]
 int pc_breakarmor(MapSessionData *sd);   // armor breaking [Valaris]
 
-int pc_checkskill(MapSessionData *sd, int skill_id);
+int pc_checkskill(MapSessionData *sd, int skill_id) __attribute__((pure));
 int pc_checkequip(MapSessionData *sd, int pos);
 
 int pc_walktoxy(MapSessionData *, int, int);
@@ -80,7 +80,7 @@ int pc_gainexp_reason(MapSessionData *, int, int, int reason);
 int pc_extract_healer_exp(MapSessionData *, int max);    // [Fate] Used by healers: extract healer-xp from the target, return result (up to max)
 
 int pc_nextbaseexp(MapSessionData *);
-int pc_nextjobexp(MapSessionData *);
+int pc_nextjobexp(MapSessionData *) __attribute__((pure));
 int pc_need_status_point(MapSessionData *, int);
 int pc_statusup(MapSessionData *, int);
 int pc_statusup2(MapSessionData *, int, int);
@@ -102,15 +102,15 @@ int pc_changelook(MapSessionData *, int, int);
 
 int pc_readparam(MapSessionData *, int);
 int pc_setparam(MapSessionData *, int, int);
-int pc_readreg(MapSessionData *, int);
+int pc_readreg(MapSessionData *, int) __attribute__((pure));
 int pc_setreg(MapSessionData *, int, int);
 char *pc_readregstr(MapSessionData *sd, int reg);
 int pc_setregstr(MapSessionData *sd, int reg, const char *str);
-int pc_readglobalreg(MapSessionData *, const char *);
+int pc_readglobalreg(MapSessionData *, const char *) __attribute__((pure));
 int pc_setglobalreg(MapSessionData *, const char *, int);
-int pc_readaccountreg(MapSessionData *, const char *);
+int pc_readaccountreg(MapSessionData *, const char *) __attribute__((pure));
 int pc_setaccountreg(MapSessionData *, const char *, int);
-int pc_readaccountreg2(MapSessionData *, const char *);
+int pc_readaccountreg2(MapSessionData *, const char *) __attribute__((pure));
 int pc_setaccountreg2(MapSessionData *, const char *, int);
 int pc_percentrefinery(MapSessionData *sd, struct item *item);
 
@@ -121,10 +121,9 @@ int pc_cleareventtimer(MapSessionData *sd);
 
 void pc_calc_pvprank_timer(timer_id, tick_t, uint32_t);
 
-int pc_marriage(MapSessionData *sd,
-                 MapSessionData *dstsd);
+int pc_marriage(MapSessionData *sd, MapSessionData *dstsd);
 int pc_divorce(MapSessionData *sd);
-MapSessionData *pc_get_partner(MapSessionData *sd);
+MapSessionData *pc_get_partner(MapSessionData *sd) __attribute__((pure));
 int pc_set_gm_level(int account_id, int level);
 void pc_setstand(MapSessionData *sd);
 

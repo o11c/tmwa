@@ -6,7 +6,7 @@
 # include "map.structs.hpp"
 
 void do_init_party(void);
-struct party *party_search(int party_id);
+struct party *party_search(int party_id) __attribute__((pure));
 struct party *party_searchname(const char *str);
 
 int party_create(MapSessionData *sd, const char *name);

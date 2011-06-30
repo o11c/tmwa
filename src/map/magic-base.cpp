@@ -9,209 +9,151 @@
 #include "magic.hpp"
 #include "magic-expr.hpp"
 
-static void set_int_p(val_t * v, int i, int t)
+static void set_int(val_t *v, int i)
 {
-    v->ty = t;
-    v->v.v_int = i;
+    v->ty = TY::INT;
+    v->v_int = i;
 }
 
-#define set_int(v, i) set_int_p(v, i, TY_INT)
-#define set_dir(v, i) set_int_p(v, i, TY_DIR)
-
-#define SETTER(tty, dyn_ty, field) (val_t *v, tty x) { v->ty = dyn_ty; v->v.field = x; }
-
-static void set_string SETTER(char *, TY_STRING, v_string);
-
-static void set_entity(val_t * v, entity_t * e)
+static void set_string (val_t *v, POD_string x)
 {
-    v->ty = TY_ENTITY;
-    v->v.v_int = e->id;
+    v->ty = TY::STRING;
+    v->v_string = x;
 }
 
-static void set_invocation(val_t * v, invocation_t * i)
+static void set_entity(val_t *v, BlockList *e)
 {
-    v->ty = TY_INVOCATION;
-    v->v.v_int = i->id;
+    v->ty = TY::ENTITY;
+    v->v_int = e->id;
 }
 
-static void set_spell SETTER(spell_t *, TY_SPELL, v_spell);
-
-#define setenv(f, v, x) f(&(env->vars[v]), x)
-
-#define set_env_int(v, x) setenv(set_int, v, x)
-#define set_env_dir(v, x) setenv(set_dir, v, x)
-#define set_env_string(v, x) setenv(set_string, v, x)
-#define set_env_entity(v, x) setenv(set_entity, v, x)
-#define set_env_location(v, x) setenv(set_location, v, x)
-#define set_env_area(v, x) setenv(set_area, v, x)
-#define set_env_invocation(v, x) setenv(set_invocation, v, x)
-#define set_env_spell(v, x) setenv(set_spell, v, x)
-
-magic_conf_t magic_conf;        /* Global magic conf */
-env_t magic_default_env = { &magic_conf, NULL };
-
-static int spells_sorted = 0;
-
-char *magic_find_invocation(const char *spellname)
+static void set_invocation(val_t *v, invocation_t *i)
 {
-    int i;
-
-    for (i = 0; i < abs(magic_conf.spells_nr); i++)
-        if (!strcmp(magic_conf.spells[i]->name, spellname))
-            return magic_conf.spells[i]->invocation;
-
-    return NULL;
+    v->ty = TY::INVOCATION;
+    v->v_int = i->id;
 }
 
-static int spell_compare(const void *lhs, const void *rhs)
+static void set_spell(val_t *v, spell_t *x)
 {
-    return strcmp((*static_cast<spell_t *const *>(lhs))->invocation,
-                  (*static_cast<spell_t *const *>(rhs))->invocation);
+    v->ty = TY::SPELL;
+    v->v_spell = x;
 }
 
-spell_t *magic_find_spell(char *invocation)
+// Global magic conf
+namespace magic_conf
 {
-    spell_t key;
-    spell_t *keyp = &key;
-    spell_t **retval;
+    std::vector<std::pair<POD_string, val_t>> vars;
 
-    if (!spells_sorted)
-    {
-        qsort(magic_conf.spells, magic_conf.spells_nr, sizeof(spell_t *),
-               spell_compare);
-        spells_sorted = 1;
-    }
+    //int obscure_chance;
+    //int min_casttime;
 
-    key.invocation = invocation;
+    std::map<POD_string, spell_t *> spells;
 
-    retval = static_cast<spell_t **>(
-            bsearch(&keyp, magic_conf.spells, magic_conf.spells_nr,
-                    sizeof(spell_t *), spell_compare));
+    std::map<POD_string, teleport_anchor_t *> anchors;
+};
 
-    if (!retval)
-        return NULL;
-    else
-        return *retval;
+env_t magic_default_env = { NULL };
+
+POD_string magic_find_invocation(POD_string spellname)
+{
+    for (auto& pair : magic_conf::spells)
+        if (pair.second->name == spellname)
+            return pair.first;
+
+    return { NULL };
+}
+
+spell_t *magic_find_spell(POD_string invocation)
+{
+    return magic_conf::spells[invocation];
 }
 
 /* -------------------------------------------------------------------------------- */
 /* Spell anchors */
 /* -------------------------------------------------------------------------------- */
 
-static int compare_teleport_anchor(const void *lhs, const void *rhs)
+POD_string magic_find_anchor_invocation(POD_string anchor_name)
 {
-    return strcmp((*static_cast<teleport_anchor_t *const *>(lhs))->invocation,
-                  (*static_cast<teleport_anchor_t *const *>(rhs))->invocation);
+    for (auto& pair : magic_conf::anchors)
+        if (pair.second->name == anchor_name)
+            return pair.first;
+    return { NULL };
 }
 
-char *magic_find_anchor_invocation(const char *anchor_name)
+teleport_anchor_t *magic_find_anchor(POD_string name)
 {
-    int i;
-
-    for (i = 0; i < abs(magic_conf.anchors_nr); i++)
-        if (!strcmp(magic_conf.anchors[i]->name, anchor_name))
-            return magic_conf.anchors[i]->invocation;
-
-    return NULL;
-}
-
-teleport_anchor_t *magic_find_anchor(char *name)
-{
-    teleport_anchor_t key;
-    teleport_anchor_t *keyp = &key;
-    teleport_anchor_t **retval;
-
-    if (magic_conf.anchors_nr > 0)
-    {                           /* unsorted */
-        qsort(magic_conf.anchors, magic_conf.anchors_nr,
-               sizeof(teleport_anchor_t *), compare_teleport_anchor);
-        magic_conf.anchors_nr = -magic_conf.anchors_nr;
-    }
-
-    key.invocation = name;
-
-    retval = static_cast<teleport_anchor_t **>(
-            bsearch(&keyp, magic_conf.anchors, -magic_conf.anchors_nr,
-                    sizeof(teleport_anchor_t *), compare_teleport_anchor));
-
-    if (!retval)
-        return NULL;
-    else
-        return *retval;
+    return magic_conf::anchors[name];
 }
 
 /* -------------------------------------------------------------------------------- */
 /* Spell guard checks */
 /* -------------------------------------------------------------------------------- */
 
-static env_t *alloc_env(magic_conf_t * conf)
+static env_t *alloc_env()
 {
     env_t *env;
     CREATE(env, env_t, 1);
-    CREATE(env->vars, val_t, conf->vars_nr);
-    env->base_env = conf;
+    CREATE(env->vars, val_t, magic_conf::vars.size());
     return env;
 }
 
-static env_t *clone_env(env_t * src)
+static env_t *clone_env(env_t *src)
 {
-    env_t *retval = alloc_env(src->base_env);
-    int i;
+    env_t *retval = alloc_env();
 
-    for (i = 0; i < src->base_env->vars_nr; i++)
+    for (int i = 0; i < magic_conf::vars.size(); i++)
         magic_copy_var(&retval->vars[i], &src->vars[i]);
 
     return retval;
 }
 
-void magic_free_env(env_t * env)
+void magic_free_env(env_t *env)
 {
-    int i;
-    for (i = 0; i < env->base_env->vars_nr; i++)
+    for (int i = 0; i < magic_conf::vars.size(); i++)
         magic_clear_var(&env->vars[i]);
     free(env);
 }
 
-env_t *spell_create_env(magic_conf_t * conf, spell_t * spell,
-                         character_t * caster, int spellpower, char *param)
+env_t *spell_create_env(spell_t *spell,
+                        MapSessionData *caster, int spellpower, POD_string param)
 {
-    env_t *env = alloc_env(conf);
+    env_t *env = alloc_env();
 
     switch (spell->spellarg_ty)
     {
 
-        case SPELLARG_STRING:
-            set_env_string(spell->arg, param);
+        case SpellArgType::STRING:
+            set_string      (&(env->vars[spell->arg]), param);
             break;
 
-        case SPELLARG_PC:
+        case SpellArgType::PC:
         {
-            character_t *subject = map_nick2sd(param);
+            MapSessionData *subject = map_nick2sd(param.c_str());
             if (!subject)
                 subject = caster;
-            set_env_entity(spell->arg, subject);
-            free(param);
+            set_entity(&(env->vars[spell->arg]), subject);
+            param.free();
             break;
         }
 
-        case SPELLARG_NONE:
-            free(param);
+        case SpellArgType::NONE:
+            param.free();
             break;
 
         default:
-            free(param);
+            param.free();
             fprintf(stderr, "Unexpected spellarg type %d\n",
-                     spell->spellarg_ty);
+                    static_cast<int>(spell->spellarg_ty));
     }
 
-    set_env_entity(VAR_CASTER, caster);
-    set_env_int(VAR_SPELLPOWER, spellpower);
-    set_env_spell(VAR_SPELL, spell);
+    set_entity(&(env->vars[Var::CASTER]), caster);
+    set_int(&(env->vars[Var::SPELLPOWER]), spellpower);
+    set_spell(&(env->vars[Var::SPELL]), spell);
 
     return env;
 }
 
-static void free_components(component_t ** component_holder)
+static void free_components(component_t **component_holder)
 {
     if (*component_holder == NULL)
         return;
@@ -220,7 +162,7 @@ static void free_components(component_t ** component_holder)
     *component_holder = NULL;
 }
 
-void magic_add_component(component_t ** component_holder, int id, int count)
+void magic_add_component(component_t **component_holder, int id, int count)
 {
     if (count <= 0)
         return;
@@ -248,7 +190,7 @@ void magic_add_component(component_t ** component_holder, int id, int count)
     }
 }
 
-static void copy_components(component_t ** component_holder, component_t * component)
+static void copy_components(component_t **component_holder, component_t *component)
 {
     if (component == NULL)
         return;
@@ -264,7 +206,7 @@ typedef struct spellguard_check
     int mana, casttime;
 } spellguard_check_t;
 
-static int check_prerequisites(character_t * caster, component_t * component)
+static int check_prerequisites(MapSessionData *caster, component_t *component)
 {
     while (component)
     {
@@ -278,7 +220,7 @@ static int check_prerequisites(character_t * caster, component_t * component)
     return 1;
 }
 
-static void consume_components(character_t * caster, component_t * component)
+static void consume_components(MapSessionData *caster, component_t *component)
 {
     while (component)
     {
@@ -287,8 +229,8 @@ static void consume_components(character_t * caster, component_t * component)
     }
 }
 
-static int spellguard_can_satisfy(spellguard_check_t * check, character_t * caster,
-                        env_t * env, int *near_miss)
+static int spellguard_can_satisfy(spellguard_check_t *check, MapSessionData *caster,
+                        env_t *env, int *near_miss)
 {
     unsigned int tick = gettick();
 
@@ -315,8 +257,8 @@ static int spellguard_can_satisfy(spellguard_check_t * check, character_t * cast
     {
         unsigned int casttime = check->casttime;
 
-        if (VAR(VAR_MIN_CASTTIME).ty == TY_INT)
-            casttime = MAX(casttime, VAR(VAR_MIN_CASTTIME).v.v_int);
+        if (VAR(Var::MIN_CASTTIME).ty == TY::INT)
+            casttime = MAX(casttime, VAR(Var::MIN_CASTTIME).v_int);
 
         caster->cast_tick = tick + casttime;    /* Make sure not to cast too frequently */
 
@@ -327,9 +269,9 @@ static int spellguard_can_satisfy(spellguard_check_t * check, character_t * cast
     return retval;
 }
 
-static effect_set_t *spellguard_check_sub(spellguard_check_t * check,
-                                           spellguard_t * guard,
-                                           character_t * caster, env_t * env,
+static effect_set_t *spellguard_check_sub(spellguard_check_t *check,
+                                           spellguard_t *guard,
+                                           MapSessionData *caster, env_t *env,
                                            int *near_miss)
 {
     if (guard == NULL)
@@ -337,20 +279,20 @@ static effect_set_t *spellguard_check_sub(spellguard_check_t * check,
 
     switch (guard->ty)
     {
-        case SPELLGUARD_CONDITION:
-            if (!magic_eval_int(env, guard->s.s_condition))
+        case SpellGuardType::CONDITION:
+            if (!magic_eval_int(env, guard->s_condition))
                 return NULL;
             break;
 
-        case SPELLGUARD_COMPONENTS:
-            copy_components(&check->components, guard->s.s_components);
+        case SpellGuardType::COMPONENTS:
+            copy_components(&check->components, guard->s_components);
             break;
 
-        case SPELLGUARD_CATALYSTS:
-            copy_components(&check->catalysts, guard->s.s_catalysts);
+        case SpellGuardType::CATALYSTS:
+            copy_components(&check->catalysts, guard->s_catalysts);
             break;
 
-        case SPELLGUARD_CHOICE:
+        case SpellGuardType::CHOICE:
         {
             spellguard_check_t altcheck = *check;
             effect_set_t *retval;
@@ -369,34 +311,34 @@ static effect_set_t *spellguard_check_sub(spellguard_check_t * check,
             if (retval)
                 return retval;
             else
-                return spellguard_check_sub(check, guard->s.s_alt, caster,
+                return spellguard_check_sub(check, guard->s_alt, caster,
                                              env, near_miss);
         }
 
-        case SPELLGUARD_MANA:
-            check->mana += magic_eval_int(env, guard->s.s_mana);
+        case SpellGuardType::MANA:
+            check->mana += magic_eval_int(env, guard->s_mana);
             break;
 
-        case SPELLGUARD_CASTTIME:
-            check->casttime += magic_eval_int(env, guard->s.s_mana);
+        case SpellGuardType::CASTTIME:
+            check->casttime += magic_eval_int(env, guard->s_mana);
             break;
 
-        case SPELLGUARD_EFFECT:
+        case SpellGuardType::EFFECT:
             if (spellguard_can_satisfy(check, caster, env, near_miss))
-                return &guard->s.s_effect;
+                return &guard->s_effect;
             else
                 return NULL;
 
         default:
-            fprintf(stderr, "Unexpected spellguard type %d\n", guard->ty);
+            fprintf(stderr, "Unexpected spellguard type %d\n", static_cast<int>(guard->ty));
             return NULL;
     }
 
     return spellguard_check_sub(check, guard->next, caster, env, near_miss);
 }
 
-static effect_set_t *check_spellguard(spellguard_t * guard,
-                                       character_t * caster, env_t * env,
+static effect_set_t *check_spellguard(spellguard_t *guard,
+                                       MapSessionData *caster, env_t *env,
                                        int *near_miss)
 {
     spellguard_check_t check;
@@ -417,8 +359,8 @@ static effect_set_t *check_spellguard(spellguard_t * guard,
 /* Public API */
 /* -------------------------------------------------------------------------------- */
 
-effect_set_t *spell_trigger(spell_t * spell, character_t * caster,
-                             env_t * env, int *near_miss)
+effect_set_t *spell_trigger(spell_t *spell, MapSessionData *caster,
+                             env_t *env, int *near_miss)
 {
     int i;
     spellguard_t *guard = spell->spellguard;
@@ -433,38 +375,38 @@ effect_set_t *spell_trigger(spell_t * spell, character_t * caster,
     return check_spellguard(guard, caster, env, near_miss);
 }
 
-static void spell_set_location(invocation_t * invocation, entity_t * entity)
+static void spell_set_location(invocation_t *invocation, BlockList *entity)
 {
-    magic_clear_var(&invocation->env->vars[VAR_LOCATION]);
-    invocation->env->vars[VAR_LOCATION].ty = TY_LOCATION;
-    invocation->env->vars[VAR_LOCATION].v.v_location.m = entity->m;
-    invocation->env->vars[VAR_LOCATION].v.v_location.x = entity->x;
-    invocation->env->vars[VAR_LOCATION].v.v_location.y = entity->y;
+    magic_clear_var(&invocation->env->vars[Var::LOCATION]);
+    invocation->env->vars[Var::LOCATION].ty = TY::LOCATION;
+    invocation->env->vars[Var::LOCATION].v_location.m = entity->m;
+    invocation->env->vars[Var::LOCATION].v_location.x = entity->x;
+    invocation->env->vars[Var::LOCATION].v_location.y = entity->y;
 }
 
-void spell_update_location(invocation_t * invocation)
+void spell_update_location(invocation_t *invocation)
 {
-    if (invocation->spell->flags & SPELL_FLAG_LOCAL)
+    if (invocation->spell->flags & SpellFlag::LOCAL)
         return;
     else
     {
-        character_t *owner = static_cast<character_t *>(map_id2bl(invocation->subject));
+        MapSessionData *owner = static_cast<MapSessionData *>(map_id2bl(invocation->subject));
         if (!owner)
             return;
 
-        spell_set_location(invocation, static_cast<entity_t *>(owner));
+        spell_set_location(invocation, static_cast<BlockList *>(owner));
     }
 }
 
-invocation_t *spell_instantiate(effect_set_t * effect_set, env_t * env)
+invocation_t *spell_instantiate(effect_set_t *effect_set, env_t *env)
 {
     invocation_t *retval = new invocation_t;
-    entity_t *caster;
+    BlockList *caster;
 
     retval->env = env;
 
-    retval->caster = VAR(VAR_CASTER).v.v_int;
-    retval->spell = VAR(VAR_SPELL).v.v_spell;
+    retval->caster = VAR(Var::CASTER).v_int;
+    retval->spell = VAR(Var::SPELL).v_spell;
     retval->stack_size = 0;
     retval->current_effect = effect_set->effect;
     retval->trigger_effect = effect_set->at_trigger;
@@ -477,12 +419,12 @@ invocation_t *spell_instantiate(effect_set_t * effect_set, env_t * env)
     retval->y = caster->y;
 
     map_addblock(retval);
-    set_env_invocation(VAR_INVOCATION, retval);
+    set_invocation  (&(env->vars[Var::INVOCATION]), retval);
 
     return retval;
 }
 
-invocation_t *spell_clone_effect(invocation_t * base)
+invocation_t *spell_clone_effect(invocation_t *base)
 {
     invocation_t *retval = static_cast<invocation_t *>(malloc(sizeof(invocation_t)));
     env_t *env;
@@ -507,38 +449,38 @@ invocation_t *spell_clone_effect(invocation_t * base)
     retval->next = NULL;
 
     retval->id = map_addobject(retval);
-    set_env_invocation(VAR_INVOCATION, retval);
+    set_invocation(&(env->vars[Var::INVOCATION]), retval);
 
     return retval;
 }
 
-void spell_bind(character_t * subject, invocation_t * invocation)
+void spell_bind(MapSessionData *subject, invocation_t *invocation)
 {
     /* Only bind nonlocal spells */
 
-    if (!(invocation->spell->flags & SPELL_FLAG_LOCAL))
+    if (!(invocation->spell->flags & SpellFlag::LOCAL))
     {
-        if (invocation->flags & INVOCATION_FLAG_BOUND
+        if (invocation->flags & InvocationFlag::BOUND
             || invocation->subject || invocation->next_invocation)
         {
             int *i = NULL;
             fprintf(stderr,
                      "[magic] INTERNAL ERROR: Attempt to re-bind spell invocation `%s'\n",
-                     invocation->spell->name);
+                     invocation->spell->name.c_str());
             *i = 1;
             return;
         }
 
         invocation->next_invocation = subject->active_spells;
         subject->active_spells = invocation;
-        invocation->flags |= INVOCATION_FLAG_BOUND;
+        invocation->flags |= InvocationFlag::BOUND;
         invocation->subject = subject->id;
     }
 
-    spell_set_location(invocation, static_cast<entity_t *>(subject));
+    spell_set_location(invocation, static_cast<BlockList *>(subject));
 }
 
-int spell_unbind(character_t * subject, invocation_t * invocation)
+int spell_unbind(MapSessionData *subject, invocation_t *invocation)
 {
     invocation_t **seeker = &subject->active_spells;
 
@@ -548,7 +490,7 @@ int spell_unbind(character_t * subject, invocation_t * invocation)
         {
             *seeker = invocation->next_invocation;
 
-            invocation->flags &= ~INVOCATION_FLAG_BOUND;
+            invocation->flags &= ~InvocationFlag::BOUND;
             invocation->next_invocation = NULL;
             invocation->subject = 0;
 

@@ -830,6 +830,7 @@ static MapSessionData *map_get_session(int i)
     return NULL;
 }
 
+static MapSessionData *map_get_session_forward(int start) __attribute__((pure));
 static MapSessionData *map_get_session_forward(int start)
 {
     // this loop usually isn't traversed many times

@@ -1,5 +1,8 @@
 %code requires {
+#include "battle.structs.hpp"
 #include "magic.structs.hpp"
+
+#include "../lib/string.hpp"
 }
 
 %code {
@@ -17,11 +20,8 @@
 /// I don't know why the code is making me do this, but it is required
 #define YYLEX_PARAM 0, 0
 
-static int intern_id(const char *id_name);
-
-
+static int intern_id(POD_string id_name);
 static expr_t *fun_expr(const char *name, int args_nr, expr_t **args, int line, int column);
-
 static expr_t *dot_expr(expr_t *lhs, int id);
 
 #define BIN_EXPR(x, name, arg1, arg2, line, column) { expr_t *e[2]; e[0] = arg1; e[1] = arg2; x = fun_expr(name, 2, e, line, column); }
@@ -29,34 +29,23 @@ static expr_t *dot_expr(expr_t *lhs, int id);
 static int failed_flag = 0;
 
 static void magic_frontend_error(const char *msg);
-
 static void fail(int line, int column, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
 
 static spell_t *new_spell(spellguard_t *guard);
-
 static spellguard_t *spellguard_implication(spellguard_t *a, spellguard_t *b);
-
-static spellguard_t *new_spellguard(int ty);
-
-static effect_t *new_effect(int ty);
-
+static spellguard_t *new_spellguard(SpellGuardType ty);
+static effect_t *new_effect(EffectType ty);
 static effect_t *set_effect_continuation(effect_t *src, effect_t *continuation);
-
 static void add_spell(spell_t *spell, int line_nr);
-
 static void add_teleport_anchor(teleport_anchor_t *anchor, int line_nr);
-
-static effect_t *op_effect(char *name, int args_nr, expr_t **args, int line, int column);
+static effect_t *op_effect(const char *name, int args_nr, expr_t **args, int line, int column);
 
 int magic_frontend_lex(YYSTYPE *, YYLTYPE *);
 
-static void install_proc(proc_t *proc);
-
-static effect_t *call_proc(char *name, int args_nr, expr_t **args, int line_nr, int column);
-
-static void bind_constant(char *name, val_t *val, int line_nr);
-
-static val_t *find_constant(char *name);
+static void install_proc(const proc_t& proc);
+static effect_t *call_proc(POD_string name, int args_nr, expr_t **args, int line_nr, int column);
+static void bind_constant(POD_string name, val_t *val, int line_nr);
+static val_t *find_constant(POD_string name) __attribute__((pure));
 
 }
 
@@ -64,11 +53,11 @@ static val_t *find_constant(char *name);
 
 %locations
 
+// YYSTYPE
 %union {
     int i;
-    char *s;
+    POD_string s;
     int op;
-    magic_conf_t *magic_conf;
     val_t value;
     expr_t *expr;
     e_location_t location;
@@ -76,13 +65,17 @@ static val_t *find_constant(char *name);
     args_rec_t arg_list;
     struct { int letdefs_nr; letdef_t *letdefs; } letdefs;
     spell_t *spell;
-    struct { int id, ty; } spellarg_def;
+    struct { int id; SpellArgType ty; } spellarg_def;
     letdef_t vardef;
     spellguard_t *spellguard;
     component_t *components;
     struct {int id, count; } component;
     effect_t *effect;
     proc_t *proc;
+
+    SpellArgType spell_arg;
+    ForEach_FilterType foreach_filter;
+    Direction dir;
 };
 
 %expect 7
@@ -90,7 +83,7 @@ static val_t *find_constant(char *name);
 %token <i> INT
 %token <s> STRING
 %token <s> ID
-%token <i> DIR
+%token <dir> DIR
 
 %token '='
 %token '<'
@@ -159,6 +152,8 @@ static val_t *find_constant(char *name);
 %token DO
 %token SLEEP
 
+// fields used for various types
+// if there is no <field> you can't use $$
 %type <value> value
 %type <location> location
 %type <area> area
@@ -177,7 +172,7 @@ static val_t *find_constant(char *name);
 %type <components> items
 %type <components> item_list
 %type <i> item_name
-%type <i> selection;
+%type <foreach_filter> selection;
 %type <effect> effect
 %type <effect> effect_list
 %type <effect> maybe_trigger
@@ -185,7 +180,7 @@ static val_t *find_constant(char *name);
 %type <i> spell_flags;
 
 %type <expr> expr
-%type <i> arg_ty
+%type <spell_arg> arg_ty
 %type <proc> proc_formals_list
 %type <proc> proc_formals_list_ne
 
@@ -201,19 +196,19 @@ static val_t *find_constant(char *name);
 %left '.'
 
 %%
-
+// void
 spellconf:
 /* empty */
 | spellconf_option semicolons spellconf
 ;
 
-
+// void
 semicolons:
 /* empty */
 | semicolons ';'
 ;
 
-
+// proc_t proc
 proc_formals_list:
 /* empty  */
     {
@@ -225,6 +220,7 @@ proc_formals_list:
     }
 ;
 
+// proc_t proc
 proc_formals_list_ne:
 ID
     {
@@ -241,19 +237,20 @@ ID
     }
 ;
 
+// void
 spellconf_option:
 ID '=' expr
     {
-        int var_id;
         if (find_constant($1))
         {
-            fail(@1.first_line, 0, "Attempt to redefine constant `%s' as global\n", $1);
-            free($1);
+            fail(@1.first_line, 0, "Attempt to redefine constant `%s' as global\n",
+                 $1.c_str());
+            $1.free();
         }
         else
         {
-            var_id = intern_id($1);
-            magic_eval(&magic_default_env, &magic_conf.vars[var_id], $3);
+            int var_id = intern_id($1);
+            magic_eval(&magic_default_env, &magic_conf::vars[var_id].second, $3);
         }
     }
 | CONST ID '=' expr
@@ -282,7 +279,8 @@ ID '=' expr
         proc->name = $2;
         proc->body = $7;
         if (!failed_flag)
-            install_proc(proc);
+            install_proc(*proc);
+        free(proc);
         failed_flag = 0;
     }
 | spell_flags SPELL ID argopt ':' expr '=' spelldef
@@ -299,6 +297,7 @@ ID '=' expr
     }
 ;
 
+// int i
 spell_flags:
 /* empty */
     {
@@ -306,28 +305,29 @@ spell_flags:
     }
 | LOCAL spell_flags
     {
-        if ($2 & SPELL_FLAG_LOCAL)
+        if ($2 & SpellFlag::LOCAL)
             fail(@1.first_line, @1.first_column, "`LOCAL' specified more than once");
-        $$ = $2 | SPELL_FLAG_LOCAL;
+        $$ = $2 | SpellFlag::LOCAL;
     }
 | NONMAGIC spell_flags
     {
-        if ($2 & SPELL_FLAG_NONMAGIC)
+        if ($2 & SpellFlag::NONMAGIC)
             fail(@1.first_line, @1.first_column, "`NONMAGIC' specified more than once");
-        $$ = $2 | SPELL_FLAG_NONMAGIC;
+        $$ = $2 | SpellFlag::NONMAGIC;
     }
 | SILENT spell_flags
     {
-        if ($2 & SPELL_FLAG_SILENT)
+        if ($2 & SpellFlag::SILENT)
             fail(@1.first_line, @1.first_column, "`SILENT' specified more than once");
-        $$ = $2 | SPELL_FLAG_SILENT;
+        $$ = $2 | SpellFlag::SILENT;
     }
 ;
 
+// struct { int id; SpellArgType ty; } spellarg_def
 argopt:
 /* empty */
     {
-        $$.ty = SPELLARG_NONE;
+        $$.ty = SpellArgType::NONE;
     }
 | '(' ID ':' arg_ty ')'
     {
@@ -336,59 +336,62 @@ argopt:
     }
 ;
 
+// SpellArgType spell_arg
 arg_ty:
 PC_F
     {
-        $$ = SPELLARG_PC;
+        $$ = SpellArgType::PC;
     }
 | STRING_TY
     {
-        $$ = SPELLARG_STRING;
+        $$ = SpellArgType::STRING;
     }
 ;
 
+// val_t value
 value:
 DIR
     {
-        $$.ty = TY_DIR;
-        $$.v.v_int = $1;
+        $$.ty = TY::DIR;
+        $$.v_dir = $1;
     }
 | INT
     {
-        $$.ty = TY_INT;
-        $$.v.v_int = $1;
+        $$.ty = TY::INT;
+        $$.v_int = $1;
     }
 | STRING
     {
-        $$.ty = TY_STRING;
-        $$.v.v_string = $1;
+        $$.ty = TY::STRING;
+        $$.v_string = $1;
     }
 ;
 
+// expr_t *expr
 expr:
 value
     {
-        $$ = magic_new_expr(EXPR_VAL);
-        $$->e.e_val = $1;
+        $$ = magic_new_expr(ExprType::VAL);
+        $$->e_val = $1;
     }
 | ID
     {
         val_t *val = find_constant($1);
         if (val)
         {
-            $$ = magic_new_expr(EXPR_VAL);
-            $$->e.e_val = *val;
+            $$ = magic_new_expr(ExprType::VAL);
+            $$->e_val = *val;
         }
         else
         {
-            $$ = magic_new_expr(EXPR_ID);
-            $$->e.e_id = intern_id($1);
+            $$ = magic_new_expr(ExprType::ID);
+            $$->e_id = intern_id($1);
         }
     }
 | area
     {
-        $$ = magic_new_expr(EXPR_AREA);
-        $$->e.e_area = $1;
+        $$ = magic_new_expr(ExprType::AREA);
+        $$->e_area = $1;
     }
 | expr '+' expr
     {
@@ -412,6 +415,7 @@ value
     }
 | expr '<' expr
     {
+        // notice the args are reversed
         BIN_EXPR($$, ">", $3, $1, @1.first_line, @1.first_column);
     }
 | expr '>' expr
@@ -440,6 +444,7 @@ value
     }
 | expr LTE expr
     {
+        // notice the args are reversed
         BIN_EXPR($$, ">=", $3, $1, @1.first_line, @1.first_column);
     }
 | expr GTE expr
@@ -465,13 +470,14 @@ value
 | expr NEQ expr
     {
         BIN_EXPR($$, "=", $1, $3, @1.first_line, @1.first_column);
+        // how does this work?
         $$ = fun_expr("not", 1, &$$, @1.first_line, @1.first_column);
     }
 | ID '(' arg_list ')'
     {
-        $$ = fun_expr($1, $3.args_nr, $3.args, @1.first_line, @1.first_column);
+        $$ = fun_expr($1.c_str(), $3.args_nr, $3.args, @1.first_line, @1.first_column);
         free($3.args);
-        free($1);
+        $1.free();
     }
 | '(' expr ')'
     {
@@ -483,6 +489,7 @@ value
     }
 ;
 
+// args_rec_t arg_list
 arg_list:
 /* empty */
     {
@@ -494,6 +501,7 @@ arg_list:
     }
 ;
 
+// args_rec_t arg_list
 arg_list_ne: expr
     {
         CREATE($$.args, expr_t *, 1);
@@ -507,7 +515,7 @@ arg_list_ne: expr
     }
 ;
 
-
+// e_location_t location
 location:
 '@' '(' expr ',' expr ',' expr ')'
     {
@@ -515,29 +523,31 @@ location:
     }
 ;
 
+// e_area_t area
 area:
 location
     {
-        $$.ty = AREA_LOCATION;
-        $$.a.a_loc = $1;
+        $$.ty = AreaType::LOCATION;
+        $$.a_loc = $1;
     }
 | location '@' '+' '(' expr ',' expr ')'
     {
-        $$.ty = AREA_RECT;
-        $$.a.a_rect.loc = $1;
-        $$.a.a_rect.width = $5;
-        $$.a.a_rect.height = $7;
+        $$.ty = AreaType::RECT;
+        $$.a_rect.loc = $1;
+        $$.a_rect.width = $5;
+        $$.a_rect.height = $7;
     }
 | location TOWARDS expr ':' '(' expr ',' expr ')'
     {
-        $$.ty = AREA_BAR;
-        $$.a.a_bar.loc = $1;
-        $$.a.a_bar.width = $6;
-        $$.a.a_bar.depth = $8;
-        $$.a.a_bar.dir = $3;
+        $$.ty = AreaType::BAR;
+        $$.a_bar.loc = $1;
+        $$.a_bar.width = $6;
+        $$.a_bar.depth = $8;
+        $$.a_bar.dir = $3;
     }
 ;
 
+// spell_t *spell
 spelldef:
 spellbody_list
     {
@@ -552,6 +562,7 @@ spellbody_list
     }
 ;
 
+// struct { int letdefs_nr; letdef_t *letdefs; } letdefs
 defs:
 semicolons
     {
@@ -567,14 +578,16 @@ semicolons
     }
 ;
 
+// letdef_t vardef
 def:
 ID '=' expr
     {
         if (find_constant($1))
         {
             fail(@1.first_line, @1.first_column,
-                 "Attempt to re-define constant `%s' as LET-bound variable.\n", $1);
-            free($1);
+                 "Attempt to re-define constant `%s' as LET-bound variable.\n",
+                 $1.c_str());
+            $1.free();
         }
         else
         {
@@ -584,6 +597,7 @@ ID '=' expr
     }
 ;
 
+// spellguard_t *spellguard
 spellbody_list:
 spellbody
     {
@@ -591,13 +605,14 @@ spellbody
     }
 | spellbody '|' spellbody_list
     {
-        spellguard_t *sg = new_spellguard(SPELLGUARD_CHOICE);
+        spellguard_t *sg = new_spellguard(SpellGuardType::CHOICE);
         sg->next = $1;
-        sg->s.s_alt = $3;
+        sg->s_alt = $3;
         $$ = sg;
     }
 ;
 
+// spellguard_t *spellguard
 spellbody:
 spellguard DARROW spellbody
     {
@@ -609,14 +624,15 @@ spellguard DARROW spellbody
     }
 | EFFECT effect_list maybe_trigger maybe_end
     {
-        spellguard_t *sg = new_spellguard(SPELLGUARD_EFFECT);
-        sg->s.s_effect.effect = $2;
-        sg->s.s_effect.at_trigger = $3;
-        sg->s.s_effect.at_end = $4;
+        spellguard_t *sg = new_spellguard(SpellGuardType::EFFECT);
+        sg->s_effect.effect = $2;
+        sg->s_effect.at_trigger = $3;
+        sg->s_effect.at_end = $4;
         $$ = sg;
     }
 ;
 
+// effect_t *effect
 maybe_trigger:
 /* empty */
     {
@@ -628,6 +644,7 @@ maybe_trigger:
     }
 ;
 
+// effect_t *effect
 maybe_end:
 /* empty */
     {
@@ -639,6 +656,7 @@ maybe_end:
     }
 ;
 
+// spellguard_t *spellguard
 spellguard:
 prereq
     {
@@ -646,9 +664,9 @@ prereq
     }
 | spellguard OR spellguard
     {
-        spellguard_t *sg = new_spellguard(SPELLGUARD_CHOICE);
+        spellguard_t *sg = new_spellguard(SpellGuardType::CHOICE);
         sg->next = $1;
-        sg->s.s_alt = $3;
+        sg->s_alt = $3;
         $$ = sg;
     }
 | '(' spellguard_list ')'
@@ -657,6 +675,7 @@ prereq
     }
 ;
 
+// spellguard_t *spellguard
 spellguard_list:
 spellguard
     {
@@ -668,40 +687,43 @@ spellguard
     }
 ;
 
+// spellguard_t *spellguard
 prereq:
 REQUIRE expr
     {
-        $$ = new_spellguard(SPELLGUARD_CONDITION);
-        $$->s.s_condition = $2;
+        $$ = new_spellguard(SpellGuardType::CONDITION);
+        $$->s_condition = $2;
     }
 | CATALYSTS items
     {
-        $$ = new_spellguard(SPELLGUARD_CATALYSTS);
-        $$->s.s_catalysts = $2;
+        $$ = new_spellguard(SpellGuardType::CATALYSTS);
+        $$->s_catalysts = $2;
     }
 | COMPONENTS items
     {
-        $$ = new_spellguard(SPELLGUARD_COMPONENTS);
-        $$->s.s_components = $2;
+        $$ = new_spellguard(SpellGuardType::COMPONENTS);
+        $$->s_components = $2;
     }
 | MANA expr
     {
-        $$ = new_spellguard(SPELLGUARD_MANA);
-        $$->s.s_mana = $2;
+        $$ = new_spellguard(SpellGuardType::MANA);
+        $$->s_mana = $2;
     }
 | CASTTIME expr
     {
-        $$ = new_spellguard(SPELLGUARD_CASTTIME);
-        $$->s.s_casttime = $2;
+        $$ = new_spellguard(SpellGuardType::CASTTIME);
+        $$->s_casttime = $2;
     }
 ;
 
+// component_t *components
 items: '[' item_list ']'
     {
         $$ = $2;
     }
 ;
 
+// component_t *components
 item_list: item
     {
         $$ = NULL;
@@ -714,6 +736,7 @@ item_list: item
     }
 ;
 
+// struct {int id, count; } component;
 item:
 INT '*' item_name
     {
@@ -725,18 +748,19 @@ INT '*' item_name
     }
 ;
 
+// int i
 item_name:
 STRING
     {
-        struct item_data *item = itemdb_searchname($1);
+        struct item_data *item = itemdb_searchname($1.c_str());
         if (!item)
         {
-            fail(@1.first_line, @1.first_column, "Unknown item `%s'\n", $1);
+            fail(@1.first_line, @1.first_column, "Unknown item `%s'\n", $1.c_str());
             $$ = 0;
         }
         else
             $$ = item->nameid;
-        free($1);
+        $1.free();
     }
 | INT
     {
@@ -744,33 +768,35 @@ STRING
     }
 ;
 
+// ForEach_FilterType foreach_filter
 selection:
 PC_F
     {
-        $$ = FOREACH_FILTER_PC;
+        $$ = ForEach_FilterType::PC;
     }
 | MOB_F
     {
-        $$ = FOREACH_FILTER_MOB;
+        $$ = ForEach_FilterType::MOB;
     }
 | ENTITY_F
     {
-        $$ = FOREACH_FILTER_ENTITY;
+        $$ = ForEach_FilterType::ENTITY;
     }
 | SPELL
     {
-        $$ = FOREACH_FILTER_SPELL;
+        $$ = ForEach_FilterType::SPELL;
     }
 | TARGET_F
     {
-        $$ = FOREACH_FILTER_TARGET;
+        $$ = ForEach_FilterType::TARGET;
     }
 | NPC_F
     {
-        $$ = FOREACH_FILTER_NPC;
+        $$ = ForEach_FilterType::NPC;
     }
 ;
 
+// effect_t *effect
 effect:
 '(' effect_list ')'
     {
@@ -778,93 +804,96 @@ effect:
     }
 | SKIP ';'
     {
-        $$ = new_effect(EFFECT_SKIP);
+        $$ = new_effect(EffectType::SKIP);
     }
 | ABORT ';'
     {
-        $$ = new_effect(EFFECT_ABORT);
+        $$ = new_effect(EffectType::ABORT);
     }
 | END ';'
     {
-        $$ = new_effect(EFFECT_END);
+        $$ = new_effect(EffectType::END);
     }
 | BREAK ';'
     {
-        $$ = new_effect(EFFECT_BREAK);
+        $$ = new_effect(EffectType::BREAK);
     }
 | ID '=' expr ';'
     {
         if (find_constant($1))
         {
-            fail(@1.first_line, @1.first_column, "Attempt to re-define constant `%s' in assignment.", $1);
-            free($1);
+            fail(@1.first_line, @1.first_column,
+                 "Attempt to re-define constant `%s' in assignment.",
+                 $1.c_str());
+            $1.free();
         }
         else
         {
-            $$ = new_effect(EFFECT_ASSIGN);
-            $$->e.e_assign.id = intern_id($1);
-            $$->e.e_assign.expr = $3;
+            $$ = new_effect(EffectType::ASSIGN);
+            $$->e_assign.id = intern_id($1);
+            $$->e_assign.expr = $3;
         }
     }
 | FOREACH selection ID IN expr DO effect
     {
-        $$ = new_effect(EFFECT_FOREACH);
-        $$->e.e_foreach.id = intern_id($3);
-        $$->e.e_foreach.area = $5;
-        $$->e.e_foreach.body = $7;
-        $$->e.e_foreach.filter = $2;
+        $$ = new_effect(EffectType::FOREACH);
+        $$->e_foreach.id = intern_id($3);
+        $$->e_foreach.area = $5;
+        $$->e_foreach.body = $7;
+        $$->e_foreach.filter = $2;
     }
 | FOR ID '=' expr TO expr DO effect
     {
-        $$ = new_effect(EFFECT_FOR);
-        $$->e.e_for.id = intern_id($2);
-        $$->e.e_for.start = $4;
-        $$->e.e_for.stop = $6;
-        $$->e.e_for.body = $8;
+        $$ = new_effect(EffectType::FOR);
+        $$->e_for.id = intern_id($2);
+        $$->e_for.start = $4;
+        $$->e_for.stop = $6;
+        $$->e_for.body = $8;
     }
 | IF expr THEN effect ELSE effect
     {
-        $$ = new_effect(EFFECT_IF);
-        $$->e.e_if.cond = $2;
-        $$->e.e_if.true_branch = $4;
-        $$->e.e_if.false_branch = $6;
+        $$ = new_effect(EffectType::IF);
+        $$->e_if.cond = $2;
+        $$->e_if.true_branch = $4;
+        $$->e_if.false_branch = $6;
     }
 | IF expr THEN effect
     {
-        $$ = new_effect(EFFECT_IF);
-        $$->e.e_if.cond = $2;
-        $$->e.e_if.true_branch = $4;
-        $$->e.e_if.false_branch = new_effect(EFFECT_SKIP);
+        $$ = new_effect(EffectType::IF);
+        $$->e_if.cond = $2;
+        $$->e_if.true_branch = $4;
+        $$->e_if.false_branch = new_effect(EffectType::SKIP);
     }
 | SLEEP expr ';'
     {
-        $$ = new_effect(EFFECT_SLEEP);
-        $$->e.e_sleep = $2;
+        $$ = new_effect(EffectType::SLEEP);
+        $$->e_sleep = $2;
     }
 | ID '(' arg_list ')' ';'
     {
-        $$ = op_effect($1, $3.args_nr, $3.args, @1.first_line, @1.first_column);
-        free($1);
+        $$ = op_effect($1.c_str(), $3.args_nr, $3.args, @1.first_line, @1.first_column);
+        $1.free();
     }
 | SCRIPT_DATA
     {
-        $$ = new_effect(EFFECT_SCRIPT);
-        $$->e.e_script = parse_script($1, @1.first_line);
-        free($1);
-        if ($$->e.e_script == NULL)
+        $$ = new_effect(EffectType::SCRIPT);
+        $$->e_script = parse_script($1.c_str(), @1.first_line);
+        $1.free();
+        if ($$->e_script == NULL)
             fail(@1.first_line, @1.first_column, "Failed to compile script\n");
     }
 | CALL ID '(' arg_list ')' ';'
     {
         $$ = call_proc($2, $4.args_nr, $4.args, @1.first_line, @1.first_column);
-        free($2);
+        $2.free();
     }
 ;
 
+// effect_t *effect
 effect_list:
 /* empty */
     {
-        $$ = new_effect(EFFECT_SKIP);
+        $$ = new_effect(EffectType::SKIP);
     }
 | effect semicolons effect_list
     {
@@ -874,73 +903,63 @@ effect_list:
 
 %%
 
-/* We do incremental realloc here to store our results.  Since this happens only once
- * during startup for a relatively manageable set of configs, it should be fine. */
-
-static int intern_id(const char *id_name)
+static int intern_id(POD_string id_name)
 {
-    for (int i = 0; i < magic_conf.vars_nr; i++)
-        if (0 == strcmp(id_name, magic_conf.var_name[i]))
+    size_t sz = magic_conf::vars.size();
+    for (int i = 0; i < sz; i++)
+        if (id_name == magic_conf::vars[i].first)
         {
-            free(const_cast<char*>(id_name));
+            id_name.free();
             return i;
         }
 
-    /* Must add new */
-    int i = magic_conf.vars_nr++;
-    RECREATE(magic_conf.var_name, const char *, magic_conf.vars_nr);
-    magic_conf.var_name[i] = id_name;
-    RECREATE(magic_conf.vars, val_t, magic_conf.vars_nr);
-    magic_conf.vars[i].ty = TY_UNDEF;
+    int i = sz;
+    // Must add new
+    magic_conf::vars.push_back(std::make_pair(id_name, val_t{{0}, TY::UNDEF}));
 
     return i;
 }
 
 static void add_spell(spell_t *spell, int line_nr)
 {
-    int idx = magic_conf.spells_nr;
-
-    for (int i = 0; i < idx; i++)
+    for (auto& spell_pair : magic_conf::spells)
     {
-        if (0 == strcmp(magic_conf.spells[i]->name, spell->name))
+        if (spell_pair.second->name == spell->name)
         {
-            fail(line_nr, 0, "Attempt to redefine spell `%s'\n", spell->name);
+            fail(line_nr, 0, "Attempt to redefine spell `%s'\n", spell->name.c_str());
             return;
         }
-        if (0 == strcmp(magic_conf.spells[i]->invocation, spell->invocation))
+        if (spell_pair.second->invocation == spell->invocation)
         {
-            fail(line_nr, 0, "Attempt to redefine spell invocation `%s' between spells `%s' and `%s'\n",
-                spell->invocation, magic_conf.spells[i]->name, spell->name);
+            fail(line_nr, 0,
+                 "Attempt to redefine spell invocation `%s' between spells `%s' and `%s'\n",
+                 spell->invocation.c_str(), spell_pair.second->name.c_str(),
+                 spell->name.c_str());
             return;
         }
     }
-    magic_conf.spells_nr++;
-
-    RECREATE(magic_conf.spells, spell_t *, magic_conf.spells_nr);
-    magic_conf.spells[idx] = spell;
+    magic_conf::spells[spell->invocation] = spell;
 }
 
 static void add_teleport_anchor(teleport_anchor_t *anchor, int line_nr)
 {
-    int idx = magic_conf.anchors_nr;
-    for (int i = 0; i < idx; i++)
+    for (auto& anchor_pair : magic_conf::anchors)
     {
-        if (0 == strcmp(magic_conf.anchors[i]->name, anchor->name))
+        if (anchor_pair.second->name == anchor->name)
         {
-            fail(line_nr, 0, "Attempt to redefine teleport anchor `%s'\n", anchor->name);
+            fail(line_nr, 0, "Attempt to redefine teleport anchor `%s'\n", anchor->name.c_str());
             return;
         }
-        if (0 == strcmp(magic_conf.anchors[i]->invocation, anchor->invocation))
+        if (anchor_pair.second->invocation == anchor->invocation)
         {
-            fail(line_nr, 0, "Attempt to redefine anchor invocation `%s' between anchors `%s' and `%s'\n",
-                 anchor->invocation, magic_conf.anchors[i]->name, anchor->name);
+            fail(line_nr, 0,
+                 "Attempt to redefine anchor invocation `%s' between anchors `%s' and `%s'\n",
+                 anchor->invocation.c_str(), anchor_pair.second->name.c_str(),
+                 anchor->name.c_str());
             return;
         }
     }
-    magic_conf.anchors_nr++;
-
-    RECREATE(magic_conf.anchors, teleport_anchor_t *, magic_conf.anchors_nr);
-    magic_conf.anchors[idx] = anchor;
+    magic_conf::anchors[anchor->invocation] = anchor;
 }
 
 
@@ -955,9 +974,9 @@ static void fail(int line, int column, const char *fmt, ...)
 
 static expr_t *dot_expr(expr_t *expr, int id)
 {
-    expr_t *retval = magic_new_expr(EXPR_SPELLFIELD);
-    retval->e.e_field.id = id;
-    retval->e.e_field.expr = expr;
+    expr_t *retval = magic_new_expr(ExprType::SPELLFIELD);
+    retval->e_field.id = id;
+    retval->e_field.expr = expr;
 
     return retval;
 }
@@ -965,7 +984,7 @@ static expr_t *dot_expr(expr_t *expr, int id)
 static expr_t *fun_expr(const char *name, int args_nr, expr_t **args, int line, int column)
 {
     int id;
-    fun_t *fun = magic_get_fun(name, &id);
+    const fun_t *fun = magic_get_fun(name, &id);
 
     if (!fun)
     {
@@ -981,19 +1000,19 @@ static expr_t *fun_expr(const char *name, int args_nr, expr_t **args, int line, 
     expr_t *expr;
     if (fun)
     {
-        expr = magic_new_expr(EXPR_FUNAPP);
-        expr->e.e_funapp.line_nr = line;
-        expr->e.e_funapp.column = column;
-        expr->e.e_funapp.id = id;
-        expr->e.e_funapp.args_nr = args_nr;
+        expr = magic_new_expr(ExprType::FUNAPP);
+        expr->e_funapp.line_nr = line;
+        expr->e_funapp.column = column;
+        expr->e_funapp.id = id;
+        expr->e_funapp.args_nr = args_nr;
 
         for (int i = 0; i < args_nr; i++)
-            expr->e.e_funapp.args[i] = args[i];
+            expr->e_funapp.args[i] = args[i];
     }
     else
     { /* failure */
-        expr = magic_new_expr(EXPR_VAL);
-        expr->e.e_val.ty = TY_FAIL;
+        expr = magic_new_expr(ExprType::VAL);
+        expr->e_val.ty = TY::FAIL;
     }
 
     return expr;
@@ -1010,7 +1029,7 @@ static spell_t *new_spell(spellguard_t *guard)
     return retval;
 }
 
-static spellguard_t *new_spellguard(int ty)
+static spellguard_t *new_spellguard(SpellGuardType ty)
 {
     spellguard_t *retval;
     CREATE(retval, spellguard_t, 1);
@@ -1037,8 +1056,8 @@ static spellguard_t *spellguard_implication(spellguard_t *a, spellguard_t *b)
         return retval;
 
     /* If the premise is a disjunction, b is the continuation of _all_ branches */
-    if (a->ty == SPELLGUARD_CHOICE)
-        spellguard_implication(a->s.s_alt, b);
+    if (a->ty == SpellGuardType::CHOICE)
+        spellguard_implication(a->s_alt, b);
     if (a->next)
         spellguard_implication(a->next, b);
     else
@@ -1047,7 +1066,7 @@ static spellguard_t *spellguard_implication(spellguard_t *a, spellguard_t *b)
     return retval;
 }
 
-static effect_t *new_effect(int ty)
+static effect_t *new_effect(EffectType ty)
 {
     effect_t *effect;
     CREATE(effect, effect_t, 1);
@@ -1065,10 +1084,10 @@ static effect_t *set_effect_continuation(effect_t *src, effect_t *continuation)
 
     /* For FOR and FOREACH, we use special stack handlers and thus don't have to set
      * the continuation.  It's only IF that we need to handle in this fashion. */
-    if (src->ty == EFFECT_IF)
+    if (src->ty == EffectType::IF)
     {
-        set_effect_continuation(src->e.e_if.true_branch, continuation);
-        set_effect_continuation(src->e.e_if.false_branch, continuation);
+        set_effect_continuation(src->e_if.true_branch, continuation);
+        set_effect_continuation(src->e_if.false_branch, continuation);
     }
     if (src->next)
         set_effect_continuation(src->next, continuation);
@@ -1078,11 +1097,11 @@ static effect_t *set_effect_continuation(effect_t *src, effect_t *continuation)
     return retval;
 }
 
-static effect_t *op_effect(char *name, int args_nr, expr_t **args, int line, int column)
+static effect_t *op_effect(const char *name, int args_nr, expr_t **args, int line, int column)
 {
     int id;
     effect_t *effect;
-    op_t *op = magic_get_op(name, &id);
+    const op_t *op = magic_get_op(name, &id);
 
     if (!op)
         fail(line, column, "Unknown operation `%s'\n", name);
@@ -1094,107 +1113,82 @@ static effect_t *op_effect(char *name, int args_nr, expr_t **args, int line, int
 
     if (op)
     {
-        effect = new_effect(EFFECT_OP);
-        effect->e.e_op.line_nr = line;
-        effect->e.e_op.column = column;
-        effect->e.e_op.id = id;
-        effect->e.e_op.args_nr = args_nr;
+        effect = new_effect(EffectType::OP);
+        effect->e_op.line_nr = line;
+        effect->e_op.column = column;
+        effect->e_op.id = id;
+        effect->e_op.args_nr = args_nr;
 
         for (int i = 0; i < args_nr; i++)
-            effect->e.e_op.args[i] = args[i];
+            effect->e_op.args[i] = args[i];
     }
     else /* failure */
-        effect = new_effect(EFFECT_SKIP);
+        effect = new_effect(EffectType::SKIP);
 
     return effect;
 }
 
 
-proc_t *procs = NULL;
-int procs_nr = 0;
+std::map<POD_string, proc_t> procs;
 
 // I think this is a memory leak, or undefined behavior
-static void install_proc(proc_t *proc)
+static void install_proc(const proc_t& proc)
 {
-    if (!procs)
-    {
-        procs = proc;
-        procs_nr = 1;
-    }
-    else
-    {
-        RECREATE(procs, proc_t, 1 + procs_nr);
-        procs[procs_nr++] = *proc;
-    }
+    procs[proc.name] = proc;
 }
 
-static effect_t *call_proc(char *name, int args_nr, expr_t **args, int line_nr, int column)
+static effect_t *call_proc(POD_string name, int args_nr, expr_t **args, int line_nr, int column)
 {
-    proc_t *p = NULL;
-
-    for (int i = 0; i < procs_nr; i++)
-        if (0 == strcmp(procs[i].name, name))
-        {
-            p = &procs[i];
-            break;
-        }
-
-    if (!p)
+    auto it = procs.find(name);
+    if (it == procs.end())
     {
-        fail(line_nr, column, "Unknown procedure `%s'\n", name);
-        return new_effect(EFFECT_SKIP);
+        fail(line_nr, column,
+             "Unknown procedure `%s'\n",
+             name.c_str());
+        return new_effect(EffectType::SKIP);
     }
 
+    proc_t *p = &it->second;
     if (p->args_nr != args_nr)
     {
-        fail(line_nr, column, "Procedure %s/%d invoked with %d parameters\n", name, p->args_nr, args_nr);
-        return new_effect(EFFECT_SKIP);
+        fail(line_nr, column,
+             "Procedure %s/%d invoked with %d parameters\n",
+             name.c_str(), p->args_nr, args_nr);
+        return new_effect(EffectType::SKIP);
     }
 
-    effect_t *retval = new_effect(EFFECT_CALL);
-    retval->e.e_call.body = p->body;
-    retval->e.e_call.args_nr = args_nr;
-    retval->e.e_call.formals = p->args;
-    retval->e.e_call.actuals = args;
+    effect_t *retval = new_effect(EffectType::CALL);
+    retval->e_call.body = p->body;
+    retval->e_call.args_nr = args_nr;
+    retval->e_call.formals = p->args;
+    retval->e_call.actuals = args;
     return retval;
 }
 
 struct const_def_rec
 {
-    char *name;
+    POD_string name;
     val_t val;
-} *const_defs = NULL;
+};
+std::vector<const_def_rec> const_defs;
 
-int const_defs_nr = 0;
-
-static void bind_constant(char *name, val_t *val, int line_nr)
+static void bind_constant(POD_string name, val_t *val, int line_nr)
 {
     if (find_constant(name))
     {
-        fail(line_nr, 0, "Redefinition of constant `%s'\n", name);
+        fail(line_nr, 0, "Redefinition of constant `%s'\n", name.c_str());
         return;
     }
 
-    if (!const_defs)
-    {
-        CREATE(const_defs, struct const_def_rec, 1);
-    }
-    else
-    {
-        RECREATE(const_defs, struct const_def_rec, const_defs_nr + 1);
-    }
-    const_defs[const_defs_nr].name = name;
-    const_defs[const_defs_nr].val = *val;
-    ++const_defs_nr;
+    const_defs.push_back({name, *val});
 }
 
-static val_t *find_constant(char *name)
+static val_t *find_constant(POD_string name)
 {
-    for (int i = 0; i < const_defs_nr; i++)
+    for (int i = 0; i < const_defs.size(); i++)
     {
-        if (0 == strcmp(const_defs[i].name, name))
+        if (const_defs[i].name == name)
         {
-            free(name);
             return &const_defs[i].val;
         }
     }
@@ -1205,40 +1199,32 @@ static val_t *find_constant(char *name)
 
 static void INTERN_ASSERT(const char *name, int id)
 {
-    int zid = intern_id(name);
+    POD_string pname;
+    pname.init();
+    pname.assign(name);
+    int zid = intern_id(pname);
     if (zid != id)
         fprintf(stderr,
                 "[magic-conf] INTERNAL ERROR: Builtin special var %s interned to %d, not %d as it should be!\n",
                 name, zid, id);
 }
 
-void magic_init(const char *conffile) // must be called after itemdb initialisation
+// must be called after itemdb initialisation
+void magic_init(const char *conffile)
 {
-    magic_conf.vars_nr = 0;
-    // TODO was there a reason these were mallocing a minimal amount?
-    // probably it was just somebody not knowing the standard library
-    // very well - that it is safe to realloc NULL
-    magic_conf.var_name = static_cast<const char **>(NULL);
-    magic_conf.vars = static_cast<val_t *>(NULL);
+    //magic_conf::obscure_chance = 95;
+    //magic_conf::min_casttime = 100;
 
-    magic_conf.obscure_chance = 95;
-    magic_conf.min_casttime = 100;
-
-    magic_conf.spells_nr = 0;
-    CREATE(magic_conf.spells, spell_t *, 1);
-
-    magic_conf.anchors_nr = 0;
-    CREATE(magic_conf.anchors, teleport_anchor_t *, 1);
-
-    INTERN_ASSERT("min_casttime", VAR_MIN_CASTTIME);
-    INTERN_ASSERT("obscure_chance", VAR_OBSCURE_CHANCE);
-    INTERN_ASSERT("caster", VAR_CASTER);
-    INTERN_ASSERT("spellpower", VAR_SPELLPOWER);
-    INTERN_ASSERT("self_spell", VAR_SPELL);
-    INTERN_ASSERT("self_invocation", VAR_INVOCATION);
-    INTERN_ASSERT("target", VAR_TARGET);
-    INTERN_ASSERT("script_target", VAR_SCRIPTTARGET);
-    INTERN_ASSERT("location", VAR_LOCATION);
+    // it would be better to specify these in an initializer list
+    INTERN_ASSERT("min_casttime", Var::MIN_CASTTIME);
+    INTERN_ASSERT("obscure_chance", Var::OBSCURE_CHANCE);
+    INTERN_ASSERT("caster", Var::CASTER);
+    INTERN_ASSERT("spellpower", Var::SPELLPOWER);
+    INTERN_ASSERT("self_spell", Var::SPELL);
+    INTERN_ASSERT("self_invocation", Var::INVOCATION);
+    INTERN_ASSERT("target", Var::TARGET);
+    INTERN_ASSERT("script_target", Var::SCRIPTTARGET);
+    INTERN_ASSERT("location", Var::LOCATION);
 
     magic_frontend_in = fopen(conffile, "r");
     if (!magic_frontend_in)
@@ -1247,17 +1233,18 @@ void magic_init(const char *conffile) // must be called after itemdb initialisat
         return;
     }
     magic_frontend_parse();
+/*
+    if (magic_conf::vars[Var::MIN_CASTTIME].ty == TY::INT)
+        magic_conf::min_casttime = magic_conf::vars[Var::MIN_CASTTIME].v_int;
 
-    if (magic_conf.vars[VAR_MIN_CASTTIME].ty == TY_INT)
-        magic_conf.min_casttime = magic_conf.vars[VAR_MIN_CASTTIME].v.v_int;
+    if (magic_conf::vars[Var::OBSCURE_CHANCE].ty == TY::INT)
+        magic_conf::obscure_chance = magic_conf::vars[Var::OBSCURE_CHANCE].v_int;
+*/
 
-    if (magic_conf.vars[VAR_OBSCURE_CHANCE].ty == TY_INT)
-        magic_conf.obscure_chance = magic_conf.vars[VAR_OBSCURE_CHANCE].v.v_int;
+    printf("[magic-conf] Magic initialised: %d spells, %d teleport anchors.\n",
+           magic_conf::spells.size(), magic_conf::anchors.size());
 
-    printf("[magic-conf] Magic initialised; obscure at %d%%.  %d spells, %d teleport anchors.\n",
-        magic_conf.obscure_chance, magic_conf.spells_nr, magic_conf.anchors_nr);
-
-    free(procs);
+    procs.clear();
 }
 
 static void magic_frontend_error(const char *msg)

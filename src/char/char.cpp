@@ -124,6 +124,7 @@ Log char_log("char");
 Log unknown_packet_log("char.unknown");
 
 ///Return level of a GM (0 if not a GM)
+static gm_level_t isGM(int account_id) __attribute__((pure));
 static gm_level_t isGM(int account_id)
 {
     for (int i = 0; i < GM_num; i++)
@@ -155,14 +156,6 @@ struct mmo_charstatus *character_by_name(const char *character_name)
         }
     }
     return quantity == 1 ? loose : NULL;
-}
-
-/// Return name of character by index, or "Unknown"
-const char *get_character_name(int idx)
-{
-    if (idx >= 0 && idx < char_num)
-        return char_dat[idx].name;
-    return unknown_char_name;
 }
 
 /// Write a line of character data

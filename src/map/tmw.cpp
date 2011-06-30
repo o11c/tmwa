@@ -14,7 +14,7 @@
 #include "pc.hpp"
 
 static int tmw_ShorterStrlen(const char *s1, const char *s2);
-static int tmw_CheckChatLameness(const char *message);
+static int tmw_CheckChatLameness(const char *message) __attribute__((pure));
 static void tmw_AutoBan(MapSessionData *sd, const char *reason, int length);
 
 int tmw_CheckChatSpam(MapSessionData *sd, const char *message)

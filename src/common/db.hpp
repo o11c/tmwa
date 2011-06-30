@@ -10,7 +10,7 @@ struct dbt *strdb_init();
 /// Create a map from int to void*
 struct dbt *numdb_init(void);
 /// Return the value corresponding to the key, or NULL if not found
-db_val_t db_search(struct dbt *table, db_key_t key);
+db_val_t db_search(struct dbt *table, db_key_t key) __attribute__((pure));
 /// Add or replace table[key] = data
 // if it was already there, call release
 struct dbn *db_insert(struct dbt *table, db_key_t key, db_val_t data);

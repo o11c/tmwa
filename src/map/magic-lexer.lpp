@@ -5,7 +5,7 @@
 
 #define FIXLOC magic_frontend_lloc.first_line = magic_frontend_lineno
 
-#define HEADING(dir) { magic_frontend_lval.i = dir; FIXLOC; return DIR; }
+#define HEADING(d) { magic_frontend_lval.dir = Direction::d; FIXLOC; return DIR; }
 
 %}
 
@@ -18,14 +18,14 @@
 
 %%
 
-"S"                     HEADING(0);
-"SW"                    HEADING(1);
-"W"                     HEADING(2);
-"NW"                    HEADING(3);
-"N"                     HEADING(4);
-"NE"                    HEADING(5);
-"E"                     HEADING(6);
-"SE"                    HEADING(7);
+"S"                     HEADING(S);
+"SW"                    HEADING(SW);
+"W"                     HEADING(W);
+"NW"                    HEADING(NW);
+"N"                     HEADING(N);
+"NE"                    HEADING(NE);
+"E"                     HEADING(E);
+"SE"                    HEADING(SE);
 "="                     {FIXLOC; return '=';}
 "=="                    {FIXLOC; return EQ;}
 "<>"                    {FIXLOC; return NEQ;}
@@ -95,38 +95,57 @@
 "DO"                    {FIXLOC; return DO;}
 "WAIT"                  {FIXLOC; return SLEEP;}
 
-\{([^\}]|\\.)*\} { char *string = strdup(yytext);
-                   magic_frontend_lval.s = string;
-                   FIXLOC;
-                   return SCRIPT_DATA;
-                   }
+\{([^\}]|\\.)*\} {
+    magic_frontend_lval.s.init();
+    magic_frontend_lval.s.assign(yytext);
+    FIXLOC;
+    return SCRIPT_DATA;
+}
 
-\"([^\"]|\\.)*\" { char *string = strdup(yytext + 1);
-                   char *src = string;
-                   char *dst = string;
-                   while (*src && *src != '"')
-                       if (*src == '\\') {
-                           *dst++ = src[1];
-                           src += 2;
-                       } else
-                           *dst++ = *src++;
-                   *dst = '\0'; /* terminate */
-                   magic_frontend_lval.s = string;
-                   FIXLOC;
-                   return STRING;
-                   }
+\"([^\"]|\\.)*\" {
+    // skip the leading '\"'
+    char *str = yytext + 1;
+    char *src = str;
+    char *dst = str;
+    // backslash means: use the next character as-is
+    // intended only for itself and quote
+    while (*src && *src != '"')
+        if (*src == '\\')
+        {
+            // we don't have to worry about src[1] being the NUL terminator
+            // because the regex has: \\.
+            *dst++ = src[1];
+            src += 2;
+        } else
+            *dst++ = *src++;
+    // terminate in place of the trailing '\"'
+    *dst = '\0';
 
-"-"?[0-9]+          { magic_frontend_lval.i = atoi(yytext);
-                      FIXLOC;
-                      return INT; }
+    magic_frontend_lval.s.init();
+    magic_frontend_lval.s.assign(str);
+    FIXLOC;
+    return STRING;
+}
 
-"0x"[0-9a-fA-F]+    { magic_frontend_lval.i = strtol(yytext + 2, NULL, 16);
-                      FIXLOC;
-                      return INT; }
+"-"?[0-9]+          {
+    magic_frontend_lval.i = atoi(yytext);
+    FIXLOC;
+    return INT;
+}
 
-[a-zA-Z][-_a-zA-Z0-9?!]*  { magic_frontend_lval.s = strdup(yytext);
-                            FIXLOC;
-                            return ID; }
+"0x"[0-9a-fA-F]+    {
+    magic_frontend_lval.i = strtol(yytext + 2, NULL, 16);
+    FIXLOC;
+    return INT;
+}
+
+[a-zA-Z][-_a-zA-Z0-9?!]*  {
+    // apparently, '-', '?', and '!' are valid in tokens?
+    magic_frontend_lval.s.init();
+    magic_frontend_lval.s.assign(yytext);
+    FIXLOC;
+    return ID;
+}
 
 "#".*$          /* Ignore comments */
 "//".*$         /* Ignore comments */

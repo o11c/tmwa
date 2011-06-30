@@ -11,8 +11,8 @@
 
 extern struct mob_db mob_db[];
 
-int mobdb_searchname(const char *str);
-int mobdb_checkid(const int id);
+int mobdb_searchname(const char *str) __attribute__((pure));
+int mobdb_checkid(const int id) __attribute__((pure));
 int mob_once_spawn(MapSessionData *sd, const fixed_string<16>& mapname,
                      int x, int y, const char *mobname, int class_, int amount,
                     const char *event);

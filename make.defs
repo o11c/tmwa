@@ -1,8 +1,13 @@
 # defaults for compilation
 BISON = bison
 WARNINGS= @warnings
+OPTIMIZATION=-O2
 CXXFLAGS = -pipe -g ${WARNINGS}
-LDFLAGS = -Wl,--as-needed
+LDFLAGS = -Wl,--as-needed -pipe
+
+# Since I'm depending on GCC 4.6 for now, I might as well take advantage
+CXXFLAGS += -flto
+LDFLAGS += -flto
 
 # defaults for installation
 PREFIX=/usr/local
@@ -17,15 +22,22 @@ override CXX += -m32
 # * Using local types in template arguments
 # * Undoubtedly other stuff I'll forget to put here
 override CXX += -std=c++0x
+# With -flto, needed at link time *as well* as at compile time
+override CXX += ${OPTIMIZATION}
 
 # for clock_gettime
 override LDLIBS += -lrt
+# Due to a strange and irreproducable bug in GCC
+# Note: please don't append anything else after this
+override LDLIBS += -Wl,--no-as-needed -lm
 
 # Needed for the implicit linking rule
 override CC = ${CXX}
 
 # I'm not *that* confident in the code
 override CXXFLAGS += -fstack-protector
+# I *know* we don't do *this*
+override CXXFLAGS += -fno-strict-aliasing
 
 # I'm probably going to get rid of this header eventually
 # Also, it is pretty stupid if you only check sanity when you remember

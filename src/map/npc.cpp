@@ -184,7 +184,7 @@ static void npc_event_doall_sub(db_key_t key, db_val_t data, int *c, const char 
     }
 }
 
-int npc_event_doall_l(const char *name, int rid, int argc, argrec_t * args)
+int npc_event_doall_l(const char *name, int rid, int argc, argrec_t *args)
 {
     int c = 0;
     char buf[64] = "::";
@@ -211,7 +211,7 @@ static void npc_event_do_sub(db_key_t key, db_val_t data, int *c, const char *na
     }
 }
 
-int npc_event_do_l(const char *name, int rid, int argc, argrec_t * args)
+int npc_event_do_l(const char *name, int rid, int argc, argrec_t *args)
 {
     int c = 0;
 
@@ -577,7 +577,7 @@ int npc_command(MapSessionData *, const char *npcname, const char *command)
 int npc_touch_areanpc(MapSessionData *sd, int m, int x, int y)
 {
     int i, f = 1;
-    int xs, ys;
+    int xs = 0, ys = 0;
 
     nullpo_retr(1, sd);
 
@@ -1178,7 +1178,8 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
 {
     int x, y, dir = 0, m, xs = 0, ys = 0, npc_class = 0;   // [Valaris] thanks to fov
     fixed_string<16> mapname;
-    char *srcbuf = NULL, *script;
+    char *srcbuf = NULL;
+    const char *script;
     int srcsize = 65536;
     int startline = 0;
     char line[1024];
@@ -1486,7 +1487,8 @@ static int npc_parse_script(char *w1, char *w2, char *w3, char *w4,
 static int npc_parse_function(char *, char *, char *w3, char *,
                                char *first_line, FILE * fp, int *lines)
 {
-    char *srcbuf = NULL, *script;
+    char *srcbuf = NULL;
+    const char *script;
     int srcsize = 65536;
     int startline = 0;
     char line[1024];
@@ -1541,7 +1543,7 @@ static int npc_parse_function(char *, char *, char *w3, char *,
     CREATE(p, char, 50);
 
     strncpy(p, w3, 49);
-    strdb_insert(script_get_userfunc_db(), p, static_cast<void *>(script));
+    strdb_insert(script_get_userfunc_db(), p, const_cast<char *>(script));
 
 //  label_db=script_get_label_db();
 
@@ -1827,7 +1829,7 @@ npc_data_script::~npc_data_script()
     free(scr.timer_event);
     if (scr.src_id == 0)
     {
-        free(scr.script);
+        free(const_cast<char *>(scr.script));
         free(scr.label_list);
     }
     npc_propagate_update(this);

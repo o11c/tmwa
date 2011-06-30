@@ -9,6 +9,7 @@ static int strdb_cmp(const char *a, const char* b)
     return strcmp(a, b);
 }
 
+static hash_t strdb_hash(const char *a) __attribute__((pure));
 static hash_t strdb_hash(const char *a)
 {
     hash_t h = 0;
@@ -50,6 +51,7 @@ struct dbt *numdb_init(void)
     return table;
 }
 
+static int table_cmp(struct dbt *table, db_key_t a, db_key_t b) __attribute__((pure));
 static int table_cmp(struct dbt *table, db_key_t a, db_key_t b)
 {
     switch (table->type)
@@ -60,6 +62,7 @@ static int table_cmp(struct dbt *table, db_key_t a, db_key_t b)
     abort();
 }
 
+static hash_t table_hash(struct dbt *table, db_key_t key) __attribute__((pure));
 static hash_t table_hash(struct dbt *table, db_key_t key)
 {
     switch (table->type)

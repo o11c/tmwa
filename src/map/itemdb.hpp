@@ -5,7 +5,7 @@
 
 struct item_data *itemdb_searchname(const char *name);
 struct item_data *itemdb_search(int nameid);
-struct item_data *itemdb_exists(int nameid);
+struct item_data *itemdb_exists(int nameid) __attribute__((pure));
 #define itemdb_type(n) itemdb_search(n)->type
 #define itemdb_atk(n) itemdb_search(n)->atk
 #define itemdb_def(n) itemdb_search(n)->def
@@ -24,7 +24,7 @@ struct item_data *itemdb_exists(int nameid);
 #define itemdb_value_sell(n) itemdb_search(n)->value_sell
 
 int itemdb_isequip(int);
-int itemdb_isequip2(struct item_data *);
+int itemdb_isequip2(struct item_data *) __attribute__((pure));
 int itemdb_isequip3(int);
 
 void do_init_itemdb(void);

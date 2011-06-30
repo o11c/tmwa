@@ -6,51 +6,54 @@
 # include "../common/timer.structs.hpp"
 # include "../common/socket.structs.hpp"
 
+# include "../lib/string.hpp"
+
+# include <vector>
+# include <map>
+
 # define MAGIC_CONFIG_FILE "conf/magic.conf"
 
-# define SPELLARG_NONE   0       /* No spell parameter */
-# define SPELLARG_PC     1       /* Spell parameter describes pc (defaults to self) */
-# define SPELLARG_STRING 2       /* Spell parameter describes pc (defaults to self) */
+struct spell_t;
+struct expr_t;
 
-/* ------ */
-/* Values */
-/* ------ */
+enum class SpellArgType
+{
+    NONE,
+    PC,
+    STRING,
+};
 
-# define TY_UNDEF      0
-# define TY_INT        1
-# define TY_DIR        2
-# define TY_STRING     3
-# define TY_ENTITY     5
-# define TY_LOCATION   6
-# define TY_AREA       7
-# define TY_SPELL      8
-# define TY_INVOCATION 9
-# define TY_FAIL     127
+enum class TY : uint8_t
+{
+    UNDEF,
+    INT,
+    DIR,
+    STRING,
+    ENTITY,
+    LOCATION,
+    AREA,
+    SPELL,
+    INVOCATION,
+    FAIL = 127,
+};
 
-typedef MapSessionData character_t;
-typedef BlockList entity_t;
-
-struct expr;
-struct val;
-struct location;
-struct area;
-struct spell;
-class invocation_t;
-
-typedef struct location
+struct location_t
 {
     int m;
     int x, y;
-} location_t;
+};
 
-# define AREA_LOCATION 0
-# define AREA_UNION    1
-# define AREA_RECT     2
-# define AREA_BAR      3
-
-typedef struct area
+enum class AreaType : uint8_t
 {
-    union a
+    LOCATION,
+    UNION,
+    RECT,
+    BAR,
+};
+
+struct area_t
+{
+    union
     {
         location_t a_loc;
         struct
@@ -64,68 +67,72 @@ typedef struct area
             location_t loc;
             int width, height;
         } a_rect;
-        struct area *a_union[2];
-    } a;
+        area_t *a_union[2];
+    };
     int size;
-    uint8_t ty;
-} area_t;
+    AreaType ty;
+};
 
-typedef struct val
+struct val_t
 {
-    union v
+    union
     {
         int v_int;
-        char *v_string;
-        entity_t *v_entity;     /* Used ONLY during operation/function invocation; otherwise we use v_int */
+        POD_string v_string;
+        // Used ONLY during operation/function invocation; otherwise we use v_int
+        BlockList *v_entity;
         area_t *v_area;
         location_t v_location;
-        invocation_t *v_invocation;    /* Used ONLY during operation/function invocation; otherwise we use v_int */
-        struct spell *v_spell;
-    } v;
-    uint8_t ty;
-} val_t;
+        // Used ONLY during operation/function invocation; otherwise we use v_int
+        invocation_t *v_invocation;
+        spell_t *v_spell;
+        Direction v_dir;
+    };
+    TY ty;
+};
 
-/* ----------- */
-/* Expressions */
-/* ----------- */
 
-# define MAX_ARGS 7              /* Max. # of args used in builtin primitive functions */
+/// Max. # of args used in builtin primitive functions
+# define MAX_ARGS 7
 
-# define EXPR_VAL        0
-# define EXPR_LOCATION   1
-# define EXPR_AREA       2
-# define EXPR_FUNAPP     3
-# define EXPR_ID         4
-# define EXPR_SPELLFIELD 5
-
-typedef struct e_location
+enum class ExprType
 {
-    struct expr *m, *x, *y;
-} e_location_t;
+    VAL,
+    LOCATION,
+    AREA,
+    FUNAPP,
+    ID,
+    SPELLFIELD,
+};
 
-typedef struct e_area
+struct e_location_t
 {
-    union a0
+    expr_t *m, *x, *y;
+};
+
+struct e_area_t
+{
+    union
     {
         e_location_t a_loc;
         struct
         {
             e_location_t loc;
-            struct expr *width, *depth, *dir;
+            expr_t *width, *depth, *dir;
         } a_bar;
         struct
         {
             e_location_t loc;
-            struct expr *width, *height;
+            expr_t *width, *height;
         } a_rect;
-        struct e_area *a_union[2];
-    } a;
-    uint8_t ty;
-} e_area_t;
+        e_area_t *a_union[2];
+    };
+    AreaType ty;
+};
 
-typedef struct expr
+struct expr_t
 {
-    union e
+    union
     {
         val_t e_val;
         e_location_t e_location;
@@ -134,46 +141,49 @@ typedef struct expr
         {
             int id, line_nr, column;
             int args_nr;
-            struct expr *args[MAX_ARGS];
+            expr_t *args[MAX_ARGS];
         } e_funapp;
         int e_id;
         struct
         {
-            struct expr *expr;
+            expr_t *expr;
             int id;
         } e_field;
-    } e;
-    uint8_t ty;
-} expr_t;
+    };
+    ExprType ty;
+};
 
-/* ------- */
-/* Effects */
-/* ------- */
 
-# define EFFECT_SKIP    0
-# define EFFECT_ABORT   1
-# define EFFECT_ASSIGN  2
-# define EFFECT_FOREACH 3
-# define EFFECT_FOR     4
-# define EFFECT_IF      5
-# define EFFECT_SLEEP   6
-# define EFFECT_SCRIPT  7
-# define EFFECT_BREAK   8
-# define EFFECT_OP      9
-# define EFFECT_END    10
-# define EFFECT_CALL   11
-
-# define FOREACH_FILTER_MOB    1
-# define FOREACH_FILTER_PC     2
-# define FOREACH_FILTER_ENTITY 3
-# define FOREACH_FILTER_TARGET 4
-# define FOREACH_FILTER_SPELL  5
-# define FOREACH_FILTER_NPC    6
-
-typedef struct effect
+enum class EffectType
 {
-    struct effect *next;
-    union e0
+    SKIP,
+    ABORT,
+    ASSIGN,
+    FOREACH,
+    FOR,
+    IF,
+    SLEEP,
+    SCRIPT,
+    BREAK,
+    OP,
+    END,
+    CALL,
+};
+
+enum class ForEach_FilterType
+{
+    MOB,
+    PC,
+    ENTITY,
+    TARGET,
+    SPELL,
+    NPC,
+};
+
+struct effect_t
+{
+    effect_t *next;
+    union
     {
         struct
         {
@@ -184,22 +194,22 @@ typedef struct effect
         {
             int id;
             expr_t *area;
-            struct effect *body;
-            uint8_t filter;
+            effect_t *body;
+            ForEach_FilterType filter;
         } e_foreach;
         struct
         {
             int id;
             expr_t *start, *stop;
-            struct effect *body;
+            effect_t *body;
         } e_for;
         struct
         {
             expr_t *cond;
-            struct effect *true_branch, *false_branch;
+            effect_t *true_branch, *false_branch;
         } e_if;
         expr_t *e_sleep;        /* sleep time */
-        char *e_script;
+        const char *e_script;
         struct
         {
             int id;
@@ -211,152 +221,156 @@ typedef struct effect
         {
             int args_nr, *formals;
             expr_t **actuals;
-            struct effect *body;
+            effect_t *body;
         } e_call;
-    } e;
-    uint8_t ty;
-} effect_t;
+    };
+    EffectType ty;
+};
 
-/* ---------- */
-/* Components */
-/* ---------- */
 
-typedef struct component
+struct component_t
 {
-    struct component *next;
+    component_t *next;
     int item_id;
     int count;
-} component_t;
+};
 
-/* ----------- */
-/* Spellguards */
-/* ----------- */
 
-# define SPELLGUARD_CONDITION  0
-# define SPELLGUARD_COMPONENTS 1
-# define SPELLGUARD_CATALYSTS  2
-# define SPELLGUARD_CHOICE     3
-# define SPELLGUARD_MANA       4
-# define SPELLGUARD_CASTTIME   5
-# define SPELLGUARD_EFFECT     6
+enum class SpellGuardType
+{
+    CONDITION,
+    COMPONENTS,
+    CATALYSTS,
+    CHOICE,
+    MANA,
+    CASTTIME,
+    EFFECT,
+};
 
-typedef struct effect_set
+struct effect_set_t
 {
     effect_t *effect, *at_trigger, *at_end;
-} effect_set_t;
+};
 
-typedef struct spellguard
+struct spellguard_t
 {
-    struct spellguard *next;
-    union s
+    spellguard_t *next;
+    union
     {
         expr_t *s_condition;
         expr_t *s_mana;
         expr_t *s_casttime;
         component_t *s_components;
         component_t *s_catalysts;
-        struct spellguard *s_alt;   /* either `next' or `s.s_alt' */
+        // either `next' or `s.s_alt'
+        spellguard_t *s_alt;
         effect_set_t s_effect;
-    } s;
-    uint8_t ty;
-} spellguard_t;
+    };
+    SpellGuardType ty;
+};
 
-/* ------ */
-/* Spells */
-/* ------ */
 
-typedef struct letdef
+struct letdef_t
 {
     int id;
     expr_t *expr;
-} letdef_t;
+};
 
-# define SPELL_FLAG_LOCAL    (1 << 0)    // spell associated not with caster but with place
-# define SPELL_FLAG_SILENT   (1 << 1)    // spell invocation never uttered
-# define SPELL_FLAG_NONMAGIC (1 << 2)    // `magic word' only:  don't require spellcasting ability
-
-typedef struct spell
+// not (yet) an enum class because
+// 1. it must be bitmasked
+//      SpellFlag operator | (SpellFlag, SpellFlag);
+//      bool operator & (SpellFlag, SpellFlag);
+// 2. it gets put in a YACC variable
+// 2 is not really a problem, I figured out how to add 2 other types already
+namespace SpellFlag
 {
-    char *name;
-    char *invocation;
-    int idx;                 // Relative location in the definitions file
+    /// spell associated not with caster but with place
+    const int LOCAL    = (1 << 0);
+    /// spell invocation never uttered
+    const int SILENT   = (1 << 1);
+    /// `magic word' only:  don't require spellcasting ability
+    const int NONMAGIC = (1 << 2);
+};
+
+struct spell_t
+{
+    POD_string name;
+    POD_string invocation;
+    // Relative location in the definitions file
+    int idx;
     int flags;
     int arg;
-    int spellarg_ty;
+    SpellArgType spellarg_ty;
 
     int letdefs_nr;
     letdef_t *letdefs;
 
     spellguard_t *spellguard;
-} spell_t;
+};
 
-/* ------- */
-/* Anchors */
-/* ------- */
 
-typedef struct teleport_anchor
+struct teleport_anchor_t
 {
-    char *name;
-    char *invocation;
+    POD_string name;
+    POD_string invocation;
     expr_t *location;
-} teleport_anchor_t;
+};
 
-/* ------------------- */
-/* The big config blob */
-/* ------------------- */
-
-typedef struct
+// The configuration
+// FIXME this is implemented in magic-base.cpp, this is the wrong header
+namespace magic_conf
 {
-    int vars_nr;
-    const char **var_name;
-    val_t *vars;                /* Initial assignments, if any, or NULL */
+    extern std::vector<std::pair<POD_string, val_t>> vars;
 
-    int obscure_chance;
-    int min_casttime;
+    //extern int obscure_chance;
+    //extern int min_casttime;
 
-    int spells_nr;
-    spell_t **spells;
+    extern std::map<POD_string, spell_t *> spells;
 
-    int anchors_nr;            /* NEGATIVE iff we have sorted the anchors */
-    teleport_anchor_t **anchors;
-} magic_conf_t;
+    extern std::map<POD_string, teleport_anchor_t *> anchors;
+};
 
-/* Execution environment */
 
-# define VAR_MIN_CASTTIME   0
-# define VAR_OBSCURE_CHANCE 1
-# define VAR_CASTER         2
-# define VAR_SPELLPOWER     3
-# define VAR_SPELL          4
-# define VAR_INVOCATION     5
-# define VAR_TARGET         6
-# define VAR_SCRIPTTARGET   7
-# define VAR_LOCATION       8
-
-struct magic_config;
-
-typedef struct env
+/// This represents asserted intern indices, NOT an enum
+namespace Var
 {
-    magic_conf_t *base_env;
+    const int MIN_CASTTIME = 0;
+    const int OBSCURE_CHANCE = 1;
+    const int CASTER = 2;
+    const int SPELLPOWER = 3;
+    const int SPELL = 4;
+    const int INVOCATION = 5;
+    const int TARGET = 6;
+    const int SCRIPTTARGET = 7;
+    const int LOCATION = 8;
+};
+
+struct env_t
+{
     val_t *vars;
-} env_t;
+};
 
-# define VAR(i) ((!env->vars || env->vars[i].ty == TY_UNDEF)? env->base_env->vars[i] : env->vars[i])
+// nasty macro, captures a scope variable called "env"
+# define VAR(i) ((!env->vars || env->vars[i].ty == TY::UNDEF)? magic_conf::vars[i].second : env->vars[i])
 
 # define MAX_STACK_SIZE 32
 
-# define CONT_STACK_FOREACH 0
-# define CONT_STACK_FOR     1
-# define CONT_STACK_PROC    2
+enum class ContStackType
+{
+    FOREACH,
+    FOR,
+    PROC,
+};
 
-typedef struct cont_activation_record
+struct cont_activation_record_t
 {
     effect_t *return_location;
-    union c
+    union
     {
         struct
         {
-            int id, ty;
+            int id;
+            TY ty;
             effect_t *body;
             int entities_nr;
             int *entities;
@@ -374,63 +388,77 @@ typedef struct cont_activation_record
             int args_nr, *formals;
             val_t *old_actuals;
         } c_proc;
-    } c;
-    uint8_t ty;
-} cont_activation_record_t;
+    };
+    ContStackType ty;
+};
 
-typedef struct status_change_ref
+struct status_change_ref_t
 {
     int sc_type;
     int bl_id;
-} status_change_ref_t;
+};
 
-# define INVOCATION_FLAG_BOUND      (1 << 0)    /* Bound directly to the caster (i.e., ignore its location) */
-# define INVOCATION_FLAG_ABORTED    (1 << 1)    /* Used `abort' to terminate */
-# define INVOCATION_FLAG_STOPATTACK (1 << 2)    /* On magical attacks:  if we run out of steam, stop attacking altogether */
+// not (yet) an enum class
+namespace InvocationFlag
+{
+    /// Bound directly to the caster (i.e., ignore its location)
+    const int BOUND      = (1 << 0);
+    /// Used `abort' to terminate
+    const int ABORTED    = (1 << 1);
+    /// On magical attacks:  if we run out of steam, stop attacking altogether
+    const int STOPATTACK = (1 << 2);
+};
 
 struct invocation_t : public BlockList
 {
-    invocation_t *next_invocation; /* used for spells directly associated with a caster: they form a singly-linked list */
+    // linked-list of spells directly associated with a caster
+    invocation_t *next_invocation;
     int flags;
 
     env_t *env;
     spell_t *spell;
-    int caster;                /* this is the person who originally invoked the spell */
-    int subject;               /* when this person dies, the spell dies with it */
+    // this is the person who originally invoked the spell
+    int caster;
+    // when this person dies, the spell dies with it
+    int subject;
 
-    timer_id timer;            /* spell timer, if any */
+    // spell timer, if any
+    timer_id timer;
 
     int stack_size;
     cont_activation_record_t stack[MAX_STACK_SIZE];
 
-    int script_pos;            /* Script position; if nonzero, resume the script we were running. */
+    // Script position; if nonzero, resume the script we were running.
+    int script_pos;
     effect_t *current_effect;
-    effect_t *trigger_effect;   /* If non-NULL, this is used to spawn a cloned effect based on the same environment */
-    effect_t *end_effect;       /* If non-NULL, this is executed when the spell terminates naturally, e.g. when all status changes have run out or all delays are over. */
+    // If non-NULL, this is used to spawn a cloned effect based on the same environment
+    effect_t *trigger_effect;
+    // If non-NULL, this is executed when the spell terminates naturally, e.g. when all status changes have run out or all delays are over.
+    effect_t *end_effect;
 
-    /* Status change references:  for status change updates, keep track of whom we updated where */
+    // Status change references:  for status change updates, keep track of whom we updated where
     int status_change_refs_nr;
     status_change_ref_t *status_change_refs;
 
     invocation_t() : BlockList(BL_SPELL) {}
 };
 
-extern magic_conf_t magic_conf; /* Global magic conf */
-extern env_t magic_default_env; /* Fake default environment */
+// Fake default environment
+extern env_t magic_default_env;
 
-/* The following is used only by the parser: */
-typedef struct args_rec
+// The following is used only by the parser:
+struct args_rec_t
 {
     int args_nr;
     expr_t **args;
-} args_rec_t;
+};
 
-typedef struct
+struct proc_t
 {
-    char *name;
+    POD_string name;
     int args_nr;
     int *args;
     effect_t *body;
-} proc_t;
+};
 
 #endif // MAGIC_STRUCTS

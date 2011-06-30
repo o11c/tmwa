@@ -1,7 +1,7 @@
 .SUFFIXES:
 all:
-	make -C ../.. tmwa-admin
+	${MAKE} -C ../.. tmwa-admin
 clean:
 	rm -r ../../obj/ladmin/
 %::
-	make -C ../.. obj/ladmin/$@
+	${MAKE} -C ../.. obj/ladmin/$@

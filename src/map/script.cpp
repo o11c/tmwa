@@ -82,11 +82,6 @@ static struct Script_Config
 static int parse_cmd_if = 0;
 static int parse_cmd;
 
-/*==========================================
- * ローカルプロトタイプ宣言 (必要な物のみ)
- *------------------------------------------
- */
-static char *parse_subexpr(char *, int);
 #define BUILTIN(name) static void builtin_ ## name (struct script_state *)
 BUILTIN(mes);
 BUILTIN(goto);
@@ -438,6 +433,7 @@ enum
  * 文字列のハッシュを計算
  *------------------------------------------
  */
+static int calc_hash(const uint8_t *p) __attribute__((pure));
 static int calc_hash(const uint8_t *p)
 {
     int h = 0;
@@ -454,6 +450,7 @@ static int calc_hash(const uint8_t *p)
  *------------------------------------------
  */
 // 既存のであれば番号、無ければ-1
+static int search_str(const char *p) __attribute__((pure));
 static int search_str(const char *p)
 {
     int i;
@@ -474,21 +471,25 @@ static int search_str(const char *p)
  *------------------------------------------
  */
 // 既存のであれば番号、無ければ登録して新規番号
-static int add_str(const char *p)
+static int add_str(const char *p, size_t len)
 {
-    int i;
-    char *lowcase;
+    char *lowcase = static_cast<char *>(malloc(len + 1));
+    memcpy(lowcase, p, len);
+    lowcase[len] = '\0';
 
-    lowcase = strdup(p);
-    for (i = 0; lowcase[i]; i++)
+    // not really lower case anymore
+/*
+    for (int i = 0; lowcase[i]; i++)
         lowcase[i] = tolower(lowcase[i]);
-    if ((i = search_str(lowcase)) >= 0)
+*/
+    int i = search_str(lowcase);
+    if (i >= 0)
     {
         free(lowcase);
         return i;
     }
-    free(lowcase);
 
+    p = lowcase;
     i = calc_hash(sign_cast<const uint8_t *>(p));
     if (str_hash[i] == 0)
     {
@@ -501,6 +502,7 @@ static int add_str(const char *p)
         {
             if (strcmp(str_buf + str_data[i].str, p) == 0)
             {
+                free(lowcase);
                 return i;
             }
             if (str_data[i].next == 0)
@@ -529,7 +531,12 @@ static int add_str(const char *p)
     str_data[str_num].backpatch = -1;
     str_data[str_num].label = -1;
     str_pos += strlen(p) + 1;
+    free(lowcase);
     return str_num++;
+}
+static int add_str(const char *p)
+{
+    return add_str(p, strlen(p));
 }
 
 /*==========================================
@@ -648,7 +655,8 @@ static void set_label(int l, int pos)
  * スペース/コメント読み飛ばし
  *------------------------------------------
  */
-static char *skip_space(char *p)
+static const char *skip_space(const char *p) __attribute__((pure));
+static const char *skip_space(const char *p)
 {
     while (1)
     {
@@ -677,7 +685,8 @@ static char *skip_space(char *p)
  * １単語スキップ
  *------------------------------------------
  */
-static char *skip_word(char *p)
+static const char *skip_word(const char *p) __attribute__((pure));
+static const char *skip_word(const char *p)
 {
     // prefix
     if (*p == '$')
@@ -706,31 +715,26 @@ static char *skip_word(char *p)
     return p;
 }
 
-static char *startptr;
+static const char *startptr;
 static int startline;
 
 /*==========================================
  * エラーメッセージ出力
  *------------------------------------------
  */
-static void disp_error_message(const char *mes, char *pos)
+static void disp_error_message(const char *mes, const char *pos)
 {
-    int line, c = 0, i;
-    char *p, *linestart, *lineend;
+    int line;
+    const char *p;
 
     for (line = startline, p = startptr; p && *p; line++)
     {
-        linestart = p;
-        lineend = strchr(p, '\n');
-        if (lineend)
-        {
-            c = *lineend;
-            *lineend = 0;
-        }
+        const char *linestart = p;
+        const char *lineend = strchr(p, '\n');
         if (lineend == NULL || pos < lineend)
         {
             printf("%s line %d : ", mes, line);
-            for (i = 0;
+            for (int i = 0;
                  (linestart[i] != '\r') && (linestart[i] != '\n')
                  && linestart[i]; i++)
             {
@@ -740,20 +744,14 @@ static void disp_error_message(const char *mes, char *pos)
                     printf("\'%c\'", linestart[i]);
             }
             printf("\a\n");
-            if (lineend)
-                *lineend = c;
             return;
         }
-        *lineend = c;
         p = lineend + 1;
     }
 }
 
-/*==========================================
- * 項の解析
- *------------------------------------------
- */
-static char *parse_simpleexpr(char *p)
+static const char *parse_subexpr(const char *, int);
+static const char *parse_simpleexpr(const char *p)
 {
     int i;
     p = skip_space(p);
@@ -806,35 +804,21 @@ static char *parse_simpleexpr(char *p)
     }
     else
     {
-        int c, l;
-        char *p2;
         // label , register , function etc
         if (skip_word(p) == p)
         {
             disp_error_message("unexpected character", p);
             exit(1);
         }
-        p2 = skip_word(p);
-        c = *p2;
-        *p2 = 0;                // 名前をadd_strする
-        l = add_str(p);
+        const char *p2 = skip_word(p);
+        int l = add_str(p, p2 - p);
 
         parse_cmd = l;          // warn_*_mismatch_paramnumのために必要
         if (l == search_str("if")) // warn_cmd_no_commaのために必要
             parse_cmd_if++;
-/*
-                // 廃止予定のl14/l15,およびプレフィックスｌの警告
-                if (    strcmp(str_buf+str_data[l].str,"l14")==0 ||
-                        strcmp(str_buf+str_data[l].str,"l15")==0 ){
-                        disp_error_message("l14 and l15 is DEPRECATED. use @menu instead of l15.",p);
-                }else if (str_buf[str_data[l].str]=='l'){
-                        disp_error_message("prefix 'l' is DEPRECATED. use prefix '@' instead.",p2);
-                }
-*/
-        *p2 = c;
         p = p2;
 
-        if (str_data[l].type != C_FUNC && c == '[')
+        if (str_data[l].type != C_FUNC && *p == '[')
         {
             // array(name[i] => getelementofarray(name,i) )
             add_scriptl(search_str("getelementofarray"));
@@ -861,16 +845,15 @@ static char *parse_simpleexpr(char *p)
  * 式の解析
  *------------------------------------------
  */
-char *parse_subexpr(char *p, int limit)
+const char *parse_subexpr(const char *p, int limit)
 {
     int op, opl, len;
-    char *tmpp;
 
     p = skip_space(p);
 
     if (*p == '-')
     {
-        tmpp = skip_space(p + 1);
+        const char *tmpp = skip_space(p + 1);
         if (*tmpp == ';' || *tmpp == ',')
         {
             add_scriptl(LABEL_NEXTLINE);
@@ -878,7 +861,7 @@ char *parse_subexpr(char *p, int limit)
             return p;
         }
     }
-    tmpp = p;
+    const char *tmpp = p;
     if ((op = C_NEG, *p == '-') || (op = C_LNOT, *p == '!')
         || (op = C_NOT, *p == '~'))
     {
@@ -912,7 +895,7 @@ char *parse_subexpr(char *p, int limit)
         if (op == C_FUNC)
         {
             int i = 0, func = parse_cmd;
-            char *plist[128];
+            const char *plist[128];
 
             if (str_data[func].type != C_FUNC)
             {
@@ -972,7 +955,7 @@ char *parse_subexpr(char *p, int limit)
  * 式の評価
  *------------------------------------------
  */
-static char *parse_expr(char *p)
+static const char *parse_expr(const char *p)
 {
     switch (*p)
     {
@@ -993,11 +976,10 @@ static char *parse_expr(char *p)
  * 行の解析
  *------------------------------------------
  */
-static char *parse_line(char *p)
+static const char *parse_line(const char *p)
 {
     int i = 0, cmd;
-    char *plist[128];
-    char *p2;
+    const char *plist[128];
 
     p = skip_space(p);
     if (*p == ';')
@@ -1006,7 +988,7 @@ static char *parse_line(char *p)
     parse_cmd_if = 0;           // warn_cmd_no_commaのために必要
 
     // 最初は関数名
-    p2 = p;
+    const char *p2 = p;
     p = parse_simpleexpr(p);
     p = skip_space(p);
 
@@ -1118,11 +1100,9 @@ static void read_constdb(void)
  * スクリプトの解析
  *------------------------------------------
  */
-char *parse_script(char *src, int line)
+const char *parse_script(const char *src, int line)
 {
-    char *p, *tmpp;
-    int i;
-    static int first = 1;
+    static bool first = 1;
 
     if (first)
     {
@@ -1136,7 +1116,7 @@ char *parse_script(char *src, int line)
     str_data[LABEL_NEXTLINE].type = C_NOP;
     str_data[LABEL_NEXTLINE].backpatch = -1;
     str_data[LABEL_NEXTLINE].label = -1;
-    for (i = LABEL_START; i < str_num; i++)
+    for (int i = LABEL_START; i < str_num; i++)
     {
         if (str_data[i].type == C_POS || str_data[i].type == C_NAME)
         {
@@ -1152,11 +1132,11 @@ char *parse_script(char *src, int line)
         db_final(scriptlabel_db);
     scriptlabel_db = strdb_init();
 
-    // for error message
+    // globals for for error message
     startptr = src;
     startline = line;
 
-    p = src;
+    const char *p = src;
     p = skip_space(p);
     if (*p != '{')
     {
@@ -1166,24 +1146,23 @@ char *parse_script(char *src, int line)
     for (p++; p && *p && *p != '}';)
     {
         p = skip_space(p);
+        const char *p_skipw = skip_word(p);
         // labelだけ特殊処理
-        tmpp = skip_space(skip_word(p));
+        const char *tmpp = skip_space(p_skipw);
         if (*tmpp == ':')
         {
-            int l, c;
-
-            c = *skip_word(p);
-            *skip_word(p) = 0;
-            l = add_str(p);
+            int l = add_str(p, p_skipw - p);
             if (str_data[l].label != -1)
             {
-                *skip_word(p) = c;
                 disp_error_message("dup label ", p);
                 exit(1);
             }
             set_label(l, script_pos);
+            // Yes, we are adding a non-NUL-terminated string as the key to the DB
+            // the only use of scriptlabel_db is in npc.cpp, doing a foreach
+            // since there is no db_search, and there's a NUL out there *somewhere*
+            // (but usually it will stop before the ':'), nothing goes wrong
             strdb_insert(scriptlabel_db, p, script_pos);   // 外部用label db登録
-            *skip_word(p) = c;
             p = tmpp + 1;
             continue;
         }
@@ -1205,7 +1184,7 @@ char *parse_script(char *src, int line)
     RECREATE(script_buf, char, script_pos + 1);
 
     // 未解決のラベルを解決
-    for (i = LABEL_START; i < str_num; i++)
+    for (int i = LABEL_START; i < str_num; i++)
     {
         if (str_data[i].type == C_NOP)
         {
@@ -4575,30 +4554,32 @@ void builtin_getitemname(struct script_state *st)
 
 void builtin_getspellinvocation(struct script_state *st)
 {
-    const char *name;
-    const char *invocation;
+    POD_string name;
+    name.init();
+    name.assign(conv_str(st, &(st->stack->stack_data[st->start + 2])));
 
-    name = conv_str(st, &(st->stack->stack_data[st->start + 2]));
-
-    invocation = magic_find_invocation(name);
+    POD_string invocation = magic_find_invocation(name);
     if (!invocation)
-        invocation = "...";
+        invocation.assign("...");
 
-    push_str(st->stack, C_STR, strdup(invocation));
+    push_str(st->stack, C_STR, strdup(invocation.c_str()));
+    name.free();
+    invocation.free();
 }
 
 void builtin_getanchorinvocation(struct script_state *st)
 {
-    const char *name;
-    const char *invocation;
+    POD_string name;
+    name.init();
+    name.assign(conv_str(st, &(st->stack->stack_data[st->start + 2])));
 
-    name = conv_str(st, &(st->stack->stack_data[st->start + 2]));
-
-    invocation = magic_find_anchor_invocation(name);
+    POD_string invocation = magic_find_anchor_invocation(name);
     if (!invocation)
-        invocation = "...";
+        invocation.assign("...");
 
-    push_str(st->stack, C_STR, strdup(invocation));
+    push_str(st->stack, C_STR, strdup(invocation.c_str()));
+    name.free();
+    invocation.free();
 }
 
 void builtin_getpartnerid2(struct script_state *st)
@@ -5296,7 +5277,7 @@ void builtin_gety(struct script_state *st)
  * コマンドの読み取り
  *------------------------------------------
  */
-static int get_com(char *script, int *pos)
+static int get_com(const char *script, int *pos)
 {
     int i, j;
     if (static_cast<uint8_t>(script[*pos]) >= 0x80)
@@ -5318,13 +5299,14 @@ static int get_com(char *script, int *pos)
  * 数値の所得
  *------------------------------------------
  */
-static int get_num(char *script, int *pos)
+static int get_num(const char *script, int *pos)
 {
     int i, j;
     i = 0;
     j = 0;
     while (static_cast<uint8_t>(script[*pos]) >= 0xc0)
     {
+        // why is this mask 0x7f instead of 0x3f?
         i += (script[(*pos)++] & 0x7f) << j;
         j += 6;
     }
@@ -5627,8 +5609,8 @@ int run_func(struct script_state *st)
  * スクリプトの実行メイン部分
  *------------------------------------------
  */
-static int run_script_main(char *script, int pos, int, int,
-                           struct script_state *st, char *rootscript)
+static int run_script_main(const char *script, int pos, int, int,
+                           struct script_state *st, const char *rootscript)
 {
     int c, rerun_pos;
     int cmdcount = script_config.check_cmdcount;
@@ -5657,7 +5639,7 @@ static int run_script_main(char *script, int pos, int, int,
                 break;
             case C_POS:
             case C_NAME:
-                push_val(stack, c, (*reinterpret_cast<int *>(script + st->pos)) & 0xffffff);
+                push_val(stack, c, (*reinterpret_cast<const int *>(script + st->pos)) & 0xffffff);
                 st->pos += 3;
                 break;
             case C_ARG:
@@ -5770,18 +5752,18 @@ static int run_script_main(char *script, int pos, int, int,
  * スクリプトの実行
  *------------------------------------------
  */
-int run_script(char *script, int pos, int rid, int oid)
+int run_script(const char *script, int pos, int rid, int oid)
 {
     return run_script_l(script, pos, rid, oid, 0, NULL);
 }
 
-int run_script_l(char *script, int pos, int rid, int oid,
-                 int args_nr, argrec_t * args)
+int run_script_l(const char *script, int pos, int rid, int oid,
+                 int args_nr, argrec_t *args)
 {
     struct script_stack stack;
     struct script_state st;
     MapSessionData *sd = map_id2sd(rid);
-    char *rootscript = script;
+    const char *rootscript = script;
     int i;
     if (script == NULL || pos < 0)
         return -1;

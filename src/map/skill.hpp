@@ -30,7 +30,7 @@ class MapSessionData;
 
 void do_init_skill(void);
 
-int skill_get_max_raise(int id);
+int skill_get_max_raise(int id) __attribute__((pure));
 
 // 詠唱キャンセル
 int skill_castcancel(BlockList *bl);
@@ -108,12 +108,12 @@ extern int skill_pool_skills_size;  // Number of entries in skill_pool_skills
 
 void skill_pool_register(int id);   // [Fate] Remember that a certain skill ID belongs to a pool skill
 int skill_pool(MapSessionData *sd, int *skills); // Yields all active skills in the skill pool; no more than MAX_SKILL_POOL.  Return is number of skills.
-int skill_pool_max(MapSessionData *sd);  // Max. number of pool skills
+int skill_pool_max(MapSessionData *sd) __attribute__((pure));  // Max. number of pool skills
 int skill_pool_activate(MapSessionData *sd, int skill);  // Skill into skill pool.  Return is zero iff okay.
-int skill_pool_is_activated(MapSessionData *sd, int skill);  // Skill into skill pool.  Return is zero when activated.
+int skill_pool_is_activated(MapSessionData *sd, int skill) __attribute__((pure));  // Skill into skill pool.  Return is zero when activated.
 int skill_pool_deactivate(MapSessionData *sd, int skill);    // Skill out of skill pool.  Return is zero iff okay.
-const char *skill_name(int skill);   // Yield configurable skill name
-int skill_stat(int skill);    // Yields the stat associated with a skill.  Returns zero if none, or SP_STR, SP_VIT, ... otherwise
+const char *skill_name(int skill) __attribute__((pure));   // Yield configurable skill name
+int skill_stat(int skill) __attribute__((pure));    // Yields the stat associated with a skill.  Returns zero if none, or SP_STR, SP_VIT, ... otherwise
 int skill_power(MapSessionData *sd, int skill);  // Yields the power of a skill.  This is zero if the skill is unknown or if it's a pool skill that is outside of the skill pool,
                              // otherwise a value from 0 to 255 (with 200 being the `normal maximum')
 int skill_power_bl(BlockList *bl, int skill); // Yields the power of a skill.  This is zero if the skill is unknown or if it's a pool skill that is outside of the skill pool,

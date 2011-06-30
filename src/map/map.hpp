@@ -17,7 +17,7 @@ extern char whisper_server_name[24];
 
 // global information
 void map_setusers(int);
-int map_getusers(void);
+int map_getusers(void) __attribute__((pure));
 // block freeing
 int map_freeblock(BlockList *bl);
 int map_freeblock_lock(void);
@@ -83,12 +83,12 @@ int map_addflooritem(struct item *, int amount, uint16_t m, uint16_t x, uint16_t
 
 // mappings between character id and names
 void map_addchariddb(charid_t charid, const char *name);
-const char *map_charid2nick(charid_t);
+const char *map_charid2nick(charid_t) __attribute__((pure));
 
-MapSessionData *map_id2sd(unsigned int);
-MapSessionData *map_id2authsd(unsigned int);
-BlockList *map_id2bl(unsigned int);
-int map_mapname2mapid(const fixed_string<16>&);
+MapSessionData *map_id2sd(unsigned int) __attribute__((pure));
+MapSessionData *map_id2authsd(unsigned int) __attribute__((pure));
+BlockList *map_id2bl(unsigned int) __attribute__((pure));
+int map_mapname2mapid(const fixed_string<16>&) __attribute__((pure));
 bool map_mapname2ipport(const fixed_string<16>&, IP_Address *, in_port_t *);
 bool map_setipport(const fixed_string<16>& name, IP_Address ip, in_port_t port);
 
@@ -98,17 +98,17 @@ void map_foreachiddb(DB_Func func);
 
 void map_addnickdb(MapSessionData *);
 int map_scriptcont(MapSessionData *sd, int id);  /* Continues a script either on a spell or on an NPC */
-MapSessionData *map_nick2sd(const char *);
-int compare_item(struct item *a, struct item *b);
+MapSessionData *map_nick2sd(const char *) __attribute__((pure));
+int compare_item(struct item *a, struct item *b) __attribute__((pure));
 
 // iterate over players
-MapSessionData *map_get_first_session(void);
-MapSessionData *map_get_last_session(void);
-MapSessionData *map_get_next_session(MapSessionData *current);
-MapSessionData *map_get_prev_session(MapSessionData *current);
+MapSessionData *map_get_first_session(void) __attribute__((pure));
+MapSessionData *map_get_last_session(void) __attribute__((pure));
+MapSessionData *map_get_next_session(MapSessionData *current) __attribute__((pure));
+MapSessionData *map_get_prev_session(MapSessionData *current) __attribute__((pure));
 
 // edit the gat data
-uint8_t map_getcell(int, int, int);
+uint8_t map_getcell(int, int, int) __attribute__((pure));
 void map_setcell(int, int, int, uint8_t);
 
 // get the general direction from block's location to the coordinates

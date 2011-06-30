@@ -160,7 +160,7 @@ public:
     int npc_menu;
     int npc_amount;
     int npc_stack, npc_stackmax;
-    char *npc_script, *npc_scriptroot;
+    const char *npc_script, *npc_scriptroot;
     struct script_data *npc_stackbuf;
     char npc_str[256];
     struct
@@ -340,7 +340,7 @@ struct npc_data_script : npc_data
 {
     struct
     {
-        char *script;
+        const char *script;
         short xs, ys;
         timer_id timerid;
         int timer, timeramount, nexttimer;

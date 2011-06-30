@@ -61,6 +61,7 @@ obj/common/utils.o \
 lib: \
 obj/lib/ip.o \
 obj/lib/log.o \
+obj/lib/string.o \
 
 
 # Top level programs
@@ -155,6 +156,7 @@ obj/map/map: obj/map/map.o \
  obj/common/utils.o \
  obj/lib/ip.o \
  obj/lib/log.o \
+ obj/lib/string.o \
 
 obj/tool/eathena-monitor: obj/tool/eathena-monitor.o \
 
@@ -188,7 +190,7 @@ include map.deps
 # It isn't feasible to fix this single use of strftime with nonconstant format string
 obj/map/script.o: override WARNINGS+=-Wno-error=format-nonliteral
 # Not our code :(
-obj/map/magic-lexer.o: override WARNINGS+=-Wno-error=unused-but-set-variable
+obj/map/magic-lexer.o: override WARNINGS+=-Wno-unused-but-set-variable -Wno-suggest-attribute=pure
 
 # SIG_DFL or generated: unavoidable
 obj/common/core.o \
@@ -196,7 +198,7 @@ obj/common/socket.o \
 obj/tool/eathena-monitor.o \
 obj/map/magic-lexer.o \
 obj/map/magic-parser.o \
-: override WARNINGS+=-Wno-error=old-style-cast
+: override WARNINGS+=-Wno-old-style-cast
 
 warnings: warnings.commented
 	grep -v '^#' $< > $@

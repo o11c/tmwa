@@ -22,8 +22,8 @@ struct item_data
     int elv;
     int wlv;
     int refine;
-    char *use_script;
-    char *equip_script;
+    const char *use_script;
+    const char *equip_script;
     struct
     {
         unsigned available:1;

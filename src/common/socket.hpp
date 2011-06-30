@@ -50,7 +50,7 @@ void set_defaultparse(void (*defaultparse)(int));
 /// Wrappers to track number of free FDs
 void fclose_(FILE * fp);
 FILE *fopen_(const char *path, const char *mode);
-bool free_fds(void);
+bool free_fds(void) __attribute__((pure));
 
 
 

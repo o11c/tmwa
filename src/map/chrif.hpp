@@ -9,12 +9,12 @@
 
 void chrif_setuserid(const char *);
 void chrif_setpasswd(const char *);
-const char *chrif_getpasswd(void);
+const char *chrif_getpasswd(void) __attribute__((const));
 
 void chrif_setip(IP_Address);
 void chrif_setport(in_port_t);
 
-bool chrif_isconnect(void);
+bool chrif_isconnect(void) __attribute__((pure));
 
 void chrif_authreq(MapSessionData *);
 void chrif_save(MapSessionData *);

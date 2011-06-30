@@ -9,14 +9,14 @@ void spell_free_invocation(invocation_t *invocation);
  * Stops all magic bound to the specified character
  *
  */
-void magic_stop_completely(character_t * c);
+void magic_stop_completely(MapSessionData *c);
 
 /**
  * Removes the shroud from a character
  *
  * \param character The character to remove the shroud from
  */
-void magic_unshroud(character_t * character);
+void magic_unshroud(MapSessionData *character);
 
 /**
  * Notifies a running spell that a status_change timer triggered by the spell has expired

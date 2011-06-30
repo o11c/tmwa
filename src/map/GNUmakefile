@@ -1,7 +1,7 @@
 .SUFFIXES:
 all:
-	make -C ../.. tmwa-map
+	${MAKE} -C ../.. tmwa-map
 clean:
 	rm -r ../../obj/map/
 %::
-	make -C ../.. obj/map/$@
+	${MAKE} -C ../.. obj/map/$@

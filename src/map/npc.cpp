@@ -1,5 +1,7 @@
 #include "npc.hpp"
 
+#include <list>
+
 #include "../common/nullpo.hpp"
 #include "../common/timer.hpp"
 #include "../common/utils.hpp"
@@ -16,15 +18,8 @@ static void npc_event_timer(timer_id, tick_t, uint32_t, char *);
 static int npc_checknear(MapSessionData *, int);
 static int npc_parse_mob(char *w1, char *w2, char *w3, char *w4);
 
+static std::list<std::string> npc_srcs;
 
-struct npc_src_list
-{
-    struct npc_src_list *next;
-    struct npc_src_list *prev;
-    char name[4];
-};
-
-static struct npc_src_list *npc_src_first, *npc_src_last;
 static int npc_next_id = START_NPC_NUM;
 static int npc_warp, npc_shop, npc_script, npc_mob;
 
@@ -936,16 +931,7 @@ int npc_selllist(MapSessionData *sd, int n,
  */
 static void npc_clearsrcfile(void)
 {
-    struct npc_src_list *p = npc_src_first;
-
-    while (p)
-    {
-        struct npc_src_list *p2 = p;
-        p = p->next;
-        free(p2);
-    }
-    npc_src_first = NULL;
-    npc_src_last = NULL;
+    npc_srcs.clear();
 }
 
 /*==========================================
@@ -954,25 +940,12 @@ static void npc_clearsrcfile(void)
  */
 void npc_addsrcfile(char *name)
 {
-    struct npc_src_list *new_src;
-    size_t len;
-
     if (strcasecmp(name, "clear") == 0)
     {
         npc_clearsrcfile();
         return;
     }
-
-    len = sizeof(*new_src) + strlen(name);
-    new_src = static_cast<struct npc_src_list *>(calloc(1, len));
-    new_src->next = NULL;
-    strncpy(new_src->name, name, strlen(name) + 1);
-    if (npc_src_first == NULL)
-        npc_src_first = new_src;
-    if (npc_src_last)
-        npc_src_last->next = new_src;
-
-    npc_src_last = new_src;
+    npc_srcs.push_back(name);
 }
 
 /*==========================================
@@ -1852,11 +1825,6 @@ static void ev_release(db_key_t key, db_val_t val)
  */
 int do_init_npc(void)
 {
-    struct npc_src_list *nsl;
-    FILE *fp;
-    char line[1024];
-    int m, lines;
-
     ev_db = strdb_init();
     npcname_db = strdb_init();
 
@@ -1864,20 +1832,17 @@ int do_init_npc(void)
 
     memset(&ev_tm_b, -1, sizeof(ev_tm_b));
 
-    for (nsl = npc_src_first; nsl; nsl = nsl->next)
+    for (auto nsl : npc_srcs)
     {
-        if (nsl->prev)
-        {
-            free(nsl->prev);
-            nsl->prev = NULL;
-        }
-        fp = fopen_(nsl->name, "r");
+        const char *nsl_name = nsl.c_str();
+        FILE *fp = fopen_(nsl_name, "r");
         if (fp == NULL)
         {
-            printf("file not found : %s\n", nsl->name);
+            printf("file not found : %s\n", nsl_name);
             exit(1);
         }
-        lines = 0;
+        int lines = 0;
+        char line[1024];
         while (fgets(line, 1020, fp))
         {
             char w1[1024], w2[1024], w3[1024], w4[1024];
@@ -1919,7 +1884,7 @@ int do_init_npc(void)
             if (strcmp(w1, "-") != 0 && strcasecmp(w1, "function") != 0)
             {
                 sscanf(w1, "%[^,]", &mapname);
-                m = map_mapname2mapid(mapname);
+                int m = map_mapname2mapid(mapname);
                 if (m < 0)
                 {
                     // "mapname" is not assigned to this server
@@ -1965,9 +1930,10 @@ int do_init_npc(void)
         }
         fclose_(fp);
         printf("\rLoading NPCs [%d]: %-54s", npc_next_id - START_NPC_NUM,
-                nsl->name);
+                nsl_name);
         fflush(stdout);
     }
+    npc_srcs.clear();
     printf("\rNPCs Loaded: %d [Warps:%d Shops:%d Scripts:%d Mobs:%d]\n",
             npc_next_id - START_NPC_NUM, npc_warp, npc_shop, npc_script, npc_mob);
 

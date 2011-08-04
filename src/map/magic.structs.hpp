@@ -7,6 +7,8 @@
 # include "../common/socket.structs.hpp"
 
 # include "../lib/string.hpp"
+# include "../lib/darray.hpp"
+# include "../lib/enum.hpp"
 
 # include <vector>
 # include <map>
@@ -48,7 +50,6 @@ enum class AreaType : uint8_t
     LOCATION,
     UNION,
     RECT,
-    BAR,
 };
 
 struct area_t
@@ -59,18 +60,27 @@ struct area_t
         struct
         {
             location_t loc;
-            int width, depth;
-            Direction dir;
-        } a_bar;
-        struct
-        {
-            location_t loc;
             int width, height;
         } a_rect;
         area_t *a_union[2];
     };
+    /// number of cells in the area
+    // used (only) to "pick a random location in the area"
     int size;
     AreaType ty;
+
+    // defined in magic-expr.cpp
+    ~area_t();
+    area_t(const area_t &);
+
+    // point
+    area_t(const location_t&);
+    // union
+    area_t(area_t *, area_t *);
+    // rectangle
+    area_t(const location_t&, int, int);
+    // bar (whatever that is)
+    area_t(const location_t&, int, int, Direction);
 };
 
 struct val_t
@@ -219,7 +229,8 @@ struct effect_t
         } e_op;
         struct
         {
-            int args_nr, *formals;
+            int args_nr;
+            DArray<int> formals;
             expr_t **actuals;
             effect_t *body;
         } e_call;
@@ -254,6 +265,8 @@ struct effect_set_t
 
 struct spellguard_t
 {
+    spellguard_t(SpellGuardType type);
+
     spellguard_t *next;
     union
     {
@@ -276,29 +289,22 @@ struct letdef_t
     expr_t *expr;
 };
 
-// not (yet) an enum class because
-// 1. it must be bitmasked
-//      SpellFlag operator | (SpellFlag, SpellFlag);
-//      bool operator & (SpellFlag, SpellFlag);
-// 2. it gets put in a YACC variable
-// 2 is not really a problem, I figured out how to add 2 other types already
-namespace SpellFlag
+SHIFT_ENUM(SpellFlag, uint8_t)
 {
-    /// spell associated not with caster but with place
-    const int LOCAL    = (1 << 0);
-    /// spell invocation never uttered
-    const int SILENT   = (1 << 1);
-    /// `magic word' only:  don't require spellcasting ability
-    const int NONMAGIC = (1 << 2);
+    LOCAL, SILENT, NONMAGIC
 };
 
 struct spell_t
 {
     POD_string name;
-    POD_string invocation;
+private:
+    static int spell_counter;
+public:
+    // implemented in magic-parser.ypp
+    spell_t(spellguard_t *spellguard);
     // Relative location in the definitions file
     int idx;
-    int flags;
+    SpellFlag flags;
     int arg;
     SpellArgType spellarg_ty;
 
@@ -309,49 +315,39 @@ struct spell_t
 };
 
 
-struct teleport_anchor_t
-{
-    POD_string name;
-    POD_string invocation;
-    expr_t *location;
-};
-
-// The configuration
-// FIXME this is implemented in magic-base.cpp, this is the wrong header
-namespace magic_conf
-{
-    extern std::vector<std::pair<POD_string, val_t>> vars;
-
-    //extern int obscure_chance;
-    //extern int min_casttime;
-
-    extern std::map<POD_string, spell_t *> spells;
-
-    extern std::map<POD_string, teleport_anchor_t *> anchors;
-};
-
-
-/// This represents asserted intern indices, NOT an enum
+/// This represents asserted intern indices, NOT really an enum
 namespace Var
 {
-    const int MIN_CASTTIME = 0;
-    const int OBSCURE_CHANCE = 1;
-    const int CASTER = 2;
-    const int SPELLPOWER = 3;
-    const int SPELL = 4;
-    const int INVOCATION = 5;
-    const int TARGET = 6;
-    const int SCRIPTTARGET = 7;
-    const int LOCATION = 8;
+    enum
+    {
+        MIN_CASTTIME,
+//         OBSCURE_CHANCE,
+        CASTER,
+        SPELLPOWER,
+        SPELL,
+        INVOCATION,
+        TARGET,
+        SCRIPTTARGET,
+        LOCATION,
+    };
 };
 
 struct env_t
 {
-    val_t *vars;
-};
+    env_t(std::nullptr_t) : vars(NULL) {}
+    // defined in magic-base.cpp
+    // which is the only user of the constructors
+    // TODO maybe replace with shared_ptr?
+    env_t();
+    env_t(const env_t&);
+    ~env_t();
 
-// nasty macro, captures a scope variable called "env"
-# define VAR(i) ((!env->vars || env->vars[i].ty == TY::UNDEF)? magic_conf::vars[i].second : env->vars[i])
+    val_t *vars;
+    // in magic-expr.cpp
+    val_t magic_eval(expr_t *expr);
+    // implemented inline in magic-base.hpp
+    val_t& VAR(int i);
+};
 
 # define MAX_STACK_SIZE 32
 
@@ -385,11 +381,36 @@ struct cont_activation_record_t
         } c_for;
         struct
         {
-            int args_nr, *formals;
+            int args_nr;
+            DArray<int> formals;
             val_t *old_actuals;
         } c_proc;
     };
     ContStackType ty;
+    cont_activation_record_t() : ty(ContStackType::FOR) {}
+    cont_activation_record_t(ContStackType type, effect_t *rl) : return_location(rl), ty(type) {}
+    cont_activation_record_t(const cont_activation_record_t& r) : return_location(r.return_location), ty(r.ty)
+    {
+        switch(ty)
+        {
+        case ContStackType::FOREACH:
+            new(&c_foreach)decltype(c_foreach)(r.c_foreach);
+            break;
+        case ContStackType::FOR:
+            new(&c_for)decltype(c_for)(r.c_for);
+            break;
+        case ContStackType::PROC:
+            new(&c_proc)decltype(c_proc)(r.c_proc);
+            break;
+        }
+    }
+    ~cont_activation_record_t()
+    {
+        if (ty == ContStackType::PROC)
+        {
+            c_proc.formals.~DArray<int>();
+        }
+    }
 };
 
 struct status_change_ref_t
@@ -398,22 +419,17 @@ struct status_change_ref_t
     int bl_id;
 };
 
-// not (yet) an enum class
-namespace InvocationFlag
+SHIFT_ENUM(InvocationFlag, uint8_t)
 {
-    /// Bound directly to the caster (i.e., ignore its location)
-    const int BOUND      = (1 << 0);
-    /// Used `abort' to terminate
-    const int ABORTED    = (1 << 1);
-    /// On magical attacks:  if we run out of steam, stop attacking altogether
-    const int STOPATTACK = (1 << 2);
+    // removed since it is the same as checking whether there is a subject
+//    BOUND,
+    ABORTED,
+    STOPATTACK
 };
 
 struct invocation_t : public BlockList
 {
-    // linked-list of spells directly associated with a caster
-    invocation_t *next_invocation;
-    int flags;
+    InvocationFlag flags;
 
     env_t *env;
     spell_t *spell;
@@ -447,17 +463,17 @@ struct invocation_t : public BlockList
 extern env_t magic_default_env;
 
 // The following is used only by the parser:
+// it cannot become a vector because it is used in a union
 struct args_rec_t
 {
     int args_nr;
-    expr_t **args;
+    expr_t *args[MAX_ARGS];
 };
 
 struct proc_t
 {
     POD_string name;
-    int args_nr;
-    int *args;
+    DArray<int> args;
     effect_t *body;
 };
 

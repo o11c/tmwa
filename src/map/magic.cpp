@@ -84,12 +84,11 @@ int magic_message(MapSessionData *caster, char *spell_, size_t)
     }
     if (spell)
     {
-        int near_miss;
         env_t *env = spell_create_env(spell, caster, power, parameter);
         effect_set_t *effects;
 
         if ((spell->flags & SpellFlag::NONMAGIC) || (power >= 1))
-            effects = spell_trigger(spell, caster, env, &near_miss);
+            effects = spell_trigger(spell, caster, env);
         else
             effects = NULL;
 
@@ -97,7 +96,7 @@ int magic_message(MapSessionData *caster, char *spell_, size_t)
             return 0;           // No spellcasting while hidden
 
         MAP_LOG_PC(caster, "CAST %s %s",
-                    spell->name.c_str(), effects ? "SUCCESS" : "FAILURE");
+                   spell->name.c_str(), effects ? "SUCCESS" : "FAILURE");
 
         if (effects)
         {
@@ -109,7 +108,7 @@ int magic_message(MapSessionData *caster, char *spell_, size_t)
             return (spell->flags & SpellFlag::SILENT) ? -1 : 1;
         }
         else
-            magic_free_env(env);
+            delete env;
 
         return 1;
     }

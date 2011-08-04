@@ -59,7 +59,6 @@
 "CALL"                  {FIXLOC; return CALL;}
 "OR"                    {FIXLOC; return OR;}
 "TO"                    {FIXLOC; return TO;}
-"TOWARDS"               {FIXLOC; return TOWARDS;}
 "TELEPORT-ANCHOR"       {FIXLOC; return TELEPORT_ANCHOR;}
 "SILENT"                {FIXLOC; return SILENT;}
 "LOCAL"                 {FIXLOC; return LOCAL;}

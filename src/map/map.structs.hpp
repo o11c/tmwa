@@ -12,6 +12,7 @@
 # include <cstdlib>
 
 # include <vector>
+# include <set>
 
 # define MAX_PC_CLASS (1+6+6+1+6+1+1+1+1+4023)
 # define PC_CLASS_BASE 0
@@ -178,7 +179,7 @@ public:
     int followtarget;
 
     unsigned int cast_tick;     // [Fate] Next tick at which spellcasting is allowed
-    invocation_t *active_spells;   // [Fate] Singly-linked list of active spells linked to this PC
+    std::set<invocation_t *> active_spells;
     int attack_spell_override; // [Fate] When an attack spell is active for this player, they trigger it
     // like a weapon.  Check pc_attack_timer() for details.
     short attack_spell_icon_override;   // Weapon equipment slot (slot 4) item override

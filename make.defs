@@ -1,9 +1,10 @@
 # defaults for compilation
 BISON = bison
 WARNINGS= @warnings
-OPTIMIZATION=-O2
-CXXFLAGS = -pipe -g ${WARNINGS}
-LDFLAGS = -Wl,--as-needed -pipe
+DEBUG=-g3
+OPTIMIZATION=-O2 -pipe
+CXXFLAGS = ${DEBUG} ${WARNINGS}
+LDFLAGS = -Wl,--as-needed
 
 # Since I'm depending on GCC 4.6 for now, I might as well take advantage
 CXXFLAGS += -flto

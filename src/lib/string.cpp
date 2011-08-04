@@ -20,11 +20,19 @@ static const size_t MALLOC_MIN = 2 * sizeof(size_t) + 2 * sizeof(void *) - MALLO
 // overhead of string allocation system: refcount, capacity, size
 static const size_t OVERHEAD = 3 * sizeof(size_t);
 
+#define POD_STR_SIZE     reinterpret_cast<size_t *>(_ptr)[-1]
+#define POD_STR_CAPACITY reinterpret_cast<size_t *>(_ptr)[-2]
+#define POD_STR_REFCOUNT reinterpret_cast<size_t *>(_ptr)[-3]
+
 static char zero [OVERHEAD + 1];
-const POD_string EMPTY_STRING =
+POD_string _calc_empty_string() __attribute__((const));
+POD_string _calc_empty_string()
 {
-    &zero[OVERHEAD]
-};
+    POD_string out;
+    out._ptr = &zero[OVERHEAD];
+    return out;
+}
+const POD_string EMPTY_STRING = _calc_empty_string();
 
 POD_string::operator bool() const
 {
@@ -38,24 +46,24 @@ size_t POD_string::size() const
 {
     if (!_ptr)
         return 0;
-    return reinterpret_cast<size_t *>(_ptr)[-1];
+    return POD_STR_SIZE;
 }
 size_t POD_string::capacity() const
 {
     if (!_ptr)
         return 0;
-    return reinterpret_cast<size_t *>(_ptr)[-2];
+    return POD_STR_CAPACITY;
 }
 size_t POD_string::_refcount() const
 {
     if (!_ptr)
         return 0;
-    return reinterpret_cast<size_t *>(_ptr)[-3];
+    return POD_STR_REFCOUNT;
 }
 void POD_string::_inc_ref() const
 {
     if (_ptr)
-        reinterpret_cast<size_t *>(_ptr)[-3]++;
+        POD_STR_REFCOUNT++;
 }
 void POD_string::_dec_ref()
 {
@@ -63,10 +71,9 @@ void POD_string::_dec_ref()
         return;
     if (_refcount())
     {
-        reinterpret_cast<size_t *>(_ptr)[-3]--;
+        POD_STR_REFCOUNT--;
         return;
-
-}
+    }
     ::free(_ptr - OVERHEAD);
     _ptr = NULL;
 }
@@ -85,9 +92,9 @@ void POD_string::unique()
         abort();
     memcpy(new_ptr + OVERHEAD, _ptr, sz + 1);
     _ptr = new_ptr + OVERHEAD;
-    reinterpret_cast<size_t *>(_ptr)[-3] = 0;
-    reinterpret_cast<size_t *>(_ptr)[-2] = cap - OVERHEAD - 1;
-    reinterpret_cast<size_t *>(_ptr)[-1] = sz;
+    POD_STR_REFCOUNT = 0;
+    POD_STR_CAPACITY = cap - OVERHEAD - 1;
+    POD_STR_SIZE = sz;
 }
 
 void POD_string::init()
@@ -120,17 +127,16 @@ void POD_string::reserve(size_t cap)
     if (!new_ptr)
         abort();
     _ptr = new_ptr + OVERHEAD;
-    reinterpret_cast<size_t *>(_ptr)[-2] = cap - OVERHEAD - 1;
+    POD_STR_CAPACITY = cap - OVERHEAD - 1;
 }
 void POD_string::resize_no_fill(size_t sz)
 {
-    unique();
-    size_t old_sz = size();
     reserve(sz);
-    reinterpret_cast<size_t *>(_ptr)[-1] = sz;
+    unique();
+    POD_STR_SIZE = sz;
     // we DO require there always be a NUL-terminator
     _ptr[sz] = '\0';
-    if (old_sz > 2 * sz)
+    if (capacity() > 2 * sz)
         shrink_to_fit();
 }
 void POD_string::resize(size_t sz)
@@ -145,13 +151,13 @@ void POD_string::resize(size_t sz)
 }
 void POD_string::shrink_to_fit()
 {
-    unique();
     size_t sz = size();
     if (sz == capacity())
         return;
+    unique();
     // _ptr cannot be NULL because that is caught with size() == capacity()
     char *old_ptr = _ptr - OVERHEAD;
-    char *new_ptr = reinterpret_cast<char *>(realloc(old_ptr, sz));
+    char *new_ptr = reinterpret_cast<char *>(realloc(old_ptr, sz + OVERHEAD));
     if (!new_ptr)
         return;
     _ptr = new_ptr + OVERHEAD;
@@ -210,9 +216,9 @@ void POD_string::take_ownership(char *str, size_t sz)
         abort();
     _ptr = new_ptr + OVERHEAD;
     memmove(_ptr, new_ptr, sz + 1);
-    reinterpret_cast<size_t *>(_ptr)[-1] = sz;
-    reinterpret_cast<size_t *>(_ptr)[-2] = cap - OVERHEAD - 1;
-    reinterpret_cast<size_t *>(_ptr)[-3] = 0;
+    POD_STR_SIZE = sz;
+    POD_STR_CAPACITY = cap - OVERHEAD - 1;
+    POD_STR_REFCOUNT = 0;
 }
 
 

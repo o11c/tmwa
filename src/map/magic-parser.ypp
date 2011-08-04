@@ -6,6 +6,7 @@
 }
 
 %code {
+
 #include "magic-parser.hpp"
 
 #include "../common/utils.hpp"
@@ -26,25 +27,21 @@ static expr_t *dot_expr(expr_t *lhs, int id);
 
 #define BIN_EXPR(x, name, arg1, arg2, line, column) { expr_t *e[2]; e[0] = arg1; e[1] = arg2; x = fun_expr(name, 2, e, line, column); }
 
-static int failed_flag = 0;
-
 static void magic_frontend_error(const char *msg);
-static void fail(int line, int column, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
+static void fail(int line, int column, const char *fmt, ...) __attribute__((format(printf, 3, 4))) __attribute__((noreturn));
 
-static spell_t *new_spell(spellguard_t *guard);
 static spellguard_t *spellguard_implication(spellguard_t *a, spellguard_t *b);
-static spellguard_t *new_spellguard(SpellGuardType ty);
 static effect_t *new_effect(EffectType ty);
 static effect_t *set_effect_continuation(effect_t *src, effect_t *continuation);
-static void add_spell(spell_t *spell, int line_nr);
-static void add_teleport_anchor(teleport_anchor_t *anchor, int line_nr);
+static void add_spell(POD_string invocation, spell_t *spell, int line_nr, int col_nr);
+static void add_teleport_anchor(POD_string name, POD_string invocation, expr_t *location, int line_nr, int col_nr);
 static effect_t *op_effect(const char *name, int args_nr, expr_t **args, int line, int column);
 
 int magic_frontend_lex(YYSTYPE *, YYLTYPE *);
 
-static void install_proc(const proc_t& proc);
+static void install_proc(proc_t&& proc);
 static effect_t *call_proc(POD_string name, int args_nr, expr_t **args, int line_nr, int column);
-static void bind_constant(POD_string name, val_t *val, int line_nr);
+static void bind_constant(POD_string name, val_t *val, int line_nr, int col_nr);
 static val_t *find_constant(POD_string name) __attribute__((pure));
 
 }
@@ -55,6 +52,7 @@ static val_t *find_constant(POD_string name) __attribute__((pure));
 
 // YYSTYPE
 %union {
+    SpellFlag spell_flags;
     int i;
     POD_string s;
     int op;
@@ -69,7 +67,7 @@ static val_t *find_constant(POD_string name) __attribute__((pure));
     letdef_t vardef;
     spellguard_t *spellguard;
     component_t *components;
-    struct {int id, count; } component;
+    struct { int id, count; } component;
     effect_t *effect;
     proc_t *proc;
 
@@ -120,7 +118,6 @@ static val_t *find_constant(POD_string name) __attribute__((pure));
 %token OROR
 %token <s> SCRIPT_DATA
 %token TO
-%token TOWARDS
 %token TELEPORT_ANCHOR
 %token SPELL
 %token LET
@@ -177,7 +174,7 @@ static val_t *find_constant(POD_string name) __attribute__((pure));
 %type <effect> effect_list
 %type <effect> maybe_trigger
 %type <effect> maybe_end
-%type <i> spell_flags;
+%type <spell_flags> spell_flags;
 
 %type <expr> expr
 %type <spell_arg> arg_ty
@@ -212,7 +209,7 @@ semicolons:
 proc_formals_list:
 /* empty  */
     {
-        CREATE($$, proc_t, 1);
+        $$ = new proc_t;
     }
 | proc_formals_list_ne
     {
@@ -224,16 +221,13 @@ proc_formals_list:
 proc_formals_list_ne:
 ID
     {
-        CREATE($$, proc_t, 1);
-        $$->args_nr = 1;
-        CREATE($$->args, int, 1);
-        $$->args[0] = intern_id($1);
+        $$ = new proc_t;
+        $$->args.push_back(intern_id($1));
     }
 | proc_formals_list_ne ',' ID
     {
         $$ = $1;
-        RECREATE($$->args, int, 1 + $$->args_nr);
-        $$->args[$$->args_nr++] = intern_id($3);
+        $$->args.push_back(intern_id($3));
     }
 ;
 
@@ -243,65 +237,55 @@ ID '=' expr
     {
         if (find_constant($1))
         {
-            fail(@1.first_line, 0, "Attempt to redefine constant `%s' as global\n",
+            fail(@1.first_line, @1.first_column,
+                 "Attempt to redefine constant `%s' as global\n",
                  $1.c_str());
             $1.free();
         }
         else
         {
             int var_id = intern_id($1);
-            magic_eval(&magic_default_env, &magic_conf::vars[var_id].second, $3);
+            magic_conf::vars[var_id].second = magic_default_env.magic_eval($3);
         }
     }
 | CONST ID '=' expr
     {
-        val_t var;
-        magic_eval(&magic_default_env, &var, $4);
-        bind_constant($2, &var, @1.first_line);
+        val_t var = magic_default_env.magic_eval($4);
+        bind_constant($2, &var, @1.first_line, @1.first_column);
     }
 | TELEPORT_ANCHOR ID ':' expr '=' expr
     {
-        teleport_anchor_t *anchor;
-        CREATE(anchor, teleport_anchor_t, 1);
-        anchor->name = $2;
-        anchor->invocation = magic_eval_str(&magic_default_env, $4);
-        anchor->location = $6;
+        POD_string name = $2;
+        POD_string invocation = magic_eval_str(&magic_default_env, $4);
+        expr_t *location = $6;
 
-        if (!failed_flag)
-            add_teleport_anchor(anchor, @1.first_line);
-        else
-            free(anchor);
-        failed_flag = 0;
+        add_teleport_anchor(name, invocation, location, @1.first_line, @1.first_column);
     }
 | PROCEDURE ID '(' proc_formals_list ')' '=' effect_list
     {
         proc_t *proc = $4;
         proc->name = $2;
         proc->body = $7;
-        if (!failed_flag)
-            install_proc(*proc);
-        free(proc);
-        failed_flag = 0;
+        install_proc(std::move(*proc));
+        delete proc;
     }
 | spell_flags SPELL ID argopt ':' expr '=' spelldef
     {
         spell_t *spell = $8;
         spell->name = $3;
-        spell->invocation = magic_eval_str(&magic_default_env, $6);
+        POD_string invocation = magic_eval_str(&magic_default_env, $6);
         spell->arg = $4.id;
         spell->spellarg_ty = $4.ty;
         spell->flags = $1;
-        if (!failed_flag)
-            add_spell(spell, @1.first_line);
-        failed_flag = 0;
+        add_spell(invocation, spell, @1.first_line, @1.first_column);
     }
 ;
 
-// int i
+// SpellFlag spell_flags
 spell_flags:
 /* empty */
     {
-        $$ = 0;
+        $$ = SpellFlag();
     }
 | LOCAL spell_flags
     {
@@ -476,7 +460,6 @@ value
 | ID '(' arg_list ')'
     {
         $$ = fun_expr($1.c_str(), $3.args_nr, $3.args, @1.first_line, @1.first_column);
-        free($3.args);
         $1.free();
     }
 | '(' expr ')'
@@ -504,13 +487,15 @@ arg_list:
 // args_rec_t arg_list
 arg_list_ne: expr
     {
-        CREATE($$.args, expr_t *, 1);
         $$.args_nr = 1;
         $$.args[0] = $1;
     }
 | arg_list_ne ',' expr
     {
-        RECREATE($$.args, expr_t *, 1 + $$.args_nr);
+        if ($$.args_nr >= MAX_ARGS)
+        {
+            fail(@1.first_line, @1.first_column, "Too many arguments");
+        }
         $$.args[$$.args_nr++] = $3;
     }
 ;
@@ -537,25 +522,17 @@ location
         $$.a_rect.width = $5;
         $$.a_rect.height = $7;
     }
-| location TOWARDS expr ':' '(' expr ',' expr ')'
-    {
-        $$.ty = AreaType::BAR;
-        $$.a_bar.loc = $1;
-        $$.a_bar.width = $6;
-        $$.a_bar.depth = $8;
-        $$.a_bar.dir = $3;
-    }
 ;
 
 // spell_t *spell
 spelldef:
 spellbody_list
     {
-        $$ = new_spell($1);
+        $$ = new spell_t($1);
     }
 | LET defs IN spellbody_list
     {
-        $$ = new_spell($4);
+        $$ = new spell_t($4);
         $$->letdefs_nr = $2.letdefs_nr;
         $$->letdefs = $2.letdefs;
         $$->spellguard = $4;
@@ -605,7 +582,7 @@ spellbody
     }
 | spellbody '|' spellbody_list
     {
-        spellguard_t *sg = new_spellguard(SpellGuardType::CHOICE);
+        spellguard_t *sg = new spellguard_t(SpellGuardType::CHOICE);
         sg->next = $1;
         sg->s_alt = $3;
         $$ = sg;
@@ -624,7 +601,7 @@ spellguard DARROW spellbody
     }
 | EFFECT effect_list maybe_trigger maybe_end
     {
-        spellguard_t *sg = new_spellguard(SpellGuardType::EFFECT);
+        spellguard_t *sg = new spellguard_t(SpellGuardType::EFFECT);
         sg->s_effect.effect = $2;
         sg->s_effect.at_trigger = $3;
         sg->s_effect.at_end = $4;
@@ -664,7 +641,7 @@ prereq
     }
 | spellguard OR spellguard
     {
-        spellguard_t *sg = new_spellguard(SpellGuardType::CHOICE);
+        spellguard_t *sg = new spellguard_t(SpellGuardType::CHOICE);
         sg->next = $1;
         sg->s_alt = $3;
         $$ = sg;
@@ -691,27 +668,27 @@ spellguard
 prereq:
 REQUIRE expr
     {
-        $$ = new_spellguard(SpellGuardType::CONDITION);
+        $$ = new spellguard_t(SpellGuardType::CONDITION);
         $$->s_condition = $2;
     }
 | CATALYSTS items
     {
-        $$ = new_spellguard(SpellGuardType::CATALYSTS);
+        $$ = new spellguard_t(SpellGuardType::CATALYSTS);
         $$->s_catalysts = $2;
     }
 | COMPONENTS items
     {
-        $$ = new_spellguard(SpellGuardType::COMPONENTS);
+        $$ = new spellguard_t(SpellGuardType::COMPONENTS);
         $$->s_components = $2;
     }
 | MANA expr
     {
-        $$ = new_spellguard(SpellGuardType::MANA);
+        $$ = new spellguard_t(SpellGuardType::MANA);
         $$->s_mana = $2;
     }
 | CASTTIME expr
     {
-        $$ = new_spellguard(SpellGuardType::CASTTIME);
+        $$ = new spellguard_t(SpellGuardType::CASTTIME);
         $$->s_casttime = $2;
     }
 ;
@@ -727,12 +704,12 @@ items: '[' item_list ']'
 item_list: item
     {
         $$ = NULL;
-        magic_add_component(&$$, $1.id, $1.count);
+        magic_add_component($$, $1.id, $1.count);
     }
 | item_list ',' item
     {
         $$ = $1;
-        magic_add_component(&$$, $3.id, $3.count);
+        magic_add_component($$, $3.id, $3.count);
     }
 ;
 
@@ -920,46 +897,46 @@ static int intern_id(POD_string id_name)
     return i;
 }
 
-static void add_spell(spell_t *spell, int line_nr)
+void add_spell(POD_string invocation, spell_t *spell, int line_nr, int col_nr)
 {
-    for (auto& spell_pair : magic_conf::spells)
+    if (magic_conf::spell_names.find(spell->name) != magic_conf::spell_names.end())
     {
-        if (spell_pair.second->name == spell->name)
-        {
-            fail(line_nr, 0, "Attempt to redefine spell `%s'\n", spell->name.c_str());
-            return;
-        }
-        if (spell_pair.second->invocation == spell->invocation)
-        {
-            fail(line_nr, 0,
-                 "Attempt to redefine spell invocation `%s' between spells `%s' and `%s'\n",
-                 spell->invocation.c_str(), spell_pair.second->name.c_str(),
-                 spell->name.c_str());
-            return;
-        }
+        fail(line_nr, col_nr, "Attempt to redefine spell `%s'\n", spell->name.c_str());
+        return;
     }
-    magic_conf::spells[spell->invocation] = spell;
+
+    auto it = magic_conf::spells.find(invocation);
+    if (it != magic_conf::spells.end())
+    {
+        fail(line_nr, col_nr,
+             "Attempt to redefine spell invocation `%s' as `%s'\n",
+             invocation.c_str(),
+             spell->name.c_str());
+        return;
+    }
+    // FIXME: this could be slightly more efficient if we had a "nearby" iterator
+    magic_conf::spell_names[spell->name] = invocation;
+    magic_conf::spells[invocation] = spell;
 }
 
-static void add_teleport_anchor(teleport_anchor_t *anchor, int line_nr)
+void add_teleport_anchor(POD_string name, POD_string invocation, expr_t *location, int line_nr, int col_nr)
 {
-    for (auto& anchor_pair : magic_conf::anchors)
+    if (magic_conf::anchor_names.find(name) != magic_conf::anchor_names.end())
     {
-        if (anchor_pair.second->name == anchor->name)
-        {
-            fail(line_nr, 0, "Attempt to redefine teleport anchor `%s'\n", anchor->name.c_str());
-            return;
-        }
-        if (anchor_pair.second->invocation == anchor->invocation)
-        {
-            fail(line_nr, 0,
-                 "Attempt to redefine anchor invocation `%s' between anchors `%s' and `%s'\n",
-                 anchor->invocation.c_str(), anchor_pair.second->name.c_str(),
-                 anchor->name.c_str());
-            return;
-        }
+        fail(line_nr, col_nr, "Attempt to redefine teleport anchor `%s'\n", name.c_str());
+        return;
     }
-    magic_conf::anchors[anchor->invocation] = anchor;
+
+    auto it = magic_conf::anchors.find(invocation);
+    if (it != magic_conf::anchors.end())
+    {
+        fail(line_nr, col_nr,
+             "Attempt to redefine anchor invocation `%s' as `%s'\n",
+             invocation.c_str(),
+             name.c_str());
+    }
+
+    magic_conf::anchors[invocation] = location;
 }
 
 
@@ -969,7 +946,7 @@ static void fail(int line, int column, const char *fmt, ...)
     fprintf(stderr, "[magic-init]  L%d:%d: ", line, column);
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
-    failed_flag = 1;
+    abort();
 }
 
 static expr_t *dot_expr(expr_t *expr, int id)
@@ -1018,24 +995,11 @@ static expr_t *fun_expr(const char *name, int args_nr, expr_t **args, int line, 
     return expr;
 }
 
-static spell_t *new_spell(spellguard_t *guard)
-{
-    static int spell_counter = 0;
+int spell_t::spell_counter;
 
-    spell_t *retval;
-    CREATE(retval, spell_t, 1);
-    retval->idx = ++spell_counter;
-    retval->spellguard = guard;
-    return retval;
-}
+spell_t::spell_t(spellguard_t *guard) : idx(++spell_counter), spellguard(guard) {}
 
-static spellguard_t *new_spellguard(SpellGuardType ty)
-{
-    spellguard_t *retval;
-    CREATE(retval, spellguard_t, 1);
-    retval->ty = ty;
-    return retval;
-}
+spellguard_t::spellguard_t(SpellGuardType type) : ty(type) {}
 
 static spellguard_t *spellguard_implication(spellguard_t *a, spellguard_t *b)
 {
@@ -1128,11 +1092,9 @@ static effect_t *op_effect(const char *name, int args_nr, expr_t **args, int lin
     return effect;
 }
 
-
 std::map<POD_string, proc_t> procs;
 
-// I think this is a memory leak, or undefined behavior
-static void install_proc(const proc_t& proc)
+static void install_proc(proc_t&& proc)
 {
     procs[proc.name] = proc;
 }
@@ -1149,17 +1111,17 @@ static effect_t *call_proc(POD_string name, int args_nr, expr_t **args, int line
     }
 
     proc_t *p = &it->second;
-    if (p->args_nr != args_nr)
+    if (p->args.size() != args_nr)
     {
         fail(line_nr, column,
-             "Procedure %s/%d invoked with %d parameters\n",
-             name.c_str(), p->args_nr, args_nr);
-        return new_effect(EffectType::SKIP);
+             "Procedure %s/%zd invoked with %d parameters\n",
+             name.c_str(), p->args.size(), args_nr);
     }
 
     effect_t *retval = new_effect(EffectType::CALL);
     retval->e_call.body = p->body;
     retval->e_call.args_nr = args_nr;
+    // hm, this would be a copy and I don't see why it should be necessary
     retval->e_call.formals = p->args;
     retval->e_call.actuals = args;
     return retval;
@@ -1172,11 +1134,11 @@ struct const_def_rec
 };
 std::vector<const_def_rec> const_defs;
 
-static void bind_constant(POD_string name, val_t *val, int line_nr)
+void bind_constant(POD_string name, val_t *val, int line_nr, int col_nr)
 {
     if (find_constant(name))
     {
-        fail(line_nr, 0, "Redefinition of constant `%s'\n", name.c_str());
+        fail(line_nr, col_nr, "Redefinition of constant `%s'\n", name.c_str());
         return;
     }
 
@@ -1217,7 +1179,7 @@ void magic_init(const char *conffile)
 
     // it would be better to specify these in an initializer list
     INTERN_ASSERT("min_casttime", Var::MIN_CASTTIME);
-    INTERN_ASSERT("obscure_chance", Var::OBSCURE_CHANCE);
+//     INTERN_ASSERT("obscure_chance", Var::OBSCURE_CHANCE);
     INTERN_ASSERT("caster", Var::CASTER);
     INTERN_ASSERT("spellpower", Var::SPELLPOWER);
     INTERN_ASSERT("self_spell", Var::SPELL);
@@ -1233,13 +1195,10 @@ void magic_init(const char *conffile)
         return;
     }
     magic_frontend_parse();
-/*
-    if (magic_conf::vars[Var::MIN_CASTTIME].ty == TY::INT)
-        magic_conf::min_casttime = magic_conf::vars[Var::MIN_CASTTIME].v_int;
-
-    if (magic_conf::vars[Var::OBSCURE_CHANCE].ty == TY::INT)
-        magic_conf::obscure_chance = magic_conf::vars[Var::OBSCURE_CHANCE].v_int;
-*/
+    if (magic_conf::vars[Var::MIN_CASTTIME].second.ty == TY::INT)
+        magic_conf::min_casttime = magic_conf::vars[Var::MIN_CASTTIME].second.v_int;
+//     if (magic_conf::vars[Var::OBSCURE_CHANCE].ty == TY::INT)
+//         magic_conf::obscure_chance = magic_conf::vars[Var::OBSCURE_CHANCE].v_int;
 
     printf("[magic-conf] Magic initialised: %d spells, %d teleport anchors.\n",
            magic_conf::spells.size(), magic_conf::anchors.size());
@@ -1250,5 +1209,5 @@ void magic_init(const char *conffile)
 static void magic_frontend_error(const char *msg)
 {
     fprintf(stderr, "[magic-conf] Parse error: %s at line %d\n", msg, magic_frontend_lineno);
-    failed_flag = 1;
+    abort();
 }

@@ -1,10 +1,10 @@
 #ifndef INT_HPP
 #define INT_HPP
 
-// bit twiddling
-// http://graphics.stanford.edu/~seander/bithacks.html
-
 # include <cstdint>
+
+/// bit twiddling
+/// http://graphics.stanford.edu/~seander/bithacks.html
 
 // 0 -> 1, 4 -> 8
 // if you want 0 -> 0, 4 -> 4, call next_power_of_2(v-1)

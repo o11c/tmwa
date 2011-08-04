@@ -66,7 +66,7 @@ void spell_free_invocation(invocation_t *invocation)
         invocation->status_change_refs_nr = 0;
     }
 
-    if (invocation->flags & InvocationFlag::BOUND)
+    if (invocation->subject)
     {
         BlockList *e = map_id2bl(invocation->subject);
         if (e && e->type == BL_PC)
@@ -78,7 +78,7 @@ void spell_free_invocation(invocation_t *invocation)
     if (invocation->timer)
         delete_timer(invocation->timer);
 
-    magic_free_env(invocation->env);
+    delete invocation->env;
 
     map_delblock(invocation);
     // also frees the object
@@ -135,8 +135,8 @@ void magic_stop_completely(MapSessionData *c)
     for (int i = 0; i < MAX_STATUSCHANGE; i++)
         c->sc_data[i].spell_invocation = 0;
 
-    while (c->active_spells)
-        spell_free_invocation(c->active_spells);
+    while (!c->active_spells.empty())
+        spell_free_invocation(*c->active_spells.begin());
 
     if (c->attack_spell_override)
     {
@@ -175,7 +175,7 @@ static int trigger_spell(int subject, int spell)
 
     invocation = spell_clone_effect(invocation);
 
-    spell_bind(static_cast<MapSessionData *>(map_id2bl(subject)), invocation);
+    spell_bind(map_id2sd(subject), invocation);
     magic_clear_var(&invocation->env->vars[Var::CASTER]);
     invocation->env->vars[Var::CASTER].ty = TY::ENTITY;
     invocation->env->vars[Var::CASTER].v_int = subject;
@@ -253,8 +253,8 @@ static int op_sfx(env_t *, int, val_t *args)
 
 static int op_instaheal(env_t *env, int, val_t *args)
 {
-    BlockList *caster = (VAR(Var::CASTER).ty == TY::ENTITY)
-        ? map_id2bl(VAR(Var::CASTER).v_int) : NULL;
+    BlockList *caster = (env->VAR(Var::CASTER).ty == TY::ENTITY)
+        ? map_id2bl(env->VAR(Var::CASTER).v_int) : NULL;
     BlockList *subject = ARGENTITY(0);
     if (!caster)
         caster = subject;
@@ -436,8 +436,8 @@ static void record_status_change(invocation_t *invocation, int bl_id, int sc_id)
 static int op_status_change(env_t *env, int, val_t *args)
 {
     BlockList *subject = ARGENTITY(0);
-    int invocation_id = VAR(Var::INVOCATION).ty == TY::INVOCATION
-        ? VAR(Var::INVOCATION).v_int : 0;
+    int invocation_id = env->VAR(Var::INVOCATION).ty == TY::INVOCATION
+        ? env->VAR(Var::INVOCATION).v_int : 0;
     invocation_t *invocation = static_cast<invocation_t *>(map_id2bl(invocation_id));
 
     skill_status_effect(subject, ARGINT(1), ARGINT(2),
@@ -484,7 +484,7 @@ static int op_override_attack(env_t *env, int, val_t *args)
     }
 
     subject->attack_spell_override =
-        trigger_spell(subject->id, VAR(Var::INVOCATION).v_int);
+        trigger_spell(subject->id, env->VAR(Var::INVOCATION).v_int);
     subject->attack_spell_charges = charges;
 
     if (subject->attack_spell_override)
@@ -563,7 +563,7 @@ static int op_aggravate(env_t *, int, val_t *args)
 
 static int op_spawn(env_t *, int, val_t *args)
 {
-    area_t *area = ARGAREA(0);
+    area_t *area = ARG_AREA(0);
     BlockList *owner_e = ARGENTITY(1);
     int monster_id = ARGINT(2);
     int monster_attitude = ARGINT(3);
@@ -637,14 +637,14 @@ static int op_spawn(env_t *, int, val_t *args)
 
 static POD_string get_invocation_name(env_t *env)
 {
-    if (VAR(Var::INVOCATION).ty != TY::INVOCATION)
+    if (env->VAR(Var::INVOCATION).ty != TY::INVOCATION)
     {
         POD_string out;
         out.init();
         out.assign("?");
         return out;
     }
-    invocation_t *invocation = static_cast<invocation_t *>(map_id2bl(VAR(Var::INVOCATION).v_int));
+    invocation_t *invocation = static_cast<invocation_t *>(map_id2bl(env->VAR(Var::INVOCATION).v_int));
 
     if (invocation)
         return invocation->spell->name.clone();
@@ -972,8 +972,8 @@ static effect_t *return_to_stack(invocation_t *invocation)
 }
 
 static cont_activation_record_t *add_stack_entry(invocation_t *invocation,
-                                                  ContStackType ty,
-                                                  effect_t *return_location)
+                                                 ContStackType ty,
+                                                 effect_t *return_location)
 {
     cont_activation_record_t *ar =
         invocation->stack + invocation->stack_size++;
@@ -986,8 +986,9 @@ static cont_activation_record_t *add_stack_entry(invocation_t *invocation,
         return NULL;
     }
 
-    ar->ty = ty;
-    ar->return_location = return_location;
+    ar->~cont_activation_record_t();
+    new(ar) cont_activation_record_t(ty, return_location);
+
     return ar;
 }
 
@@ -1015,15 +1016,14 @@ static void find_entities_in_area_c(BlockList *target,
                 || (filter == ForEach_FilterType::TARGET
                     && maps[target->m].flag.pvp))
                 break;
-            else if (filter == ForEach_FilterType::SPELL)
-            {                   /* Check all spells bound to the caster */
-                invocation_t *invoc = static_cast<MapSessionData *>(target)->active_spells;
-                /* Add all spells locked onto thie PC */
-
-                while (invoc)
+            if (filter == ForEach_FilterType::SPELL)
+            {
+                // Check all spells bound to the caster
+                auto invocs = static_cast<MapSessionData *>(target)->active_spells;
+                // Add all spells locked onto thie PC
+                for(auto invoc : invocs)
                 {
                     ADD_ENTITY(invoc->id);
-                    invoc = invoc->next_invocation;
                 }
             }
             return;
@@ -1037,18 +1037,14 @@ static void find_entities_in_area_c(BlockList *target,
                 return;
 
         case BL_SPELL:
-            if (filter == ForEach_FilterType::SPELL)
-            {
-                invocation_t *invocation = static_cast<invocation_t *>(target);
-
-                /* Check whether the spell is `bound'-- if so, we'll consider it iff we see the caster (case BL_PC). */
-                if (invocation->flags & InvocationFlag::BOUND)
-                    return;
-                else
-                    break;      /* Add the spell */
-            }
-            else
+            if (filter != ForEach_FilterType::SPELL)
                 return;
+
+            /* Check whether the spell is `bound'-- if so, we'll consider it iff we see the caster (case BL_PC). */
+            if (static_cast<invocation_t *>(target)->subject)
+                return;
+            else
+                break;      /* Add the spell */
 
         case BL_NPC:
             if (filter == ForEach_FilterType::NPC)
@@ -1097,7 +1093,7 @@ static effect_t *run_foreach(invocation_t *invocation, effect_t *foreach,
     int id = foreach->e_foreach.id;
     effect_t *body = foreach->e_foreach.body;
 
-    magic_eval(invocation->env, &area, foreach->e_foreach.area);
+    area = invocation->env->magic_eval(foreach->e_foreach.area);
 
     if (area.ty != TY::AREA)
     {
@@ -1165,8 +1161,8 @@ static effect_t *run_for(invocation_t *invocation, effect_t *for_,
     val_t start;
     val_t stop;
 
-    magic_eval(invocation->env, &start, for_->e_for.start);
-    magic_eval(invocation->env, &stop, for_->e_for.stop);
+    start = invocation->env->magic_eval(for_->e_for.start);
+    stop = invocation->env->magic_eval(for_->e_for.stop);
 
     if (start.ty != TY::INT || stop.ty != TY::INT)
     {
@@ -1195,14 +1191,13 @@ static effect_t *run_call(invocation_t *invocation,
                            effect_t *return_location)
 {
     effect_t *current = invocation->current_effect;
-    cont_activation_record_t *ar;
     int args_nr = current->e_call.args_nr;
-    int *formals = current->e_call.formals;
+    DArray<int> formals = current->e_call.formals;
     val_t *old_actuals;
     CREATE(old_actuals, val_t, args_nr);
     int i;
 
-    ar = add_stack_entry(invocation, ContStackType::PROC, return_location);
+    cont_activation_record_t *ar = add_stack_entry(invocation, ContStackType::PROC, return_location);
     ar->c_proc.args_nr = args_nr;
     ar->c_proc.formals = formals;
     ar->c_proc.old_actuals = old_actuals;
@@ -1211,7 +1206,7 @@ static effect_t *run_call(invocation_t *invocation,
         val_t *env_val = &invocation->env->vars[formals[i]];
         val_t result;
         magic_copy_var(&old_actuals[i], env_val);
-        magic_eval(invocation->env, &result, current->e_call.actuals[i]);
+        result = invocation->env->magic_eval(current->e_call.actuals[i]);
         *env_val = result;
     }
 
@@ -1327,9 +1322,7 @@ static int spell_run(invocation_t *invocation, int allow_delete)
                 break;
 
             case EffectType::ASSIGN:
-                magic_eval(invocation->env,
-                            &invocation->env->vars[e->e_assign.id],
-                            e->e_assign.expr);
+                invocation->env->vars[e->e_assign.id] = invocation->env->magic_eval(e->e_assign.expr);
                 break;
 
             case EffectType::FOREACH:
@@ -1359,7 +1352,7 @@ static int spell_run(invocation_t *invocation, int allow_delete)
 
             case EffectType::SCRIPT:
             {
-                MapSessionData *caster = static_cast<MapSessionData *>(map_id2bl(invocation->caster));
+                MapSessionData *caster = map_id2sd(invocation->caster);
                 if (caster)
                 {
                     env_t *env = invocation->env;
@@ -1367,7 +1360,7 @@ static int spell_run(invocation_t *invocation, int allow_delete)
                     {
                         {
                             "@target",
-                            v: { i: VAR(Var::TARGET).ty ==TY::ENTITY ? 0 : VAR(Var::TARGET).v_int }
+                            v: { i: env->VAR(Var::TARGET).ty == TY::ENTITY ? 0 : env->VAR(Var::TARGET).v_int }
                         },
                         {
                             "@caster",
@@ -1379,9 +1372,9 @@ static int spell_run(invocation_t *invocation, int allow_delete)
                         }
                     };
                     int message_recipient =
-                        VAR(Var::SCRIPTTARGET).ty ==
-                        TY::ENTITY ? VAR(Var::SCRIPTTARGET).v_int : invocation->caster;
-                    MapSessionData *recipient = static_cast<MapSessionData *>(map_id2bl(message_recipient));
+                        env->VAR(Var::SCRIPTTARGET).ty ==
+                        TY::ENTITY ? env->VAR(Var::SCRIPTTARGET).v_int : invocation->caster;
+                    MapSessionData *recipient = map_id2sd(message_recipient);
 
                     if (recipient->npc_id
                         && recipient->npc_id != invocation->id)
@@ -1424,7 +1417,7 @@ static int spell_run(invocation_t *invocation, int allow_delete)
                 val_t args[MAX_ARGS];
 
                 for (i = 0; i < e->e_op.args_nr; i++)
-                    magic_eval(invocation->env, &args[i], e->e_op.args[i]);
+                    args[i] = invocation->env->magic_eval(e->e_op.args[i]);
 
                 if (!magic_signature_check("effect", op->name, op->signature,
                                             e->e_op.args_nr, args,
@@ -1497,7 +1490,7 @@ void spell_execute_script(invocation_t *invocation)
 
 int spell_attack(int caster_id, int target_id)
 {
-    MapSessionData *caster = static_cast<MapSessionData *>(map_id2bl(caster_id));
+    MapSessionData *caster = map_id2sd(caster_id);
     invocation_t *invocation;
     int stop_attack = 0;
 

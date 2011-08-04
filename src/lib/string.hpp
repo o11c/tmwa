@@ -19,7 +19,7 @@
 // Please don't use this class for new code. It is only intended to make porting C code easier
 class POD_string
 {
-public:
+private:
     /// pointer to the beginning of the character data, or NULL
     // Don't access this directly!
     // The only safe thing is set initialize it to NULL,
@@ -29,7 +29,12 @@ public:
     // is due to a shortcoming of C++.
     char *_ptr;
 
+    // make the shared empty string implementation work
+    friend POD_string _calc_empty_string();
 public:
+    constexpr POD_string(std::nullptr_t) : _ptr(NULL) {}
+    POD_string() = default;
+
     typedef char *iterator;
     typedef const char *const_iterator;
 

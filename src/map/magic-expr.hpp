@@ -20,11 +20,6 @@ const fun_t *magic_get_fun(const char *name, int *index);
 const op_t *magic_get_op(const char *name, int *index);
 
 /**
- * Evaluates an expression and stores the result in `dest'
- */
-void magic_eval(env_t *env, val_t *dest, expr_t *expr);
-
-/**
  * Evaluates an expression and coerces the result into an integer
  */
 int magic_eval_int(env_t *env, expr_t *expr);
@@ -59,7 +54,7 @@ void magic_area_rect(int *m, int *x, int *y, int *width, int *height, area_t *ar
 # define ARGSTR(x) args[x].v_string
 # define ARGENTITY(x) args[x].v_entity
 # define ARGLOCATION(x) args[x].v_location
-# define ARGAREA(x) args[x].v_area
+# define ARG_AREA(x) args[x].v_area
 # define ARGSPELL(x) args[x].v_spell
 # define ARGINVOCATION(x) args[x].v_invocation
 
@@ -68,7 +63,7 @@ void magic_area_rect(int *m, int *x, int *y, int *width, int *height, area_t *ar
 # define RESULTSTR result->v_string
 # define RESULTENTITY result->v_entity
 # define RESULTLOCATION result->v_location
-# define RESULTAREA result->v_area
+# define RESULT_AREA result->v_area
 # define RESULTSPELL result->v_spell
 # define RESULTINVOCATION result->v_invocation
 

@@ -14,10 +14,6 @@
 #include "npc.hpp"
 #include "pc.hpp"
 
-#define CHECK_TYPE(v, t) ((v)->ty == t)
-
-#define IS_SOLID(c) ((c) == 1 || (c) == 5)
-
 static int heading_x[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
 static int heading_y[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
 
@@ -25,47 +21,53 @@ static int magic_location_in_area(int m, int x, int y, area_t *area);
 
 int map_is_solid(int m, int x, int y)
 {
-    return (IS_SOLID(map_getcell(m, x, y)));
+    return map_getcell(m, x, y) == 1;
 }
 
-#undef IS_SOLID
-
-static void free_area(area_t *area)
+area_t::~area_t()
 {
-    if (!area)
+    if (ty == AreaType::UNION)
+    {
+        delete a_union[0];
+        delete a_union[1];
+    }
+}
+
+area_t::area_t(const area_t& area) : size(area.size), ty(area.ty)
+{
+    switch(ty)
+    {
+    case AreaType::LOCATION:
+        a_loc = area.a_loc;
         return;
-
-    switch (area->ty)
-    {
-        case AreaType::UNION:
-            free_area(area->a_union[0]);
-            free_area(area->a_union[1]);
-            break;
-        default:
-            break;
+    case AreaType::UNION:
+        a_union[0] = new area_t(*area.a_union[0]);
+        a_union[1] = new area_t(*area.a_union[1]);
+        return;
+    case AreaType::RECT:
+        a_rect = area.a_rect;
+        return;
     }
-
-    free(area);
+    abort();
 }
 
-static area_t *dup_area(area_t *area)
-{
-    area_t *retval;
-    CREATE(retval, area_t, 1);
-    *retval = *area;
+area_t::area_t(const location_t& loc) :
+    a_loc(loc),
+    size(1),
+    ty(AreaType::LOCATION)
+{}
 
-    switch (area->ty)
-    {
-        case AreaType::UNION:
-            retval->a_union[0] = dup_area(retval->a_union[0]);
-            retval->a_union[1] = dup_area(retval->a_union[1]);
-            break;
-        default:
-            break;
-    }
+area_t::area_t(area_t *area, area_t *other_area) :
+    a_union({area, other_area}),
+    size(area->size + other_area->size),
+    ty(AreaType::UNION)
+{}
 
-    return retval;
-}
+area_t::area_t(const location_t& loc, int width, int height) :
+    a_rect({loc, width, height}),
+    size(width * height),
+    ty(AreaType::RECT)
+{}
 
 void magic_copy_var(val_t *dest, val_t *src)
 {
@@ -73,30 +75,25 @@ void magic_copy_var(val_t *dest, val_t *src)
 
     switch (dest->ty)
     {
-        case TY::STRING:
-            dest->v_string = dest->v_string.clone();
-            break;
-        case TY::AREA:
-            dest->v_area = dup_area(dest->v_area);
-            break;
-        default:
-            break;
+    case TY::STRING:
+        dest->v_string = dest->v_string.clone();
+        return;
+    case TY::AREA:
+        dest->v_area = new area_t(*dest->v_area);
+        return;
     }
-
 }
 
 void magic_clear_var(val_t *v)
 {
     switch (v->ty)
     {
-        case TY::STRING:
-            v->v_string.free();
-            break;
-        case TY::AREA:
-            free_area(v->v_area);
-            break;
-        default:
-            break;
+    case TY::STRING:
+        v->v_string.free();
+        return;
+    case TY::AREA:
+        delete v->v_area;
+        return;
     }
 }
 
@@ -104,19 +101,19 @@ static const char *show_entity(BlockList *entity)
 {
     switch (entity->type)
     {
-        case BL_PC:
-            return static_cast<MapSessionData *>(entity)->status.name;
-        case BL_NPC:
-            return static_cast<struct npc_data *>(entity)->name;
-        case BL_MOB:
-            return static_cast<struct mob_data *>(entity)->name;
-        case BL_ITEM:
-            /// You should have seen this *before*
-            return itemdb_search(static_cast<struct flooritem_data *>(entity)->item_data.nameid)->name;
-        case BL_SPELL:
-            return "%invocation(ERROR:this-should-not-be-an-entity)";
-        default:
-            return "%unknown-entity";
+    case BL_PC:
+        return static_cast<MapSessionData *>(entity)->status.name;
+    case BL_NPC:
+        return static_cast<struct npc_data *>(entity)->name;
+    case BL_MOB:
+        return static_cast<struct mob_data *>(entity)->name;
+    case BL_ITEM:
+        /// You should have seen this *before*
+        return itemdb_search(static_cast<struct flooritem_data *>(entity)->item_data.nameid)->name;
+    case BL_SPELL:
+        return "%invocation(ERROR:this-should-not-be-an-entity)";
+    default:
+        return "%unknown-entity";
     }
 }
 
@@ -132,55 +129,55 @@ static void stringify(val_t *v, int within_op)
 
     switch (v->ty)
     {
-        case TY::UNDEF:
-            buf.assign("UNDEF");
-            break;
+    case TY::UNDEF:
+        buf.assign("UNDEF");
+        break;
 
-        case TY::INT:
-            buf.resize(31);
-            sprintf(&buf[0], "%i", v->v_int);
-            break;
+    case TY::INT:
+        buf.resize(31);
+        sprintf(&buf[0], "%i", v->v_int);
+        break;
 
-        case TY::STRING:
-            return;
+    case TY::STRING:
+        return;
 
-        case TY::DIR:
-            buf.assign(dirs[static_cast<int>(v->v_dir)]);
-            break;
+    case TY::DIR:
+        buf.assign(dirs[static_cast<int>(v->v_dir)]);
+        break;
 
-        case TY::ENTITY:
-            buf.assign(show_entity(v->v_entity));
-            break;
+    case TY::ENTITY:
+        buf.assign(show_entity(v->v_entity));
+        break;
 
-        case TY::LOCATION:
-            buf.resize(127);
-            sprintf(&buf[0], "<\"%s\", %d, %d>", &maps[v->v_location.m].name,
-                    v->v_location.x, v->v_location.y);
-            break;
+    case TY::LOCATION:
+        buf.resize(127);
+        sprintf(&buf[0], "<\"%s\", %d, %d>", &maps[v->v_location.m].name,
+                v->v_location.x, v->v_location.y);
+        break;
 
-        case TY::AREA:
-            buf.assign("%area");
-            free_area(v->v_area);
-            break;
+    case TY::AREA:
+        buf.assign("%area");
+        delete v->v_area;
+        break;
 
-        case TY::SPELL:
-            buf = v->v_spell->name.clone();
-            break;
+    case TY::SPELL:
+        buf = v->v_spell->name.clone();
+        break;
 
-        case TY::INVOCATION:
-        {
-            invocation_t *invocation =
-                within_op
-                ? v->v_invocation
-                : static_cast<invocation_t *>(map_id2bl(v->v_int));
-            buf = invocation->spell->name.clone();
-        }
-            break;
+    case TY::INVOCATION:
+    {
+        invocation_t *invocation =
+            within_op
+            ? v->v_invocation
+            : static_cast<invocation_t *>(map_id2bl(v->v_int));
+        buf = invocation->spell->name.clone();
+    }
+        break;
 
-        default:
-            fprintf(stderr, "[magic] INTERNAL ERROR: Cannot stringify %d\n",
-                    static_cast<int>(v->ty));
-            return;
+    default:
+        fprintf(stderr, "[magic] INTERNAL ERROR: Cannot stringify %d\n",
+                static_cast<int>(v->ty));
+        return;
     }
 
     v->v_string = buf;
@@ -197,23 +194,6 @@ static void intify(val_t *v)
     v->v_int = 1;
 }
 
-static area_t *area_new(AreaType ty)
-{
-    area_t *retval;
-    CREATE(retval, area_t, 1);
-    retval->ty = ty;
-    return retval;
-}
-
-static area_t *area_union(area_t *area, area_t *other_area)
-{
-    area_t *retval = area_new(AreaType::UNION);
-    retval->a_union[0] = area;
-    retval->a_union[1] = other_area;
-    retval->size = area->size + other_area->size;   /* Assume no overlap */
-    return retval;
-}
-
 /**
  * Turns location into area, leaves other types untouched
  */
@@ -221,12 +201,8 @@ static void make_area(val_t *v)
 {
     if (v->ty == TY::LOCATION)
     {
-        area_t *a;
-        CREATE(a, area_t, 1);
+        v->v_area = new area_t(v->v_location);
         v->ty = TY::AREA;
-        a->ty = AreaType::LOCATION;
-        a->a_loc = v->v_location;
-        v->v_area = a;
     }
 }
 
@@ -235,7 +211,7 @@ static void make_location(val_t *v)
     if (v->ty == TY::AREA && v->v_area->ty == AreaType::LOCATION)
     {
         location_t location = v->v_area->a_loc;
-        free_area(v->v_area);
+        delete v->v_area;
         v->ty = TY::LOCATION;
         v->v_location = location;
     }
@@ -269,9 +245,9 @@ static int fun_add(env_t *, int, val_t *result, val_t *args)
         /* AreaType union */
         make_area(&args[0]);
         make_area(&args[1]);
-        RESULTAREA = area_union(ARGAREA(0), ARGAREA(1));
-        ARGAREA(0) = NULL;
-        ARGAREA(1) = NULL;
+        RESULT_AREA = new area_t(ARG_AREA(0), ARG_AREA(1));
+        ARG_AREA(0) = NULL;
+        ARG_AREA(1) = NULL;
         result->ty = TY::AREA;
     }
     else
@@ -392,7 +368,7 @@ static int fun_eq(env_t *, int, val_t *result, val_t *args)
                      && ARGLOCATION(0).y == ARGLOCATION(1).y
                      && ARGLOCATION(0).m == ARGLOCATION(1).m);
     else if (TY(0) == TY::AREA && TY(1) == TY::AREA)
-        RESULTINT = ARGAREA(0) == ARGAREA(1); /* Probably not that great an idea... */
+        RESULTINT = ARG_AREA(0) == ARG_AREA(1); /* Probably not that great an idea... */
     else if (TY(0) == TY::SPELL && TY(1) == TY::SPELL)
         RESULTINT = ARGSPELL(0) == ARGSPELL(1);
     else if (TY(0) == TY::INVOCATION && TY(1) == TY::INVOCATION)
@@ -458,76 +434,28 @@ static int fun_if_then_else(env_t *, int, val_t *result, val_t *args)
 }
 
 void magic_area_rect(int *m, int *x, int *y, int *width, int *height,
-                 area_t *area)
+                     area_t *area)
 {
     switch (area->ty)
     {
-        case AreaType::UNION:
-            break;
+    case AreaType::UNION:
+        break;
 
-        case AreaType::LOCATION:
-            *m = area->a_loc.m;
-            *x = area->a_loc.x;
-            *y = area->a_loc.y;
-            *width = 1;
-            *height = 1;
-            break;
+    case AreaType::LOCATION:
+        *m = area->a_loc.m;
+        *x = area->a_loc.x;
+        *y = area->a_loc.y;
+        *width = 1;
+        *height = 1;
+        break;
 
-        case AreaType::RECT:
-            *m = area->a_rect.loc.m;
-            *x = area->a_rect.loc.x;
-            *y = area->a_rect.loc.y;
-            *width = area->a_rect.width;
-            *height = area->a_rect.height;
-            break;
-
-        case AreaType::BAR:
-        {
-            int tx = area->a_bar.loc.x;
-            int ty = area->a_bar.loc.y;
-            int twidth = area->a_bar.width;
-            int tdepth = area->a_bar.width;
-            *m = area->a_bar.loc.m;
-
-            switch (area->a_bar.dir)
-            {
-                case Direction::S:
-                    *x = tx - twidth;
-                    *y = ty;
-                    *width = twidth * 2 + 1;
-                    *height = tdepth;
-                    break;
-
-                case Direction::W:
-                    *x = tx - tdepth;
-                    *y = ty - twidth;
-                    *width = tdepth;
-                    *height = twidth * 2 + 1;
-                    break;
-
-                case Direction::N:
-                    *x = tx - twidth;
-                    *y = ty - tdepth;
-                    *width = twidth * 2 + 1;
-                    *height = tdepth;
-                    break;
-
-                case Direction::E:
-                    *x = tx;
-                    *y = ty - twidth;
-                    *width = tdepth;
-                    *height = twidth * 2 + 1;
-                    break;
-
-                default:
-                    fprintf(stderr,
-                             "Error: Trying to compute area of NE/SE/NW/SW-facing bar");
-                    *x = tx;
-                    *y = ty;
-                    *width = *height = 1;
-            }
-            break;
-        }
+    case AreaType::RECT:
+        *m = area->a_rect.loc.m;
+        *x = area->a_rect.loc.x;
+        *y = area->a_rect.loc.y;
+        *width = area->a_rect.width;
+        *height = area->a_rect.height;
+        break;
     }
 }
 
@@ -535,31 +463,30 @@ static int magic_location_in_area(int m, int x, int y, area_t *area)
 {
     switch (area->ty)
     {
-        case AreaType::UNION:
-            return magic_location_in_area(m, x, y, area->a_union[0])
-                || magic_location_in_area(m, x, y, area->a_union[1]);
-        case AreaType::LOCATION:
-        case AreaType::RECT:
-        case AreaType::BAR:
-        {
-            int am;
-            int ax, ay, awidth, aheight;
-            magic_area_rect(&am, &ax, &ay, &awidth, &aheight, area);
-            return (am == m
-                    && (x >= ax) && (y >= ay)
-                    && (x < ax + awidth) && (y < ay + aheight));
-        }
-        default:
-            fprintf(stderr, "INTERNAL ERROR: Invalid area\n");
-            return 0;
+    case AreaType::UNION:
+        return magic_location_in_area(m, x, y, area->a_union[0])
+            || magic_location_in_area(m, x, y, area->a_union[1]);
+    case AreaType::LOCATION:
+    case AreaType::RECT:
+    {
+        int am;
+        int ax, ay, awidth, aheight;
+        magic_area_rect(&am, &ax, &ay, &awidth, &aheight, area);
+        return (am == m
+                && (x >= ax) && (y >= ay)
+                && (x < ax + awidth) && (y < ay + aheight));
+    }
+    default:
+        fprintf(stderr, "INTERNAL ERROR: Invalid area\n");
+        abort();
     }
 }
 
 static int fun_is_in(env_t *, int, val_t *result, val_t *args)
 {
     RESULTINT = magic_location_in_area(ARGLOCATION(0).m,
-                                        ARGLOCATION(0).x,
-                                        ARGLOCATION(0).y, ARGAREA(1));
+                                       ARGLOCATION(0).x,
+                                       ARGLOCATION(0).y, ARG_AREA(1));
     return 0;
 }
 
@@ -839,12 +766,12 @@ static int fun_rdistance(env_t *, int, val_t *result, val_t *args)
 
 static int fun_anchor(env_t *env, int, val_t *result, val_t *args)
 {
-    teleport_anchor_t *anchor = magic_find_anchor(ARGSTR(0));
+    expr_t *location = magic_find_anchor(ARGSTR(0));
 
-    if (!anchor)
+    if (!location)
         return 1;
 
-    magic_eval(env, result, anchor->location);
+    *result = env->magic_eval(location);
 
     make_area(result);
     if (result->ty != TY::AREA)
@@ -884,7 +811,6 @@ void magic_random_location(location_t *dest, area_t *area)
 
         case AreaType::LOCATION:
         case AreaType::RECT:
-        case AreaType::BAR:
         {
             int m, x, y, w, h;
             magic_area_rect(&m, &x, &y, &w, &h, area);
@@ -938,7 +864,7 @@ void magic_random_location(location_t *dest, area_t *area)
 
 static int fun_pick_location(env_t *, int, val_t *result, val_t *args)
 {
-    magic_random_location(&result->v_location, ARGAREA(0));
+    magic_random_location(&result->v_location, ARG_AREA(0));
     return 0;
 }
 
@@ -958,12 +884,7 @@ static int fun_rbox(env_t *, int, val_t *result, val_t *args)
     location_t loc = ARGLOCATION(0);
     int radius = ARGINT(1);
 
-    RESULTAREA = area_new(AreaType::RECT);
-    RESULTAREA->a_rect.loc.m = loc.m;
-    RESULTAREA->a_rect.loc.x = loc.x - radius;
-    RESULTAREA->a_rect.loc.y = loc.y - radius;
-    RESULTAREA->a_rect.width = radius * 2 + 1;
-    RESULTAREA->a_rect.height = radius * 2 + 1;
+    RESULT_AREA = new area_t({loc.m, loc.x - radius, loc.y - radius}, radius * 2 + 1, radius * 2 + 1);
 
     return 0;
 }
@@ -1267,13 +1188,11 @@ const fun_t *magic_get_fun(const char *name, int *idx)
 // 1 on failure
 static int eval_location(env_t *env, location_t *dest, e_location_t *expr)
 {
-    val_t m, x, y;
-    magic_eval(env, &m, expr->m);
-    magic_eval(env, &x, expr->x);
-    magic_eval(env, &y, expr->y);
+    val_t m = env->magic_eval(expr->m);
+    val_t x = env->magic_eval(expr->x);
+    val_t y = env->magic_eval(expr->y);
 
-    if (CHECK_TYPE(&m, TY::STRING)
-        && CHECK_TYPE(&x, TY::INT) && CHECK_TYPE(&y, TY::INT))
+    if (m.ty == TY::STRING && x.ty == TY::INT && y.ty == TY::INT)
     {
         fixed_string<16> mapname;
         mapname.copy_from(m.v_string.c_str());
@@ -1297,113 +1216,49 @@ static int eval_location(env_t *env, location_t *dest, e_location_t *expr)
 
 static area_t *eval_area(env_t *env, e_area_t *expr)
 {
-    area_t *area;
-    CREATE(area, area_t, 1);
-    area->ty = expr->ty;
-
     switch (expr->ty)
     {
-        case AreaType::LOCATION:
-            area->size = 1;
-            if (eval_location(env, &area->a_loc, &expr->a_loc))
-            {
-                free(area);
-                return NULL;
-            }
-            else
-                return area;
-
-        case AreaType::UNION:
-        {
-            int i, fail = 0;
-            for (i = 0; i < 2; i++)
-            {
-                area->a_union[i] = eval_area(env, expr->a_union[i]);
-                if (!area->a_union[i])
-                    fail = 1;
-            }
-
-            if (fail)
-            {
-                for (i = 0; i < 2; i++)
-                {
-                    if (area->a_union[i])
-                        free_area(area->a_union[i]);
-                }
-                free(area);
-                return NULL;
-            }
-            area->size = area->a_union[0]->size + area->a_union[1]->size;
-            return area;
-        }
-
-        case AreaType::RECT:
-        {
-            val_t width, height;
-            magic_eval(env, &width, expr->a_rect.width);
-            magic_eval(env, &height, expr->a_rect.height);
-
-            area->a_rect.width = width.v_int;
-            area->a_rect.height = height.v_int;
-
-            if (CHECK_TYPE(&width, TY::INT)
-                && CHECK_TYPE(&height, TY::INT)
-                && !eval_location(env, &(area->a_rect.loc),
-                                   &expr->a_rect.loc))
-            {
-                area->size = area->a_rect.width * area->a_rect.height;
-                magic_clear_var(&width);
-                magic_clear_var(&height);
-                return area;
-            }
-            else
-            {
-                free(area);
-                magic_clear_var(&width);
-                magic_clear_var(&height);
-                return NULL;
-            }
-        }
-
-        case AreaType::BAR:
-        {
-            val_t width, depth, dir;
-            magic_eval(env, &width, expr->a_bar.width);
-            magic_eval(env, &depth, expr->a_bar.depth);
-            magic_eval(env, &dir, expr->a_bar.dir);
-
-            area->a_bar.width = width.v_int;
-            area->a_bar.depth = depth.v_int;
-            area->a_bar.dir = static_cast<Direction>(dir.v_int);
-
-            if (CHECK_TYPE(&width, TY::INT)
-                && CHECK_TYPE(&depth, TY::INT)
-                && CHECK_TYPE(&dir, TY::DIR)
-                && !eval_location(env, &area->a_bar.loc,
-                                   &expr->a_bar.loc))
-            {
-                area->size =
-                    (area->a_bar.width * 2 + 1) * area->a_bar.depth;
-                magic_clear_var(&width);
-                magic_clear_var(&depth);
-                magic_clear_var(&dir);
-                return area;
-            }
-            else
-            {
-                free(area);
-                magic_clear_var(&width);
-                magic_clear_var(&depth);
-                magic_clear_var(&dir);
-                return NULL;
-            }
-        }
-
-        default:
-            fprintf(stderr, "INTERNAL ERROR: Unknown area type %d\n",
-                    static_cast<int>(area->ty));
-            free(area);
+    case AreaType::LOCATION:
+    {
+        location_t loc;
+        if (eval_location(env, &loc, &expr->a_loc))
             return NULL;
+        return new area_t(loc);
+    }
+    case AreaType::UNION:
+    {
+        area_t *au0 = eval_area(env, expr->a_union[0]);
+        if (!au0)
+            return NULL;
+
+        area_t *au1 = eval_area(env, expr->a_union[1]);
+        if (!au1)
+            return NULL;
+
+        return new area_t(au0, au1);
+    }
+
+    case AreaType::RECT:
+    {
+        val_t width = env->magic_eval(expr->a_rect.width);
+        val_t height = env->magic_eval(expr->a_rect.height);
+        int w = width.ty == TY::INT ? width.v_int : 0;
+        int h = height.ty == TY::INT ? height.v_int : 0;
+        magic_clear_var(&width);
+        magic_clear_var(&height);
+        if (!w || !h)
+            return NULL;
+
+        location_t loc;
+        if (eval_location(env, &loc, &expr->a_rect.loc))
+            return NULL;
+        return new area_t(loc, w, h);
+    }
+
+    default:
+        fprintf(stderr, "INTERNAL ERROR: Unknown area type %d\n",
+                static_cast<int>(expr->ty));
+        abort();
     }
 }
 
@@ -1411,24 +1266,15 @@ static TY type_key(char ty_key)
 {
     switch (ty_key)
     {
-        case 'i':
-            return TY::INT;
-        case 'd':
-            return TY::DIR;
-        case 's':
-            return TY::STRING;
-        case 'e':
-            return TY::ENTITY;
-        case 'l':
-            return TY::LOCATION;
-        case 'a':
-            return TY::AREA;
-        case 'S':
-            return TY::SPELL;
-        case 'I':
-            return TY::INVOCATION;
-        default:
-            return TY::FAIL;
+    case 'i': return TY::INT;
+    case 'd': return TY::DIR;
+    case 's': return TY::STRING;
+    case 'e': return TY::ENTITY;
+    case 'l': return TY::LOCATION;
+    case 'a': return TY::AREA;
+    case 'S': return TY::SPELL;
+    case 'I': return TY::INVOCATION;
+    default:  return TY::FAIL;
     }
 }
 
@@ -1481,23 +1327,23 @@ int magic_signature_check(const char *opname, const char *funname, const char *s
         /* If we are here, we have a type mismatch but no failure _yet_.  Try to coerce. */
         switch (desired_ty)
         {
-            case TY::INT:
-                intify(arg);
-                break;          /* 100% success rate */
-            case TY::STRING:
-                stringify(arg, 1);
-                break;          /* 100% success rate */
-            case TY::AREA:
-                make_area(arg);
-                break;          /* Only works for locations */
-            case TY::LOCATION:
-                make_location(arg);
-                break;          /* Only works for some areas */
-            case TY::SPELL:
-                make_spell(arg);
-                break;          /* Only works for still-active invocatoins */
-            default:
-                break;          /* We'll fail right below */
+        case TY::INT:
+            intify(arg);
+            break;          /* 100% success rate */
+        case TY::STRING:
+            stringify(arg, 1);
+            break;          /* 100% success rate */
+        case TY::AREA:
+            make_area(arg);
+            break;          /* Only works for locations */
+        case TY::LOCATION:
+            make_location(arg);
+            break;          /* Only works for some areas */
+        case TY::SPELL:
+            make_spell(arg);
+            break;          /* Only works for still-active invocatoins */
+        default:
+            break;          /* We'll fail right below */
         }
 
         ty = arg->ty;
@@ -1514,112 +1360,111 @@ int magic_signature_check(const char *opname, const char *funname, const char *s
     return 0;
 }
 
-void magic_eval(env_t *env, val_t *dest, expr_t *expr)
+val_t env_t::magic_eval(expr_t *expr)
 {
+    val_t out;
+    val_t *dest = &out;
     switch (expr->ty)
     {
-        case ExprType::VAL:
-            magic_copy_var(dest, &expr->e_val);
-            break;
+    case ExprType::VAL:
+        magic_copy_var(dest, &expr->e_val);
+        break;
 
-        case ExprType::LOCATION:
-            if (eval_location(env, &dest->v_location, &expr->e_location))
-                dest->ty = TY::FAIL;
-            else
-                dest->ty = TY::LOCATION;
-            break;
+    case ExprType::LOCATION:
+        if (eval_location(this, &dest->v_location, &expr->e_location))
+            dest->ty = TY::FAIL;
+        else
+            dest->ty = TY::LOCATION;
+        break;
 
-        case ExprType::AREA:
-            if ((dest->v_area = eval_area(env, &expr->e_area)))
-                dest->ty = TY::AREA;
-            else
-                dest->ty = TY::FAIL;
-            break;
+    case ExprType::AREA:
+        if ((dest->v_area = eval_area(this, &expr->e_area)))
+            dest->ty = TY::AREA;
+        else
+            dest->ty = TY::FAIL;
+        break;
 
-        case ExprType::FUNAPP:
+    case ExprType::FUNAPP:
+    {
+        val_t arguments[MAX_ARGS];
+        int args_nr = expr->e_funapp.args_nr;
+        int i;
+        fun_t *f = functions + expr->e_funapp.id;
+
+        for (i = 0; i < args_nr; ++i)
+            arguments[i] = magic_eval(expr->e_funapp.args[i]);
+        if (magic_signature_check("function", f->name, f->signature, args_nr, arguments,
+                expr->e_funapp.line_nr, expr->e_funapp.column)
+            || f->fun(this, args_nr, dest, arguments))
+            dest->ty = TY::FAIL;
+        else
         {
-            val_t arguments[MAX_ARGS];
-            int args_nr = expr->e_funapp.args_nr;
-            int i;
-            fun_t *f = functions + expr->e_funapp.id;
+            TY dest_ty = type_key(f->ret_ty);
+            if (dest_ty != TY::FAIL)
+                dest->ty = dest_ty;
 
-            for (i = 0; i < args_nr; ++i)
-                magic_eval(env, &arguments[i], expr->e_funapp.args[i]);
-            if (magic_signature_check
-                ("function", f->name, f->signature, args_nr, arguments,
-                 expr->e_funapp.line_nr, expr->e_funapp.column)
-                || f->fun(env, args_nr, dest, arguments))
-                dest->ty = TY::FAIL;
-            else
+            /* translate entity back into persistent int */
+            if (dest->ty == TY::ENTITY)
             {
-                TY dest_ty = type_key(f->ret_ty);
-                if (dest_ty != TY::FAIL)
-                    dest->ty = dest_ty;
-
-                /* translate entity back into persistent int */
-                if (dest->ty == TY::ENTITY)
-                {
-                    if (dest->v_entity)
-                        dest->v_int = dest->v_entity->id;
-                    else
-                        dest->ty = TY::FAIL;
-                }
-            }
-
-            for (i = 0; i < args_nr; ++i)
-                magic_clear_var(&arguments[i]);
-            break;
-        }
-
-        case ExprType::ID:
-        {
-            val_t v = VAR(expr->e_id);
-            magic_copy_var(dest, &v);
-            break;
-        }
-
-        case ExprType::SPELLFIELD:
-        {
-            val_t v;
-            int id = expr->e_field.id;
-            magic_eval(env, &v, expr->e_field.expr);
-
-            if (v.ty == TY::INVOCATION)
-            {
-                invocation_t *t = static_cast<invocation_t *>(map_id2bl(v.v_int));
-
-                if (!t)
-                    dest->ty = TY::UNDEF;
+                if (dest->v_entity)
+                    dest->v_int = dest->v_entity->id;
                 else
-                {
-// This is why macros should capture nonargument variables
-#  define env t->env
-                    val_t val2 = VAR(id);
-#  undef env
-                    magic_copy_var(dest, &val2);
-                }
+                    dest->ty = TY::FAIL;
             }
-            else
-            {
-                fprintf(stderr,
-                        "[magic] Attempt to access field %s on non-spell\n",
-                        magic_conf::vars[id].first.c_str());
-                dest->ty = TY::FAIL;
-            }
-            break;
         }
 
-        default:
-            fprintf(stderr, "[magic] INTERNAL ERROR: Unknown expression type %d\n",
-                    static_cast<int>(expr->ty));
-            break;
+        for (i = 0; i < args_nr; ++i)
+            magic_clear_var(&arguments[i]);
+        break;
     }
+
+    case ExprType::ID:
+    {
+        val_t v = VAR(expr->e_id);
+        magic_copy_var(dest, &v);
+        break;
+    }
+
+    case ExprType::SPELLFIELD:
+    {
+        val_t v;
+        int id = expr->e_field.id;
+        v = magic_eval(expr->e_field.expr);
+
+        if (v.ty == TY::INVOCATION)
+        {
+            invocation_t *t = static_cast<invocation_t *>(map_id2bl(v.v_int));
+
+            if (!t)
+                dest->ty = TY::UNDEF;
+            else
+            {
+                val_t val2 = t->env->VAR(id);
+                magic_copy_var(dest, &val2);
+            }
+        }
+        else
+        {
+            fprintf(stderr,
+                    "[magic] Attempt to access field %s on non-spell\n",
+                    magic_conf::vars[id].first.c_str());
+            dest->ty = TY::FAIL;
+        }
+        break;
+    }
+
+    default:
+        fprintf(stderr, "[magic] INTERNAL ERROR: Unknown expression type %d\n",
+                static_cast<int>(expr->ty));
+        break;
+    }
+    return out;
 }
 
 int magic_eval_int(env_t *env, expr_t *expr)
 {
     val_t result;
-    magic_eval(env, &result, expr);
+    result = env->magic_eval(expr);
 
     if (result.ty == TY::FAIL || result.ty == TY::UNDEF)
         return 0;
@@ -1632,7 +1477,7 @@ int magic_eval_int(env_t *env, expr_t *expr)
 POD_string magic_eval_str(env_t *env, expr_t *expr)
 {
     val_t result;
-    magic_eval(env, &result, expr);
+    result = env->magic_eval(expr);
 
     if (result.ty == TY::FAIL || result.ty == TY::UNDEF)
     {

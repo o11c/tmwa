@@ -4310,14 +4310,14 @@ int atcommand_visible(int, MapSessionData *sd,
 
 /// Implementation for the player iterators
 static int atcommand_jump_iterate(int fd, MapSessionData *sd,
-                                   MapSessionData *(*get_start)(void),
-                                   MapSessionData *(*get_next)(MapSessionData* current))
+                                  MapSessionData *(*get_start)(void),
+                                  MapSessionData *(*get_next)(MapSessionData* current))
 {
     char output[200];
 
     memset(output, '\0', sizeof(output));
 
-    MapSessionData *pl_sd = static_cast<MapSessionData *>(map_id2bl(sd->followtarget));
+    MapSessionData *pl_sd = map_id2sd(sd->followtarget);
 
     if (pl_sd)
         pl_sd = get_next(pl_sd);

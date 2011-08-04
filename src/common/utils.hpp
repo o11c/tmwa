@@ -251,4 +251,8 @@ public:
         return *a < *b;
     }
 };
+
+// disallow free()ing an array of any type
+template<class T, size_t n>
+void free(T(&)[n]) = delete;
 #endif //UTILS_HPP

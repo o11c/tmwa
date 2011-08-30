@@ -4,7 +4,7 @@
 # include <cstdint>
 # include <cstdlib>
 
-uint64_t lfsr_next_internal(uint64_t last, int bits, bool allow_zero_state) __attribute__((const));
+uint64_t lfsr_next_internal(uint64_t last, int bits, bool allow_zero_state) __attribute__((const, pure));
 
 template<int bits, bool allow_zero_state>
 uint64_t lfsr_next(uint64_t last) __attribute__((const));

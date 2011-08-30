@@ -53,7 +53,7 @@ static char *magic_tokenise(char *src, char *& parameter)
     while (*seeker == ' ')
         ++seeker;
 
-    *parameter = seeker;
+    parameter = seeker;
 
     return retval;
 }
@@ -75,7 +75,7 @@ int magic_message(MapSessionData *caster, char *spell_, size_t)
     {
         POD_string spell_invocation;
         char *parm;
-        spell_invocation.take_ownership(magic_tokenise(source_invocation, &parm));
+        spell_invocation.take_ownership(magic_tokenise(source_invocation, parm));
         parameter.assign(parm);
 
         spell = magic_find_spell(spell_invocation);

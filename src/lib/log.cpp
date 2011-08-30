@@ -48,7 +48,13 @@ void Log::replace(const std::string& old_filename, const std::string& new_filena
         if (it->first == old_filename)
         {
             FILE *file = it->second;
-            freopen(new_filename.c_str(), "a", file);
+            if (!freopen(new_filename.c_str(), "a", file))
+            {
+                filenames.erase(it);
+                root_log.error("Unable to open log file: %s, to replace %s", new_filename.c_str(), it->first.c_str());
+                root_log.error("Possible trouble ahead (code untested)");
+                return;
+            }
             if (old_filename != new_filename)
             {
                 // granted, we probably shouldn't keep using the map, but

@@ -51,7 +51,7 @@ struct item
 struct Point
 {
     fixed_string<16> map;
-    short x, y;
+    uint16_t x, y;
 };
 
 struct skill

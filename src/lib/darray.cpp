@@ -40,6 +40,21 @@ DArray_base::~DArray_base()
     dec_ref();
 }
 
+DArray_base& DArray_base::operator = (const DArray_base& r)
+{
+    dec_ref();
+    mem = r.mem;
+    inc_ref();
+    return *this;
+}
+DArray_base& DArray_base::operator = (DArray_base&& r)
+{
+    dec_ref();
+    mem = r.mem;
+    r.mem = NULL;
+    return *this;
+}
+
 
 size_t DArray_base::size() const
 {

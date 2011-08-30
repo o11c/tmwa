@@ -720,7 +720,7 @@ static uint16_t clif_mob_appear(struct mob_data *md, uint8_t *buf)
     WBUFPOS(buf, 46, md->x, md->y, md->dir);
     WBUFB(buf, 49) = 5;
     WBUFB(buf, 50) = 5;
-    WBUFW(buf, 52) = MIN(battle_get_lv(md), battle_config.max_lv);
+    WBUFW(buf, 52) = MIN(battle_get_level(md), battle_config.max_lv);
 
     return packet_len_table[0x78];
 }
@@ -745,7 +745,7 @@ static uint16_t clif_mob_move(struct mob_data *md, uint8_t *buf)
     WBUFPOS2(buf, 50, md->x, md->y, md->to_x, md->to_y);
     WBUFB(buf, 56) = 5;
     WBUFB(buf, 57) = 5;
-    WBUFW(buf, 58) = MIN(battle_get_lv(md), battle_config.max_lv);
+    WBUFW(buf, 58) = MIN(battle_get_level(md), battle_config.max_lv);
 
     return packet_len_table[0x7b];
 }
@@ -2105,7 +2105,7 @@ void clif_fixmobpos(struct mob_data *md)
 {
     nullpo_retv(md);
 
-    if (md->state.state == MS_WALK)
+    if (md->state.state == MS::WALK)
     {
         uint8_t buf[256];
         int len = clif_mob_move(md, buf);
@@ -2178,7 +2178,7 @@ static void clif_getareachar_mob(MapSessionData *sd, struct mob_data *md)
     nullpo_retv(sd);
     nullpo_retv(md);
 
-    if (md->state.state == MS_WALK)
+    if (md->state.state == MS::WALK)
     {
         len = clif_mob_move(md, WFIFOP(sd->fd, 0));
         WFIFOSET(sd->fd, len);
@@ -4753,7 +4753,7 @@ static uint8_t *clif_validate_chat(MapSessionData *sd, int type,
      * Don't send chat in the period between the ban and the connection's
      * closure.
      */
-    if (type < 0 || type > 2 || sd->auto_ban_info.in_progress)
+    if (type < 0 || type > 2 || sd->state.auto_ban_in_progress)
         return NULL;
 
     fd = sd->fd;

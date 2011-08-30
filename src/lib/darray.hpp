@@ -16,6 +16,10 @@ protected:
     DArray_base(DArray_base&& r);
     ~DArray_base();
 
+    DArray_base& operator = (const DArray_base& r);
+    DArray_base& operator = (DArray_base&& r);
+
+
     size_t size() const __attribute__((pure));
     size_t capacity() const __attribute__((pure));
     size_t refcount() const __attribute__((pure));

@@ -1832,8 +1832,9 @@ int atcommand_spawn(int fd, MapSessionData *sd,
         return -1;
 
     char monster[100];
-    unsigned int number = 0, x = 0, y = 0;
-    if (sscanf(message, "%99s %u %u %u", monster, &number, &x, &y) < 1)
+    unsigned int number = 0;
+    unsigned short x = 0, y = 0;
+    if (sscanf(message, "%99s %u %hu %hu", monster, &number, &x, &y) < 1)
         return -1;
 
     // If monster identifier/name argument is a name
@@ -1866,7 +1867,7 @@ int atcommand_spawn(int fd, MapSessionData *sd,
         bool k = 0;
         while (j++ < 8 && k == 0)
         {                       // try 8 times to spawn the monster (needed for close area)
-            int mx, my;
+            uint16_t mx, my;
             if (x <= 0)
                 mx = sd->x + (MRAND(range) - (range / 2));
             else
@@ -1877,8 +1878,7 @@ int atcommand_spawn(int fd, MapSessionData *sd,
                 my = y;
             fixed_string<16> ths;
             ths.copy_from("this");
-            k = mob_once_spawn(sd, ths, mx,
-                                my, "", mob_id, 1, "");
+            k = mob_once_spawn(sd, {ths, mx, my}, "", mob_id, 1, "");
         }
         count += k;
     }
@@ -4112,12 +4112,12 @@ int atcommand_summon(int, MapSessionData *sd,
     if (!mob_id)
         return -1;
 
-    int x = sd->x + (MRAND(10) - 5);
-    int y = sd->y + (MRAND(10) - 5);
+    uint16_t x = sd->x + MPRAND(-5, 10);
+    uint16_t y = sd->y + MPRAND(-5, 10);
 
     fixed_string<16> ths;
     ths.copy_from("this");
-    int id = mob_once_spawn(sd, ths, x, y, "--ja--", mob_id, 1, "");
+    int id = mob_once_spawn(sd, {ths, x, y}, "--ja--", mob_id, 1, "");
     struct mob_data *md = static_cast<struct mob_data *>(map_id2bl(id));
     if (md)
     {

@@ -10,6 +10,14 @@ protected:
     constexpr operators() = default;
     constexpr operators(U raw) : u(raw) {}
     ~operators() = default;
+
+    // helper method in order for derived classes' from_raw() method to work,
+    // because according to the strange rules of C++, a protected constructor
+    // is only available in a subclass's constructor, unlike protected methods
+    static operators from_raw(U raw)
+    {
+        return operators(raw);
+    }
 public:
     constexpr explicit operator bool()
     {
@@ -75,6 +83,10 @@ struct Name : operators<Name, underlying_type>                  \
         operators<Name, underlying_type>(v) {}                  \
     constexpr Name(const operators<Name, underlying_type>& p) : \
         operators<Name, underlying_type>(p) {}                  \
+    static Name from_raw(underlying_type v)                     \
+    {                                                           \
+        return operators<Name, underlying_type>::from_raw(v);   \
+    }                                                           \
 };                                                              \
 /* Separate definitions because of when it gets instantiated */ \
 constexpr Name operator | (Name::impl_t l, Name::impl_t r)      \
@@ -106,6 +118,10 @@ struct Name : operators<Name, underlying_type>                  \
         operators<Name, underlying_type>(1 << v) {}             \
     constexpr Name(const operators<Name, underlying_type>& p) : \
         operators<Name, underlying_type>(p) {}                  \
+    static Name from_raw(underlying_type v)                     \
+    {                                                           \
+        return operators<Name, underlying_type>::from_raw(v);   \
+    }                                                           \
 };                                                              \
 /* Separate definitions because of when it gets instantiated */ \
 constexpr Name operator | (Name::impl_t l, Name::impl_t r)      \

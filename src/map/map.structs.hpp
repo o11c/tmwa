@@ -110,37 +110,38 @@ class MapSessionData : public SessionData, public BlockList
 public:
     struct
     {
-        unsigned auth:1;
-        unsigned change_walk_target:1;
-        unsigned attack_continue:1;
-        unsigned menu_or_input:1;
+        bool auto_ban_in_progress:1;
+        bool auth:1;
+        bool change_walk_target:1;
+        bool attack_continue:1;
+        bool menu_or_input:1;
         unsigned dead_sit:2;
-        unsigned waitingdisconnect:1;
+        bool waitingdisconnect:1;
         unsigned lr_flag:2;
-        unsigned connect_new:1;
-        unsigned arrow_atk:1;
+        bool connect_new:1;
+        bool arrow_atk:1;
         unsigned attack_type:3;
-        unsigned gangsterparadise:1;
-        unsigned produce_flag:1;
-        unsigned make_arrow_flag:1;
+        bool produce_flag:1;
+        bool make_arrow_flag:1;
+        // TODO replace with a more generic storage system
         unsigned storage_flag:1;    //0: closed, 1: Normal Storage open
-        unsigned shroud_active:1;
-        unsigned shroud_hides_name_talking:1;
-        unsigned shroud_disappears_on_pickup:1;
-        unsigned shroud_disappears_on_talk:1;
+        bool shroud_active:1;
+        bool shroud_hides_name_talking:1;
+        bool shroud_disappears_on_pickup:1;
+        bool shroud_disappears_on_talk:1;
     } state;
     struct
     {
-        unsigned killer:1;
-        unsigned killable:1;
-        unsigned restart_full_recover:1;
-        unsigned no_castcancel:1;
-        unsigned no_castcancel2:1;
-        unsigned no_magic_damage:1;
-        unsigned no_weapon_damage:1;
-        unsigned no_gemstone:1;
-        unsigned unbreakable_weapon:1;
-        unsigned unbreakable_armor:1;
+        bool killer:1;
+        bool killable:1;
+        bool restart_full_recover:1;
+        bool no_castcancel:1;
+        bool no_castcancel2:1;
+        bool no_magic_damage:1;
+        bool no_weapon_damage:1;
+        bool no_gemstone:1;
+        bool unbreakable_weapon:1;
+        bool unbreakable_armor:1;
     } special_state;
     int char_id, login_id1, login_id2, sex;
     uint8_t tmw_version;  // tmw client version
@@ -166,8 +167,8 @@ public:
     char npc_str[256];
     struct
     {
-        unsigned storage:1;
-        unsigned divorce:1;
+        bool storage:1;
+        bool divorce:1;
     } npc_flags;
 
     timer_id attacktimer;
@@ -278,11 +279,6 @@ public:
         timer_id tid;
         char *name;
     } eventtimer[MAX_EVENTTIMER];
-
-    struct
-    {
-        unsigned in_progress:1;
-    } auto_ban_info;
 
     time_t chat_reset_due;
     time_t chat_repeat_reset_due;
@@ -400,6 +396,15 @@ enum mob_stat
 #define MOB_XP_BONUS_BASE  1024
 #define MOB_XP_BONUS_SHIFT 10
 
+enum class MS : uint8_t
+{
+    IDLE,
+    WALK,
+    ATTACK,
+    DEAD,
+    DELAY
+};
+
 struct mob_data : public BlockList
 {
     short n;
@@ -410,13 +415,13 @@ struct mob_data : public BlockList
     int spawndelay_1, spawndelay2;
     struct
     {
-        unsigned state:8;
-        unsigned targettype:1;
-        unsigned steal_flag:1;
-        unsigned steal_coin_flag:1;
-        unsigned master_check:1;
-        unsigned change_walk_target:1;
-        unsigned walk_easy:1;
+        MS state;
+        bool target_attackable:1;
+        bool steal_flag:1;
+        bool steal_coin_flag:1;
+        bool master_check:1;
+        bool change_walk_target:1;
+        bool walk_easy:1;
         unsigned special_mob_ai:3;
     } state;
     timer_id timer;
@@ -458,12 +463,6 @@ struct mob_data : public BlockList
     }
 };
 
-enum
-{ MS_IDLE, MS_WALK, MS_ATTACK, MS_DEAD, MS_DELAY };
-
-enum
-{ NONE_ATTACKABLE, ATTACKABLE };
-
 class map_data
 {
 public:
@@ -491,25 +490,25 @@ public:
     int users;
     struct
     {
-        unsigned alias:1;
-        unsigned nomemo:1;
-        unsigned noteleport:1;
-        unsigned noreturn:1;
-        unsigned monster_noteleport:1;
-        unsigned nosave:1;
-        unsigned nobranch:1;
-        unsigned nopenalty:1;
-        unsigned pvp:1;
-        unsigned pvp_noparty:1;
-        unsigned pvp_nightmaredrop:1;
-        unsigned pvp_nocalcrank:1;
-        unsigned nozenypenalty:1;
-        unsigned notrade:1;
-        unsigned nowarp:1;
-        unsigned nowarpto:1;
-        unsigned nopvp:1;       // [Valaris]
-        unsigned no_player_drops:1; // [Jaxad0127]
-        unsigned town:1;        // [remoitnane]
+        bool alias:1;
+        bool nomemo:1;
+        bool noteleport:1;
+        bool noreturn:1;
+        bool monster_noteleport:1;
+        bool nosave:1;
+        bool nobranch:1;
+        bool nopenalty:1;
+        bool pvp:1;
+        bool pvp_noparty:1;
+        bool pvp_nightmaredrop:1;
+        bool pvp_nocalcrank:1;
+        bool nozenypenalty:1;
+        bool notrade:1;
+        bool nowarp:1;
+        bool nowarpto:1;
+        bool nopvp:1;       // [Valaris]
+        bool no_player_drops:1; // [Jaxad0127]
+        bool town:1;        // [remoitnane]
     } flag;
     Point save;
     struct npc_data *npc[MAX_NPC_PER_MAP];

@@ -26,10 +26,10 @@ struct item_data
     const char *equip_script;
     struct
     {
-        unsigned available:1;
+        bool available:1;
         unsigned no_equip:3;
-        unsigned no_drop:1;
-        unsigned no_use:1;
+        bool no_drop:1;
+        bool no_use:1;
     } flag;
 };
 

@@ -1,27 +1,10 @@
-# defaults for compilation
-BISON = bison
-WARNINGS= @warnings
-DEBUG=-g3
-OPTIMIZATION=-O2 -pipe
-CXXFLAGS = ${DEBUG} ${WARNINGS}
-LDFLAGS = -Wl,--as-needed
-
-# Since I'm depending on GCC 4.6 for now, I might as well take advantage
-CXXFLAGS += -flto
-LDFLAGS += -flto
-
-# defaults for installation
-PREFIX=/usr/local
-PREFIX_BIN=${PREFIX}/bin
-
 # We edit the CXX variable instead of CXXFLAGS
 # because CXX is also used for dependency generation and linking
 
 # works on both x86 and x86_64
 override CXX += -m32
-# We require some c++0x features, from G++ 4.5
-# * Using local types in template arguments
-# * Undoubtedly other stuff I'll forget to put here
+# We require many c++0x features from G++ 4.6
+# It's probably not worth porting even to 4.5, and hopeless before that
 override CXX += -std=c++0x
 # With -flto, needed at link time *as well* as at compile time
 override CXX += ${OPTIMIZATION}
@@ -32,9 +15,6 @@ override LDLIBS += -lrt
 # Note: please don't append anything else after this
 override LDLIBS += -Wl,--no-as-needed -lm
 
-# Needed for the implicit linking rule
-override CC = ${CXX}
-
 # I'm not *that* confident in the code
 override CXXFLAGS += -fstack-protector
 # I *know* we don't do *this*
@@ -43,4 +23,3 @@ override CXXFLAGS += -fno-strict-aliasing
 # I'm probably going to get rid of this header eventually
 # Also, it is pretty stupid if you only check sanity when you remember
 override CXXFLAGS += -include src/common/sanity.hpp
-

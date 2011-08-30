@@ -84,10 +84,10 @@ void tmw_AutoBan(MapSessionData *sd, const char *reason, int length)
 {
     char anotherbuf[512];
 
-    if (length == 0 || sd->auto_ban_info.in_progress)
+    if (length == 0 || sd->state.auto_ban_in_progress)
         return;
 
-    sd->auto_ban_info.in_progress = 1;
+    sd->state.auto_ban_in_progress = 1;
 
     tmw_GmHackMsg("%s has been autobanned for %s spam",
                    sd->status.name, reason);

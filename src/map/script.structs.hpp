@@ -26,14 +26,17 @@ struct script_state
     int defsp, new_pos, new_defsp;
 };
 
-typedef struct argrec
+struct ArgRec
 {
     const char *name;
     union
     {
         int i;
         const char *s;
-    } v;
-} argrec_t;
+    };
+
+    ArgRec(const char *n, int v) : name(n), i(v) {}
+    ArgRec(const char *n, const char *v) : name(n), s(v) {}
+};
 
 #endif //SCRIPT_STRUCTS

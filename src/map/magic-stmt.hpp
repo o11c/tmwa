@@ -2,6 +2,7 @@
 #define MAGIC_STMT_HPP
 
 #include "magic.structs.hpp"
+#include "magic-expr.structs.hpp"
 
 void spell_free_invocation(invocation_t *invocation);
 
@@ -44,7 +45,13 @@ void spell_execute_script(invocation_t *invocation);
  *
  * Returns 0 if there is no charged spell or the spell is depleted.
  */
-int spell_attack(int caster, int target);
+bool spell_attack(int caster, int target);
 
+/**
+ * Retrieves an operation by name
+ * @param name The name to look up
+ * @return An operation of that name, or NULL
+ */
+const std::pair<const std::string, op_t> *magic_get_op(const char *name);
 
 #endif // MAGIC_STMT_HPP

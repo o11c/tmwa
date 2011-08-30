@@ -64,7 +64,7 @@ Direction battle_get_dir(BlockList *bl)
 }
 
 /// Get the (base) level of this being
-int battle_get_lv(BlockList *bl)
+int battle_get_level(BlockList *bl)
 {
     nullpo_ret(bl);
 
@@ -190,7 +190,7 @@ int battle_get_flee(BlockList *bl)
     if (bl->type == BL_PC)
         flee = static_cast<MapSessionData *>(bl)->flee;
     else
-        flee = battle_get_agi(bl) + battle_get_lv(bl);
+        flee = battle_get_agi(bl) + battle_get_level(bl);
 
     if (battle_is_unarmed(bl))
         flee += (skill_power_bl(bl, TMW_BRAWLING) >> 3);
@@ -209,7 +209,7 @@ int battle_get_hit(BlockList *bl)
     if (bl->type == BL_PC)
         hit = static_cast<MapSessionData *>(bl)->hit;
     else
-        hit = battle_get_dex(bl) + battle_get_lv(bl);
+        hit = battle_get_dex(bl) + battle_get_level(bl);
 
     if (battle_is_unarmed(bl))
         // +12 for 200

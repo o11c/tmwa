@@ -8,16 +8,9 @@
 /**
  * Retrieves a function by name
  * @param name The name to look up
- * @return A function of that name, or NULL, and a function index
+ * @return A function of that name, or NULL
  */
-const fun_t *magic_get_fun(const char *name, int *index);
-
-/**
- * Retrieves an operation by name
- * @param name The name to look up
- * @return An operation of that name, or NULL, and a function index
- */
-const op_t *magic_get_op(const char *name, int *index);
+const std::pair<const std::string, fun_t> *magic_get_fun(const char *name);
 
 /**
  * Evaluates an expression and coerces the result into an integer
@@ -37,43 +30,28 @@ void magic_clear_var(val_t *v);
 
 void magic_copy_var(val_t *dest, val_t *src);
 
-void magic_random_location(location_t *dest, area_t *area);
+bool magic_find_item(val_t *args, int index, struct item *item, bool *stackable);
 
-/// ret -1: not a string, ret 1: no such item, ret 0: OK
-int magic_find_item(val_t *args, int index, struct item *item, int *stackable);
-
-# define GET_ARG_ITEM(index, dest, stackable) switch (magic_find_item(args, index, &dest, &stackable)) { case -1 : return 1; case 1 : return 0; }
+# define GET_ARG_ITEM(index, dest, stackable) if (magic_find_item(args, index, &dest, &stackable)) return 1;
 
 int magic_signature_check(const char *opname, const char *funname, const char *signature,
                           int args_nr, val_t *args, int line, int column);
 
-void magic_area_rect(int *m, int *x, int *y, int *width, int *height, area_t *area);
+# define ASSERT_TYPE(x, type)   (args[x].ty == type ? 0 : throw args[x].type)
 
-# define ARGINT(x) args[x].v_int
-# define ARGDIR(x) args[x].v_dir
-# define ARGSTR(x) args[x].v_string
-# define ARGENTITY(x) args[x].v_entity
-# define ARGLOCATION(x) args[x].v_location
-# define ARG_AREA(x) args[x].v_area
-# define ARGSPELL(x) args[x].v_spell
-# define ARGINVOCATION(x) args[x].v_invocation
+# define ARG_INT(x)         (*(TY::INT        == args[x].ty ? throw args[x].ty : &args[x].v_int))
+# define ARG_DIR(x)         (*(TY::DIR        == args[x].ty ? throw args[x].ty : &args[x].v_dir))
+# define ARG_STR(x)         (*(TY::STRING     == args[x].ty ? throw args[x].ty : &args[x].v_string))
+# define ARG_ENTITY(x)      (*(TY::ENTITY     == args[x].ty ? throw args[x].ty : &args[x].v_entity))
+# define ARG_LOCATION(x)    (*(TY::LOCATION   == args[x].ty ? throw args[x].ty : &args[x].v_location))
+# define ARG_AREA(x)        (*(TY::AREA       == args[x].ty ? throw args[x].ty : &args[x].v_area))
+# define ARG_SPELL(x)       (*(TY::SPELL      == args[x].ty ? throw args[x].ty : &args[x].v_spell))
+# define ARG_INVOCATION(x)  (*(TY::INVOCATION == args[x].ty ? throw args[x].ty : &args[x].v_invocation))
 
-# define RESULTINT result->v_int
-# define RESULTDIR result->v_dir
-# define RESULTSTR result->v_string
-# define RESULTENTITY result->v_entity
-# define RESULTLOCATION result->v_location
-# define RESULT_AREA result->v_area
-# define RESULTSPELL result->v_spell
-# define RESULTINVOCATION result->v_invocation
+# define ARG_PC(x)      (ARG_ENTITY(x)->type != BL_PC ? NULL : static_cast<MapSessionData *>(ARG_ENTITY(x)))
+# define ARG_NPC(x)     (ARG_ENTITY(x)->type != BL_NPC ? NULL : static_cast<struct npc_data *>(ARG_ENTITY(x)))
+# define ARG_MOB(x)     (ARG_ENTITY(x)->type != BL_MOB ? NULL : static_cast<struct mob_data *>(ARG_ENTITY(x)))
 
-# define TY(x) args[x].ty
-# define ETY(x) ARGENTITY(x)->type
-
-# define ARGPC(x)    static_cast<MapSessionData *>(ARGENTITY(x))
-# define ARGNPC(x)   static_cast<struct npc_data *>(ARGENTITY(x))
-# define ARGMOB(x)   static_cast<struct mob_data *>(ARGENTITY(x))
-
-# define ARG_MAY_BE_AREA(x) (TY(x) == TY::AREA || TY(x) == TY::LOCATION)
+# define ARG_MAY_BE_AREA(x) (args[x].ty == TY::AREA || args[x].ty == TY::LOCATION)
 
 #endif // MAGIC_EXPR_HPP

@@ -163,7 +163,7 @@ void npc_event_timer(timer_id, tick_t, uint32_t id, char *data)
  * 全てのNPCのOn*イベント実行
  *------------------------------------------
  */
-static void npc_event_doall_sub(db_key_t key, db_val_t data, int *c, const char *name, int rid, int argc, argrec_t *argv)
+static void npc_event_doall_sub(db_key_t key, db_val_t data, int *c, const char *name, int rid, int argc, ArgRec *argv)
 {
     const char *p = key.s;
     struct event_data *ev;
@@ -173,13 +173,12 @@ static void npc_event_doall_sub(db_key_t key, db_val_t data, int *c, const char 
 
     if ((p = strchr(p, ':')) && p && strcasecmp(name, p) == 0)
     {
-        run_script_l(ev->nd->scr.script, ev->pos, rid, ev->nd->id, argc,
-                      argv);
+        run_script_l(ev->nd->scr.script, ev->pos, rid, ev->nd->id, argc, argv);
         (*c)++;
     }
 }
 
-int npc_event_doall_l(const char *name, int rid, int argc, argrec_t *args)
+int npc_event_doall_l(const char *name, int rid, int argc, ArgRec *args)
 {
     int c = 0;
     char buf[64] = "::";
@@ -190,7 +189,7 @@ int npc_event_doall_l(const char *name, int rid, int argc, argrec_t *args)
     return c;
 }
 
-static void npc_event_do_sub(db_key_t key, db_val_t data, int *c, const char *name, int rid, int argc, argrec_t *argv)
+static void npc_event_do_sub(db_key_t key, db_val_t data, int *c, const char *name, int rid, int argc, ArgRec *argv)
 {
     const char *p = key.s;
     struct event_data *ev;
@@ -200,13 +199,12 @@ static void npc_event_do_sub(db_key_t key, db_val_t data, int *c, const char *na
 
     if (p && strcasecmp(name, p) == 0)
     {
-        run_script_l(ev->nd->scr.script, ev->pos, rid, ev->nd->id, argc,
-                      argv);
+        run_script_l(ev->nd->scr.script, ev->pos, rid, ev->nd->id, argc, argv);
         (*c)++;
     }
 }
 
-int npc_event_do_l(const char *name, int rid, int argc, argrec_t *args)
+int npc_event_do_l(const char *name, int rid, int argc, ArgRec *args)
 {
     int c = 0;
 
@@ -1755,14 +1753,13 @@ static int npc_parse_mapflag(char *w1, char *, char *w3, char *w4)
     return 0;
 }
 
-struct npc_data *npc_spawn_text(int m, int x, int y,
-                                 int npc_class, const char *name, const char *message)
+struct npc_data *npc_spawn_text(location_t loc, int npc_class, const char *name, const char *message)
 {
     struct npc_data_message *retval = new npc_data_message;
     retval->id = npc_get_new_npc_id();
-    retval->x = x;
-    retval->y = y;
-    retval->m = m;
+    retval->x = loc.x;
+    retval->y = loc.y;
+    retval->m = loc.m;
 
     strncpy(retval->name, name, 23);
     strncpy(retval->exname, name, 23);

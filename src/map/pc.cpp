@@ -252,7 +252,7 @@ static void pc_counttargeted_sub(BlockList *bl, uint32_t id, int *c,
     {
         struct mob_data *md = static_cast<struct mob_data *>(bl);
         if (md && md->target_id == id && md->timer
-            && md->state.state == MS_ATTACK && md->target_lv >= target_lv)
+            && md->state.state == MS::ATTACK && md->target_lv >= target_lv)
 
             (*c)++;
         //printf("md->target_lv:%d, target_lv:%d\n",((struct mob_data *)bl)->target_lv,target_lv);
@@ -693,7 +693,7 @@ int pc_authok(int id, int login_id2, time_t connect_until_time,
         }
     }
 
-    sd->auto_ban_info.in_progress = 0;
+    sd->state.auto_ban_in_progress = 0;
 
     // Initialize antispam vars
     sd->chat_reset_due = sd->chat_lines_in = sd->chat_total_repeats =
@@ -915,22 +915,20 @@ int pc_calcstatus(MapSessionData *sd, int first)
                     && sd->status.inventory[idx].card[0] != 0x00fe
                     && sd->status.inventory[idx].card[0] != static_cast<short>(0xff00))
                 {
-                    int j;
-                    for (j = 0; j < sd->inventory_data[idx]->slot; j++)
+                    for (int j = 0; j < sd->inventory_data[idx]->slot; j++)
                     {           // カード
                         int c = sd->status.inventory[idx].card[j];
                         if (c > 0)
                         {
-                            argrec_t arg[2];
-                            arg[0].name = "@slotId";
-                            arg[0].v.i = i;
-                            arg[1].name = "@itemId";
-                            arg[1].v.i = sd->inventory_data[idx]->nameid;
+                            ArgRec arg[] =
+                            {
+                                { "@slotId", i },
+                                { "@itemId", sd->inventory_data[idx]->nameid }
+                            };
                             if (i == 8
                                 && sd->status.inventory[idx].equip == 0x20)
                                 sd->state.lr_flag = 1;
-                            run_script_l(itemdb_equipscript(c), 0, sd->id,
-                                        0, 2, arg);
+                            run_script_l(itemdb_equipscript(c), 0, sd->id, 0, ARRAY_SIZEOF(arg), arg);
                             sd->state.lr_flag = 0;
                         }
                     }
@@ -946,14 +944,14 @@ int pc_calcstatus(MapSessionData *sd, int first)
                     for (j = 0; j < sd->inventory_data[idx]->slot; j++)
                     {           // カード
                         int c = sd->status.inventory[idx].card[j];
-                        if (c > 0) {
-                            argrec_t arg[2];
-                            arg[0].name = "@slotId";
-                            arg[0].v.i = i;
-                            arg[1].name = "@itemId";
-                            arg[1].v.i = sd->inventory_data[idx]->nameid;
-                            run_script_l(itemdb_equipscript(c), 0, sd->id,
-                                        0, 2, arg);
+                        if (c > 0)
+                        {
+                            ArgRec arg[] =
+                            {
+                                { "@slotId", i },
+                                { "@itemId", sd->inventory_data[idx]->nameid }
+                            };
+                            run_script_l(itemdb_equipscript(c), 0, sd->id, 0, ARRAY_SIZEOF(arg), arg);
                         }
                     }
                 }
@@ -1012,23 +1010,22 @@ int pc_calcstatus(MapSessionData *sd, int first)
                     sd->attackrange_ += sd->inventory_data[idx]->range;
                     sd->state.lr_flag = 1;
                     {
-                        argrec_t arg[2];
-                        arg[0].name = "@slotId";
-                        arg[0].v.i = i;
-                        arg[1].name = "@itemId";
-                        arg[1].v.i = sd->inventory_data[idx]->nameid;
-                        run_script_l(sd->inventory_data[idx]->equip_script, 0,
-                                      sd->id, 0, 2, arg);
+                        ArgRec arg[] =
+                        {
+                            { "@slotId", i },
+                            { "@itemId", sd->inventory_data[idx]->nameid }
+                        };
+                        run_script_l(sd->inventory_data[idx]->equip_script, 0, sd->id, 0, ARRAY_SIZEOF(arg), arg);
                     }
                     sd->state.lr_flag = 0;
                 }
                 else
                 {               //二刀流武器以外
-                    argrec_t arg[2];
-                    arg[0].name = "@slotId";
-                    arg[0].v.i = i;
-                    arg[1].name = "@itemId";
-                    arg[1].v.i = sd->inventory_data[idx]->nameid;
+                    ArgRec arg[] =
+                    {
+                        { "@slotId", i },
+                        { "@itemId", sd->inventory_data[idx]->nameid }
+                    };
                     sd->watk += sd->inventory_data[idx]->atk;
                     sd->watk2 += (r = sd->status.inventory[idx].refine) * // 精錬攻撃力
                         refinebonus[wlv][0];
@@ -1041,22 +1038,19 @@ int pc_calcstatus(MapSessionData *sd, int first)
                         wele = (sd->status.inventory[idx].card[1] & 0x0f);    // 属 性
                     }
                     sd->attackrange += sd->inventory_data[idx]->range;
-                    run_script_l(sd->inventory_data[idx]->equip_script, 0,
-                                  sd->id, 0, 2, arg);
+                    run_script_l(sd->inventory_data[idx]->equip_script, 0, sd->id, 0, ARRAY_SIZEOF(arg), arg);
                 }
             }
             else if (sd->inventory_data[idx]->type == 5)
             {
-                argrec_t arg[2];
-                arg[0].name = "@slotId";
-                arg[0].v.i = i;
-                arg[1].name = "@itemId";
-                arg[1].v.i = sd->inventory_data[idx]->nameid;
+                ArgRec arg[] =
+                {
+                    { "@slotId", i },
+                    { "@itemId", sd->inventory_data[idx]->nameid }
+                };
                 sd->watk += sd->inventory_data[idx]->atk;
-                refinedef +=
-                    sd->status.inventory[idx].refine * refinebonus[0][0];
-                run_script_l(sd->inventory_data[idx]->equip_script, 0,
-                              sd->id, 0, 2, arg);
+                refinedef += sd->status.inventory[idx].refine * refinebonus[0][0];
+                run_script_l(sd->inventory_data[idx]->equip_script, 0, sd->id, 0, ARRAY_SIZEOF(arg), arg);
             }
         }
     }
@@ -1074,14 +1068,13 @@ int pc_calcstatus(MapSessionData *sd, int first)
         idx = sd->equip_index[10];
         if (sd->inventory_data[idx])
         {                       //まだ属性が入っていない
-            argrec_t arg[2];
-            arg[0].name = "@slotId";
-            arg[0].v.i = i;
-            arg[1].name = "@itemId";
-            arg[1].v.i = sd->inventory_data[idx]->nameid;
+            ArgRec arg[] =
+            {
+                { "@slotId", i },
+                { "@itemId", sd->inventory_data[idx]->nameid }
+            };
             sd->state.lr_flag = 2;
-            run_script_l(sd->inventory_data[idx]->equip_script, 0, sd->id,
-                        0, 2, arg);
+            run_script_l(sd->inventory_data[idx]->equip_script, 0, sd->id, 0, ARRAY_SIZEOF(arg), arg);
             sd->state.lr_flag = 0;
             sd->arrow_atk += sd->inventory_data[idx]->atk;
         }
@@ -2335,7 +2328,7 @@ int pc_setpos(MapSessionData *sd, const Point& point_org, BeingRemoveType clrtyp
     int y = point.y;
     if (x < 0 || x >= maps[m].xs || y < 0 || y >= maps[m].ys)
         x = y = 0;
-    if ((x == 0 && y == 0) || (c = read_gat(m, x, y)) == 1 || c == 5)
+    if ((x == 0 && y == 0) || (c = read_gat(m, x, y)) == 1 )
     {
         if (x || y)
         {
@@ -2346,7 +2339,7 @@ int pc_setpos(MapSessionData *sd, const Point& point_org, BeingRemoveType clrtyp
             x = MRAND(maps[m].xs - 2) + 1;
             y = MRAND(maps[m].ys - 2) + 1;
         }
-        while ((c = read_gat(m, x, y)) == 1 || c == 5);
+        while ((c = read_gat(m, x, y)) == 1 );
     }
 
     if (sd->mapname[0] && sd->prev != NULL)
@@ -3685,15 +3678,14 @@ int pc_damage(BlockList *src, MapSessionData *sd,
     if (src && src->type == BL_PC)
     {
         // [Fate] PK death, trigger scripts
-        argrec_t arg[3];
-        arg[0].name = "@killerrid";
-        arg[0].v.i = src->id;
-        arg[1].name = "@victimrid";
-        arg[1].v.i = sd->id;
-        arg[2].name = "@victimlvl";
-        arg[2].v.i = sd->status.base_level;
-        npc_event_doall_l("OnPCKilledEvent", sd->id, 3, arg);
-        npc_event_doall_l("OnPCKillEvent", src->id, 3, arg);
+        ArgRec arg[] =
+        {
+            { "@killerrid", src->id },
+            { "@victimrid", sd->id },
+            { "@victimlvl", sd->status.base_level }
+        };
+        npc_event_doall_l("OnPCKilledEvent", sd->id, ARRAY_SIZEOF(arg), arg);
+        npc_event_doall_l("OnPCKillEvent", src->id, ARRAY_SIZEOF(arg), arg);
     }
     npc_event_doall_l("OnPCDieEvent", sd->id, 0, NULL);
 

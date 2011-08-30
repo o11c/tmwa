@@ -3362,21 +3362,18 @@ void builtin_getexp(struct script_state *st)
  */
 void builtin_monster(struct script_state *st)
 {
-    int mob_class, amount, x, y;
-    const char *str, *event = "";
-
     fixed_string<16> map;
     map.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
-    x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
-    y = conv_num(st, &(st->stack->stack_data[st->start + 4]));
-    str = conv_str(st, &(st->stack->stack_data[st->start + 5]));
-    mob_class = conv_num(st, &(st->stack->stack_data[st->start + 6]));
-    amount = conv_num(st, &(st->stack->stack_data[st->start + 7]));
+    uint16_t x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
+    uint16_t y = conv_num(st, &(st->stack->stack_data[st->start + 4]));
+    const char *str = conv_str(st, &(st->stack->stack_data[st->start + 5]));
+    int mob_class = conv_num(st, &(st->stack->stack_data[st->start + 6]));
+    int amount = conv_num(st, &(st->stack->stack_data[st->start + 7]));
+    const char *event = "";
     if (st->end > st->start + 8)
         event = conv_str(st, &(st->stack->stack_data[st->start + 8]));
 
-    mob_once_spawn(map_id2sd(st->rid), map, x, y, str, mob_class, amount,
-                    event);
+    mob_once_spawn(map_id2sd(st->rid), {map, x, y}, str, mob_class, amount, event);
 }
 
 /*==========================================
@@ -4554,8 +4551,7 @@ void builtin_getitemname(struct script_state *st)
 
 void builtin_getspellinvocation(struct script_state *st)
 {
-    POD_string name;
-    name.init();
+    POD_string name = NULL;
     name.assign(conv_str(st, &(st->stack->stack_data[st->start + 2])));
 
     POD_string invocation = magic_find_invocation(name);
@@ -4569,8 +4565,7 @@ void builtin_getspellinvocation(struct script_state *st)
 
 void builtin_getanchorinvocation(struct script_state *st)
 {
-    POD_string name;
-    name.init();
+    POD_string name = NULL;
     name.assign(conv_str(st, &(st->stack->stack_data[st->start + 2])));
 
     POD_string invocation = magic_find_anchor_invocation(name);
@@ -5757,8 +5752,7 @@ int run_script(const char *script, int pos, int rid, int oid)
     return run_script_l(script, pos, rid, oid, 0, NULL);
 }
 
-int run_script_l(const char *script, int pos, int rid, int oid,
-                 int args_nr, argrec_t *args)
+int run_script_l(const char *script, int pos, int rid, int oid, int args_nr, ArgRec *args)
 {
     struct script_stack stack;
     struct script_state st;
@@ -5794,9 +5788,9 @@ int run_script_l(const char *script, int pos, int rid, int oid,
     for (i = 0; i < args_nr; i++)
     {
         if (args[i].name[strlen(args[i].name) - 1] == '$')
-            pc_setregstr(sd, add_str(args[i].name), args[i].v.s);
+            pc_setregstr(sd, add_str(args[i].name), args[i].s);
         else
-            pc_setreg(sd, add_str(args[i].name), args[i].v.i);
+            pc_setreg(sd, add_str(args[i].name), args[i].i);
     }
     run_script_main(script, pos, rid, oid, &st, rootscript);
 

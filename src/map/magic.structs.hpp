@@ -9,6 +9,8 @@
 # include "../lib/string.hpp"
 # include "../lib/darray.hpp"
 # include "../lib/enum.hpp"
+# include "../lib/fixed_stack.hpp"
+# include "../lib/placed.hpp"
 
 # include <vector>
 # include <map>
@@ -17,6 +19,8 @@
 
 struct spell_t;
 struct expr_t;
+struct fun_t;
+struct op_t;
 
 enum class SpellArgType
 {
@@ -42,7 +46,7 @@ enum class TY : uint8_t
 struct location_t
 {
     int m;
-    int x, y;
+    uint16_t x, y;
 };
 
 enum class AreaType : uint8_t
@@ -60,7 +64,7 @@ struct area_t
         struct
         {
             location_t loc;
-            int width, height;
+            unsigned int width, height;
         } a_rect;
         area_t *a_union[2];
     };
@@ -81,6 +85,11 @@ struct area_t
     area_t(const location_t&, int, int);
     // bar (whatever that is)
     area_t(const location_t&, int, int, Direction);
+
+    // in magic-expr.cpp
+    location_t rect(unsigned int& w, unsigned int& h);
+    location_t random_location();
+    bool contains(location_t);
 };
 
 struct val_t
@@ -149,7 +158,9 @@ struct expr_t
         e_area_t e_area;
         struct
         {
-            int id, line_nr, column;
+            // *grumble* why does it need to know the name?
+            const std::pair<const std::string, fun_t> *fun;
+            int line_nr, column;
             int args_nr;
             expr_t *args[MAX_ARGS];
         } e_funapp;
@@ -202,14 +213,14 @@ struct effect_t
         } e_assign;
         struct
         {
-            int id;
+            int var_id;
             expr_t *area;
             effect_t *body;
             ForEach_FilterType filter;
         } e_foreach;
         struct
         {
-            int id;
+            int var_id;
             expr_t *start, *stop;
             effect_t *body;
         } e_for;
@@ -222,7 +233,7 @@ struct effect_t
         const char *e_script;
         struct
         {
-            int id;
+            const std::pair<const std::string, op_t> *op;
             int args_nr;
             int line_nr, column;
             expr_t *args[MAX_ARGS];
@@ -365,16 +376,14 @@ struct cont_activation_record_t
     {
         struct
         {
-            int id;
+            int var_id;
             TY ty;
             effect_t *body;
-            int entities_nr;
-            int *entities;
-            int idx;
+            std::vector<int> entities;
         } c_foreach;
         struct
         {
-            int id;
+            int var_id;
             effect_t *body;
             int current;
             int stop;
@@ -383,10 +392,11 @@ struct cont_activation_record_t
         {
             int args_nr;
             DArray<int> formals;
-            val_t *old_actuals;
+            DArray<val_t> old_actuals;
         } c_proc;
     };
     ContStackType ty;
+
     cont_activation_record_t() : ty(ContStackType::FOR) {}
     cont_activation_record_t(ContStackType type, effect_t *rl) : return_location(rl), ty(type) {}
     cont_activation_record_t(const cont_activation_record_t& r) : return_location(r.return_location), ty(r.ty)
@@ -404,11 +414,20 @@ struct cont_activation_record_t
             break;
         }
     }
+    // this destructor only destructs the appropriate union member
     ~cont_activation_record_t()
     {
-        if (ty == ContStackType::PROC)
+        switch(ty)
         {
-            c_proc.formals.~DArray<int>();
+        case ContStackType::FOREACH:
+            destruct(c_foreach);
+            break;
+        case ContStackType::FOR:
+            destruct(c_for);
+            break;
+        case ContStackType::PROC:
+            destruct(c_proc);
+            break;
         }
     }
 };
@@ -418,6 +437,11 @@ struct status_change_ref_t
     int sc_type;
     int bl_id;
 };
+
+inline bool operator ==(const status_change_ref_t& lhs, const status_change_ref_t& rhs)
+{
+    return lhs.sc_type == rhs.sc_type && lhs.bl_id == rhs.bl_id;
+}
 
 SHIFT_ENUM(InvocationFlag, uint8_t)
 {
@@ -441,8 +465,7 @@ struct invocation_t : public BlockList
     // spell timer, if any
     timer_id timer;
 
-    int stack_size;
-    cont_activation_record_t stack[MAX_STACK_SIZE];
+    fixed_stack<cont_activation_record_t, MAX_STACK_SIZE> stack;
 
     // Script position; if nonzero, resume the script we were running.
     int script_pos;
@@ -453,10 +476,12 @@ struct invocation_t : public BlockList
     effect_t *end_effect;
 
     // Status change references:  for status change updates, keep track of whom we updated where
-    int status_change_refs_nr;
-    status_change_ref_t *status_change_refs;
+    std::vector<status_change_ref_t> status_change_refs;
 
     invocation_t() : BlockList(BL_SPELL) {}
+    invocation_t(const invocation_t&) = delete;
+    // in magic-base.cpp
+    invocation_t(invocation_t* rhs);
 };
 
 // Fake default environment

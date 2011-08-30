@@ -51,7 +51,7 @@ namespace magic_conf
     std::map<POD_string, spell_t *> spells;
 
     std::map<POD_string, POD_string> anchor_names;
-    std::map<POD_string, expr_t *> anchors;
+    std::map<POD_string, area_t *> anchors;
 };
 
 env_t magic_default_env = { NULL };
@@ -83,7 +83,7 @@ POD_string magic_find_anchor_invocation(POD_string anchor_name)
     return NULL;
 }
 
-expr_t *magic_find_anchor(POD_string name)
+area_t *magic_find_anchor(POD_string name)
 {
     auto it = magic_conf::anchors.find(name);
     if (it != magic_conf::anchors.end())
@@ -355,7 +355,6 @@ invocation_t *spell_instantiate(effect_set_t *effect_set, env_t *env)
 
     retval->caster = env->VAR(Var::CASTER).v_int;
     retval->spell = env->VAR(Var::SPELL).v_spell;
-    retval->stack_size = 0;
     retval->current_effect = effect_set->effect;
     retval->trigger_effect = effect_set->at_trigger;
     retval->end_effect = effect_set->at_end;
@@ -372,30 +371,28 @@ invocation_t *spell_instantiate(effect_set_t *effect_set, env_t *env)
     return retval;
 }
 
-invocation_t *spell_clone_effect(invocation_t *base)
+invocation_t::invocation_t(invocation_t* rhs) : BlockList(*rhs),
+    flags(),
+    env(new env_t(*rhs->env)),
+    spell(rhs->spell),
+    caster(rhs->caster),
+    subject(0),
+    timer(0),
+    stack(),
+    script_pos(0),
+    current_effect(rhs->trigger_effect),
+    trigger_effect(rhs->trigger_effect),
+    end_effect(NULL),
+    status_change_refs()
 {
-    invocation_t *retval = new invocation_t(*base);
-    env_t *env = retval->env = new env_t(*retval->env);
+    // unset some parent fields first
+    // (alternatively, we could have used the other constructor and set m,x,y)
+    id = 0;
+    prev = NULL;
+    next = NULL;
 
-    retval->current_effect = retval->trigger_effect;
-
-    retval->end_effect = NULL;
-    retval->script_pos = 0;
-    retval->stack_size = 0;
-    retval->timer = 0;
-    retval->subject = 0;
-    retval->status_change_refs_nr = 0;
-    retval->status_change_refs = NULL;
-    retval->flags = InvocationFlag();
-
-    retval->id = 0;
-    retval->prev = NULL;
-    retval->next = NULL;
-
-    retval->id = map_addobject(retval);
-    set_invocation(env->vars[Var::INVOCATION], retval);
-
-    return retval;
+    id = map_addobject(this);
+    set_invocation(env->vars[Var::INVOCATION], this);
 }
 
 void spell_bind(MapSessionData *subject, invocation_t *invocation)

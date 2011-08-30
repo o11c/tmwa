@@ -4,6 +4,9 @@
 #include "../common/mmo.hpp"
 #include "../common/timer.structs.hpp"
 
+#include "magic.structs.hpp"
+#include "script.structs.hpp"
+
 #define START_NPC_NUM 110000000
 
 #define WARP_CLASS 45
@@ -31,17 +34,15 @@ int npc_get_new_npc_id(void);
  * \param message The message to speak.  If message is NULL, the NPC will not do anything at all.
  */
 // message is strdup'd within
-struct npc_data *npc_spawn_text(int m, int x, int y, int class_, const char *name, const char *message);
+struct npc_data *npc_spawn_text(location_t loc, int npc_class, const char *name, const char *message);
 
 void npc_addsrcfile(char *);
 int do_init_npc(void);
 int npc_event_do_oninit(void);
 int npc_do_ontimer(int, MapSessionData *, bool);
 
-int npc_event_doall_l(const char *name, int rid, int argc,
-                       struct argrec *argv);
-int npc_event_do_l(const char *name, int rid, int argc,
-                    struct argrec *argv);
+int npc_event_doall_l(const char *name, int rid, int argc, ArgRec *argv);
+int npc_event_do_l(const char *name, int rid, int argc, ArgRec *argv);
 #define npc_event_doall(name) npc_event_doall_l(name, 0, 0, NULL)
 #define npc_event_do(name) npc_event_do_l(name, 0, 0, NULL)
 

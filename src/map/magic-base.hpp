@@ -22,7 +22,7 @@ POD_string magic_find_anchor_invocation(POD_string teleport_location) __attribut
  */
 void magic_add_component(component_t *& component_holder, int id, int count);
 
-expr_t *magic_find_anchor(POD_string name) __attribute__((pure));
+area_t *magic_find_anchor(POD_string name) __attribute__((pure));
 
 /**
  * The parameter `param' must have been dynamically allocated; ownership is transferred to the resultant env_t.
@@ -41,11 +41,6 @@ void spell_bind(MapSessionData *subject, invocation_t *invocation);
 
 void spell_unbind(MapSessionData *subject, invocation_t *invocation);
 
-/**
- * Clones a spell to run the at_effect field
- */
-invocation_t *spell_clone_effect(invocation_t *source);
-
 spell_t *magic_find_spell(POD_string invocation) __attribute__((pure));
 
 void spell_update_location(invocation_t *invocation);
@@ -62,7 +57,7 @@ namespace magic_conf
     extern std::map<POD_string, spell_t *> spells;
 
     extern std::map<POD_string, POD_string> anchor_names;
-    extern std::map<POD_string, expr_t *> anchors;
+    extern std::map<POD_string, area_t *> anchors;
 };
 
 inline val_t& env_t::VAR(int i)

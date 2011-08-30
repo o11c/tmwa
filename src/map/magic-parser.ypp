@@ -15,6 +15,7 @@
 #include "magic.hpp"
 #include "magic-base.hpp"
 #include "magic-expr.hpp"
+#include "magic-stmt.hpp"
 #include "magic-lexer.hpp"
 #include "script.hpp"
 
@@ -25,6 +26,7 @@ static int intern_id(POD_string id_name);
 static expr_t *fun_expr(const char *name, int args_nr, expr_t **args, int line, int column);
 static expr_t *dot_expr(expr_t *lhs, int id);
 
+// Note: the name must be synchronized with the 'functions' in magic-expr.cpp
 #define BIN_EXPR(x, name, arg1, arg2, line, column) { expr_t *e[2]; e[0] = arg1; e[1] = arg2; x = fun_expr(name, 2, e, line, column); }
 
 static void magic_frontend_error(const char *msg);
@@ -379,82 +381,82 @@ value
     }
 | expr '+' expr
     {
-        BIN_EXPR($$, "+", $1, $3, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "add", $1, $3, @1.first_line, @1.first_column);
     }
 | expr '-' expr
     {
-        BIN_EXPR($$, "-", $1, $3, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "sub", $1, $3, @1.first_line, @1.first_column);
     }
 | expr '*' expr
     {
-        BIN_EXPR($$, "*", $1, $3, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "mul", $1, $3, @1.first_line, @1.first_column);
     }
 | expr '%' expr
     {
-        BIN_EXPR($$, "%", $1, $3, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "mod", $1, $3, @1.first_line, @1.first_column);
     }
 | expr '/' expr
     {
-        BIN_EXPR($$, "/", $1, $3, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "div", $1, $3, @1.first_line, @1.first_column);
     }
 | expr '<' expr
     {
         // notice the args are reversed
-        BIN_EXPR($$, ">", $3, $1, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "gt", $3, $1, @1.first_line, @1.first_column);
     }
 | expr '>' expr
     {
-        BIN_EXPR($$, ">", $1, $3, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "gt", $1, $3, @1.first_line, @1.first_column);
     }
 | expr '&' expr
     {
-        BIN_EXPR($$, "&", $1, $3, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "bitand", $1, $3, @1.first_line, @1.first_column);
     }
 | expr '^' expr
     {
-        BIN_EXPR($$, "^", $1, $3, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "bitxor", $1, $3, @1.first_line, @1.first_column);
     }
 | expr '|' expr
     {
-        BIN_EXPR($$, "|", $1, $3, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "bitor", $1, $3, @1.first_line, @1.first_column);
     }
 | expr SHL expr
     {
-        BIN_EXPR($$, "<<", $1, $3, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "bitshl", $1, $3, @1.first_line, @1.first_column);
     }
 | expr SHR expr
     {
-        BIN_EXPR($$, ">>", $1, $3, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "bitshr", $1, $3, @1.first_line, @1.first_column);
     }
 | expr LTE expr
     {
         // notice the args are reversed
-        BIN_EXPR($$, ">=", $3, $1, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "gte", $3, $1, @1.first_line, @1.first_column);
     }
 | expr GTE expr
     {
-        BIN_EXPR($$, ">=", $1, $3, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "gte", $1, $3, @1.first_line, @1.first_column);
     }
 | expr ANDAND expr
     {
-        BIN_EXPR($$, "&&", $1, $3, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "and", $1, $3, @1.first_line, @1.first_column);
     }
 | expr OROR expr
     {
-        BIN_EXPR($$, "||", $1, $3, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "or", $1, $3, @1.first_line, @1.first_column);
     }
 | expr EQ expr
     {
-        BIN_EXPR($$, "=", $1, $3, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "eq", $1, $3, @1.first_line, @1.first_column);
     }
 | expr '=' expr
     {
-        BIN_EXPR($$, "=", $1, $3, @1.first_line, @1.first_column);
+        BIN_EXPR($$, "eq", $1, $3, @1.first_line, @1.first_column);
     }
 | expr NEQ expr
     {
         BIN_EXPR($$, "=", $1, $3, @1.first_line, @1.first_column);
-        // how does this work?
+        // how does this work with the "address-of"?
         $$ = fun_expr("not", 1, &$$, @1.first_line, @1.first_column);
     }
 | ID '(' arg_list ')'
@@ -814,7 +816,7 @@ effect:
 | FOREACH selection ID IN expr DO effect
     {
         $$ = new_effect(EffectType::FOREACH);
-        $$->e_foreach.id = intern_id($3);
+        $$->e_foreach.var_id = intern_id($3);
         $$->e_foreach.area = $5;
         $$->e_foreach.body = $7;
         $$->e_foreach.filter = $2;
@@ -822,7 +824,7 @@ effect:
 | FOR ID '=' expr TO expr DO effect
     {
         $$ = new_effect(EffectType::FOR);
-        $$->e_for.id = intern_id($2);
+        $$->e_for.var_id = intern_id($2);
         $$->e_for.start = $4;
         $$->e_for.stop = $6;
         $$->e_for.body = $8;
@@ -936,7 +938,10 @@ void add_teleport_anchor(POD_string name, POD_string invocation, expr_t *locatio
              name.c_str());
     }
 
-    magic_conf::anchors[invocation] = location;
+    val_t val = magic_default_env.magic_eval(location);
+    if (val.ty != TY::AREA)
+        abort();
+    magic_conf::anchors[invocation] = val.v_area;
 }
 
 
@@ -960,37 +965,26 @@ static expr_t *dot_expr(expr_t *expr, int id)
 
 static expr_t *fun_expr(const char *name, int args_nr, expr_t **args, int line, int column)
 {
-    int id;
-    const fun_t *fun = magic_get_fun(name, &id);
+    const std::pair<const std::string, fun_t> *fun = magic_get_fun(name);
 
     if (!fun)
     {
         fail(line, column, "Unknown function `%s'\n", name);
     }
-    else if (strlen(fun->signature) != args_nr)
+    if (strlen(fun->second.signature) != args_nr)
     {
         fail(line, column, "Incorrect number of arguments to function `%s': Expected %d, found %d\n",
-             name, strlen(fun->signature), args_nr);
-        fun = NULL;
+             name, strlen(fun->second.signature), args_nr);
     }
 
-    expr_t *expr;
-    if (fun)
-    {
-        expr = magic_new_expr(ExprType::FUNAPP);
-        expr->e_funapp.line_nr = line;
-        expr->e_funapp.column = column;
-        expr->e_funapp.id = id;
-        expr->e_funapp.args_nr = args_nr;
+    expr_t *expr = magic_new_expr(ExprType::FUNAPP);
+    expr->e_funapp.line_nr = line;
+    expr->e_funapp.column = column;
+    expr->e_funapp.fun = fun;
+    expr->e_funapp.args_nr = args_nr;
 
-        for (int i = 0; i < args_nr; i++)
-            expr->e_funapp.args[i] = args[i];
-    }
-    else
-    { /* failure */
-        expr = magic_new_expr(ExprType::VAL);
-        expr->e_val.ty = TY::FAIL;
-    }
+    for (int i = 0; i < args_nr; i++)
+        expr->e_funapp.args[i] = args[i];
 
     return expr;
 }
@@ -1063,31 +1057,23 @@ static effect_t *set_effect_continuation(effect_t *src, effect_t *continuation)
 
 static effect_t *op_effect(const char *name, int args_nr, expr_t **args, int line, int column)
 {
-    int id;
-    effect_t *effect;
-    const op_t *op = magic_get_op(name, &id);
+    const std::pair<const std::string, op_t> *op = magic_get_op(name);
 
     if (!op)
         fail(line, column, "Unknown operation `%s'\n", name);
-    else if (strlen(op->signature) != args_nr)
-    {
-        fail(line, column, "Incorrect number of arguments to operation `%s': Expected %d, found %d\n", name, strlen(op->signature), args_nr);
-        op = NULL;
-    }
+    else if (strlen(op->second.signature) != args_nr)
+        fail(line, column,
+             "Incorrect number of arguments to operation `%s': Expected %d, found %d\n",
+             name, strlen(op->second.signature), args_nr);
 
-    if (op)
-    {
-        effect = new_effect(EffectType::OP);
-        effect->e_op.line_nr = line;
-        effect->e_op.column = column;
-        effect->e_op.id = id;
-        effect->e_op.args_nr = args_nr;
+    effect_t *effect = new_effect(EffectType::OP);
+    effect->e_op.line_nr = line;
+    effect->e_op.column = column;
+    effect->e_op.op = op;
+    effect->e_op.args_nr = args_nr;
 
-        for (int i = 0; i < args_nr; i++)
-            effect->e_op.args[i] = args[i];
-    }
-    else /* failure */
-        effect = new_effect(EffectType::SKIP);
+    for (int i = 0; i < args_nr; i++)
+        effect->e_op.args[i] = args[i];
 
     return effect;
 }
@@ -1161,8 +1147,7 @@ static val_t *find_constant(POD_string name)
 
 static void INTERN_ASSERT(const char *name, int id)
 {
-    POD_string pname;
-    pname.init();
+    POD_string pname = NULL;
     pname.assign(name);
     int zid = intern_id(pname);
     if (zid != id)

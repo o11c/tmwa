@@ -30,7 +30,7 @@ AttackResult battle_weapon_attack(BlockList *bl, BlockList *target, tick_t tick)
 
 int battle_is_unarmed(BlockList *bl) __attribute__((pure));
 Direction battle_get_dir(BlockList *bl);
-int battle_get_lv(BlockList *bl);
+int battle_get_level(BlockList *bl);
 int battle_get_range(BlockList *bl);
 int battle_get_hp(BlockList *bl);
 int battle_get_max_hp(BlockList *bl);

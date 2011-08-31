@@ -37,9 +37,6 @@ int pc_authfail(int);
 
 int pc_equippoint(MapSessionData *sd, int n);
 
-int pc_breakweapon(MapSessionData *sd);  // weapon breaking [Valaris]
-int pc_breakarmor(MapSessionData *sd);   // armor breaking [Valaris]
-
 int pc_checkskill(MapSessionData *sd, int skill_id) __attribute__((pure));
 int pc_checkequip(MapSessionData *sd, int pos);
 
@@ -112,10 +109,8 @@ int pc_readaccountreg(MapSessionData *, const char *) __attribute__((pure));
 int pc_setaccountreg(MapSessionData *, const char *, int);
 int pc_readaccountreg2(MapSessionData *, const char *) __attribute__((pure));
 int pc_setaccountreg2(MapSessionData *, const char *, int);
-int pc_percentrefinery(MapSessionData *sd, struct item *item);
 
-int pc_addeventtimer(MapSessionData *sd, int tick,
-                      const char *name);
+int pc_addeventtimer(MapSessionData *sd, int tick, const char *name);
 int pc_deleventtimer(MapSessionData *sd, const char *name);
 int pc_cleareventtimer(MapSessionData *sd);
 

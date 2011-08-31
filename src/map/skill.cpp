@@ -260,24 +260,12 @@ static void skill_status_change_timer(timer_id tid, tick_t tick, uint32_t id, in
                             md->hp -= hp;
                         }
                     }
-                    sc_data[type].timer =
-                        add_timer(1000 + tick, skill_status_change_timer,
-                                   bl->id, type);
+                    sc_data[type].timer = add_timer(1000 + tick, skill_status_change_timer, bl->id, type);
                 }
             }
             else
-                sc_data[type].timer =
-                    add_timer(2000 + tick, skill_status_change_timer, bl->id,
-                               type);
+                sc_data[type].timer = add_timer(2000 + tick, skill_status_change_timer, bl->id, type);
             break;
-
-        case SC_BROKNWEAPON:
-        case SC_BROKNARMOR:
-            if (sc_data[type].timer == tid)
-                sc_data[type].timer =
-                    add_timer(1000 * 600 + tick, skill_status_change_timer,
-                               bl->id, type);
-            return;
 
         case SC_FLYING_BACKPACK:
             clif_updatestatus(sd, SP_WEIGHT);

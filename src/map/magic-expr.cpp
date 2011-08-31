@@ -639,7 +639,6 @@ bool magic_find_item(val_t args[], int idx, struct item *item, bool *stackable)
 
     memset(item, 0, sizeof(struct item));
     item->nameid = item_data->nameid;
-    item->identify = 1;
 
     return 0;
 }

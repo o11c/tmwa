@@ -1028,11 +1028,6 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
     if (sd->double_rate > 0)
         da = MRAND(100) < sd->double_rate;
 
-    if (sd->overrefine > 0)
-        wd.damage += MPRAND(1, sd->overrefine);
-    if (sd->overrefine_ > 0)
-        wd.damage2 += MPRAND(1, sd->overrefine_);
-
     int cri = 0;
     if (da == 0)
     {
@@ -1331,37 +1326,6 @@ struct Damage battle_calc_weapon_attack(BlockList *src, BlockList *target)
     {
         md = static_cast<struct mob_data *>(src);
         wd = battle_calc_mob_weapon_attack(md, target);
-    }
-    else
-        return wd;
-
-
-    if (battle_config.equipment_breaking && sd
-        && (wd.damage > 0 || wd.damage2 > 0))
-    {
-        if (sd->status.weapon && sd->status.weapon != 11)
-        {
-            int breakrate = 1;
-            if (wd.type == 0x0a)
-                breakrate *= 2;
-            if (breakrate >= 10000 || MRAND(10000) < breakrate * battle_config.equipment_break_rate / 100)
-            {
-                pc_breakweapon(sd);
-                memset(&wd, 0, sizeof(wd));
-            }
-        }
-    }
-
-    if (battle_config.equipment_breaking && target->type == BL_PC
-        && (wd.damage > 0 || wd.damage2 > 0))
-    {
-        int breakrate = 1;
-        if (wd.type == 0x0a)
-            breakrate *= 2;
-        if (breakrate >= 10000 || MRAND(10000) < breakrate * battle_config.equipment_break_rate / 100)
-        {
-            pc_breakarmor(static_cast<MapSessionData *>(target));
-        }
     }
 
     return wd;
@@ -1700,8 +1664,6 @@ int battle_config_read(const char *cfgName)
         battle_config.prevent_logout = 1;   // Added by RoVeRT
         battle_config.maximum_level = 255;  // Added by Valaris
         battle_config.drops_by_luk = 0; // [Valaris]
-        battle_config.equipment_breaking = 0;   // [Valaris]
-        battle_config.equipment_break_rate = 100;   // [Valaris]
         battle_config.pk_mode = 0;  // [Valaris]
         battle_config.multi_level_up = 0;   // [Valaris]
         battle_config.hack_info_GM_level = 60;  // added by [Yor] (default: 60, GM level)
@@ -1809,8 +1771,6 @@ int battle_config_read(const char *cfgName)
             {"maximum_level", &battle_config.maximum_level}, // [Valaris]
             {"drops_by_luk", &battle_config.drops_by_luk},   // [Valaris]
             {"monsters_ignore_gm", &battle_config.monsters_ignore_gm},   // [Valaris]
-            {"equipment_breaking", &battle_config.equipment_breaking},   // [Valaris]
-            {"equipment_break_rate", &battle_config.equipment_break_rate},   // [Valaris]
             {"pk_mode", &battle_config.pk_mode}, // [Valaris]
             {"multi_level_up", &battle_config.multi_level_up},   // [Valaris]
             {"hack_info_GM_level", &battle_config.hack_info_GM_level},   // added by [Yor]

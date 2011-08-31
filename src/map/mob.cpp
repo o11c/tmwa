@@ -2018,7 +2018,7 @@ static void mob_delay_item_drop(timer_id, tick_t, struct delay_item_drop *ditem)
     memset(&temp_item, 0, sizeof(temp_item));
     temp_item.nameid = ditem->nameid;
     temp_item.amount = ditem->amount;
-    temp_item.identify = !itemdb_isequip3(temp_item.nameid);
+    //temp_item.identify = !itemdb_isequip3(temp_item.nameid);
 
     if (battle_config.item_auto_get == 1)
     {

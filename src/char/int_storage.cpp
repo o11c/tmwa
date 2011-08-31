@@ -26,13 +26,14 @@ actually_store:
         if (p->storage_[i].nameid && p->storage_[i].amount)
         {
             fprintf(fp, "%d,%d,%d,"
-                         "%d,%d,%d,%d,"
-                         "%d,%d,%d,%d ",
-                     p->storage_[i].id, p->storage_[i].nameid, p->storage_[i].amount,
-                     p->storage_[i].equip, p->storage_[i].identify,
-                     p->storage_[i].refine,p->storage_[i].attribute,
-                     p->storage_[i].card[0], p->storage_[i].card[1],
-                     p->storage_[i].card[2], p->storage_[i].card[3]);
+                        "%d,%d,%d,%d,"
+                        "%d,%d,%d,%d ",
+                    0/*id*/, p->storage_[i].nameid, p->storage_[i].amount,
+                    p->storage_[i].equip, 0/*identify*/,
+                    0/*refine*/, 0/*attribute*/,
+                    0/*card[0]*/, 0/*card[1]*/,
+                    0/*card[2]*/, 0/*card[3]*/);
+            // Note: in storage, the "broken" field is not stored
         }
     fprintf(fp, "\n");
 }
@@ -58,15 +59,15 @@ static bool storage_fromstr(const char *str, struct storage *p)
 
     for (int i = 0; i < p->storage_amount; i++)
     {
-        if (sscanf(str, "%d,%hd,%hd,"
-                         "%hu,%hhd,%hhd,%hhd,"
-                         "%hd,%hd,%hd,%hd%n",
-                    &p->storage_[i].id, &p->storage_[i].nameid, &p->storage_[i].amount,
-                    &p->storage_[i].equip, &p->storage_[i].identify,
-                    &p->storage_[i].refine, &p->storage_[i].attribute,
-                    &p->storage_[i].card[0], &p->storage_[i].card[1],
-                    &p->storage_[i].card[2], &p->storage_[i].card[3],
-                    &next) != 11)
+        if (sscanf(str, "%*d,%hd,%hd,"
+                        "%hu,%*d,%*d,%*d,"
+                        "%*d,%*d,%*d,%*d%n",
+                   /*id,*/ &p->storage_[i].nameid, &p->storage_[i].amount,
+                   &p->storage_[i].equip, /*identify,*/
+                   /*refine,*/ /*attribute,*/
+                   /*card[0],*/ /*card[1],*/
+                   /*card[2],*/ /*card[3],*/
+                   &next) != 11)
             return 1;
         str += next;
         if (str[0] == ' ')

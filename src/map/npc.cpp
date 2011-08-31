@@ -856,7 +856,6 @@ int npc_buylist(MapSessionData *sd, int n,
             memset(&item_tmp, 0, sizeof(item_tmp));
 
             item_tmp.nameid = item_data->nameid;
-            item_tmp.identify = 1;  // npc販売アイテムは鑑定済み
 
             if (amount > 1
                 && (item_data->type == 4 || item_data->type == 5

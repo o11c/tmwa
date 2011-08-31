@@ -1357,7 +1357,6 @@ int atcommand_item(int fd, MapSessionData *sd,
     {
         struct item item_tmp = {};
         item_tmp.nameid = item_id;
-        item_tmp.identify = 1;
         PickupFail flag = pc_additem(sd, &item_tmp, get_count);
         if (flag != PickupFail::OKAY)
             clif_additem(sd, 0, 0, flag);
@@ -3113,14 +3112,6 @@ int atcommand_char_wipe(int fd, MapSessionData *sd,
         }
     }
 
-    // Give knife and shirt
-    struct item tmpitem = {};
-    tmpitem.nameid = 1201; // knife
-    tmpitem.identify = 1;
-    pc_additem(pl_sd, &tmpitem, 1);
-    tmpitem.nameid = 1202; // shirt
-    pc_additem(pl_sd, &tmpitem, 1);
-
     // Reset stats and skills
     pc_calcstatus(pl_sd, 0);
     pc_resetstate(pl_sd);
@@ -3767,46 +3758,11 @@ int atcommand_character_item_list(int fd, MapSessionData *sd,
         // remove final ', '
         equipstr[strlen(equipstr) - 2] = '\0';
 
-        if (sd->status.inventory[i].refine)
-            sprintf(output, "%d %s %+d (%s %+d, id: %d) %s",
-                     pl_sd->status.inventory[i].amount,
-                     item_data->name,
-                     pl_sd->status.inventory[i].refine,
-                     item_data->jname,
-                     pl_sd->status.inventory[i].refine,
-                     pl_sd->status.inventory[i].nameid, equipstr);
-        else
-            sprintf(output, "%d %s (%s, id: %d) %s",
-                     pl_sd->status.inventory[i].amount,
-                     item_data->name, item_data->jname,
-                     pl_sd->status.inventory[i].nameid, equipstr);
+        sprintf(output, "%d %s (%s, id: %d) %s",
+                pl_sd->status.inventory[i].amount,
+                item_data->name, item_data->jname,
+                pl_sd->status.inventory[i].nameid, equipstr);
         clif_displaymessage(fd, output);
-
-        *output = '\0';
-
-        char outputtmp[200];
-        int counter2 = 0;
-        for (int j = 0; j < item_data->slot; j++)
-        {
-            if (!pl_sd->status.inventory[i].card[j])
-                continue;
-            struct item_data *item_temp = itemdb_search(pl_sd->status.inventory[i].card[j]);
-            if (!item_temp)
-                continue;
-            if (output[0] == '\0')
-                sprintf(outputtmp, " -> (card(s): #%d %s (%s), ", ++counter2,
-                         item_temp->name, item_temp->jname);
-            else
-                sprintf(outputtmp, "#%d %s (%s), ", ++counter2,
-                         item_temp->name, item_temp->jname);
-            strcat(output, outputtmp);
-        }
-        if (output[0])
-        {
-            output[strlen(output) - 2] = ')';
-            output[strlen(output) - 1] = '\0';
-            clif_displaymessage(fd, output);
-        }
     }
 
     if (count == 0)
@@ -3815,7 +3771,7 @@ int atcommand_character_item_list(int fd, MapSessionData *sd,
     {
         char output[200];
         sprintf(output, "%d item(s) found in %d kind(s) of items.",
-                 counter, count);
+                counter, count);
         clif_displaymessage(fd, output);
     }
 
@@ -3869,42 +3825,10 @@ int atcommand_character_storage_list(int fd, MapSessionData *sd,
             sprintf(output, "------ Storage items list of '%s' ------", pl_sd->status.name);
             clif_displaymessage(fd, output);
         }
-        if (stor->storage_[i].refine)
-            sprintf(output, "%d %s %+d (%s %+d, id: %d)", stor->storage_[i].amount,
-                     item_data->name, stor->storage_[i].refine,
-                     item_data->jname, stor->storage_[i].refine,
-                     stor->storage_[i].nameid);
-        else
-            sprintf(output, "%d %s (%s, id: %d)", stor->storage_[i].amount,
-                     item_data->name, item_data->jname,
-                     stor->storage_[i].nameid);
+        sprintf(output, "%d %s (%s, id: %d)", stor->storage_[i].amount,
+                item_data->name, item_data->jname,
+                stor->storage_[i].nameid);
         clif_displaymessage(fd, output);
-        *output = '\0';
-        int counter2 = 0;
-        for (int j = 0; j < item_data->slot; j++)
-        {
-            if (!stor->storage_[i].card[j])
-                continue;
-            struct item_data *item_temp = itemdb_search(stor->storage_[i].card[j]);
-            if (!item_temp)
-                continue;
-            char outputtmp[200];
-            if (output[0] == '\0')
-                sprintf(outputtmp, " -> (card(s): #%d %s (%s), ",
-                         ++counter2, item_temp->name,
-                         item_temp->jname);
-            else
-                sprintf(outputtmp, "#%d %s (%s), ",
-                         ++counter2, item_temp->name,
-                         item_temp->jname);
-            strcat(output, outputtmp);
-        }
-        if (output[0])
-        {
-            output[strlen(output) - 2] = ')';
-            output[strlen(output) - 1] = '\0';
-            clif_displaymessage(fd, output);
-        }
     }
     if (count == 0)
         clif_displaymessage(fd, "No item found in the storage of this player.");
@@ -3912,7 +3836,7 @@ int atcommand_character_storage_list(int fd, MapSessionData *sd,
     {
         char output[200];
         sprintf(output, "%d item(s) found in %d kind(s) of items.",
-                 counter, count);
+                counter, count);
         clif_displaymessage(fd, output);
     }
 

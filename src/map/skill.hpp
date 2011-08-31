@@ -54,14 +54,9 @@ enum
 /// effects
 const int SC_SENDMAX = 256;
 const int SC_SLOWPOISON = 14;
-const int SC_BROKNARMOR = 32;
-const int SC_BROKNWEAPON = 33;
 const int SC_SPEEDPOTION0 = 37;
-
 const int SC_HEALING = 70;
-
 const int SC_POISON = 132;
-
 const int SC_ATKPOT = 185;
 
 // Added for Fate's spells

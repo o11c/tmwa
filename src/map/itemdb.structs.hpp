@@ -5,8 +5,6 @@ struct item_data
 {
     int nameid;
     char name[24], jname[24];
-    char prefix[24], suffix[24];
-    char cardillustname[64];
     int value_buy;
     int value_sell;
     int type;
@@ -17,11 +15,11 @@ struct item_data
     int def;
     int range;
     int magic_bonus;
-    int slot;
     int look;
+    /// Base level require to equip this
     int elv;
+    /// "Weapon level", used in damage calculations
     int wlv;
-    int refine;
     const char *use_script;
     const char *equip_script;
     struct

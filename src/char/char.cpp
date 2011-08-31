@@ -89,9 +89,6 @@ struct mmo_charstatus *char_dat;
 int char_num, char_max;
 int max_connect_user = 0;
 int autosave_interval = DEFAULT_AUTOSAVE_INTERVAL;
-int start_zeny = 500;
-int start_weapon = 1201;
-int start_armor = 1202;
 
 // Initial position (set it in conf file)
 Point start_point;
@@ -189,23 +186,22 @@ static void mmo_char_tofile(FILE *fp, struct mmo_charstatus *p)
         if (p->memo_point[i].map[0])
         {
             fprintf(fp, "%s,%d,%d ", &p->memo_point[i].map,
-                     p->memo_point[i].x, p->memo_point[i].y);
+                    p->memo_point[i].x, p->memo_point[i].y);
         }
     fprintf(fp, "\t");
 
     for (int i = 0; i < MAX_INVENTORY; i++)
         if (p->inventory[i].nameid)
         {
-            fprintf(fp, "%d,%d,%d,%d," "%d,%d,%d," "%d,%d,%d,%d,%d ",
-                     p->inventory[i].id, p->inventory[i].nameid,
-                     p->inventory[i].amount, p->inventory[i].equip,
+            fprintf(fp, "%d,%hu,%hu,%hu," "%d,%d,%d," "%d,%d,%d,%d,%d ",
+                    0 /*id*/, p->inventory[i].nameid,
+                    p->inventory[i].amount, p->inventory[i].equip,
 
-                     p->inventory[i].identify, p->inventory[i].refine,
-                     p->inventory[i].attribute,
+                    0/*identify*/, 0/*refine*/,
+                    0/*attribute*/,
 
-                     p->inventory[i].card[0], p->inventory[i].card[1],
-                     p->inventory[i].card[2], p->inventory[i].card[3],
-                     p->inventory[i].broken);
+                    0, 0, 0, 0 /*card[3]*/,
+                    0/*broken*/);
         }
     fprintf(fp, "\t");
 
@@ -232,27 +228,27 @@ static int mmo_char_fromstr(char *str, struct mmo_charstatus *p)
 {
     memset(p, '\0', sizeof(struct mmo_charstatus));
 
-    int ign, next;
+    int next;
     int set = sscanf(str,
-                      "%u\t"            "%d,%hhu\t"
-                      "%[^\t]\t"        "%u,%hhu,%hhu\t"
-                      "%d,%d,%d\t"      "%d,%d,%d,%d\t"
-                      "%hd,%hd,%hd,%hd,%hd,%hd\t"
-                      "%hd,%hd\t"       "%hd,%d,%d\t"
-                      "%d,%d,%d\t"      "%hd,%hd,%d\t"
-                      "%hd,%hd,%hd,%hd,%hd\t"
-                      "%[^,],%hd,%hd\t"
-                      "%[^,],%hd,%hd,%d" "%n",
-                      &p->char_id,      &p->account_id, &p->char_num,
-                      p->name,          &ign/*pc_class*/, &p->base_level, &p->job_level,
-                      &p->base_exp, &p->job_exp, &p->zeny,      &p->hp, &p->max_hp, &p->sp, &p->max_sp,
-                      &p->str, &p->agi, &p->vit, &p->int_, &p->dex, &p->luk,
-                      &p->status_point, &p->skill_point,        &p->option, &ign/*karma*/, &ign/*manner*/,
-                      &p->party_id, &ign/*guild_id*/, &ign/*pet_id*/,   &p->hair, &p->hair_color, &ign/*clothes_color*/,
-                      &p->weapon, &p->shield, &p->head_top, &p->head_mid, &p->head_bottom,
-                      &p->last_point.map, &p->last_point.x, &p->last_point.y,
-                      &p->save_point.map, &p->save_point.x, &p->save_point.y,
-                      &p->partner_id, &next);
+                     "%u\t"            "%d,%hhu\t"
+                     "%[^\t]\t"        "%*u,%hhu,%hhu\t"
+                     "%d,%d,%d\t"      "%d,%d,%d,%d\t"
+                     "%hd,%hd,%hd,%hd,%hd,%hd\t"
+                     "%hd,%hd\t"       "%hd,%*d,%*d\t"
+                     "%d,%*d,%*d\t"      "%hd,%hd,%*d\t"
+                     "%hd,%hd,%hd,%hd,%hd\t"
+                     "%[^,],%hd,%hd\t"
+                     "%[^,],%hd,%hd,%d" "%n",
+                     &p->char_id,       &p->account_id, &p->char_num,
+                     p->name,           /*pc_class,*/ &p->base_level, &p->job_level,
+                     &p->base_exp, &p->job_exp, &p->zeny,       &p->hp, &p->max_hp, &p->sp, &p->max_sp,
+                     &p->str, &p->agi,  &p->vit, &p->int_, &p->dex, &p->luk,
+                     &p->status_point,  &p->skill_point,        &p->option, /*karma,*/ /*manner,*/
+                     &p->party_id, /*guild_id,*/ /*pet_id,*/    &p->hair, &p->hair_color, /*clothes_color,*/
+                     &p->weapon, &p->shield, &p->head_top, &p->head_mid, &p->head_bottom,
+                     &p->last_point.map, &p->last_point.x, &p->last_point.y,
+                     &p->save_point.map, &p->save_point.x, &p->save_point.y,
+                     &p->partner_id, &next);
     if (set != 43)
         return 0;
 
@@ -307,17 +303,12 @@ static int mmo_char_fromstr(char *str, struct mmo_charstatus *p)
     // TODO check against maximum
     for (int i = 0; str[0] && str[0] != '\t'; i++)
     {
-        int len;
-        switch (sscanf(str, "%d,%hd,%hd,%hu,%hhd,%hhd,%hhd,%hd,%hd,%hd,%hd%n,%hd%n",
-                        &p->inventory[i].id, &p->inventory[i].nameid, &p->inventory[i].amount, &p->inventory[i].equip,
-                        &p->inventory[i].identify, &p->inventory[i].refine, &p->inventory[i].attribute,
-                        &p->inventory[i].card[0], &p->inventory[i].card[1], &p->inventory[i].card[2], &p->inventory[i].card[3],
-                        &next, &p->inventory[i].broken, &len))
-        {
-        default: return -4;
-        case 11: p->inventory[i].broken = 0; break;
-        case 12: next = len;
-        }
+        int sn = sscanf(str, "%*d,%hu,%hu,%hu,%*d,%*d,%*d,%*d,%*d,%*d,%*d,%*d%n",
+                        &p->inventory[i].nameid, &p->inventory[i].amount, &p->inventory[i].equip,
+                        &next);
+        if (sn != 12)
+            return -4;
+
         str += next;
         if (str[0] == ' ')
             str++;
@@ -329,18 +320,10 @@ static int mmo_char_fromstr(char *str, struct mmo_charstatus *p)
     // TODO check against maximum
     for (int i = 0; str[0] && str[0] != '\t'; i++)
     {
-        int len;
-        struct item cart;
-        switch (sscanf(str, "%d,%hd,%hd,%hu,%hhd,%hhd,%hhd,%hd,%hd,%hd,%hd%n,%hd%n",
-                        &cart.id, &cart.nameid, &cart.amount, &cart.equip,
-                        &cart.identify, &cart.refine, &cart.attribute,
-                        &cart.card[0], &cart.card[1], &cart.card[2], &cart.card[3],
-                        &next, &cart.broken, &len))
-        {
-        default: return -5;
-        case 11: cart.broken = 0; break;
-        case 12: next = len;
-        }
+        int sn = sscanf(str, "%*d,%*d,%*d,%*u,%*d,%*d,%*d,%*d,%*d,%*d,%*d,%*d%n",
+                        &next);
+        if (sn != 12)
+            return -5;
         str += next;
         if (str[0] == ' ')
             str++;
@@ -705,7 +688,7 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
     chardat->job_level = 1;
     chardat->base_exp = 0;
     chardat->job_exp = 0;
-    chardat->zeny = start_zeny;
+    chardat->zeny = 0;
     chardat->str = dat.stats[0];
     chardat->agi = dat.stats[1];
     chardat->vit = dat.stats[2];
@@ -722,18 +705,6 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
     chardat->party_id = 0;
     chardat->hair = dat.hair_style;
     chardat->hair_color = dat.hair_color;
-    // Knife
-    chardat->inventory[0].nameid = start_weapon;
-    chardat->inventory[0].amount = 1;
-    chardat->inventory[0].equip = 0x02;
-    chardat->inventory[0].identify = 1;
-    chardat->inventory[0].broken = 0;
-    // Cotton Shirt
-    chardat->inventory[1].nameid = start_armor;
-    chardat->inventory[1].amount = 1;
-    chardat->inventory[1].equip = 0x10;
-    chardat->inventory[1].identify = 1;
-    chardat->inventory[1].broken = 0;
     chardat->weapon = 1;
     chardat->shield = 0;
     chardat->head_top = 0;
@@ -2800,27 +2771,6 @@ static void char_config_read(const char *cfgName)
                 start_point.y = y;
                 continue;
             }
-        }
-        if (strcasecmp(w1, "start_zeny") == 0)
-        {
-            start_zeny = atoi(w2);
-            if (start_zeny < 0)
-                start_zeny = 0;
-            continue;
-        }
-        if (strcasecmp(w1, "start_weapon") == 0)
-        {
-            start_weapon = atoi(w2);
-            if (start_weapon < 0)
-                start_weapon = 0;
-            continue;
-        }
-        if (strcasecmp(w1, "start_armor") == 0)
-        {
-            start_armor = atoi(w2);
-            if (start_armor < 0)
-                start_armor = 0;
-            continue;
         }
         if (strcasecmp(w1, "unknown_char_name") == 0)
         {

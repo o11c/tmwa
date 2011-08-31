@@ -37,15 +37,10 @@ typedef uint8_t level_t;
 
 struct item
 {
-    int id;
-    short nameid;
-    short amount;
-    unsigned short equip;
-    char identify;
-    char refine;
-    char attribute;
-    short card[4];
-    short broken;
+    uint16_t nameid;
+    uint16_t amount;
+    // I think this is a mask of equip slots, but only one is usually (ever?) used
+    uint16_t equip;
 };
 
 struct Point

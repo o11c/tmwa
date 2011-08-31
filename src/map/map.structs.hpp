@@ -140,8 +140,6 @@ public:
         bool no_magic_damage:1;
         bool no_weapon_damage:1;
         bool no_gemstone:1;
-        bool unbreakable_weapon:1;
-        bool unbreakable_armor:1;
     } special_state;
     int char_id, login_id1, login_id2, sex;
     uint8_t tmw_version;  // tmw client version
@@ -214,10 +212,10 @@ public:
     int hit, flee, flee2, aspd, amotion, dmotion;
     int watk, watk2;
     int def, def2, mdef, mdef2, critical, matk1, matk2;
-    int atk_ele, def_ele, star, overrefine;
+    int atk_ele, def_ele, star;
     int castrate, hprate, sprate, dsprate;
     int watk_, watk_2;    //二刀流のために追加
-    int atk_ele_, star_, overrefine_;  //二刀流のために追加
+    int atk_ele_, star_;  //二刀流のために追加
     int base_atk, atk_rate;
     int arrow_atk, arrow_ele, arrow_cri, arrow_hit, arrow_range;
     int nhealhp, nhealsp, nshealhp, nshealsp, nsshealhp, nsshealsp;
@@ -244,7 +242,6 @@ public:
     int magic_damage_return;   // AppleGirl Was Here
     int random_attack_increase_add, random_attack_increase_per;    // [Valaris]
     int perfect_hiding;        // [Valaris]
-    int unbreakable;
 
     int die_counter;
     short doridori_counter;

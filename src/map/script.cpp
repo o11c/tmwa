@@ -112,7 +112,6 @@ BUILTIN(deletearray);
 BUILTIN(getelementofarray);
 BUILTIN(if);
 BUILTIN(getitem);
-BUILTIN(getitem2);
 BUILTIN(makeitem);
 BUILTIN(delitem);
 BUILTIN(countitem);
@@ -124,16 +123,8 @@ BUILTIN(getpartymember);
 BUILTIN(strcharinfo);
 BUILTIN(getequipid);
 BUILTIN(getequipname);
-BUILTIN(getbrokenid);
-BUILTIN(repair);
 BUILTIN(getequipisequiped);
 BUILTIN(getequipisenableref);
-BUILTIN(getequipisidentify);
-BUILTIN(getequiprefinerycnt);
-BUILTIN(getequipweaponlv);
-BUILTIN(getequippercentrefinery);
-BUILTIN(successrefitem);
-BUILTIN(failedrefitem);
 BUILTIN(statusup);
 BUILTIN(statusup2);
 BUILTIN(bonus);
@@ -194,9 +185,6 @@ BUILTIN(removemapflag);
 BUILTIN(pvpon);
 BUILTIN(pvpoff);
 BUILTIN(emotion);
-BUILTIN(getequipcardcnt);
-BUILTIN(successremovecards);
-BUILTIN(failedremovecards);
 BUILTIN(marriage);
 BUILTIN(divorce);
 BUILTIN(getitemname);
@@ -279,7 +267,6 @@ static struct builtin_function_t
     BUILTIN_ARGS(getelementofarray, "ii"),
     BUILTIN_ARGS(if, "i*"),
     BUILTIN_ARGS(getitem, "ii**"),
-    BUILTIN_ARGS(getitem2, "iiiiiiiii*"),
     BUILTIN_ARGS(makeitem, "iisii"),
     BUILTIN_ARGS(delitem, "ii"),
     BUILTIN_ARGS(heal, "ii"),
@@ -296,16 +283,8 @@ static struct builtin_function_t
     BUILTIN_ARGS(strcharinfo, "i"),
     BUILTIN_ARGS(getequipid, "i"),
     BUILTIN_ARGS(getequipname, "i"),
-    BUILTIN_ARGS(getbrokenid, "i"),
-    BUILTIN_ARGS(repair, "i"),
     BUILTIN_ARGS(getequipisequiped, "i"),
     BUILTIN_ARGS(getequipisenableref, "i"),
-    BUILTIN_ARGS(getequipisidentify, "i"),
-    BUILTIN_ARGS(getequiprefinerycnt, "i"),
-    BUILTIN_ARGS(getequipweaponlv, "i"),
-    BUILTIN_ARGS(getequippercentrefinery, "i"),
-    BUILTIN_ARGS(successrefitem, "i"),
-    BUILTIN_ARGS(failedrefitem, "i"),
     BUILTIN_ARGS(statusup, "i"),
     BUILTIN_ARGS(statusup2, "ii"),
     BUILTIN_ARGS(bonus, "ii"),
@@ -370,9 +349,6 @@ static struct builtin_function_t
     BUILTIN_ARGS(pvpon, "s"),
     BUILTIN_ARGS(pvpoff, "s"),
     BUILTIN_ARGS(emotion, "i"),
-    BUILTIN_ARGS(getequipcardcnt, "i"),
-    BUILTIN_ARGS(successremovecards, "i"),
-    BUILTIN_ARGS(failedremovecards, "ii"),
     BUILTIN_ARGS(marriage, "s"),
     BUILTIN_ARGS(divorce, "i"),
     BUILTIN_ARGS(getitemname, "*"),
@@ -2368,92 +2344,10 @@ void builtin_getitem(struct script_state *st)
     {
         memset(&item_tmp, 0, sizeof(item_tmp));
         item_tmp.nameid = nameid;
-        item_tmp.identify = 1;
         if (st->end > st->start + 5)    //アイテムを指定したIDに渡す
-            sd = map_id2sd(conv_num
-                            (st, &(st->stack->stack_data[st->start + 5])));
+            sd = map_id2sd(conv_num(st, &(st->stack->stack_data[st->start + 5])));
         if (sd == NULL)         //アイテムを渡す相手がいなかったらお帰り
             return;
-        PickupFail flag = pc_additem(sd, &item_tmp, amount);
-        if (flag != PickupFail::OKAY)
-        {
-            clif_additem(sd, 0, 0, flag);
-            map_addflooritem(&item_tmp, amount, sd->m, sd->x, sd->y,
-                              NULL, NULL, NULL);
-        }
-    }
-}
-
-/*==========================================
- *
- *------------------------------------------
- */
-void builtin_getitem2(struct script_state *st)
-{
-    int nameid, amount;
-    int iden, ref, attr, c1, c2, c3, c4;
-    struct item item_tmp;
-    MapSessionData *sd;
-    struct script_data *data;
-
-    sd = script_rid2sd(st);
-
-    data = &(st->stack->stack_data[st->start + 2]);
-    get_val(st, data);
-    if (data->type == C_STR || data->type == C_CONSTSTR)
-    {
-        const char *name = conv_str(st, data);
-        struct item_data *item_data = itemdb_searchname(name);
-        nameid = 512;           //Apple item ID
-        if (item_data)
-            nameid = item_data->nameid;
-    }
-    else
-        nameid = conv_num(st, data);
-
-    amount = conv_num(st, &(st->stack->stack_data[st->start + 3]));
-    iden = conv_num(st, &(st->stack->stack_data[st->start + 4]));
-    ref = conv_num(st, &(st->stack->stack_data[st->start + 5]));
-    attr = conv_num(st, &(st->stack->stack_data[st->start + 6]));
-    c1 = conv_num(st, &(st->stack->stack_data[st->start + 7]));
-    c2 = conv_num(st, &(st->stack->stack_data[st->start + 8]));
-    c3 = conv_num(st, &(st->stack->stack_data[st->start + 9]));
-    c4 = conv_num(st, &(st->stack->stack_data[st->start + 10]));
-    if (st->end > st->start + 11)   //アイテムを指定したIDに渡す
-        sd = map_id2sd(conv_num
-                        (st, &(st->stack->stack_data[st->start + 11])));
-    if (sd == NULL)             //アイテムを渡す相手がいなかったらお帰り
-        return;
-
-    if (nameid > 0)
-    {
-        memset(&item_tmp, 0, sizeof(item_tmp));
-        struct item_data *item_data;
-        item_data = itemdb_search(nameid);
-        if (item_data->type == 4 || item_data->type == 5)
-        {
-            if (ref > 10)
-                ref = 10;
-        }
-        else if (item_data->type == 7)
-        {
-            iden = 1;
-            ref = 0;
-        }
-        else
-        {
-            iden = 1;
-            ref = attr = 0;
-        }
-
-        item_tmp.nameid = nameid;
-        item_tmp.identify = iden;
-        item_tmp.refine = ref;
-        item_tmp.attribute = attr;
-        item_tmp.card[0] = c1;
-        item_tmp.card[1] = c2;
-        item_tmp.card[2] = c3;
-        item_tmp.card[3] = c4;
         PickupFail flag = pc_additem(sd, &item_tmp, amount);
         if (flag != PickupFail::OKAY)
         {
@@ -2506,7 +2400,6 @@ void builtin_makeitem(struct script_state *st)
     {
         memset(&item_tmp, 0, sizeof(item_tmp));
         item_tmp.nameid = nameid;
-        item_tmp.identify = 1;
 
         map_addflooritem(&item_tmp, amount, m, x, y, NULL, NULL, NULL);
     }
@@ -2795,64 +2688,6 @@ void builtin_getequipname(struct script_state *st)
 }
 
 /*==========================================
- * getbrokenid [Valaris]
- *------------------------------------------
- */
-void builtin_getbrokenid(struct script_state *st)
-{
-    int i, num, id = 0, brokencounter = 0;
-    MapSessionData *sd;
-
-    sd = script_rid2sd(st);
-
-    num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    for (i = 0; i < MAX_INVENTORY; i++)
-    {
-        if (sd->status.inventory[i].broken == 1)
-        {
-            brokencounter++;
-            if (num == brokencounter)
-            {
-                id = sd->status.inventory[i].nameid;
-                break;
-            }
-        }
-    }
-
-    push_val(st->stack, C_INT, id);
-}
-
-/*==========================================
- * repair [Valaris]
- *------------------------------------------
- */
-void builtin_repair(struct script_state *st)
-{
-    int i, num;
-    int repaircounter = 0;
-    MapSessionData *sd;
-
-    sd = script_rid2sd(st);
-
-    num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    for (i = 0; i < MAX_INVENTORY; i++)
-    {
-        if (sd->status.inventory[i].broken == 1)
-        {
-            repaircounter++;
-            if (num == repaircounter)
-            {
-                sd->status.inventory[i].broken = 0;
-                clif_equiplist(sd);
-                clif_misceffect(sd, 3);
-                clif_displaymessage(sd->fd, "Item has been repaired.");
-                break;
-            }
-        }
-    }
-}
-
-/*==========================================
  * 装備チェック
  *------------------------------------------
  */
@@ -2898,127 +2733,6 @@ void builtin_getequipisenableref(struct script_state *st)
     else
     {
         push_val(st->stack, C_INT, 0);
-    }
-}
-
-/*==========================================
- * 装備品鑑定チェック
- *------------------------------------------
- */
-void builtin_getequipisidentify(struct script_state *st)
-{
-    int i, num;
-    MapSessionData *sd;
-
-    num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    sd = script_rid2sd(st);
-    i = pc_checkequip(sd, equip[num - 1]);
-    if (i >= 0)
-        push_val(st->stack, C_INT, sd->status.inventory[i].identify);
-    else
-        push_val(st->stack, C_INT, 0);
-}
-
-/*==========================================
- * 装備品精錬度
- *------------------------------------------
- */
-void builtin_getequiprefinerycnt(struct script_state *st)
-{
-    int i, num;
-    MapSessionData *sd;
-
-    num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    sd = script_rid2sd(st);
-    i = pc_checkequip(sd, equip[num - 1]);
-    if (i >= 0)
-        push_val(st->stack, C_INT, sd->status.inventory[i].refine);
-    else
-        push_val(st->stack, C_INT, 0);
-}
-
-/*==========================================
- * 装備品武器LV
- *------------------------------------------
- */
-void builtin_getequipweaponlv(struct script_state *st)
-{
-    int i, num;
-    MapSessionData *sd;
-
-    num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    sd = script_rid2sd(st);
-    i = pc_checkequip(sd, equip[num - 1]);
-    if (i >= 0 && sd->inventory_data[i])
-        push_val(st->stack, C_INT, sd->inventory_data[i]->wlv);
-    else
-        push_val(st->stack, C_INT, 0);
-}
-
-/*==========================================
- * 装備品精錬成功率
- *------------------------------------------
- */
-void builtin_getequippercentrefinery(struct script_state *st)
-{
-    int i, num;
-    MapSessionData *sd;
-
-    num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    sd = script_rid2sd(st);
-    i = pc_checkequip(sd, equip[num - 1]);
-    if (i >= 0)
-        push_val(st->stack, C_INT,
-                  pc_percentrefinery(sd, &sd->status.inventory[i]));
-    else
-        push_val(st->stack, C_INT, 0);
-}
-
-/*==========================================
- * 精錬成功
- *------------------------------------------
- */
-void builtin_successrefitem(struct script_state *st)
-{
-    int i, num, ep;
-    MapSessionData *sd;
-
-    num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    sd = script_rid2sd(st);
-    i = pc_checkequip(sd, equip[num - 1]);
-    if (i >= 0)
-    {
-        ep = sd->status.inventory[i].equip;
-
-        sd->status.inventory[i].refine++;
-        pc_unequipitem(sd, i, 0);
-        clif_delitem(sd, i, 1);
-        clif_additem(sd, i, 1, PickupFail::OKAY);
-        pc_equipitem(sd, i, ep);
-        clif_misceffect(sd, 3);
-    }
-}
-
-/*==========================================
- * 精錬失敗
- *------------------------------------------
- */
-void builtin_failedrefitem(struct script_state *st)
-{
-    int i, num;
-    MapSessionData *sd;
-
-    num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    sd = script_rid2sd(st);
-    i = pc_checkequip(sd, equip[num - 1]);
-    if (i >= 0)
-    {
-        sd->status.inventory[i].refine = 0;
-        pc_unequipitem(sd, i, 0);
-        // 精錬失敗エフェクトのパケット
-        pc_delitem(sd, i, 1, 0);
-        // 他の人にも失敗を通知
-        clif_misceffect(sd, 2);
     }
 }
 
@@ -4200,181 +3914,6 @@ void builtin_emotion(struct script_state *st)
     clif_emotion(map_id2bl(st->oid), type);
 }
 
-/* =====================================================================
- * カードの数を得る
- * ---------------------------------------------------------------------
- */
-void builtin_getequipcardcnt(struct script_state *st)
-{
-    int i, num;
-    MapSessionData *sd;
-    int c = 4;
-
-    num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    sd = script_rid2sd(st);
-    i = pc_checkequip(sd, equip[num - 1]);
-    if (sd->status.inventory[i].card[0] == 0x00ff)
-    {                           // 製造武器はカードなし
-        push_val(st->stack, C_INT, 0);
-        return;
-    }
-    do
-    {
-        if ((sd->status.inventory[i].card[c - 1] > 4000) &&
-            (sd->status.inventory[i].card[c - 1] < 5000))
-        {
-
-            push_val(st->stack, C_INT, (c));
-            return;
-        }
-    } while (c--);
-    push_val(st->stack, C_INT, 0);
-}
-
-/* ================================================================
- * カード取り外し成功
- * ----------------------------------------------------------------
- */
-void builtin_successremovecards(struct script_state *st)
-{
-    int i, num, cardflag = 0;
-    MapSessionData *sd;
-    struct item item_tmp;
-    int c = 4;
-
-    num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    sd = script_rid2sd(st);
-    i = pc_checkequip(sd, equip[num - 1]);
-    if (sd->status.inventory[i].card[0] == 0x00ff)
-    {                           // 製造武器は処理しない
-        return;
-    }
-    do
-    {
-        if ((sd->status.inventory[i].card[c - 1] > 4000) &&
-            (sd->status.inventory[i].card[c - 1] < 5000))
-        {
-
-            cardflag = 1;
-            item_tmp.id = 0, item_tmp.nameid =
-                sd->status.inventory[i].card[c - 1];
-            item_tmp.equip = 0, item_tmp.identify = 1, item_tmp.refine = 0;
-            item_tmp.attribute = 0;
-            item_tmp.card[0] = 0, item_tmp.card[1] = 0, item_tmp.card[2] =
-                0, item_tmp.card[3] = 0;
-
-            PickupFail flag = pc_additem(sd, &item_tmp, 1);
-            if (flag != PickupFail::OKAY)
-            {                   // 持てないならドロップ
-                clif_additem(sd, 0, 0, flag);
-                map_addflooritem(&item_tmp, 1, sd->m, sd->x, sd->y,
-                                  NULL, NULL, NULL);
-            }
-        }
-    }
-    while (c--);
-
-    if (cardflag == 1)
-    {                           // カードを取り除いたアイテム所得
-        item_tmp.id = 0, item_tmp.nameid = sd->status.inventory[i].nameid;
-        item_tmp.equip = 0, item_tmp.identify = 1, item_tmp.refine =
-            sd->status.inventory[i].refine;
-        item_tmp.attribute = sd->status.inventory[i].attribute;
-        item_tmp.card[0] = 0, item_tmp.card[1] = 0, item_tmp.card[2] =
-            0, item_tmp.card[3] = 0;
-        pc_delitem(sd, i, 1, 0);
-        PickupFail flag = pc_additem(sd, &item_tmp, 1);
-        if (flag != PickupFail::OKAY)
-        {                       // もてないならドロップ
-            clif_additem(sd, 0, 0, flag);
-            map_addflooritem(&item_tmp, 1, sd->m, sd->x, sd->y,
-                              NULL, NULL, NULL);
-        }
-        clif_misceffect(sd, 3);
-        return;
-    }
-}
-
-/* ================================================================
- * カード取り外し失敗 slot,type
- * type=0: 両方損失、1:カード損失、2:武具損失、3:損失無し
- * ----------------------------------------------------------------
- */
-void builtin_failedremovecards(struct script_state *st)
-{
-    int i, num, cardflag = 0, typefail;
-    MapSessionData *sd;
-    struct item item_tmp;
-    int c = 4;
-
-    num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    typefail = conv_num(st, &(st->stack->stack_data[st->start + 3]));
-    sd = script_rid2sd(st);
-    i = pc_checkequip(sd, equip[num - 1]);
-    if (sd->status.inventory[i].card[0] == 0x00ff)
-    {                           // 製造武器は処理しない
-        return;
-    }
-    do
-    {
-        if ((sd->status.inventory[i].card[c - 1] > 4000) &&
-            (sd->status.inventory[i].card[c - 1] < 5000))
-        {
-
-            cardflag = 1;
-
-            if (typefail == 2)
-            {                   // 武具のみ損失なら、カードは受け取らせる
-                item_tmp.id = 0, item_tmp.nameid =
-                    sd->status.inventory[i].card[c - 1];
-                item_tmp.equip = 0, item_tmp.identify = 1, item_tmp.refine =
-                    0;
-                item_tmp.attribute = 0;
-                item_tmp.card[0] = 0, item_tmp.card[1] = 0, item_tmp.card[2] =
-                    0, item_tmp.card[3] = 0;
-                PickupFail flag = pc_additem(sd, &item_tmp, 1);
-                if (flag != PickupFail::OKAY)
-                {
-                    clif_additem(sd, 0, 0, flag);
-                    map_addflooritem(&item_tmp, 1, sd->m, sd->x,
-                                      sd->y, NULL, NULL, NULL);
-                }
-            }
-        }
-    }
-    while (c--);
-
-    if (cardflag == 1)
-    {
-
-        if (typefail == 0 || typefail == 2)
-        {                       // 武具損失
-            pc_delitem(sd, i, 1, 0);
-            clif_misceffect(sd, 2);
-            return;
-        }
-        if (typefail == 1)
-        {                       // カードのみ損失（武具を返す）
-            item_tmp.id = 0, item_tmp.nameid = sd->status.inventory[i].nameid;
-            item_tmp.equip = 0, item_tmp.identify = 1, item_tmp.refine =
-                sd->status.inventory[i].refine;
-            item_tmp.attribute = sd->status.inventory[i].attribute;
-            item_tmp.card[0] = 0, item_tmp.card[1] = 0, item_tmp.card[2] =
-                0, item_tmp.card[3] = 0;
-            pc_delitem(sd, i, 1, 0);
-            PickupFail flag = pc_additem(sd, &item_tmp, 1);
-            if (flag != PickupFail::OKAY)
-            {
-                clif_additem(sd, 0, 0, flag);
-                map_addflooritem(&item_tmp, 1, sd->m, sd->x, sd->y,
-                                  NULL, NULL, NULL);
-            }
-        }
-        clif_misceffect(sd, 2);
-        return;
-    }
-}
-
 void builtin_mapwarp(struct script_state *st)   // Added by RoVeRT
 {
     fixed_string<16> src_map;
@@ -4591,10 +4130,11 @@ void builtin_getpartnerid2(struct script_state *st)
 void builtin_getinventorylist(struct script_state *st)
 {
     MapSessionData *sd = script_rid2sd(st);
-    int i, j = 0;
     if (!sd)
         return;
-    for (i = 0; i < MAX_INVENTORY; i++)
+
+    int j = 0;
+    for (int i = 0; i < MAX_INVENTORY; i++)
     {
         if (sd->status.inventory[i].nameid > 0
             && sd->status.inventory[i].amount > 0)
@@ -4605,20 +4145,6 @@ void builtin_getinventorylist(struct script_state *st)
                        sd->status.inventory[i].amount);
             pc_setreg(sd, add_str("@inventorylist_equip") + (j << 24),
                        sd->status.inventory[i].equip);
-            pc_setreg(sd, add_str("@inventorylist_refine") + (j << 24),
-                       sd->status.inventory[i].refine);
-            pc_setreg(sd, add_str("@inventorylist_identify") + (j << 24),
-                       sd->status.inventory[i].identify);
-            pc_setreg(sd, add_str("@inventorylist_attribute") + (j << 24),
-                       sd->status.inventory[i].attribute);
-            pc_setreg(sd, add_str("@inventorylist_card1") + (j << 24),
-                       sd->status.inventory[i].card[0]);
-            pc_setreg(sd, add_str("@inventorylist_card2") + (j << 24),
-                       sd->status.inventory[i].card[1]);
-            pc_setreg(sd, add_str("@inventorylist_card3") + (j << 24),
-                       sd->status.inventory[i].card[2]);
-            pc_setreg(sd, add_str("@inventorylist_card4") + (j << 24),
-                       sd->status.inventory[i].card[3]);
             j++;
         }
     }

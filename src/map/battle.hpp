@@ -138,8 +138,6 @@ extern struct Battle_Config
     int maximum_level;
     int drops_by_luk;
     int monsters_ignore_gm;
-    int equipment_breaking;
-    int equipment_break_rate;
     int multi_level_up;
     int pk_mode;
 

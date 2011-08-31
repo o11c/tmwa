@@ -70,14 +70,12 @@ static char job_bonus[3][MAX_PC_CLASS][MAX_LEVEL];
 static int exp_table[14][MAX_LEVEL];
 static char statp[255][7];
 
-static int refinebonus[5][3];   // 精錬ボーナステーブル(refine_db.txt)
-static int percentrefinery[5][10];  // 精錬成功率(refine_db.txt)
-
 static int dirx[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
 static int diry[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
 
 static unsigned int equip_pos[11] =
-    { 0x0080, 0x0008, 0x0040, 0x0004, 0x0001, 0x0200, 0x0100, 0x0010, 0x0020,
+{
+    0x0080, 0x0008, 0x0040, 0x0004, 0x0001, 0x0200, 0x0100, 0x0010, 0x0020,
     0x0002, 0x8000
 };
 
@@ -456,89 +454,6 @@ int pc_isequip(MapSessionData *sd, int n)
 }
 
 /*==========================================
- * Weapon Breaking [Valaris]
- *------------------------------------------
- */
-int pc_breakweapon(MapSessionData *sd)
-{
-    struct item_data *item;
-    char output[255];
-    int i;
-
-    if (sd == NULL)
-        return -1;
-    if (sd->unbreakable >= MRAND(100))
-        return 0;
-
-    for (i = 0; i < MAX_INVENTORY; i++)
-    {
-        if (sd->status.inventory[i].equip
-            && sd->status.inventory[i].equip & 0x0002
-            && !sd->status.inventory[i].broken)
-        {
-            item = sd->inventory_data[i];
-            sd->status.inventory[i].broken = 1;
-            //pc_unequipitem(sd,i,0);
-            if (sd->status.inventory[i].equip
-                && sd->status.inventory[i].equip & 0x0002
-                && sd->status.inventory[i].broken == 1)
-            {
-                sprintf(output, "%s has broken.", item->jname);
-                clif_emotion(sd, 23);
-                clif_displaymessage(sd->fd, output);
-                clif_equiplist(sd);
-                skill_status_change_start(sd, SC_BROKNWEAPON, 0, 0);
-            }
-        }
-        if (sd->status.inventory[i].broken == 1)
-            return 0;
-    }
-
-    return 0;
-}
-
-/*==========================================
- * Armor Breaking [Valaris]
- *------------------------------------------
- */
-int pc_breakarmor(MapSessionData *sd)
-{
-    struct item_data *item;
-    char output[255];
-    int i;
-
-    if (sd == NULL)
-        return -1;
-    if (sd->unbreakable >= MRAND(100))
-        return 0;
-
-    for (i = 0; i < MAX_INVENTORY; i++)
-    {
-        if (sd->status.inventory[i].equip
-            && sd->status.inventory[i].equip & 0x0010
-            && !sd->status.inventory[i].broken)
-        {
-            item = sd->inventory_data[i];
-            sd->status.inventory[i].broken = 1;
-            //pc_unequipitem(sd,i,0);
-            if (sd->status.inventory[i].equip
-                && sd->status.inventory[i].equip & 0x0010
-                && sd->status.inventory[i].broken == 1)
-            {
-                sprintf(output, "%s has broken.", item->jname);
-                clif_emotion(sd, 23);
-                clif_displaymessage(sd->fd, output);
-                clif_equiplist(sd);
-                skill_status_change_start(sd, SC_BROKNARMOR, 0, 0);
-            }
-        }
-        if (sd->status.inventory[i].broken == 1)
-            return 0;
-    }
-    return 0;
-}
-
-/*==========================================
  * session idに問題無し
  * char鯖から送られてきたステータスを設定
  *------------------------------------------
@@ -840,7 +755,6 @@ int pc_calcstatus(MapSessionData *sd, int first)
     sd->atk_ele = 0;
     sd->def_ele = 0;
     sd->star = 0;
-    sd->overrefine = 0;
     sd->matk1 = 0;
     sd->matk2 = 0;
     sd->speed = DEFAULT_WALK_SPEED;
@@ -861,7 +775,6 @@ int pc_calcstatus(MapSessionData *sd, int first)
     sd->watk_2 = 0;
     sd->atk_ele_ = 0;
     sd->star_ = 0;
-    sd->overrefine_ = 0;
 
     sd->aspd_rate = 100;
     sd->speed_rate = 100;
@@ -900,62 +813,12 @@ int pc_calcstatus(MapSessionData *sd, int first)
             continue;
         if (i == 5 && sd->equip_index[4] == idx)
             continue;
-        if (i == 6
-            && (sd->equip_index[5] == idx || sd->equip_index[4] == idx))
+        if (i == 6 && (sd->equip_index[5] == idx || sd->equip_index[4] == idx))
             continue;
 
         if (sd->inventory_data[idx])
         {
-            sd->spellpower_bonus_target +=
-                sd->inventory_data[idx]->magic_bonus;
-
-            if (sd->inventory_data[idx]->type == 4)
-            {
-                if (sd->status.inventory[idx].card[0] != 0x00ff
-                    && sd->status.inventory[idx].card[0] != 0x00fe
-                    && sd->status.inventory[idx].card[0] != static_cast<short>(0xff00))
-                {
-                    for (int j = 0; j < sd->inventory_data[idx]->slot; j++)
-                    {           // カード
-                        int c = sd->status.inventory[idx].card[j];
-                        if (c > 0)
-                        {
-                            ArgRec arg[] =
-                            {
-                                { "@slotId", i },
-                                { "@itemId", sd->inventory_data[idx]->nameid }
-                            };
-                            if (i == 8
-                                && sd->status.inventory[idx].equip == 0x20)
-                                sd->state.lr_flag = 1;
-                            run_script_l(itemdb_equipscript(c), 0, sd->id, 0, ARRAY_SIZEOF(arg), arg);
-                            sd->state.lr_flag = 0;
-                        }
-                    }
-                }
-            }
-            else if (sd->inventory_data[idx]->type == 5)
-            {                   // 防具
-                if (sd->status.inventory[idx].card[0] != 0x00ff
-                    && sd->status.inventory[idx].card[0] != 0x00fe
-                    && sd->status.inventory[idx].card[0] != static_cast<short>(0xff00))
-                {
-                    int j;
-                    for (j = 0; j < sd->inventory_data[idx]->slot; j++)
-                    {           // カード
-                        int c = sd->status.inventory[idx].card[j];
-                        if (c > 0)
-                        {
-                            ArgRec arg[] =
-                            {
-                                { "@slotId", i },
-                                { "@itemId", sd->inventory_data[idx]->nameid }
-                            };
-                            run_script_l(itemdb_equipscript(c), 0, sd->id, 0, ARRAY_SIZEOF(arg), arg);
-                        }
-                    }
-                }
-            }
+            sd->spellpower_bonus_target += sd->inventory_data[idx]->magic_bonus;
         }
     }
 
@@ -984,39 +847,26 @@ int pc_calcstatus(MapSessionData *sd, int first)
             continue;
         if (i == 5 && sd->equip_index[4] == idx)
             continue;
-        if (i == 6
-            && (sd->equip_index[5] == idx || sd->equip_index[4] == idx))
+        if (i == 6 && (sd->equip_index[5] == idx || sd->equip_index[4] == idx))
             continue;
         if (sd->inventory_data[idx])
         {
             sd->def += sd->inventory_data[idx]->def;
             if (sd->inventory_data[idx]->type == 4)
             {
-                int r, wlv = sd->inventory_data[idx]->wlv;
                 if (i == 8 && sd->status.inventory[idx].equip == 0x20)
                 {
                     //二刀流用データ入力
                     sd->watk_ += sd->inventory_data[idx]->atk;
-                    sd->watk_2 = (r = sd->status.inventory[idx].refine) * // 精錬攻撃力
-                        refinebonus[wlv][0];
-                    if ((r -= refinebonus[wlv][2]) > 0) // 過剰精錬ボーナス
-                        sd->overrefine_ = r * refinebonus[wlv][1];
 
-                    if (sd->status.inventory[idx].card[0] == 0x00ff)
-                    {           // 製造武器
-                        sd->star_ = (sd->status.inventory[idx].card[1] >> 8); // 星のかけら
-                        wele_ = (sd->status.inventory[idx].card[1] & 0x0f);   // 属 性
-                    }
                     sd->attackrange_ += sd->inventory_data[idx]->range;
                     sd->state.lr_flag = 1;
+                    ArgRec arg[] =
                     {
-                        ArgRec arg[] =
-                        {
-                            { "@slotId", i },
-                            { "@itemId", sd->inventory_data[idx]->nameid }
-                        };
-                        run_script_l(sd->inventory_data[idx]->equip_script, 0, sd->id, 0, ARRAY_SIZEOF(arg), arg);
-                    }
+                        { "@slotId", i },
+                        { "@itemId", sd->inventory_data[idx]->nameid }
+                    };
+                    run_script_l(sd->inventory_data[idx]->equip_script, 0, sd->id, 0, ARRAY_SIZEOF(arg), arg);
                     sd->state.lr_flag = 0;
                 }
                 else
@@ -1027,16 +877,7 @@ int pc_calcstatus(MapSessionData *sd, int first)
                         { "@itemId", sd->inventory_data[idx]->nameid }
                     };
                     sd->watk += sd->inventory_data[idx]->atk;
-                    sd->watk2 += (r = sd->status.inventory[idx].refine) * // 精錬攻撃力
-                        refinebonus[wlv][0];
-                    if ((r -= refinebonus[wlv][2]) > 0) // 過剰精錬ボーナス
-                        sd->overrefine += r * refinebonus[wlv][1];
 
-                    if (sd->status.inventory[idx].card[0] == 0x00ff)
-                    {           // 製造武器
-                        sd->star += (sd->status.inventory[idx].card[1] >> 8); // 星のかけら
-                        wele = (sd->status.inventory[idx].card[1] & 0x0f);    // 属 性
-                    }
                     sd->attackrange += sd->inventory_data[idx]->range;
                     run_script_l(sd->inventory_data[idx]->equip_script, 0, sd->id, 0, ARRAY_SIZEOF(arg), arg);
                 }
@@ -1049,7 +890,6 @@ int pc_calcstatus(MapSessionData *sd, int first)
                     { "@itemId", sd->inventory_data[idx]->nameid }
                 };
                 sd->watk += sd->inventory_data[idx]->atk;
-                refinedef += sd->status.inventory[idx].refine * refinebonus[0][0];
                 run_script_l(sd->inventory_data[idx]->equip_script, 0, sd->id, 0, ARRAY_SIZEOF(arg), arg);
             }
         }
@@ -1779,14 +1619,8 @@ int pc_bonus(MapSessionData *sd, int type, int val)
                 sd->perfect_hiding = 1;
             }
             break;
-        case SP_UNBREAKABLE:
-            if (sd->state.lr_flag != 2)
-            {
-                sd->unbreakable += val;
-            }
-            break;
         default:
-            map_log("pc_bonus: map_logunknown type %d %d !\n", type, val);
+            map_log("pc_bonus: unknown type %d %d !\n", type, val);
             break;
     }
     return 0;
@@ -2002,11 +1836,7 @@ PickupFail pc_additem(MapSessionData *sd, struct item *item_data,
     {
         // 装 備品ではないので、既所有品なら個数のみ変化させる
         for (i = 0; i < MAX_INVENTORY; i++)
-            if (sd->status.inventory[i].nameid == item_data->nameid &&
-                sd->status.inventory[i].card[0] == item_data->card[0]
-                && sd->status.inventory[i].card[1] == item_data->card[1]
-                && sd->status.inventory[i].card[2] == item_data->card[2]
-                && sd->status.inventory[i].card[3] == item_data->card[3])
+            if (compare_item(&sd->status.inventory[i], item_data))
             {
                 if (sd->status.inventory[i].amount + amount > MAX_AMOUNT)
                     return PickupFail::STACK_FULL;
@@ -4506,30 +4336,6 @@ int pc_setaccountreg2(MapSessionData *sd, const char *reg, int val)
 }
 
 /*==========================================
- * 精錬成功率
- *------------------------------------------
- */
-int pc_percentrefinery(MapSessionData *, struct item *item)
-{
-    int percent;
-
-    nullpo_ret(item);
-    percent = percentrefinery[itemdb_wlv(item->nameid)][static_cast<unsigned>(item->refine)];
-
-    // 確率の有効範囲チェック
-    if (percent > 100)
-    {
-        percent = 100;
-    }
-    if (percent < 0)
-    {
-        percent = 0;
-    }
-
-    return percent;
-}
-
-/*==========================================
  * イベントタイマー処理
  *------------------------------------------
  */
@@ -4665,8 +4471,8 @@ int pc_equipitem(MapSessionData *sd, int n, int pos)
     id = sd->inventory_data[n];
     pos = pc_equippoint(sd, n);
 
-    map_log("eqmap_loguip %d(%d) %x:%x\n", nameid, n, id->equip, pos);
-    if (!pc_isequip(sd, n) || !pos || sd->status.inventory[n].broken == 1)
+    map_log("equip %d(%d) %x:%x\n", nameid, n, id->equip, pos);
+    if (!pc_isequip(sd, n) || !pos)
     {                           // [Valaris]
         clif_equipitemack(sd, n, 0, 0);    // fail
         return 0;
@@ -4825,11 +4631,6 @@ int pc_unequipitem(MapSessionData *sd, int n, int type)
             clif_changelook(sd, LOOK_HEAD_MID, sd->status.head_mid);
         }
         pc_signal_advanced_equipment_change(sd, n);
-
-        if (sd->sc_data[SC_BROKNWEAPON].timer
-            && sd->status.inventory[n].equip & 0x0002
-            && sd->status.inventory[i].broken == 1)
-            skill_status_change_end(sd, SC_BROKNWEAPON, NULL);
 
         clif_unequipitemack(sd, n, sd->status.inventory[n].equip, 1);
         sd->status.inventory[n].equip = 0;
@@ -5678,47 +5479,6 @@ static int pc_readdb(void)
     }
     fclose_(fp);
     printf("read db/attr_fix.txt done\n");
-
-    // 精錬データテーブル
-    for (i = 0; i < 5; i++)
-    {
-        for (j = 0; j < 10; j++)
-            percentrefinery[i][j] = 100;
-        refinebonus[i][0] = 0;
-        refinebonus[i][1] = 0;
-        refinebonus[i][2] = 10;
-    }
-    fp = fopen_("db/refine_db.txt", "r");
-    if (fp == NULL)
-    {
-        printf("can't read db/refine_db.txt\n");
-        return 1;
-    }
-    i = 0;
-    while (fgets(line, sizeof(line) - 1, fp))
-    {
-        char *split[16];
-        if (line[0] == '/' && line[1] == '/')
-            continue;
-        if (atoi(line) <= 0)
-            continue;
-        memset(split, 0, sizeof(split));
-        for (j = 0, p = line; j < 16 && p; j++)
-        {
-            split[j] = p;
-            p = strchr(p, ',');
-            if (p)
-                *p++ = 0;
-        }
-        refinebonus[i][0] = atoi(split[0]);    // 精錬ボーナス
-        refinebonus[i][1] = atoi(split[1]);    // 過剰精錬ボーナス
-        refinebonus[i][2] = atoi(split[2]);    // 安全精錬限界
-        for (j = 0; j < 10 && split[j]; j++)
-            percentrefinery[i][j] = atoi(split[j + 3]);
-        i++;
-    }
-    fclose_(fp);               //Lupus. close this file!!!
-    printf("read db/refine_db.txt done\n");
 
     return 0;
 }

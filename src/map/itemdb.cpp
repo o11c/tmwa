@@ -203,7 +203,7 @@ static void itemdb_readdb(void)
             id->def = atoi(str[8]);
             id->range = atoi(str[9]);
             id->magic_bonus = atoi(str[10]);
-            id->slot = atoi(str[11]);
+            // id->slot = atoi(str[11]);
             id->sex = atoi(str[12]);
             id->equip = atoi(str[13]);
             id->wlv = atoi(str[14]);

@@ -1499,8 +1499,7 @@ void clif_changelook_towards(BlockList *bl, LOOK type, int val,
 
             WBUFB(buf, 6) = static_cast<uint8_t>(type);
             if (sd->equip_index[equip_point] >= 0
-                    // is this a bug, that it is hard-coded as EQUIP::SHOES (2)?
-                    && sd->inventory_data[sd->equip_index[EQUIP::SHOES]])
+                    && sd->inventory_data[sd->equip_index[equip_point]])
                 WBUFW(buf, 7) = sd->status.inventory[sd->equip_index[equip_point]].nameid;
             else
                 WBUFW(buf, 7) = 0;

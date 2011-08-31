@@ -4,19 +4,19 @@
 # include "../common/mmo.hpp"
 
 // categories based on the old conf/help.txt
-enum AtCommandCategory
+enum class AtCommandCategory
 {
-    ATCC_UNK,
-    ATCC_MISC,
-    ATCC_INFO,
-    ATCC_MSG,
-    ATCC_SELF,
-    ATCC_MOB,
-    ATCC_ITEM,
-    ATCC_GROUP,
-    ATCC_CHAR,
-    ATCC_ENV,
-    ATCC_ADMIN,
+    UNK,
+    MISC,
+    INFO,
+    MSG,
+    SELF,
+    MOB,
+    ITEM,
+    GROUP,
+    CHAR,
+    ENV,
+    ADMIN,
 };
 
 struct AtCommandInfo

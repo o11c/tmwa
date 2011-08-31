@@ -673,6 +673,7 @@ static const char *skip_word(const char *p)
         p++;                    // account変数用
     if (*p == '#')
         p++;                    // ワールドaccount変数用
+    // TODO remove 'l'
     if (*p == 'l')
         p++;                    // 一時的変数用(like weiss)
 
@@ -1226,6 +1227,7 @@ static int get_val(struct script_state *st, struct script_data *data)
             data->type = C_CONSTSTR;
             if (prefix == '@' || prefix == 'l')
             {
+                // TODO remove 'l'
                 if (sd)
                     data->u.str = pc_readregstr(sd, data->u.num);
             }
@@ -1253,12 +1255,11 @@ static int get_val(struct script_state *st, struct script_data *data)
             else if (str_data[data->u.num & 0x00ffffff].type == C_PARAM)
             {
                 if (sd)
-                    data->u.num =
-                        pc_readparam(sd,
-                                      str_data[data->u.num & 0x00ffffff].val);
+                    data->u.num = pc_readparam(sd, static_cast<SP>(str_data[data->u.num & 0x00ffffff].val));
             }
             else if (prefix == '@' || prefix == 'l')
             {
+                // TODO remove 'l'
                 if (sd)
                     data->u.num = pc_readreg(sd, data->u.num);
             }
@@ -1319,6 +1320,7 @@ static int set_reg(MapSessionData *sd, int num, const char *name, const void *v)
         const char *str = static_cast<const char *>(v);
         if (prefix == '@' || prefix == 'l')
         {
+            // TODO remove 'l'
             pc_setregstr(sd, num, str);
         }
         else if (prefix == '$')
@@ -1336,10 +1338,11 @@ static int set_reg(MapSessionData *sd, int num, const char *name, const void *v)
         int val = reinterpret_cast<int>(v);
         if (str_data[num & 0x00ffffff].type == C_PARAM)
         {
-            pc_setparam(sd, str_data[num & 0x00ffffff].val, val);
+            pc_setparam(sd, static_cast<SP>(str_data[num & 0x00ffffff].val), val);
         }
         else if (prefix == '@' || prefix == 'l')
         {
+            // TODO remove 'l'
             pc_setreg(sd, num, val);
         }
         else if (prefix == '$')
@@ -2221,10 +2224,8 @@ void builtin_getelementofarray(struct script_state *st)
  */
 void builtin_setlook(struct script_state *st)
 {
-    int type, val;
-
-    type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    val = conv_num(st, &(st->stack->stack_data[st->start + 3]));
+    LOOK type = static_cast<LOOK>(conv_num(st, &(st->stack->stack_data[st->start + 2])));
+    int val = conv_num(st, &(st->stack->stack_data[st->start + 3]));
 
     pc_changelook(script_rid2sd(st), type, val);
 }
@@ -2490,7 +2491,7 @@ void builtin_readparam(struct script_state *st)
         return;
     }
 
-    push_val(st->stack, C_INT, pc_readparam(sd, type));
+    push_val(st->stack, C_INT, pc_readparam(sd, static_cast<SP>(type)));
 }
 
 /*==========================================
@@ -2747,7 +2748,7 @@ void builtin_statusup(struct script_state *st)
 
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     sd = script_rid2sd(st);
-    pc_statusup(sd, type);
+    pc_statusup(sd, static_cast<SP>(type));
 }
 
 /*==========================================
@@ -2756,12 +2757,9 @@ void builtin_statusup(struct script_state *st)
  */
 void builtin_statusup2(struct script_state *st)
 {
-    int type, val;
-    MapSessionData *sd;
-
-    type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    val = conv_num(st, &(st->stack->stack_data[st->start + 3]));
-    sd = script_rid2sd(st);
+    SP type = static_cast<SP>(conv_num(st, &(st->stack->stack_data[st->start + 2])));
+    int val = conv_num(st, &(st->stack->stack_data[st->start + 3]));
+    MapSessionData *sd = script_rid2sd(st);
     pc_statusup2(sd, type, val);
 }
 
@@ -2771,12 +2769,9 @@ void builtin_statusup2(struct script_state *st)
  */
 void builtin_bonus(struct script_state *st)
 {
-    int type, val;
-    MapSessionData *sd;
-
-    type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    val = conv_num(st, &(st->stack->stack_data[st->start + 3]));
-    sd = script_rid2sd(st);
+    SP type = static_cast<SP>(conv_num(st, &(st->stack->stack_data[st->start + 2])));
+    int val = conv_num(st, &(st->stack->stack_data[st->start + 3]));
+    MapSessionData *sd = script_rid2sd(st);
     pc_bonus(sd, type, val);
 }
 
@@ -3067,7 +3062,7 @@ void builtin_getexp(struct script_state *st)
     if (base < 0 || job < 0)
         return;
     if (sd)
-        pc_gainexp_reason(sd, base, job, PC_GAINEXP_REASON_SCRIPT);
+        pc_gainexp_reason(sd, base, job, PC_GAINEXP_REASON::SCRIPT);
 }
 
 /*==========================================
@@ -4412,14 +4407,13 @@ void builtin_specialeffect2(struct script_state *st)
 void builtin_nude(struct script_state *st)
 {
     MapSessionData *sd = script_rid2sd(st);
-    int i;
 
-    if (sd == NULL)
+    if (!sd)
         return;
 
-    for (i = 0; i < 11; i++)
+    for (EQUIP i : EQUIPs)
         if (sd->equip_index[i] >= 0)
-            pc_unequipitem(sd, sd->equip_index[i], i);
+            pc_unequipitem(sd, sd->equip_index[i], i != EQUIP::MISC2);
     pc_calcstatus(sd, 0);
 }
 
@@ -4434,10 +4428,10 @@ void builtin_unequipbyid(struct script_state *st)
     if (sd == NULL)
         return;
 
-    int slot_id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
+    EQUIP slot_id = static_cast<EQUIP>(conv_num(st, &(st->stack->stack_data[st->start + 2])));
 
-    if (slot_id >= 0 && slot_id < 11 && sd->equip_index[slot_id] >= 0)
-        pc_unequipitem(sd, sd->equip_index[slot_id], slot_id);
+    if (sd->equip_index[slot_id] >= 0)
+        pc_unequipitem(sd, sd->equip_index[slot_id], slot_id != EQUIP::MISC2);
 
     pc_calcstatus(sd, 0);
 }
@@ -4591,36 +4585,34 @@ void builtin_hasitems(struct script_state *st)
   */
 void builtin_getlook(struct script_state *st)
 {
-    int type, val;
-    MapSessionData *sd;
-    sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
 
-    type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    val = -1;
+    LOOK type = static_cast<LOOK>(conv_num(st, &(st->stack->stack_data[st->start + 2])));
+    int val = -1;
     switch (type)
     {
-        case LOOK_HAIR:        //1
+        case LOOK::HAIR:        //1
             val = sd->status.hair;
             break;
-        case LOOK_WEAPON:      //2
+        case LOOK::WEAPON:      //2
             val = sd->status.weapon;
             break;
-        case LOOK_HEAD_BOTTOM: //3
-            val = sd->status.head_bottom;
+        case LOOK::LEGS: //3
+            val = sd->status.legs;
             break;
-        case LOOK_HEAD_TOP:    //4
-            val = sd->status.head_top;
+        case LOOK::HEAD:    //4
+            val = sd->status.head;
             break;
-        case LOOK_HEAD_MID:    //5
-            val = sd->status.head_mid;
+        case LOOK::CHEST:    //5
+            val = sd->status.chest;
             break;
-        case LOOK_HAIR_COLOR:  //6
+        case LOOK::HAIR_COLOR:  //6
             val = sd->status.hair_color;
             break;
-        case LOOK_SHIELD:      //8
+        case LOOK::SHIELD:      //8
             val = sd->status.shield;
             break;
-        case LOOK_SHOES:       //9
+        case LOOK::SHOES:       //9
             break;
     }
 

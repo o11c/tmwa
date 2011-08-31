@@ -28,7 +28,7 @@ int battle_heal(BlockList *bl, BlockList *target, int hp, int sp);
 
 AttackResult battle_weapon_attack(BlockList *bl, BlockList *target, tick_t tick);
 
-int battle_is_unarmed(BlockList *bl) __attribute__((pure));
+bool battle_is_unarmed(BlockList *bl) __attribute__((pure));
 Direction battle_get_dir(BlockList *bl);
 int battle_get_level(BlockList *bl);
 int battle_get_range(BlockList *bl);
@@ -47,7 +47,7 @@ int battle_get_adelay(BlockList *bl);
 int battle_get_amotion(BlockList *bl);
 int battle_get_dmotion(BlockList *bl);
 int battle_get_element(BlockList *bl);
-int battle_get_stat(int stat_id, BlockList *bl);
+int battle_get_stat(SP stat_id, BlockList *bl);
 
 struct status_change *battle_get_sc_data(BlockList *bl);
 short *battle_get_sc_count(BlockList *bl);

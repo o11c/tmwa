@@ -5,6 +5,7 @@
 
 # include "../lib/fixed_string.hpp"
 # include "../lib/ip.hpp"
+# include "../lib/earray.hpp"
 
 # define MAX_MAP_PER_SERVER 512
 # define MAX_INVENTORY 100
@@ -60,6 +61,17 @@ struct global_reg
     int value;
 };
 
+enum class ATTR
+{
+    STR, AGI, VIT, INT, DEX, LUK,
+
+    COUNT
+};
+constexpr ATTR ATTRs[6] =
+{
+    ATTR::STR, ATTR::AGI, ATTR::VIT, ATTR::INT, ATTR::DEX, ATTR::LUK
+};
+
 struct mmo_charstatus
 {
     charid_t char_id;
@@ -75,11 +87,11 @@ struct mmo_charstatus
     party_t party_id;
 
     short weapon, shield;
-    short head_top, head_mid, head_bottom;
+    short head, chest, legs;
 
     char name[24];
     level_t base_level, job_level;
-    short str, agi, vit, int_, dex, luk;
+    earray<short, ATTR, ATTR::COUNT> stats;
     uint8_t char_num, sex;
 
     IP_Address mapip;

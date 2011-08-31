@@ -584,9 +584,9 @@ static void ladmin_itemfrob_c(BlockList *bl, int source_id,
             IFIX(pc->status.inventory[j].nameid);
         IFIX(pc->status.weapon);
         IFIX(pc->status.shield);
-        IFIX(pc->status.head_top);
-        IFIX(pc->status.head_mid);
-        IFIX(pc->status.head_bottom);
+        IFIX(pc->status.head);
+        IFIX(pc->status.chest);
+        IFIX(pc->status.legs);
 
         if (stor)
             for (int j = 0; j < stor->storage_amount; j++)

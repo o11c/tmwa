@@ -22,7 +22,7 @@
 #include "tmw.hpp"
 #include "trade.hpp"
 
-#define ATCOMMAND_FUNC(x) static int atcommand_##x(int fd, MapSessionData* sd, const char* command, const char* message)
+#define ATCOMMAND_FUNC(x) static int atcommand_##x(int fd, MapSessionData* sd, const char *command, const char *message)
 ATCOMMAND_FUNC(setup);
 ATCOMMAND_FUNC(broadcast);
 ATCOMMAND_FUNC(localbroadcast);
@@ -65,6 +65,7 @@ ATCOMMAND_FUNC(gat);
 ATCOMMAND_FUNC(statuspoint);
 ATCOMMAND_FUNC(skillpoint);
 ATCOMMAND_FUNC(zeny);
+template<ATTR attr>
 ATCOMMAND_FUNC(param);
 ATCOMMAND_FUNC(recall);
 ATCOMMAND_FUNC(recallall);
@@ -138,58 +139,59 @@ ATCOMMAND_FUNC(skill_learn);
 ATCOMMAND_FUNC(wgm);
 ATCOMMAND_FUNC(ipcheck);
 
+typedef AtCommandCategory ATCC;
 /// atcommand dispatch table
 // sorted by category, then level
 // levels can be overridden in atcommand_athena.conf
 static AtCommandInfo atcommand_info[] = {
-    {"@help", 0,        atcommand_help,         ATCC_MISC,
+    {"@help", 0,        atcommand_help,         ATCC::MISC,
     "[@cmd | cat]",     "Display help about @commands."},
-    {"@wgm", 0,         atcommand_wgm,          ATCC_MSG,
+    {"@wgm", 0,         atcommand_wgm,          ATCC::MSG,
     "message",          "Send a message to all online GMs."},
-    {"@kami", 40,       atcommand_kami,         ATCC_MSG,
+    {"@kami", 40,       atcommand_kami,         ATCC::MSG,
     "message",          "Make a global announcement without displaying your name."},
-    {"@broadcast", 40,  atcommand_broadcast,    ATCC_MSG,
+    {"@broadcast", 40,  atcommand_broadcast,    ATCC::MSG,
     "message",          "Make a global announcement across all servers."},
-    {"@localbroadcast", 40, atcommand_localbroadcast, ATCC_MSG,
+    {"@localbroadcast", 40, atcommand_localbroadcast, ATCC::MSG,
     "message",          "Make a global announcement on the current server."},
-    {"@die", 1,         atcommand_die,          ATCC_SELF,
+    {"@die", 1,         atcommand_die,          ATCC::SELF,
     "",                 "Suicide."},
-    {"@goto", 20,       atcommand_goto,         ATCC_SELF,
+    {"@goto", 20,       atcommand_goto,         ATCC::SELF,
     "charname",         "Warp yourself to a player."},
-    {"@model", 20,      atcommand_model,        ATCC_SELF,
+    {"@model", 20,      atcommand_model,        ATCC::SELF,
     "hairstyle haircolor",
                         "Change your appearance."},
-    {"@warp", 40,       atcommand_warp,         ATCC_SELF,
+    {"@warp", 40,       atcommand_warp,         ATCC::SELF,
     "map x y",          "Warp yourself to a location on any map (random x,y if not specified)."},
-    {"@jump", 40,       atcommand_jump,         ATCC_SELF,
+    {"@jump", 40,       atcommand_jump,         ATCC::SELF,
     "[x [y]]",          "Warp to a location on the current map (random x,y if not specified)."},
-    {"@hide", 40,       atcommand_hide,         ATCC_SELF,
+    {"@hide", 40,       atcommand_hide,         ATCC::SELF,
     "",                 "Toggle detectability to mobs and scripts."},
-    {"@heal", 40,       atcommand_heal,         ATCC_SELF,
+    {"@heal", 40,       atcommand_heal,         ATCC::SELF,
     "[hp [sp]]",        "Restore your HP/SP, fully or by a specified amount."},
-    {"@save", 40,       atcommand_save,         ATCC_SELF,
+    {"@save", 40,       atcommand_save,         ATCC::SELF,
     "",                 "Set your respawn point to your current location."},
-    {"@return", 40,     atcommand_load,         ATCC_SELF,
+    {"@return", 40,     atcommand_load,         ATCC::SELF,
     "",                 "Warp yourself to your respawn point"},
-    {"@load", 40,       atcommand_load,         ATCC_SELF,
+    {"@load", 40,       atcommand_load,         ATCC::SELF,
     "",                 "Warp yourself to your respawn point"},
-    {"@killable", 40,   atcommand_killable,     ATCC_SELF,
+    {"@killable", 40,   atcommand_killable,     ATCC::SELF,
     "",                 "Make yourself killable by other players."},
-    {"@storeall", 40,   atcommand_storeall,     ATCC_SELF,
+    {"@storeall", 40,   atcommand_storeall,     ATCC::SELF,
     "",                 "Put the contents of your inventory into storage."},
-    {"@speed", 40,      atcommand_speed,        ATCC_SELF,
+    {"@speed", 40,      atcommand_speed,        ATCC::SELF,
     "[1-1000]",         "Set your walk speed delay in milliseconds. Default is 150."},
-    {"@memo", 40,       atcommand_memo,         ATCC_SELF,
+    {"@memo", 40,       atcommand_memo,         ATCC::SELF,
     "[pos]",            "Set a memo point (list points if no location specified)."},
-    {"@hairstyle", 40,  atcommand_hair_style,   ATCC_SELF,
+    {"@hairstyle", 40,  atcommand_hair_style,   ATCC::SELF,
     "",                 "Change your hairstyle."},
-    {"@haircolor", 40,  atcommand_hair_color,   ATCC_SELF,
+    {"@haircolor", 40,  atcommand_hair_color,   ATCC::SELF,
     "",                 "Change your hair color."},
-    {"@effect", 40,     atcommand_effect,       ATCC_SELF,
+    {"@effect", 40,     atcommand_effect,       ATCC::SELF,
     "ID [flag]",        "Apply an effect to yourself."},
-    {"@sp-info", 40,    atcommand_skillpool_info, ATCC_SELF,
+    {"@sp-info", 40,    atcommand_skillpool_info, ATCC::SELF,
     "charname",         "display magic skills"},
-    {"@option", 40,     atcommand_option,       ATCC_SELF,
+    {"@option", 40,     atcommand_option,       ATCC::SELF,
     "param1 p2 p3",
     "    <param1>      <param2>      <p3>(stackable)   <param3>               <param3>\n"
     "    1 Petrified   (stackable)   01 Sight           32 Peco Peco riding   2048 Orc Head\n"
@@ -198,209 +200,209 @@ static AtCommandInfo atcommand_info[] = {
     "    4 Sleeping    04 Silenced   08 Level 1 Cart   256 Level 3 Cart\n"
     "    6 darkness    08 ???        16 Falcon         512 Level 4 Cart\n"
     "                  16 darkness                    1024 Level 5 Cart"},
-    {"@alive", 60,      atcommand_alive,        ATCC_SELF,
+    {"@alive", 60,      atcommand_alive,        ATCC::SELF,
     "",                 "Resurrect yourself."},
-    {"@blvl", 60,       atcommand_baselevelup,  ATCC_SELF,
+    {"@blvl", 60,       atcommand_baselevelup,  ATCC::SELF,
     "count",            "Raise your base level."},
-    {"@jlvl", 60,       atcommand_joblevelup,   ATCC_SELF,
+    {"@jlvl", 60,       atcommand_joblevelup,   ATCC::SELF,
     "count",            "Raise your job level (slightly broken)."},
-    {"@allstats", 60,   atcommand_all_stats,    ATCC_SELF,
+    {"@allstats", 60,   atcommand_all_stats,    ATCC::SELF,
     "[num]",            "Increase all stats (to maximum if no amount specified)."},
-    {"@stpoint", 60,    atcommand_statuspoint,  ATCC_SELF,
+    {"@stpoint", 60,    atcommand_statuspoint,  ATCC::SELF,
     "count",            "Give yourself status points"},
-    {"@skpoint", 60,    atcommand_skillpoint,   ATCC_SELF,
+    {"@skpoint", 60,    atcommand_skillpoint,   ATCC::SELF,
     "count",            "Give yourself skill points"},
-    {"@zeny", 60,       atcommand_zeny,         ATCC_SELF,
+    {"@zeny", 60,       atcommand_zeny,         ATCC::SELF,
     "count",            "Give yourself some gold"},
-    {"@str", 60,        atcommand_param,        ATCC_SELF,
+    {"@str", 60,        atcommand_param<ATTR::STR>, ATCC::SELF,
     "count",            "Increase your strength"},
-    {"@agi", 60,        atcommand_param,        ATCC_SELF,
+    {"@agi", 60,        atcommand_param<ATTR::AGI>, ATCC::SELF,
     "count",            "Increase your agility"},
-    {"@vit", 60,        atcommand_param,        ATCC_SELF,
+    {"@vit", 60,        atcommand_param<ATTR::VIT>, ATCC::SELF,
     "count",            "Increase your vitality"},
-    {"@int", 60,        atcommand_param,        ATCC_SELF,
+    {"@int", 60,        atcommand_param<ATTR::INT>, ATCC::SELF,
     "count",            "Increase your intelligence"},
-    {"@dex", 60,        atcommand_param,        ATCC_SELF,
+    {"@dex", 60,        atcommand_param<ATTR::DEX>, ATCC::SELF,
     "count",            "Increase your dexterity"},
-    {"@luk", 60,        atcommand_param,        ATCC_SELF,
+    {"@luk", 60,        atcommand_param<ATTR::LUK>, ATCC::SELF,
     "count",            "Increase your luck"},
-    {"@killer", 60,     atcommand_killer,       ATCC_SELF,
+    {"@killer", 60,     atcommand_killer,       ATCC::SELF,
     "",                 "Let yourself kill other players."},
-    {"@invisible", 60,  atcommand_invisible,    ATCC_SELF,
+    {"@invisible", 60,  atcommand_invisible,    ATCC::SELF,
     "",                 "Make yourself invisible to players."},
-    {"@visible", 60,    atcommand_visible,      ATCC_SELF,
+    {"@visible", 60,    atcommand_visible,      ATCC::SELF,
     "",                 "Make yourself visible to players."},
-    {"@hugo", 60,       atcommand_iterate_forward_over_players, ATCC_SELF,
+    {"@hugo", 60,       atcommand_iterate_forward_over_players, ATCC::SELF,
     "",                 "Warp yourself to the next player in the online list."},
-    {"@linus", 60,      atcommand_iterate_backwards_over_players, ATCC_SELF,
+    {"@linus", 60,      atcommand_iterate_backwards_over_players, ATCC::SELF,
     "",                 "Warp yourself to the previous player in the online list."},
-    {"@sp-focus", 80,   atcommand_skillpool_focus, ATCC_SELF,
+    {"@sp-focus", 80,   atcommand_skillpool_focus, ATCC::SELF,
     "num [charname]",   "focus a skill"},
-    {"@sp-unfocus", 80, atcommand_skillpool_unfocus, ATCC_SELF,
+    {"@sp-unfocus", 80, atcommand_skillpool_unfocus, ATCC::SELF,
     "num [charname]",   "unfocus a skill"},
-    {"@skill-learn", 80, atcommand_skill_learn, ATCC_SELF,
+    {"@skill-learn", 80, atcommand_skill_learn, ATCC::SELF,
     "num [level [charname]]",
                         "learn a skill"},
-    {"@kick", 20,       atcommand_kick,         ATCC_CHAR,
+    {"@kick", 20,       atcommand_kick,         ATCC::CHAR,
     "charname",         "Disconnect a player from the server."},
-    {"@charitemlist", 40, atcommand_character_item_list, ATCC_CHAR,
+    {"@charitemlist", 40, atcommand_character_item_list, ATCC::CHAR,
     "charname",         "List the contents of a player's inventory."},
-    {"@charstoragelist", 40, atcommand_character_storage_list, ATCC_CHAR,
+    {"@charstoragelist", 40, atcommand_character_storage_list, ATCC::CHAR,
     "charname",         "List the contents of a player's storage."},
-    {"@charkillable", 40, atcommand_charkillable, ATCC_CHAR,
+    {"@charkillable", 40, atcommand_charkillable, ATCC::CHAR,
     "charname",         "Make a player killable by others."},
-    {"@chareffect", 40, atcommand_chareffect,   ATCC_CHAR,
+    {"@chareffect", 40, atcommand_chareffect,   ATCC::CHAR,
     "",                 "??"},
-    {"@charstats", 40,  atcommand_character_stats, ATCC_CHAR,
+    {"@charstats", 40,  atcommand_character_stats, ATCC::CHAR,
     "charname",         "display stats of a character"},
-    {"@charstatsall", 40, atcommand_character_stats_all, ATCC_CHAR,
+    {"@charstatsall", 40, atcommand_character_stats_all, ATCC::CHAR,
     "",                 "display stats of all characters"},
-    {"@charmodel", 50,  atcommand_charmodel,    ATCC_CHAR,
+    {"@charmodel", 50,  atcommand_charmodel,    ATCC::CHAR,
     "hairstyle haircolor charname",
                         "Change a player's appearance."},
-    {"@charwarp", 60,   atcommand_charwarp,     ATCC_CHAR,
+    {"@charwarp", 60,   atcommand_charwarp,     ATCC::CHAR,
     "map x y charname", "Warp a player to a location on any map (random x,y if unspecified)."},
-    {"@kill", 60,       atcommand_kill,         ATCC_CHAR,
+    {"@kill", 60,       atcommand_kill,         ATCC::CHAR,
     "charname",         "Kill a player."},
-    {"@charbaselvl", 60, atcommand_character_baselevel, ATCC_CHAR,
+    {"@charbaselvl", 60, atcommand_character_baselevel, ATCC::CHAR,
     "num charname",     "Raise a player's base level."},
-    {"@charjlvl", 60,   atcommand_character_joblevel, ATCC_CHAR,
+    {"@charjlvl", 60,   atcommand_character_joblevel, ATCC::CHAR,
     "num charname",     "Raise a player's job level (slightly broken)."},
-    {"@charskreset", 60, atcommand_charskreset, ATCC_CHAR,
+    {"@charskreset", 60, atcommand_charskreset, ATCC::CHAR,
     "charname",         "Reset a player's skills."},
-    {"@charstreset", 60, atcommand_charstreset, ATCC_CHAR,
+    {"@charstreset", 60, atcommand_charstreset, ATCC::CHAR,
     "charname",         "Reset a player's stats."},
-    {"@charreset", 60,  atcommand_charreset,    ATCC_CHAR,
+    {"@charreset", 60,  atcommand_charreset,    ATCC::CHAR,
     "charname",         "Reset a player's stats and skills."},
-    {"@charskpoint", 60, atcommand_charskpoint, ATCC_CHAR,
+    {"@charskpoint", 60, atcommand_charskpoint, ATCC::CHAR,
     "num charname",     "Give an amount of skill points to a player."},
-    {"@charstpoint", 60, atcommand_charstpoint, ATCC_CHAR,
+    {"@charstpoint", 60, atcommand_charstpoint, ATCC::CHAR,
     "num charname",     "Give an amount of stat points to a player."},
-    {"@charzeny", 60,   atcommand_charzeny,     ATCC_CHAR,
+    {"@charzeny", 60,   atcommand_charzeny,     ATCC::CHAR,
     "amount charname",  "Give an amount of money to a player."},
-    {"@charchangesex", 60, atcommand_char_change_sex, ATCC_CHAR,
+    {"@charchangesex", 60, atcommand_char_change_sex, ATCC::CHAR,
     "name",             "Change a player's gender."},
-    {"@block", 60,      atcommand_char_block,   ATCC_CHAR,
+    {"@block", 60,      atcommand_char_block,   ATCC::CHAR,
     "charname",         "Permanently block a player's account."},
-    {"@unblock", 60,    atcommand_char_unblock, ATCC_CHAR,
+    {"@unblock", 60,    atcommand_char_unblock, ATCC::CHAR,
     "charname",         "Unblock a player's account."},
-    {"@ban", 60,        atcommand_char_ban,     ATCC_CHAR,
+    {"@ban", 60,        atcommand_char_ban,     ATCC::CHAR,
     "time charname",    "Ban a player's account for a specified time (+-#y/m/d/h/mn/s)."},
-    {"@unban", 60,      atcommand_char_unban,   ATCC_CHAR,
+    {"@unban", 60,      atcommand_char_unban,   ATCC::CHAR,
     "charname",         "Unban a player's account."},
-    {"@chardelitem", 60, atcommand_chardelitem, ATCC_CHAR,
+    {"@chardelitem", 60, atcommand_chardelitem, ATCC::CHAR,
     "name|ID qty charname",
                         "Remove an amount of a specified item from a player's inventory."},
-    {"@trade", 60,      atcommand_trade,        ATCC_CHAR,
+    {"@trade", 60,      atcommand_trade,        ATCC::CHAR,
     "charname",         "Open trade window with a player."},
-    {"@charwipe", 60,   atcommand_char_wipe,    ATCC_CHAR,
+    {"@charwipe", 60,   atcommand_char_wipe,    ATCC::CHAR,
     "",                 "??"},
-    {"@charoption", 60, atcommand_character_option, ATCC_CHAR,
+    {"@charoption", 60, atcommand_character_option, ATCC::CHAR,
     "param1 param2 param3 charname",
                         "set display options of a character"},
-    {"@revive", 60,     atcommand_revive,       ATCC_CHAR,
+    {"@revive", 60,     atcommand_revive,       ATCC::CHAR,
     "charname",         "resurrect someone else"},
-    {"@recall", 60,     atcommand_recall,       ATCC_CHAR,
+    {"@recall", 60,     atcommand_recall,       ATCC::CHAR,
     "charname",         "warp a player to you"},
-    {"@charsave", 60,   atcommand_character_save, ATCC_CHAR,
+    {"@charsave", 60,   atcommand_character_save, ATCC::CHAR,
     "map x y charname", "changes somebody's respawn point"},
-    {"@doom", 80,       atcommand_doom,         ATCC_CHAR,
+    {"@doom", 80,       atcommand_doom,         ATCC::CHAR,
     "",                 "Kill all online non-GM players."},
-    {"@doommap", 80,    atcommand_doommap,      ATCC_CHAR,
+    {"@doommap", 80,    atcommand_doommap,      ATCC::CHAR,
     "",                 "Kill all non-GM players on the map."},
-    {"@raise", 80,      atcommand_raise,        ATCC_CHAR,
+    {"@raise", 80,      atcommand_raise,        ATCC::CHAR,
     "",                 "Resurrect all online players."},
-    {"@raisemap", 80,   atcommand_raisemap,     ATCC_CHAR,
+    {"@raisemap", 80,   atcommand_raisemap,     ATCC::CHAR,
     "",                 "Resurrect all players on the map."},
-    {"@recallall", 80,  atcommand_recallall,    ATCC_CHAR,
+    {"@recallall", 80,  atcommand_recallall,    ATCC::CHAR,
     "",                 "Warp all online players to you."},
-    {"@kickall", 99,    atcommand_kickall,      ATCC_CHAR,
+    {"@kickall", 99,    atcommand_kickall,      ATCC::CHAR,
     "",                 "Disconnect all online players."},
-    {"@servertime", 0,  atcommand_servertime,   ATCC_INFO,
+    {"@servertime", 0,  atcommand_servertime,   ATCC::INFO,
     "",                 "Display the time of the server (usually UTC)."},
-    {"@where", 1,       atcommand_where,        ATCC_INFO,
+    {"@where", 1,       atcommand_where,        ATCC::INFO,
     "[charname]",       "Display the location of a player."},
-    {"@who", 20,        atcommand_who,          ATCC_INFO,
+    {"@who", 20,        atcommand_who,          ATCC::INFO,
     "[substring]",      "List all online players and their locations."},
-    {"@whogroup", 20,   atcommand_whogroup,     ATCC_INFO,
+    {"@whogroup", 20,   atcommand_whogroup,     ATCC::INFO,
     "[substring]",      "List all online players and their parties."},
-    {"@whomap", 20,     atcommand_whomap,       ATCC_INFO,
+    {"@whomap", 20,     atcommand_whomap,       ATCC::INFO,
     "[map]",            "List all players on a map and their locations."},
-    {"@whomapgroup", 20, atcommand_whomapgroup, ATCC_INFO,
+    {"@whomapgroup", 20, atcommand_whomapgroup, ATCC::INFO,
     "[map]",            "List all players on a map and their parties."},
-    {"@whogm", 20,      atcommand_whogm,        ATCC_INFO,
+    {"@whogm", 20,      atcommand_whogm,        ATCC::INFO,
     "[substring]",      "List online GMs"},
-    {"@skillid", 40,    atcommand_skillid,      ATCC_INFO,
+    {"@skillid", 40,    atcommand_skillid,      ATCC::INFO,
     "name",             "Display the ID of a skill."},
-    {"@mapinfo", 99,    atcommand_mapinfo,      ATCC_INFO,
+    {"@mapinfo", 99,    atcommand_mapinfo,      ATCC::INFO,
     "[type [map]]",     "information about a map. type 1 add players, type 2 add NPCs, type 3 add shops/chat"},
-    {"@storage", 1,     atcommand_storage,      ATCC_ITEM,
+    {"@storage", 1,     atcommand_storage,      ATCC::ITEM,
     "",                 "Open your storage."},
-    {"@itemreset", 40,  atcommand_itemreset,    ATCC_ITEM,
+    {"@itemreset", 40,  atcommand_itemreset,    ATCC::ITEM,
     "",                 "Delete the contents of your inventory."},
-    {"@item", 60,       atcommand_item,         ATCC_ITEM,
+    {"@item", 60,       atcommand_item,         ATCC::ITEM,
     "name|ID qty",      "Add an item to your inventory."},
-    {"@idsearch", 60,   atcommand_idsearch,     ATCC_ITEM,
+    {"@idsearch", 60,   atcommand_idsearch,     ATCC::ITEM,
     "name",             "List items by substring."},
-    {"@itemcheck", 60,  atcommand_itemcheck,    ATCC_ITEM,
+    {"@itemcheck", 60,  atcommand_itemcheck,    ATCC::ITEM,
     "",                 "check authorization of your inventory"},
-    {"@npcmove", 20,    atcommand_npcmove,      ATCC_ADMIN,
+    {"@npcmove", 20,    atcommand_npcmove,      ATCC::ADMIN,
     "",                 "??"},
-    {"@ipcheck", 60,    atcommand_ipcheck,      ATCC_ADMIN,
+    {"@ipcheck", 60,    atcommand_ipcheck,      ATCC::ADMIN,
     "charname",         "List players with the same IP addresses."},
-    {"@enablenpc", 80,  atcommand_enablenpc,    ATCC_ADMIN,
+    {"@enablenpc", 80,  atcommand_enablenpc,    ATCC::ADMIN,
     "npcname",          "Enable an NPC."},
-    {"@disablenpc", 80, atcommand_disablenpc,   ATCC_ADMIN,
+    {"@disablenpc", 80, atcommand_disablenpc,   ATCC::ADMIN,
     "npcname",          "Disable an NPC."},
-    {"@gat", 99,        atcommand_gat,          ATCC_ADMIN,
+    {"@gat", 99,        atcommand_gat,          ATCC::ADMIN,
     "",                 "Display the map's collision information."},
-    {"@mapexit", 99,    atcommand_mapexit,      ATCC_ADMIN,
+    {"@mapexit", 99,    atcommand_mapexit,      ATCC::ADMIN,
     "",                 "Shut the map server down."},
-    {"@adjgmlvl", 99,   atcommand_adjgmlvl,     ATCC_ADMIN,
+    {"@adjgmlvl", 99,   atcommand_adjgmlvl,     ATCC::ADMIN,
     "",                 "Temporarily adjust the GM level of a player."},
-    {"@adjcmdlvl", 99,  atcommand_adjcmdlvl,    ATCC_ADMIN,
+    {"@adjcmdlvl", 99,  atcommand_adjcmdlvl,    ATCC::ADMIN,
     "",                 "Temporarily adjust the required @level of a @command."},
-    {"@gm", 100,        atcommand_gm,           ATCC_ADMIN,
+    {"@gm", 100,        atcommand_gm,           ATCC::ADMIN,
     "password",         "Make yourself a GM."},
-    {"@party", 1,       atcommand_party,        ATCC_GROUP,
+    {"@party", 1,       atcommand_party,        ATCC::GROUP,
     "name",             "Create a party."},
-    {"@pvpoff", 40,     atcommand_pvpoff,       ATCC_GROUP,
+    {"@pvpoff", 40,     atcommand_pvpoff,       ATCC::GROUP,
     "",                 "Disable PvP on current map."},
-    {"@pvpon", 40,      atcommand_pvpon,        ATCC_GROUP,
+    {"@pvpon", 40,      atcommand_pvpon,        ATCC::GROUP,
     "",                 "Enable PvP on current map."},
-    {"@partyrecall", 60, atcommand_partyrecall, ATCC_GROUP,
+    {"@partyrecall", 60, atcommand_partyrecall, ATCC::GROUP,
     "partyname",        "Warp all members of a party to you."},
-    {"@killmonster2", 40, atcommand_killmonster2, ATCC_MOB,
+    {"@killmonster2", 40, atcommand_killmonster2, ATCC::MOB,
     "",                 "Kill all monsters on the map, without them dropping items."},
-    {"@spawn", 50,      atcommand_spawn,        ATCC_MOB,
+    {"@spawn", 50,      atcommand_spawn,        ATCC::MOB,
     "name|ID [count [x [y]]]",
                         "Spawn an amount of specified mobs around you."},
-    {"@killmonster", 60, atcommand_killmonster, ATCC_MOB,
+    {"@killmonster", 60, atcommand_killmonster, ATCC::MOB,
     "[map]",            "Kill all monsters on the map, dropping items."},
-    {"@summon", 60,     atcommand_summon,       ATCC_MOB,
+    {"@summon", 60,     atcommand_summon,       ATCC::MOB,
     "name|ID [num [desired name [x [y]]]]",
                         "Summon an amount of specified mobs around you."},
-    {"@addwarp", 20,    atcommand_addwarp,      ATCC_ENV,
+    {"@addwarp", 20,    atcommand_addwarp,      ATCC::ENV,
     "map x y",          "Add a semipermanent warp to a location from your current position."},
-    {"@email", 0,       atcommand_email,        ATCC_MISC,
+    {"@email", 0,       atcommand_email,        ATCC::MISC,
     "old@e.mail new@e.mail",
                         "change stored email"},
-    {"@magicinfo", 60,  atcommand_magic_info,   ATCC_MISC,
+    {"@magicinfo", 60,  atcommand_magic_info,   ATCC::MISC,
     "",                 "??"},
-    {"@log", 60,        atcommand_log,          ATCC_MISC,
+    {"@log", 60,        atcommand_log,          ATCC::MISC,
     "message",          "Record a message to the GM log."},
-    {"@l", 60,          atcommand_log,          ATCC_MISC,
+    {"@l", 60,          atcommand_log,          ATCC::MISC,
     "message",          "Record a message to the GM log."},
-    {"@tee", 60,        atcommand_tee,          ATCC_MISC,
+    {"@tee", 60,        atcommand_tee,          ATCC::MISC,
     "",                 "Say a message aloud and record it to the GM log."},
-    {"@t", 60,          atcommand_tee,          ATCC_MISC,
+    {"@t", 60,          atcommand_tee,          ATCC::MISC,
     "",                 "Say a message aloud and record it to the GM log."},
-    {"@setmagic", 99,   atcommand_set_magic,    ATCC_MISC,
+    {"@setmagic", 99,   atcommand_set_magic,    ATCC::MISC,
     "school|all [value [charname]]",
                         "set magic skill levels"},
-    {"@setup", 40,      atcommand_setup,        ATCC_UNK,
+    {"@setup", 40,      atcommand_setup,        ATCC::UNK,
     "",                 "??"},
-    {"@listnearby", 40, atcommand_list_nearby,  ATCC_UNK,
+    {"@listnearby", 40, atcommand_list_nearby,  ATCC::UNK,
     "",                 "??"},
 };
 
@@ -1130,7 +1132,7 @@ int atcommand_speed(int fd, MapSessionData *sd,
         return -1;
     sd->speed = speed;
 
-    clif_updatestatus(sd, SP_SPEED);
+    clif_updatestatus(sd, SP::SPEED);
     clif_displaymessage(fd, "Speed changed.");
 
     return 0;
@@ -1251,8 +1253,8 @@ int atcommand_alive(int fd, MapSessionData *sd,
     pc_setstand(sd);
     if (battle_config.pc_invincible_time > 0)
         pc_setinvincibletimer(sd, battle_config.pc_invincible_time);
-    clif_updatestatus(sd, SP_HP);
-    clif_updatestatus(sd, SP_SP);
+    clif_updatestatus(sd, SP::HP);
+    clif_updatestatus(sd, SP::SP);
     clif_resurrection(sd, 1);
     clif_displaymessage(fd, "You've been revived! It's a miracle!");
 
@@ -1415,9 +1417,9 @@ int atcommand_baselevelup(int fd, MapSessionData *sd,
         for (int i = 1; i <= level; i++)
             sd->status.status_point += (sd->status.base_level + i + 14) / 4;
         sd->status.base_level += level;
-        clif_updatestatus(sd, SP_BASELEVEL);
-        clif_updatestatus(sd, SP_NEXTBASEEXP);
-        clif_updatestatus(sd, SP_STATUSPOINT);
+        clif_updatestatus(sd, SP::BASELEVEL);
+        clif_updatestatus(sd, SP::NEXTBASEEXP);
+        clif_updatestatus(sd, SP::STATUSPOINT);
         pc_calcstatus(sd, 0);
         pc_heal(sd, sd->status.max_hp, sd->status.max_sp);
         clif_misceffect(sd, 0);
@@ -1438,11 +1440,11 @@ int atcommand_baselevelup(int fd, MapSessionData *sd,
             if (sd->status.status_point < 0)
                 sd->status.status_point = 0;
             // TODO: remove status points from stats
-            clif_updatestatus(sd, SP_STATUSPOINT);
+            clif_updatestatus(sd, SP::STATUSPOINT);
         }
         sd->status.base_level += level;
-        clif_updatestatus(sd, SP_BASELEVEL);
-        clif_updatestatus(sd, SP_NEXTBASEEXP);
+        clif_updatestatus(sd, SP::BASELEVEL);
+        clif_updatestatus(sd, SP::NEXTBASEEXP);
         pc_calcstatus(sd, 0);
         clif_displaymessage(fd, "Base level lowered.");
     }
@@ -1477,10 +1479,10 @@ int atcommand_joblevelup(int fd, MapSessionData *sd,
             return -1;
         }
         sd->status.job_level += level;
-        clif_updatestatus(sd, SP_JOBLEVEL);
-        clif_updatestatus(sd, SP_NEXTJOBEXP);
+        clif_updatestatus(sd, SP::JOBLEVEL);
+        clif_updatestatus(sd, SP::NEXTJOBEXP);
         sd->status.skill_point += level;
-        clif_updatestatus(sd, SP_SKILLPOINT);
+        clif_updatestatus(sd, SP::SKILLPOINT);
         pc_calcstatus(sd, 0);
         clif_misceffect(sd, 1);
         clif_displaymessage(fd, "Job level raised.");
@@ -1493,8 +1495,8 @@ int atcommand_joblevelup(int fd, MapSessionData *sd,
             return -1;
         }
         sd->status.job_level += level;
-        clif_updatestatus(sd, SP_JOBLEVEL);
-        clif_updatestatus(sd, SP_NEXTJOBEXP);
+        clif_updatestatus(sd, SP::JOBLEVEL);
+        clif_updatestatus(sd, SP::NEXTJOBEXP);
         if (sd->status.skill_point > 0)
         {
             // is this even how TMW does skill points?
@@ -1502,7 +1504,7 @@ int atcommand_joblevelup(int fd, MapSessionData *sd,
             if (sd->status.skill_point < 0)
                 sd->status.skill_point = 0;
             // TODO: remove status points from skills
-            clif_updatestatus(sd, SP_SKILLPOINT);
+            clif_updatestatus(sd, SP::SKILLPOINT);
         }
         pc_calcstatus(sd, 0);
         clif_displaymessage(fd, "Job level lowered.");
@@ -1517,17 +1519,17 @@ static void atcommand_help_cat_name(int fd, AtCommandCategory cat)
 {
     switch (cat)
     {
-    case ATCC_UNK:      clif_displaymessage(fd, "-- Unknown Commands --"); return;
-    case ATCC_MISC:     clif_displaymessage(fd, "-- Miscellaneous Commands --"); return;
-    case ATCC_INFO:     clif_displaymessage(fd, "-- Information Commands --"); return;
-    case ATCC_MSG:      clif_displaymessage(fd, "-- Message Commands --"); return;
-    case ATCC_SELF:     clif_displaymessage(fd, "-- Self Char Commands --"); return;
-    case ATCC_MOB:      clif_displaymessage(fd, "-- Mob Commands --"); return;
-    case ATCC_ITEM:     clif_displaymessage(fd, "-- Item Commands --"); return;
-    case ATCC_GROUP:    clif_displaymessage(fd, "-- Group Commands --"); return;
-    case ATCC_CHAR:     clif_displaymessage(fd, "-- Other Char Commands --"); return;
-    case ATCC_ENV:      clif_displaymessage(fd, "-- Environment Commands --"); return;
-    case ATCC_ADMIN:    clif_displaymessage(fd, "-- Admin Commands --"); return;
+    case ATCC::UNK:      clif_displaymessage(fd, "-- Unknown Commands --"); return;
+    case ATCC::MISC:     clif_displaymessage(fd, "-- Miscellaneous Commands --"); return;
+    case ATCC::INFO:     clif_displaymessage(fd, "-- Information Commands --"); return;
+    case ATCC::MSG:      clif_displaymessage(fd, "-- Message Commands --"); return;
+    case ATCC::SELF:     clif_displaymessage(fd, "-- Self Char Commands --"); return;
+    case ATCC::MOB:      clif_displaymessage(fd, "-- Mob Commands --"); return;
+    case ATCC::ITEM:     clif_displaymessage(fd, "-- Item Commands --"); return;
+    case ATCC::GROUP:    clif_displaymessage(fd, "-- Group Commands --"); return;
+    case ATCC::CHAR:     clif_displaymessage(fd, "-- Other Char Commands --"); return;
+    case ATCC::ENV:      clif_displaymessage(fd, "-- Environment Commands --"); return;
+    case ATCC::ADMIN:    clif_displaymessage(fd, "-- Admin Commands --"); return;
     default: abort();
     }
 }
@@ -1611,58 +1613,58 @@ int atcommand_help(int fd, MapSessionData *sd,
     }
     if (strcasecmp(message, "unk") == 0 || strcasecmp(message, "unknown") == 0)
     {
-        atcommand_help_cat(fd, gm_level, ATCC_UNK);
+        atcommand_help_cat(fd, gm_level, ATCC::UNK);
         return 0;
     }
     if (strcasecmp(message, "misc") == 0 || strcasecmp(message, "miscellaneous") == 0)
     {
-        atcommand_help_cat(fd, gm_level, ATCC_MISC);
+        atcommand_help_cat(fd, gm_level, ATCC::MISC);
         return 0;
     }
     if (strcasecmp(message, "info") == 0 || strcasecmp(message, "information") == 0)
     {
-        atcommand_help_cat(fd, gm_level, ATCC_INFO);
+        atcommand_help_cat(fd, gm_level, ATCC::INFO);
         return 0;
     }
     if (strcasecmp(message, "msg") == 0 || strcasecmp(message, "message") == 0 || strcasecmp(message, "messaging") == 0)
     {
-        atcommand_help_cat(fd, gm_level, ATCC_MSG);
+        atcommand_help_cat(fd, gm_level, ATCC::MSG);
         return 0;
     }
     if (strcasecmp(message, "self") == 0)
     {
-        atcommand_help_cat(fd, gm_level, ATCC_SELF);
+        atcommand_help_cat(fd, gm_level, ATCC::SELF);
         return 0;
     }
     if (strcasecmp(message, "monster") == 0 || strcasecmp(message, "monsters") == 0 ||
             strcasecmp(message, "mob") == 0 || strcasecmp(message, "mobs") == 0)
     {
-        atcommand_help_cat(fd, gm_level, ATCC_MOB);
+        atcommand_help_cat(fd, gm_level, ATCC::MOB);
         return 0;
     }
     if (strcasecmp(message, "item") == 0 || strcasecmp(message, "items") == 0)
     {
-        atcommand_help_cat(fd, gm_level, ATCC_ITEM);
+        atcommand_help_cat(fd, gm_level, ATCC::ITEM);
         return 0;
     }
     if (strcasecmp(message, "group") == 0 || strcasecmp(message, "groups") == 0 || strcasecmp(message, "pvp") == 0)
     {
-        atcommand_help_cat(fd, gm_level, ATCC_GROUP);
+        atcommand_help_cat(fd, gm_level, ATCC::GROUP);
         return 0;
     }
     if (strcasecmp(message, "char") == 0)
     {
-        atcommand_help_cat(fd, gm_level, ATCC_CHAR);
+        atcommand_help_cat(fd, gm_level, ATCC::CHAR);
         return 0;
     }
     if (strcasecmp(message, "env") == 0 ||strcasecmp(message, "environment") == 0)
     {
-        atcommand_help_cat(fd, gm_level, ATCC_ENV);
+        atcommand_help_cat(fd, gm_level, ATCC::ENV);
         return 0;
     }
     if (strcasecmp(message, "admin") == 0 || strcasecmp(message, "admininstration") == 0)
     {
-        atcommand_help_cat(fd, gm_level, ATCC_ADMIN);
+        atcommand_help_cat(fd, gm_level, ATCC::ADMIN);
         return 0;
     }
 
@@ -1772,8 +1774,8 @@ int atcommand_model(int fd, MapSessionData *sd,
         clif_displaymessage(fd, "An invalid number was specified.");
         return -1;
     }
-    pc_changelook(sd, LOOK_HAIR, hair_style);
-    pc_changelook(sd, LOOK_HAIR_COLOR, hair_color);
+    pc_changelook(sd, LOOK::HAIR, hair_style);
+    pc_changelook(sd, LOOK::HAIR_COLOR, hair_color);
     clif_displaymessage(fd, "Appearance changed.");
 
     return 0;
@@ -1794,7 +1796,7 @@ int atcommand_hair_style(int fd, MapSessionData *sd,
         clif_displaymessage(fd, "An invalid number was specified.");
         return -1;
     }
-    pc_changelook(sd, LOOK_HAIR, hair_style);
+    pc_changelook(sd, LOOK::HAIR, hair_style);
     clif_displaymessage(fd, "Appearance changed.");
 
     return 0;
@@ -1817,7 +1819,7 @@ int atcommand_hair_color(int fd, MapSessionData *sd,
         return -1;
     }
 
-    pc_changelook(sd, LOOK_HAIR_COLOR, hair_color);
+    pc_changelook(sd, LOOK::HAIR_COLOR, hair_color);
     clif_displaymessage(fd, "Appearance changed.");
 
     return 0;
@@ -2062,7 +2064,7 @@ int atcommand_statuspoint(int fd, MapSessionData *sd,
         return -1;
     }
     sd->status.status_point = static_cast<short>(new_status_points);
-    clif_updatestatus(sd, SP_STATUSPOINT);
+    clif_updatestatus(sd, SP::STATUSPOINT);
     clif_displaymessage(fd, "Number of status points changed!");
 
     return 0;
@@ -2093,7 +2095,7 @@ int atcommand_skillpoint(int fd, MapSessionData *sd,
         return -1;
     }
     sd->status.skill_point = static_cast<short>(new_skill_points);
-    clif_updatestatus(sd, SP_SKILLPOINT);
+    clif_updatestatus(sd, SP::SKILLPOINT);
     clif_displaymessage(fd, "Number of skill points changed!");
 
     return 0;
@@ -2124,15 +2126,16 @@ int atcommand_zeny(int fd, MapSessionData *sd,
         return -1;
     }
     sd->status.zeny = new_zeny;
-    clif_updatestatus(sd, SP_ZENY);
+    clif_updatestatus(sd, SP::ZENY);
     clif_displaymessage(fd, "Number of zenys changed!");
 
     return 0;
 }
 
 /// Set a stat (str, agi, vit ...)
+template<ATTR attr>
 int atcommand_param(int fd, MapSessionData *sd,
-                     const char *command, const char *message)
+                     const char *, const char *message)
 {
     if (!message || !*message)
         return -1;
@@ -2140,26 +2143,13 @@ int atcommand_param(int fd, MapSessionData *sd,
     if (sscanf(message, "%d", &value) < 1 || value == 0)
         return -1;
 
-    short *status = 0;
-    int idx;
-    switch (command[1])
-    {
-    case 's': idx = 0; status = &sd->status.str; break;
-    case 'a': idx = 1; status = &sd->status.agi; break;
-    case 'v': idx = 2; status = &sd->status.vit; break;
-    case 'i': idx = 3; status = &sd->status.int_; break;
-    case 'd': idx = 4; status = &sd->status.dex; break;
-    case 'l': idx = 5; status = &sd->status.luk; break;
-    default: abort();
-    }
-
-    int new_value = *status + value;
+    int new_value = sd->status.stats[attr] + value;
     if (new_value > battle_config.max_parameter)
         new_value = battle_config.max_parameter;
     if (new_value < 1)
         new_value = 1;
 
-    if (new_value == *status)
+    if (new_value == sd->status.stats[attr])
     {
         if (value < 0)
             clif_displaymessage(fd, "Impossible to decrease the number/value.");
@@ -2167,9 +2157,9 @@ int atcommand_param(int fd, MapSessionData *sd,
             clif_displaymessage(fd, "Impossible to increase the number/value.");
         return -1;
     }
-    *status = static_cast<short>(new_value);
-    clif_updatestatus(sd, SP_STR + idx);
-    clif_updatestatus(sd, SP_USTR + idx);
+    sd->status.stats[attr] = static_cast<short>(new_value);
+    clif_updatestatus(sd, ATTR_TO_SP_BASE(attr));
+    clif_updatestatus(sd, ATTR_TO_SP_UP(attr));
     pc_calcstatus(sd, 0);
     clif_displaymessage(fd, "Stat changed.");
 
@@ -2180,31 +2170,25 @@ int atcommand_param(int fd, MapSessionData *sd,
 int atcommand_all_stats(int fd, MapSessionData *sd,
                          const char *, const char *message)
 {
-    short *status[] =
-    {
-        &sd->status.str, &sd->status.agi, &sd->status.vit,
-        &sd->status.int_, &sd->status.dex, &sd->status.luk
-    };
-
     int value;
     if (!message || !*message || sscanf(message, "%d", &value) < 1 || value == 0)
         value = battle_config.max_parameter;
 
     int count = 0;
-    for (int idx = 0; idx < 6; idx++)
+    for (ATTR idx : ATTRs)
     {
-        int new_value = static_cast<int>(*status[idx]) + value;
+        int new_value = static_cast<int>(sd->status.stats[idx]) + value;
         if (new_value > battle_config.max_parameter)
             new_value = battle_config.max_parameter;
         if (new_value < 1)
             new_value = 1;
 
-        if (new_value == *status[idx])
+        if (new_value == sd->status.stats[idx])
             continue;
 
-        *status[idx] = new_value;
-        clif_updatestatus(sd, SP_STR + idx);
-        clif_updatestatus(sd, SP_USTR + idx);
+        sd->status.stats[idx] = new_value;
+        clif_updatestatus(sd, ATTR_TO_SP_BASE(idx));
+        clif_updatestatus(sd, ATTR_TO_SP_UP(idx));
         pc_calcstatus(sd, 0);
         count++;
     }
@@ -2285,8 +2269,8 @@ int atcommand_revive(int fd, MapSessionData *sd,
     pc_setstand(pl_sd);
     if (battle_config.pc_invincible_time > 0)
         pc_setinvincibletimer(sd, battle_config.pc_invincible_time);
-    clif_updatestatus(pl_sd, SP_HP);
-    clif_updatestatus(pl_sd, SP_SP);
+    clif_updatestatus(pl_sd, SP::HP);
+    clif_updatestatus(pl_sd, SP::SP);
     clif_resurrection(pl_sd, 1);
     clif_displaymessage(fd, "Character revived.");
 
@@ -2322,12 +2306,12 @@ int atcommand_character_stats(int fd, MapSessionData *,
         {"MaxHp", pl_sd->status.max_hp},
         {"Sp", pl_sd->status.sp},
         {"MaxSp", pl_sd->status.max_sp},
-        {"Str", pl_sd->status.str},
-        {"Agi", pl_sd->status.agi},
-        {"Vit", pl_sd->status.vit},
-        {"Int", pl_sd->status.int_},
-        {"Dex", pl_sd->status.dex},
-        {"Luk", pl_sd->status.luk},
+        {"Str", pl_sd->status.stats[ATTR::STR]},
+        {"Agi", pl_sd->status.stats[ATTR::AGI]},
+        {"Vit", pl_sd->status.stats[ATTR::VIT]},
+        {"Int", pl_sd->status.stats[ATTR::INT]},
+        {"Dex", pl_sd->status.stats[ATTR::DEX]},
+        {"Luk", pl_sd->status.stats[ATTR::LUK]},
         {"Zeny", pl_sd->status.zeny},
     };
     char output[200];
@@ -2366,8 +2350,8 @@ int atcommand_character_stats_all(int fd, MapSessionData *,
 
         sprintf(output,
                  "STR: %d | AGI: %d | VIT: %d | INT: %d | DEX: %d | LUK: %d | Zeny: %d %s",
-                 pl_sd->status.str, pl_sd->status.agi, pl_sd->status.vit,
-                 pl_sd->status.int_, pl_sd->status.dex, pl_sd->status.luk,
+                 pl_sd->status.stats[ATTR::STR], pl_sd->status.stats[ATTR::AGI], pl_sd->status.stats[ATTR::VIT],
+                 pl_sd->status.stats[ATTR::INT], pl_sd->status.stats[ATTR::DEX], pl_sd->status.stats[ATTR::LUK],
                  pl_sd->status.zeny, gmlevel);
         clif_displaymessage(fd, output);
         clif_displaymessage(fd, "--------");
@@ -2707,8 +2691,8 @@ static void atcommand_raise_sub(MapSessionData *sd)
         sd->status.hp = sd->status.max_hp;
         sd->status.sp = sd->status.max_sp;
         pc_setstand(sd);
-        clif_updatestatus(sd, SP_HP);
-        clif_updatestatus(sd, SP_SP);
+        clif_updatestatus(sd, SP::HP);
+        clif_updatestatus(sd, SP::SP);
         clif_resurrection(sd, 1);
         clif_displaymessage(sd->fd, "Mercy has been shown.");
     }
@@ -2775,9 +2759,9 @@ int atcommand_character_baselevel(int fd, MapSessionData *sd,
         for (int i = 1; i <= level; i++)
             pl_sd->status.status_point += (pl_sd->status.base_level + i + 14) / 4;
         pl_sd->status.base_level += level;
-        clif_updatestatus(pl_sd, SP_BASELEVEL);
-        clif_updatestatus(pl_sd, SP_NEXTBASEEXP);
-        clif_updatestatus(pl_sd, SP_STATUSPOINT);
+        clif_updatestatus(pl_sd, SP::BASELEVEL);
+        clif_updatestatus(pl_sd, SP::NEXTBASEEXP);
+        clif_updatestatus(pl_sd, SP::STATUSPOINT);
         pc_calcstatus(pl_sd, 0);
         pc_heal(pl_sd, pl_sd->status.max_hp, pl_sd->status.max_sp);
         clif_misceffect(pl_sd, 0);
@@ -2791,13 +2775,13 @@ int atcommand_character_baselevel(int fd, MapSessionData *sd,
                 pl_sd->status.status_point -= (pl_sd->status.base_level + i + 14) / 4;
             if (pl_sd->status.status_point < 0)
                 pl_sd->status.status_point = 0;
-            clif_updatestatus(pl_sd, SP_STATUSPOINT);
+            clif_updatestatus(pl_sd, SP::STATUSPOINT);
         }
         pl_sd->status.base_level += level;
         pl_sd->status.base_exp = 0;
-        clif_updatestatus(pl_sd, SP_BASELEVEL);
-        clif_updatestatus(pl_sd, SP_NEXTBASEEXP);
-        clif_updatestatus(pl_sd, SP_BASEEXP);
+        clif_updatestatus(pl_sd, SP::BASELEVEL);
+        clif_updatestatus(pl_sd, SP::NEXTBASEEXP);
+        clif_updatestatus(pl_sd, SP::BASEEXP);
         pc_calcstatus(pl_sd, 0);
         clif_displaymessage(fd, "Character's base level lowered.");
     }
@@ -2836,13 +2820,13 @@ int atcommand_character_joblevel(int fd, MapSessionData *sd,
         level = 1 - pl_sd->status.job_level;
 
     pl_sd->status.job_level += level;
-    clif_updatestatus(pl_sd, SP_JOBLEVEL);
-    clif_updatestatus(pl_sd, SP_NEXTJOBEXP);
+    clif_updatestatus(pl_sd, SP::JOBLEVEL);
+    clif_updatestatus(pl_sd, SP::NEXTJOBEXP);
 
     if (level > 0)
     {
         pl_sd->status.skill_point += level;
-        clif_updatestatus(pl_sd, SP_SKILLPOINT);
+        clif_updatestatus(pl_sd, SP::SKILLPOINT);
         pc_calcstatus(pl_sd, 0);
         clif_misceffect(pl_sd, 1);
         clif_displaymessage(fd, "character's job level raised.");
@@ -2854,7 +2838,7 @@ int atcommand_character_joblevel(int fd, MapSessionData *sd,
             pl_sd->status.skill_point += level;
             if (pl_sd->status.skill_point < 0)
                 pl_sd->status.skill_point = 0;
-            clif_updatestatus(pl_sd, SP_SKILLPOINT);
+            clif_updatestatus(pl_sd, SP::SKILLPOINT);
         }
         // TODO: remove points from skills
         pc_calcstatus(pl_sd, 0);
@@ -3086,20 +3070,20 @@ int atcommand_char_wipe(int fd, MapSessionData *sd,
     // Reset base level
     pl_sd->status.base_level = 1;
     pl_sd->status.base_exp = 0;
-    clif_updatestatus(pl_sd, SP_BASELEVEL);
-    clif_updatestatus(pl_sd, SP_NEXTBASEEXP);
-    clif_updatestatus(pl_sd, SP_BASEEXP);
+    clif_updatestatus(pl_sd, SP::BASELEVEL);
+    clif_updatestatus(pl_sd, SP::NEXTBASEEXP);
+    clif_updatestatus(pl_sd, SP::BASEEXP);
 
     // Reset job level
     pl_sd->status.job_level = 1;
     pl_sd->status.job_exp = 0;
-    clif_updatestatus(pl_sd, SP_JOBLEVEL);
-    clif_updatestatus(pl_sd, SP_NEXTJOBEXP);
-    clif_updatestatus(pl_sd, SP_JOBEXP);
+    clif_updatestatus(pl_sd, SP::JOBLEVEL);
+    clif_updatestatus(pl_sd, SP::NEXTJOBEXP);
+    clif_updatestatus(pl_sd, SP::JOBEXP);
 
     // Zeny to 50
-    pl_sd->status.zeny = 50;
-    clif_updatestatus(pl_sd, SP_ZENY);
+    pl_sd->status.zeny = 0;
+    clif_updatestatus(pl_sd, SP::ZENY);
 
     // Clear inventory
     for (int i = 0; i < MAX_INVENTORY; i++)
@@ -3107,7 +3091,7 @@ int atcommand_char_wipe(int fd, MapSessionData *sd,
         if (sd->status.inventory[i].amount)
         {
             if (sd->status.inventory[i].equip)
-                pc_unequipitem(pl_sd, i, 0);
+                pc_unequipitem(pl_sd, i, false);
             pc_delitem(pl_sd, i, sd->status.inventory[i].amount, 0);
         }
     }
@@ -3148,8 +3132,8 @@ int atcommand_charmodel(int fd, MapSessionData *,
         clif_displaymessage(fd, "An invalid number was specified.");
         return -1;
     }
-    pc_changelook(pl_sd, LOOK_HAIR, hair_style);
-    pc_changelook(pl_sd, LOOK_HAIR_COLOR, hair_color);
+    pc_changelook(pl_sd, LOOK::HAIR, hair_style);
+    pc_changelook(pl_sd, LOOK::HAIR_COLOR, hair_color);
     clif_displaymessage(fd, "Appearance changed.");
 
     return 0;
@@ -3181,7 +3165,7 @@ int atcommand_charskpoint(int fd, MapSessionData *,
     if (new_skill_points != pl_sd->status.skill_point)
     {
         pl_sd->status.skill_point = new_skill_points;
-        clif_updatestatus(pl_sd, SP_SKILLPOINT);
+        clif_updatestatus(pl_sd, SP::SKILLPOINT);
         clif_displaymessage(fd, "Character's number of skill points changed!");
     }
     else
@@ -3221,7 +3205,7 @@ int atcommand_charstpoint(int fd, MapSessionData *,
     if (new_status_points != pl_sd->status.status_point)
     {
         pl_sd->status.status_point = new_status_points;
-        clif_updatestatus(pl_sd, SP_STATUSPOINT);
+        clif_updatestatus(pl_sd, SP::STATUSPOINT);
         clif_displaymessage(fd, "Character's number of status points changed!");
     }
     else
@@ -3261,7 +3245,7 @@ int atcommand_charzeny(int fd, MapSessionData *,
     if (new_zeny != pl_sd->status.zeny)
     {
         pl_sd->status.zeny = new_zeny;
-        clif_updatestatus(pl_sd, SP_ZENY);
+        clif_updatestatus(pl_sd, SP::ZENY);
         clif_displaymessage(fd, "Character's number of zenys changed!");
     }
     else
@@ -3987,7 +3971,7 @@ int atcommand_storeall(int fd, MapSessionData *sd,
         if (sd->status.inventory[i].amount)
         {
             if (sd->status.inventory[i].equip)
-                pc_unequipitem(sd, i, 0);
+                pc_unequipitem(sd, i, false);
             storage_storageadd(sd, i, sd->status.inventory[i].amount);
         }
     }

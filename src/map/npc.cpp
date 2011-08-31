@@ -1132,7 +1132,7 @@ static void npc_convertlabel_db(db_key_t key, db_val_t data, struct npc_data_scr
     {
         RECREATE(lst, struct npc_label_list, num + 1);
     }
-    strzcpy(lst[num].name, lname, MIN(static_cast<size_t>(p - lname), sizeof(lst[num].name)-1));
+    strzcpy(lst[num].name, lname, min(static_cast<size_t>(p - lname), sizeof(lst[num].name)-1));
 
     lst[num].pos = pos;
     nd->scr.label_list = lst;

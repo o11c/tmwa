@@ -176,10 +176,10 @@ static void mmo_char_tofile(FILE *fp, struct mmo_charstatus *p)
              p->char_id,        p->account_id, p->char_num,
              p->name,           0/*pc_class*/, p->base_level, p->job_level,
              p->base_exp, p->job_exp, p->zeny,  p->hp, p->max_hp, p->sp, p->max_sp,
-             p->str, p->agi, p->vit, p->int_, p->dex, p->luk,
+             p->stats[ATTR::STR], p->stats[ATTR::AGI], p->stats[ATTR::VIT], p->stats[ATTR::INT], p->stats[ATTR::DEX], p->stats[ATTR::LUK],
              p->status_point, p->skill_point,   p->option, 0/*p->karma*/, 0/*p->manner*/,
              p->party_id, 0, 0,         p->hair, p->hair_color, 0/*p->clothes_color*/,
-             p->weapon, p->shield, p->head_top, p->head_mid, p->head_bottom,
+             p->weapon, p->shield, p->head, p->chest, p->legs,
              &p->last_point.map, p->last_point.x, p->last_point.y,
              &p->save_point.map, p->save_point.x, p->save_point.y, p->partner_id);
     for (int i = 0; i < 10; i++)
@@ -242,10 +242,10 @@ static int mmo_char_fromstr(char *str, struct mmo_charstatus *p)
                      &p->char_id,       &p->account_id, &p->char_num,
                      p->name,           /*pc_class,*/ &p->base_level, &p->job_level,
                      &p->base_exp, &p->job_exp, &p->zeny,       &p->hp, &p->max_hp, &p->sp, &p->max_sp,
-                     &p->str, &p->agi,  &p->vit, &p->int_, &p->dex, &p->luk,
+                     &p->stats[ATTR::STR], &p->stats[ATTR::AGI], &p->stats[ATTR::VIT], &p->stats[ATTR::INT], &p->stats[ATTR::DEX], &p->stats[ATTR::LUK],
                      &p->status_point,  &p->skill_point,        &p->option, /*karma,*/ /*manner,*/
                      &p->party_id, /*guild_id,*/ /*pet_id,*/    &p->hair, &p->hair_color, /*clothes_color,*/
-                     &p->weapon, &p->shield, &p->head_top, &p->head_mid, &p->head_bottom,
+                     &p->weapon, &p->shield, &p->head, &p->chest, &p->legs,
                      &p->last_point.map, &p->last_point.x, &p->last_point.y,
                      &p->save_point.map, &p->save_point.x, &p->save_point.y,
                      &p->partner_id, &next);
@@ -537,7 +537,7 @@ static void remove_trailing_blanks(char *name)
 struct new_char_dat
 {
     char name[24];
-    uint8_t stats[6];
+    earray<uint8_t, ATTR, ATTR::COUNT> stats;
     uint8_t slot;
     // Note: the mana client says these are 16-bit ints
     // but no color or style is ever likely to be that high
@@ -596,7 +596,7 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
             }
         break;
     }
-    if (dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5] != 5 * 6 ||
+    if (dat.stats[ATTR::STR] + dat.stats[ATTR::AGI] + dat.stats[ATTR::VIT] + dat.stats[ATTR::INT] + dat.stats[ATTR::DEX] + dat.stats[ATTR::LUK] != 5 * 6 ||
         dat.slot >= MAX_CHARS_PER_ACCOUNT ||
         dat.hair_style_high || dat.hair_style >= NUM_HAIR_STYLES ||
         dat.hair_color_high || dat.hair_color >= NUM_HAIR_COLORS)
@@ -604,22 +604,22 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
         char_log.info("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu\n",
                       "invalid values",
                       fd, sd->account_id, dat.slot, name,
-                      dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
-                      dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+                      dat.stats[ATTR::STR], dat.stats[ATTR::AGI], dat.stats[ATTR::VIT], dat.stats[ATTR::INT], dat.stats[ATTR::DEX], dat.stats[ATTR::LUK],
+                      dat.stats[ATTR::STR] + dat.stats[ATTR::AGI] + dat.stats[ATTR::VIT] + dat.stats[ATTR::INT] + dat.stats[ATTR::DEX] + dat.stats[ATTR::LUK],
                       dat.hair_style, dat.hair_color);
         return NULL;
     }
 
     // check individual stat value
-    for (int i = 0; i < 6; i++)
+    for (ATTR i : ATTRs)
     {
         if (dat.stats[i] < 1 || dat.stats[i] > 9)
         {
             char_log.info("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu\n",
                           "invalid stat value: not between 1 to 9",
                           fd, sd->account_id, dat.slot, name,
-                          dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
-                          dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+                          dat.stats[ATTR::STR], dat.stats[ATTR::AGI], dat.stats[ATTR::VIT], dat.stats[ATTR::INT], dat.stats[ATTR::DEX], dat.stats[ATTR::LUK],
+                          dat.stats[ATTR::STR] + dat.stats[ATTR::AGI] + dat.stats[ATTR::VIT] + dat.stats[ATTR::INT] + dat.stats[ATTR::DEX] + dat.stats[ATTR::LUK],
                           dat.hair_style, dat.hair_color);
             return NULL;
         }
@@ -632,8 +632,8 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
             char_log.info("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s (actual name of other char: %s), stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu.\n",
                           "name already exists",
                           fd, sd->account_id, dat.slot, name, char_dat[i].name,
-                          dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
-                          dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+                          dat.stats[ATTR::STR], dat.stats[ATTR::AGI], dat.stats[ATTR::VIT], dat.stats[ATTR::INT], dat.stats[ATTR::DEX], dat.stats[ATTR::LUK],
+                          dat.stats[ATTR::STR] + dat.stats[ATTR::AGI] + dat.stats[ATTR::VIT] + dat.stats[ATTR::INT] + dat.stats[ATTR::DEX] + dat.stats[ATTR::LUK],
                           dat.hair_style, dat.hair_color);
             return NULL;
         }
@@ -643,8 +643,8 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
             char_log.info("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s (name of other char: %s), stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu.\n",
                           "slot already used",
                           fd, sd->account_id, dat.slot, name, char_dat[i].name,
-                          dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
-                          dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+                          dat.stats[ATTR::STR], dat.stats[ATTR::AGI], dat.stats[ATTR::VIT], dat.stats[ATTR::INT], dat.stats[ATTR::DEX], dat.stats[ATTR::LUK],
+                          dat.stats[ATTR::STR] + dat.stats[ATTR::AGI] + dat.stats[ATTR::VIT] + dat.stats[ATTR::INT] + dat.stats[ATTR::DEX] + dat.stats[ATTR::LUK],
                           dat.hair_style, dat.hair_color);
             return NULL;
         }
@@ -655,8 +655,8 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
         char_log.info("Make new char error (%s): (connection #%d, account: %d) slot %hhu, name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu.\n",
                       "name used is whisper name for server",
                       fd, sd->account_id, dat.slot, name,
-                      dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
-                      dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+                      dat.stats[ATTR::STR], dat.stats[ATTR::AGI], dat.stats[ATTR::VIT], dat.stats[ATTR::INT], dat.stats[ATTR::DEX], dat.stats[ATTR::LUK],
+                      dat.stats[ATTR::STR] + dat.stats[ATTR::AGI] + dat.stats[ATTR::VIT] + dat.stats[ATTR::INT] + dat.stats[ATTR::DEX] + dat.stats[ATTR::LUK],
                       dat.hair_style, dat.hair_color);
         return NULL;
     }
@@ -672,8 +672,8 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
 
     char_log.info("Creation of New Character: (connection #%d, account: %d) slot %hhu, character Name: %s, stats: %hhu+%hhu+%hhu+%hhu+%hhu+%hhu=%u, hair: %hhu, hair color: %hhu. [%s]\n",
                   fd, sd->account_id, dat.slot, name,
-                  dat.stats[0], dat.stats[1], dat.stats[2], dat.stats[3], dat.stats[4], dat.stats[5],
-                  dat.stats[0] + dat.stats[1] + dat.stats[2] + dat.stats[3] + dat.stats[4] + dat.stats[5],
+                  dat.stats[ATTR::STR], dat.stats[ATTR::AGI], dat.stats[ATTR::VIT], dat.stats[ATTR::INT], dat.stats[ATTR::DEX], dat.stats[ATTR::LUK],
+                  dat.stats[ATTR::STR] + dat.stats[ATTR::AGI] + dat.stats[ATTR::VIT] + dat.stats[ATTR::INT] + dat.stats[ATTR::DEX] + dat.stats[ATTR::LUK],
                   dat.hair_style, dat.hair_color, session[fd]->client_addr.to_string().c_str());
 
     struct mmo_charstatus *chardat = &char_dat[char_num];
@@ -689,14 +689,10 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
     chardat->base_exp = 0;
     chardat->job_exp = 0;
     chardat->zeny = 0;
-    chardat->str = dat.stats[0];
-    chardat->agi = dat.stats[1];
-    chardat->vit = dat.stats[2];
-    chardat->int_ = dat.stats[3];
-    chardat->dex = dat.stats[4];
-    chardat->luk = dat.stats[5];
-    chardat->max_hp = 40 * (100 + chardat->vit) / 100;
-    chardat->max_sp = 11 * (100 + chardat->int_) / 100;
+    for (ATTR attr : ATTRs)
+        chardat->stats[attr] = dat.stats[attr];
+    chardat->max_hp = 40 * (100 + chardat->stats[ATTR::VIT]) / 100;
+    chardat->max_sp = 11 * (100 + chardat->stats[ATTR::INT]) / 100;
     chardat->hp = chardat->max_hp;
     chardat->sp = chardat->max_sp;
     chardat->status_point = 0;
@@ -707,9 +703,9 @@ static struct mmo_charstatus *make_new_char(int fd, const uint8_t *raw_dat)
     chardat->hair_color = dat.hair_color;
     chardat->weapon = 1;
     chardat->shield = 0;
-    chardat->head_top = 0;
-    chardat->head_mid = 0;
-    chardat->head_bottom = 0;
+    chardat->head = 0;
+    chardat->chest = 0;
+    chardat->legs = 0;
     chardat->last_point = start_point;
     chardat->save_point = start_point;
     char_num++;
@@ -1058,32 +1054,32 @@ static void mmo_char_send006b(int fd, CharSessionData *sd)
         WFIFOL(fd, j + 36) = 0;//p->manner;
 
         WFIFOW(fd, j + 40) = p->status_point;
-        WFIFOW(fd, j + 42) = MIN(p->hp, 0x7fff);
-        WFIFOW(fd, j + 44) = MIN(p->max_hp, 0x7fff);
-        WFIFOW(fd, j + 46) = MIN(p->sp, 0x7fff);
-        WFIFOW(fd, j + 48) = MIN(p->max_sp, 0x7fff);
+        WFIFOW(fd, j + 42) = min(p->hp, 0x7fff);
+        WFIFOW(fd, j + 44) = min(p->max_hp, 0x7fff);
+        WFIFOW(fd, j + 46) = min(p->sp, 0x7fff);
+        WFIFOW(fd, j + 48) = min(p->max_sp, 0x7fff);
         WFIFOW(fd, j + 50) = DEFAULT_WALK_SPEED;   // p->speed;
         WFIFOW(fd, j + 52) = 0; // p->pc_class;
         WFIFOW(fd, j + 54) = p->hair;
         WFIFOW(fd, j + 56) = p->weapon;
         WFIFOW(fd, j + 58) = p->base_level;
         WFIFOW(fd, j + 60) = p->skill_point;
-        WFIFOW(fd, j + 62) = p->head_bottom;
+        WFIFOW(fd, j + 62) = p->legs;
         WFIFOW(fd, j + 64) = p->shield;
-        WFIFOW(fd, j + 66) = p->head_top;
-        WFIFOW(fd, j + 68) = p->head_mid;
+        WFIFOW(fd, j + 66) = p->head;
+        WFIFOW(fd, j + 68) = p->chest;
         WFIFOW(fd, j + 70) = p->hair_color;
         WFIFOW(fd, j + 72) = find_equip_view(p, 0x0080);  // 13: misc2
 //      WFIFOW(fd,j+72) = p->clothes_color;
 
         memcpy(WFIFOP(fd, j + 74), p->name, 24);
 
-        WFIFOB(fd, j + 98) = MIN(p->str, 255);
-        WFIFOB(fd, j + 99) = MIN(p->agi, 255);
-        WFIFOB(fd, j + 100) = MIN(p->vit, 255);
-        WFIFOB(fd, j + 101) = MIN(p->int_, 255);
-        WFIFOB(fd, j + 102) = MIN(p->dex, 255);
-        WFIFOB(fd, j + 103) = MIN(p->luk, 255);
+        WFIFOB(fd, j + 98) = min(p->stats[ATTR::STR], 255);
+        WFIFOB(fd, j + 99) = min(p->stats[ATTR::AGI], 255);
+        WFIFOB(fd, j + 100) = min(p->stats[ATTR::VIT], 255);
+        WFIFOB(fd, j + 101) = min(p->stats[ATTR::INT], 255);
+        WFIFOB(fd, j + 102) = min(p->stats[ATTR::DEX], 255);
+        WFIFOB(fd, j + 103) = min(p->stats[ATTR::LUK], 255);
         WFIFOB(fd, j + 104) = p->char_num;
     }
 
@@ -1334,9 +1330,9 @@ static void parse_tologin(int fd)
                     char_dat[i].inventory[j].equip = 0;
                 char_dat[i].weapon = 0;
                 char_dat[i].shield = 0;
-                char_dat[i].head_top = 0;
-                char_dat[i].head_mid = 0;
-                char_dat[i].head_bottom = 0;
+                char_dat[i].head = 0;
+                char_dat[i].chest = 0;
+                char_dat[i].legs = 0;
             }
             // disconnect player if online on char-server
             disconnect_player(acc);
@@ -1388,11 +1384,11 @@ static void parse_tologin(int fd)
                     p++;
                 if (!p[0])
                     break;
-                char *last_space = p + MIN(len, 80);
+                char *last_space = p + min(len, 80);
                 while (last_space != p && *last_space != ' ')
                     last_space--;
                 if (last_space == p)
-                    last_space = p + MIN(len, 80);
+                    last_space = p + min(len, 80);
 
                 // send broadcast to all map-servers
                 uint8_t buf[84] = {};
@@ -1468,9 +1464,9 @@ static void parse_tologin(int fd)
                     FIX(c->inventory[j].nameid);
                 FIX(c->weapon);
                 FIX(c->shield);
-                FIX(c->head_top);
-                FIX(c->head_mid);
-                FIX(c->head_bottom);
+                FIX(c->head);
+                FIX(c->chest);
+                FIX(c->legs);
 
                 struct storage *s = account2storage(c->account_id);
                 if (s)
@@ -2335,10 +2331,10 @@ static void parse_char(int fd)
             // This used to send 0x30, which is wrong
             WFIFOW(fd, 2 + 40) = chardat->status_point;
 
-            WFIFOW(fd, 2 + 42) = MIN(chardat->hp, 0x7fff);
-            WFIFOW(fd, 2 + 44) = MIN(chardat->max_hp, 0x7fff);
-            WFIFOW(fd, 2 + 46) = MIN(chardat->sp, 0x7fff);
-            WFIFOW(fd, 2 + 48) = MIN(chardat->max_sp, 0x7fff);
+            WFIFOW(fd, 2 + 42) = min(chardat->hp, 0x7fff);
+            WFIFOW(fd, 2 + 44) = min(chardat->max_hp, 0x7fff);
+            WFIFOW(fd, 2 + 46) = min(chardat->sp, 0x7fff);
+            WFIFOW(fd, 2 + 48) = min(chardat->max_sp, 0x7fff);
             WFIFOW(fd, 2 + 50) = DEFAULT_WALK_SPEED;   // chardat->speed;
             WFIFOW(fd, 2 + 52) = 0; //chardat->pc_class;
             WFIFOW(fd, 2 + 54) = chardat->hair;
@@ -2347,18 +2343,18 @@ static void parse_char(int fd)
             WFIFOW(fd, 2 + 60) = chardat->skill_point;
 
             WFIFOW(fd, 2 + 64) = chardat->shield;
-            WFIFOW(fd, 2 + 66) = chardat->head_top;
-            WFIFOW(fd, 2 + 68) = chardat->head_mid;
+            WFIFOW(fd, 2 + 66) = chardat->head;
+            WFIFOW(fd, 2 + 68) = chardat->chest;
             WFIFOW(fd, 2 + 70) = chardat->hair_color;
 
             STRZCPY2(sign_cast<char *>(WFIFOP(fd, 2 + 74)), chardat->name);
 
-            WFIFOB(fd, 2 + 98) = MIN(chardat->str, 255);
-            WFIFOB(fd, 2 + 99) = MIN(chardat->agi, 255);
-            WFIFOB(fd, 2 + 100) = MIN(chardat->vit, 255);
-            WFIFOB(fd, 2 + 101) = MIN(chardat->int_, 255);
-            WFIFOB(fd, 2 + 102) = MIN(chardat->dex, 255);
-            WFIFOB(fd, 2 + 103) = MIN(chardat->luk, 255);
+            WFIFOB(fd, 2 + 98) = min(chardat->stats[ATTR::STR], 255);
+            WFIFOB(fd, 2 + 99) = min(chardat->stats[ATTR::AGI], 255);
+            WFIFOB(fd, 2 + 100) = min(chardat->stats[ATTR::VIT], 255);
+            WFIFOB(fd, 2 + 101) = min(chardat->stats[ATTR::INT], 255);
+            WFIFOB(fd, 2 + 102) = min(chardat->stats[ATTR::DEX], 255);
+            WFIFOB(fd, 2 + 103) = min(chardat->stats[ATTR::LUK], 255);
             WFIFOB(fd, 2 + 104) = chardat->char_num;
 
             WFIFOSET(fd, 108);

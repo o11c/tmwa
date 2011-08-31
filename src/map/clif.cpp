@@ -26,7 +26,7 @@
 #define STATE_BLIND 0x10
 #define EMOTE_IGNORED 0x0e
 
-static void clif_changelook_towards(BlockList *, int, int, MapSessionData *dst);
+static void clif_changelook_towards(BlockList *, LOOK, int, MapSessionData *dst);
 static void clif_sitting(int fd, MapSessionData *sd);
 static void clif_itemlist(MapSessionData *sd);
 static void clif_GM_kickack(MapSessionData *sd, int id);
@@ -628,19 +628,19 @@ static uint16_t clif_player_update(MapSessionData *sd, uint8_t *buf)
         WBUFB(buf, 18) = sd->attack_spell_look_override;
     else
     {
-        if (sd->equip_index[9] >= 0 && sd->inventory_data[sd->equip_index[9]])
-            WBUFW(buf, 18) = sd->status.inventory[sd->equip_index[9]].nameid;
+        if (sd->equip_index[EQUIP::WEAPON] >= 0 && sd->inventory_data[sd->equip_index[EQUIP::WEAPON]])
+            WBUFW(buf, 18) = sd->status.inventory[sd->equip_index[EQUIP::WEAPON]].nameid;
         else
             WBUFW(buf, 18) = 0;
     }
-    if (sd->equip_index[8] >= 0 && sd->equip_index[8] != sd->equip_index[9]
-        && sd->inventory_data[sd->equip_index[8]])
-        WBUFW(buf, 20) = sd->status.inventory[sd->equip_index[8]].nameid;
+    if (sd->equip_index[EQUIP::SHIELD] >= 0 && sd->equip_index[EQUIP::SHIELD] != sd->equip_index[EQUIP::WEAPON]
+        && sd->inventory_data[sd->equip_index[EQUIP::SHIELD]])
+        WBUFW(buf, 20) = sd->status.inventory[sd->equip_index[EQUIP::SHIELD]].nameid;
     else
         WBUFW(buf, 20) = 0;
-    WBUFW(buf, 22) = sd->status.head_bottom;
-    WBUFW(buf, 24) = sd->status.head_top;
-    WBUFW(buf, 26) = sd->status.head_mid;
+    WBUFW(buf, 22) = sd->status.legs;
+    WBUFW(buf, 24) = sd->status.head;
+    WBUFW(buf, 26) = sd->status.chest;
     WBUFW(buf, 28) = sd->status.hair_color;
     WBUFW(buf, 30) = 0;//sd->status.clothes_color;
     WBUFW(buf, 32) = static_cast<int>(sd->head_dir);
@@ -671,19 +671,19 @@ static uint16_t clif_player_move(MapSessionData *sd, uint8_t *buf)
     WBUFW(buf, 12) = sd->status.option;
     WBUFW(buf, 14) = 0; //sd->view_class;
     WBUFW(buf, 16) = sd->status.hair;
-    if (sd->equip_index[9] >= 0 && sd->inventory_data[sd->equip_index[9]])
-        WBUFW(buf, 18) = sd->status.inventory[sd->equip_index[9]].nameid;
+    if (sd->equip_index[EQUIP::WEAPON] >= 0 && sd->inventory_data[sd->equip_index[EQUIP::WEAPON]])
+        WBUFW(buf, 18) = sd->status.inventory[sd->equip_index[EQUIP::WEAPON]].nameid;
     else
         WBUFW(buf, 18) = 0;
-    if (sd->equip_index[8] >= 0 && sd->equip_index[8] != sd->equip_index[9]
-            && sd->inventory_data[sd->equip_index[8]])
-        WBUFW(buf, 20) = sd->status.inventory[sd->equip_index[8]].nameid;
+    if (sd->equip_index[EQUIP::SHIELD] >= 0 && sd->equip_index[EQUIP::SHIELD] != sd->equip_index[EQUIP::WEAPON]
+            && sd->inventory_data[sd->equip_index[EQUIP::SHIELD]])
+        WBUFW(buf, 20) = sd->status.inventory[sd->equip_index[EQUIP::SHIELD]].nameid;
     else
         WBUFW(buf, 20) = 0;
-    WBUFW(buf, 22) = sd->status.head_bottom;
+    WBUFW(buf, 22) = sd->status.legs;
     WBUFL(buf, 24) = gettick();
-    WBUFW(buf, 28) = sd->status.head_top;
-    WBUFW(buf, 30) = sd->status.head_mid;
+    WBUFW(buf, 28) = sd->status.head;
+    WBUFW(buf, 30) = sd->status.chest;
     WBUFW(buf, 32) = sd->status.hair_color;
     WBUFW(buf, 34) = 0;//sd->status.clothes_color;
     WBUFW(buf, 36) = static_cast<int>(sd->head_dir);
@@ -720,7 +720,7 @@ static uint16_t clif_mob_appear(struct mob_data *md, uint8_t *buf)
     WBUFPOS(buf, 46, md->x, md->y, md->dir);
     WBUFB(buf, 49) = 5;
     WBUFB(buf, 50) = 5;
-    WBUFW(buf, 52) = MIN(battle_get_level(md), battle_config.max_lv);
+    WBUFW(buf, 52) = min(battle_get_level(md), battle_config.max_lv);
 
     return packet_len_table[0x78];
 }
@@ -745,7 +745,7 @@ static uint16_t clif_mob_move(struct mob_data *md, uint8_t *buf)
     WBUFPOS2(buf, 50, md->x, md->y, md->to_x, md->to_y);
     WBUFB(buf, 56) = 5;
     WBUFB(buf, 57) = 5;
-    WBUFW(buf, 58) = MIN(battle_get_level(md), battle_config.max_lv);
+    WBUFW(buf, 58) = min(battle_get_level(md), battle_config.max_lv);
 
     return packet_len_table[0x7b];
 }
@@ -769,22 +769,22 @@ static uint16_t clif_npc_appear(struct npc_data *nd, uint8_t *buf)
 }
 
 /// These indices are derived from equip_pos in pc.c and some guesswork
-static int equip_points[LOOK_LAST + 1] =
+static earray<EQUIP, LOOK, LOOK::COUNT> equip_points =
 {
-    -1, /// 0: base
-    -1, /// 1: hair
-    9,  /// 2: weapon
-    4,  /// 3: head botom -- leg armour
-    6,  /// 4: head top -- hat
-    5,  /// 5: head mid -- torso armour
-    -1, /// 6: hair colour
-    -1, /// 7: clothes colour
-    8,  /// 8: shield
-    2,  /// 9: shoes
-    3,  /// 10: gloves
-    1,  /// 11: cape
-    7,  /// 12: misc1
-    0,  /// 13: misc2
+    EQUIP::NONE,        /// 0: base
+    EQUIP::NONE,        /// 1: hair
+    EQUIP::WEAPON,      /// 2: weapon
+    EQUIP::LEGS,        /// 3: legs
+    EQUIP::HELMET,      /// 4: helmet
+    EQUIP::CHEST,       /// 5: chest
+    EQUIP::NONE,        /// 6: hair colour
+    EQUIP::NONE,        /// 7: clothes colour
+    EQUIP::SHIELD,      /// 8: shield
+    EQUIP::SHOES,       /// 9: shoes
+    EQUIP::GLOVES,      /// 10: gloves
+    EQUIP::CAPE,        /// 11: cape
+    EQUIP::MISC1,       /// 12: misc1
+    EQUIP::MISC2,       /// 13: misc2
 };
 
 /// Send everybody (else) a new PC's appearance
@@ -1312,209 +1312,168 @@ void clif_storageequiplist(MapSessionData *sd, struct storage *stor)
     }
 }
 
-/*==========================================
- * ステータスを送りつける
- * 表示専用数字はこの中で計算して送る
- *------------------------------------------
- */
-void clif_updatestatus(MapSessionData *sd, int type)
+/// Inform client of a change in some kind of status
+void clif_updatestatus(MapSessionData *sd, SP type)
 {
-    int fd, len = 8;
-
     nullpo_retv(sd);
 
-    fd = sd->fd;
-
+    int fd = sd->fd;
     WFIFOW(fd, 0) = 0xb0;
-    WFIFOW(fd, 2) = type;
+    WFIFOW(fd, 2) = static_cast<uint16_t>(type);
     switch (type)
     {
-            // 00b0
-        case SP_WEIGHT:
-            WFIFOW(fd, 0) = 0xb0;
-            WFIFOW(fd, 2) = type;
-            WFIFOL(fd, 4) = sd->weight;
-            break;
-        case SP_MAXWEIGHT:
-            WFIFOL(fd, 4) = sd->max_weight;
-            break;
-        case SP_SPEED:
-            WFIFOL(fd, 4) = sd->speed;
-            break;
-        case SP_BASELEVEL:
-            WFIFOL(fd, 4) = sd->status.base_level;
-            break;
-        case SP_JOBLEVEL:
-            WFIFOL(fd, 4) = 0;
-            break;
-        case SP_STATUSPOINT:
-            WFIFOL(fd, 4) = sd->status.status_point;
-            break;
-        case SP_SKILLPOINT:
-            WFIFOL(fd, 4) = sd->status.skill_point;
-            break;
-        case SP_HIT:
-            WFIFOL(fd, 4) = sd->hit;
-            break;
-        case SP_FLEE1:
-            WFIFOL(fd, 4) = sd->flee;
-            break;
-        case SP_FLEE2:
-            WFIFOL(fd, 4) = sd->flee2 / 10;
-            break;
-        case SP_MAXHP:
-            WFIFOL(fd, 4) = sd->status.max_hp;
-            break;
-        case SP_MAXSP:
-            WFIFOL(fd, 4) = sd->status.max_sp;
-            break;
-        case SP_HP:
-            WFIFOL(fd, 4) = sd->status.hp;
-            break;
-        case SP_SP:
-            WFIFOL(fd, 4) = sd->status.sp;
-            break;
-        case SP_ASPD:
-            WFIFOL(fd, 4) = sd->aspd;
-            break;
-        case SP_ATK1:
-            WFIFOL(fd, 4) = sd->base_atk + sd->watk;
-            break;
-        case SP_DEF1:
-            WFIFOL(fd, 4) = sd->def;
-            break;
-        case SP_MDEF1:
-            WFIFOL(fd, 4) = sd->mdef;
-            break;
-        case SP_ATK2:
-            WFIFOL(fd, 4) = sd->watk2;
-            break;
-        case SP_DEF2:
-            WFIFOL(fd, 4) = sd->def2;
-            break;
-        case SP_MDEF2:
-            WFIFOL(fd, 4) = sd->mdef2;
-            break;
-        case SP_CRITICAL:
-            WFIFOL(fd, 4) = sd->critical / 10;
-            break;
-        case SP_MATK1:
-            WFIFOL(fd, 4) = sd->matk1;
-            break;
-        case SP_MATK2:
-            WFIFOL(fd, 4) = sd->matk2;
-            break;
+    // The first set use packet 0xb0
+    case SP::WEIGHT:
+        WFIFOL(fd, 4) = sd->weight;
+        break;
+    case SP::MAXWEIGHT:
+        WFIFOL(fd, 4) = sd->max_weight;
+        break;
+    case SP::SPEED:
+        WFIFOL(fd, 4) = sd->speed;
+        break;
+    case SP::BASELEVEL:
+        WFIFOL(fd, 4) = sd->status.base_level;
+        break;
+    case SP::JOBLEVEL:
+        WFIFOL(fd, 4) = 0;
+        break;
+    case SP::STATUSPOINT:
+        WFIFOL(fd, 4) = sd->status.status_point;
+        break;
+    case SP::SKILLPOINT:
+        WFIFOL(fd, 4) = sd->status.skill_point;
+        break;
+    case SP::HIT:
+        WFIFOL(fd, 4) = sd->hit;
+        break;
+    case SP::FLEE1:
+        WFIFOL(fd, 4) = sd->flee;
+        break;
+    case SP::FLEE2:
+        WFIFOL(fd, 4) = sd->flee2 / 10;
+        break;
+    case SP::MAXHP:
+        WFIFOL(fd, 4) = sd->status.max_hp;
+        break;
+    case SP::MAXSP:
+        WFIFOL(fd, 4) = sd->status.max_sp;
+        break;
+    case SP::HP:
+        WFIFOL(fd, 4) = sd->status.hp;
+        break;
+    case SP::SP:
+        WFIFOL(fd, 4) = sd->status.sp;
+        break;
+    case SP::ASPD:
+        WFIFOL(fd, 4) = sd->aspd;
+        break;
+    case SP::ATK1:
+        WFIFOL(fd, 4) = sd->base_atk + sd->watk;
+        break;
+    case SP::DEF1:
+        WFIFOL(fd, 4) = sd->def;
+        break;
+    case SP::MDEF1:
+        WFIFOL(fd, 4) = sd->mdef;
+        break;
+    case SP::ATK2:
+        WFIFOL(fd, 4) = sd->watk2;
+        break;
+    case SP::DEF2:
+        WFIFOL(fd, 4) = sd->def2;
+        break;
+    case SP::MDEF2:
+        WFIFOL(fd, 4) = sd->mdef2;
+        break;
+    case SP::CRITICAL:
+        WFIFOL(fd, 4) = sd->critical / 10;
+        break;
+    case SP::MATK1:
+        WFIFOL(fd, 4) = sd->matk1;
+        break;
+    case SP::MATK2:
+        WFIFOL(fd, 4) = sd->matk2;
+        break;
 
-        case SP_ZENY:
-            trade_verifyzeny(sd);
-            WFIFOW(fd, 0) = 0xb1;
-            if (sd->status.zeny < 0)
-                sd->status.zeny = 0;
-            WFIFOL(fd, 4) = sd->status.zeny;
-            break;
-        case SP_BASEEXP:
-            WFIFOW(fd, 0) = 0xb1;
-            WFIFOL(fd, 4) = sd->status.base_exp;
-            break;
-        case SP_JOBEXP:
-            WFIFOW(fd, 0) = 0xb1;
-            WFIFOL(fd, 4) = sd->status.job_exp;
-            break;
-        case SP_NEXTBASEEXP:
-            WFIFOW(fd, 0) = 0xb1;
-            WFIFOL(fd, 4) = pc_nextbaseexp(sd);
-            break;
-        case SP_NEXTJOBEXP:
-            WFIFOW(fd, 0) = 0xb1;
-            WFIFOL(fd, 4) = pc_nextjobexp(sd);
-            break;
+    // The next set use packet 0xb1
+    case SP::ZENY:
+        trade_verifyzeny(sd);
+        WFIFOW(fd, 0) = 0xb1;
+        if (sd->status.zeny < 0)
+            sd->status.zeny = 0;
+        WFIFOL(fd, 4) = sd->status.zeny;
+        break;
+    case SP::BASEEXP:
+        WFIFOW(fd, 0) = 0xb1;
+        WFIFOL(fd, 4) = sd->status.base_exp;
+        break;
+    case SP::JOBEXP:
+        WFIFOW(fd, 0) = 0xb1;
+        WFIFOL(fd, 4) = sd->status.job_exp;
+        break;
+    case SP::NEXTBASEEXP:
+        WFIFOW(fd, 0) = 0xb1;
+        WFIFOL(fd, 4) = pc_nextbaseexp(sd);
+        break;
+    case SP::NEXTJOBEXP:
+        WFIFOW(fd, 0) = 0xb1;
+        WFIFOL(fd, 4) = pc_nextjobexp(sd);
+        break;
 
-            // 00be 終了
-        case SP_USTR:
-        case SP_UAGI:
-        case SP_UVIT:
-        case SP_UINT:
-        case SP_UDEX:
-        case SP_ULUK:
-            WFIFOW(fd, 0) = 0xbe;
-            WFIFOB(fd, 4) =
-                pc_need_status_point(sd, type - SP_USTR + SP_STR);
-            len = 5;
-            break;
+    // These few use packet 0xbe
+    case SP::USTR:
+    case SP::UAGI:
+    case SP::UVIT:
+    case SP::UINT:
+    case SP::UDEX:
+    case SP::ULUK:
+        WFIFOW(fd, 0) = 0xbe;
+        WFIFOB(fd, 4) = pc_need_status_point(sd, ATTR_TO_SP_BASE(ATTR_FROM_SP_UP(type)));
+        break;
 
-            // 013a 終了
-        case SP_ATTACKRANGE:
-            WFIFOW(fd, 0) = 0x13a;
-            WFIFOW(fd, 2) = (sd->attack_spell_override)
-                ? sd->attack_spell_range : sd->attackrange;
-            len = 4;
-            break;
+    // ... packet 0x013a, with no payload
+    case SP::ATTACKRANGE:
+        WFIFOW(fd, 0) = 0x13a;
+        WFIFOW(fd, 2) = sd->attack_spell_override ? sd->attack_spell_range : sd->attackrange;
+        break;
 
-            // 0141 終了
-        case SP_STR:
-            WFIFOW(fd, 0) = 0x141;
-            WFIFOL(fd, 2) = type;
-            WFIFOL(fd, 6) = sd->status.str;
-            WFIFOL(fd, 10) = sd->paramb[0] + sd->parame[0];
-            len = 14;
-            break;
-        case SP_AGI:
-            WFIFOW(fd, 0) = 0x141;
-            WFIFOL(fd, 2) = type;
-            WFIFOL(fd, 6) = sd->status.agi;
-            WFIFOL(fd, 10) = sd->paramb[1] + sd->parame[1];
-            len = 14;
-            break;
-        case SP_VIT:
-            WFIFOW(fd, 0) = 0x141;
-            WFIFOL(fd, 2) = type;
-            WFIFOL(fd, 6) = sd->status.vit;
-            WFIFOL(fd, 10) = sd->paramb[2] + sd->parame[2];
-            len = 14;
-            break;
-        case SP_INT:
-            WFIFOW(fd, 0) = 0x141;
-            WFIFOL(fd, 2) = type;
-            WFIFOL(fd, 6) = sd->status.int_;
-            WFIFOL(fd, 10) = sd->paramb[3] + sd->parame[3];
-            len = 14;
-            break;
-        case SP_DEX:
-            WFIFOW(fd, 0) = 0x141;
-            WFIFOL(fd, 2) = type;
-            WFIFOL(fd, 6) = sd->status.dex;
-            WFIFOL(fd, 10) = sd->paramb[4] + sd->parame[4];
-            len = 14;
-            break;
-        case SP_LUK:
-            WFIFOW(fd, 0) = 0x141;
-            WFIFOL(fd, 2) = type;
-            WFIFOL(fd, 6) = sd->status.luk;
-            WFIFOL(fd, 10) = sd->paramb[5] + sd->parame[5];
-            len = 14;
-            break;
+    // main status use 0x0141 with an extended payload
+    case SP::STR:
+    case SP::AGI:
+    case SP::VIT:
+    case SP::INT:
+    case SP::DEX:
+    case SP::LUK:
+        WFIFOW(fd, 0) = 0x141;
+        // the client reads type as a 4-byte integer, so zero the top word
+        WFIFOW(fd, 4) = 0;
+        WFIFOL(fd, 6) = sd->status.stats[ATTR_FROM_SP_BASE(type)];
+        WFIFOL(fd, 10) = sd->paramb[ATTR_FROM_SP_BASE(type)] + sd->parame[ATTR_FROM_SP_BASE(type)];
+        break;
 
-        case SP_GM:
-            WFIFOL(fd, 4) = pc_isGM(sd);
-            break;
+    // back to 0xb0
+    case SP::GM:
+        WFIFOL(fd, 4) = pc_isGM(sd);
+        break;
 
-        default:
-            map_log("%s: make %d routine\n", __func__, type);
-            return;
+    default:
+        map_log("%s: make %d routine\n", __func__, static_cast<int>(type));
+        return;
     }
-    WFIFOSET(fd, len);
+    WFIFOSET(fd, packet_len_table[WFIFOW(fd, 0)]);
 }
 
 /*==========================================
  *
  *------------------------------------------
  */
-void clif_changelook(BlockList *bl, int type, int val)
+void clif_changelook(BlockList *bl, LOOK type, int val)
 {
     return clif_changelook_towards(bl, type, val, NULL);
 }
 
-void clif_changelook_towards(BlockList *bl, int type, int val,
+void clif_changelook_towards(BlockList *bl, LOOK type, int val,
                              MapSessionData *dstsd)
 {
     uint8_t rbuf[32];
@@ -1530,17 +1489,18 @@ void clif_changelook_towards(BlockList *bl, int type, int val,
         return;
 
     if (sd
-        && (type == LOOK_WEAPON || type == LOOK_SHIELD || type >= LOOK_SHOES))
+        && (type == LOOK::WEAPON || type == LOOK::SHIELD || type >= LOOK::SHOES))
     {
         WBUFW(buf, 0) = 0x1d7;
         WBUFL(buf, 2) = bl->id;
-        if (type >= LOOK_SHOES)
+        if (type >= LOOK::SHOES)
         {
-            int equip_point = equip_points[type];
+            EQUIP equip_point = equip_points[type];
 
-            WBUFB(buf, 6) = type;
+            WBUFB(buf, 6) = static_cast<uint8_t>(type);
             if (sd->equip_index[equip_point] >= 0
-                    && sd->inventory_data[sd->equip_index[2]])
+                    // is this a bug, that it is hard-coded as EQUIP::SHOES (2)?
+                    && sd->inventory_data[sd->equip_index[EQUIP::SHOES]])
                 WBUFW(buf, 7) = sd->status.inventory[sd->equip_index[equip_point]].nameid;
             else
                 WBUFW(buf, 7) = 0;
@@ -1553,16 +1513,16 @@ void clif_changelook_towards(BlockList *bl, int type, int val,
                 WBUFW(buf, 7) = sd->attack_spell_look_override;
             else
             {
-                if (sd->equip_index[9] >= 0
-                        && sd->inventory_data[sd->equip_index[9]])
-                    WBUFW(buf, 7) = sd->status.inventory[sd->equip_index[9]].nameid;
+                if (sd->equip_index[EQUIP::WEAPON] >= 0
+                        && sd->inventory_data[sd->equip_index[EQUIP::WEAPON]])
+                    WBUFW(buf, 7) = sd->status.inventory[sd->equip_index[EQUIP::WEAPON]].nameid;
                 else
                     WBUFW(buf, 7) = 0;
             }
-            if (sd->equip_index[8] >= 0
-                    && sd->equip_index[8] != sd->equip_index[9]
-                    && sd->inventory_data[sd->equip_index[8]])
-                WBUFW(buf, 9) = sd->status.inventory[sd->equip_index[8]].nameid;
+            if (sd->equip_index[EQUIP::SHIELD] >= 0
+                    && sd->equip_index[EQUIP::SHIELD] != sd->equip_index[EQUIP::WEAPON]
+                    && sd->inventory_data[sd->equip_index[EQUIP::SHIELD]])
+                WBUFW(buf, 9) = sd->status.inventory[sd->equip_index[EQUIP::SHIELD]].nameid;
             else
                 WBUFW(buf, 9) = 0;
         }
@@ -1575,7 +1535,7 @@ void clif_changelook_towards(BlockList *bl, int type, int val,
     {
         WBUFW(buf, 0) = 0x1d7;
         WBUFL(buf, 2) = bl->id;
-        WBUFB(buf, 6) = type;
+        WBUFB(buf, 6) = static_cast<uint8_t>(type);
         WBUFW(buf, 7) = val;
         WBUFW(buf, 9) = 0;
         if (dstsd)
@@ -1601,18 +1561,18 @@ static void clif_initialstatus(MapSessionData *sd)
 
     WBUFW(buf, 0) = 0xbd;
     WBUFW(buf, 2) = sd->status.status_point;
-    WBUFB(buf, 4) = (sd->status.str > 255) ? 255 : sd->status.str;
-    WBUFB(buf, 5) = pc_need_status_point(sd, SP_STR);
-    WBUFB(buf, 6) = (sd->status.agi > 255) ? 255 : sd->status.agi;
-    WBUFB(buf, 7) = pc_need_status_point(sd, SP_AGI);
-    WBUFB(buf, 8) = (sd->status.vit > 255) ? 255 : sd->status.vit;
-    WBUFB(buf, 9) = pc_need_status_point(sd, SP_VIT);
-    WBUFB(buf, 10) = (sd->status.int_ > 255) ? 255 : sd->status.int_;
-    WBUFB(buf, 11) = pc_need_status_point(sd, SP_INT);
-    WBUFB(buf, 12) = (sd->status.dex > 255) ? 255 : sd->status.dex;
-    WBUFB(buf, 13) = pc_need_status_point(sd, SP_DEX);
-    WBUFB(buf, 14) = (sd->status.luk > 255) ? 255 : sd->status.luk;
-    WBUFB(buf, 15) = pc_need_status_point(sd, SP_LUK);
+    WBUFB(buf, 4) = min(255, sd->status.stats[ATTR::STR]);
+    WBUFB(buf, 5) = pc_need_status_point(sd, SP::STR);
+    WBUFB(buf, 6) = min(255, sd->status.stats[ATTR::AGI]);
+    WBUFB(buf, 7) = pc_need_status_point(sd, SP::AGI);
+    WBUFB(buf, 8) = min(255, sd->status.stats[ATTR::VIT]);
+    WBUFB(buf, 9) = pc_need_status_point(sd, SP::VIT);
+    WBUFB(buf, 10) = min(255, sd->status.stats[ATTR::INT]);
+    WBUFB(buf, 11) = pc_need_status_point(sd, SP::INT);
+    WBUFB(buf, 12) = min(255, sd->status.stats[ATTR::DEX]);
+    WBUFB(buf, 13) = pc_need_status_point(sd, SP::DEX);
+    WBUFB(buf, 14) = min(255, sd->status.stats[ATTR::LUK]);
+    WBUFB(buf, 15) = pc_need_status_point(sd, SP::LUK);
 
     WBUFW(buf, 16) = sd->base_atk + sd->watk;
     WBUFW(buf, 18) = sd->watk2;    //atk bonus
@@ -1631,15 +1591,15 @@ static void clif_initialstatus(MapSessionData *sd)
 
     WFIFOSET(fd, packet_len_table[0xbd]);
 
-    clif_updatestatus(sd, SP_STR);
-    clif_updatestatus(sd, SP_AGI);
-    clif_updatestatus(sd, SP_VIT);
-    clif_updatestatus(sd, SP_INT);
-    clif_updatestatus(sd, SP_DEX);
-    clif_updatestatus(sd, SP_LUK);
+    clif_updatestatus(sd, SP::STR);
+    clif_updatestatus(sd, SP::AGI);
+    clif_updatestatus(sd, SP::VIT);
+    clif_updatestatus(sd, SP::INT);
+    clif_updatestatus(sd, SP::DEX);
+    clif_updatestatus(sd, SP::LUK);
 
-    clif_updatestatus(sd, SP_ATTACKRANGE);
-    clif_updatestatus(sd, SP_ASPD);
+    clif_updatestatus(sd, SP::ATTACKRANGE);
+    clif_updatestatus(sd, SP::ASPD);
 }
 
 /*==========================================
@@ -1681,13 +1641,13 @@ void clif_arrow_fail(MapSessionData *sd, int type)
  *
  *------------------------------------------
  */
-void clif_statusupack(MapSessionData *sd, int type, int ok, int val)
+void clif_statusupack(MapSessionData *sd, SP type, bool ok, int val)
 {
     nullpo_retv(sd);
 
     int fd = sd->fd;
     WFIFOW(fd, 0) = 0xbc;
-    WFIFOW(fd, 2) = type;
+    WFIFOW(fd, 2) = static_cast<uint16_t>(type);
     WFIFOB(fd, 4) = ok;
     WFIFOB(fd, 5) = val;
     WFIFOSET(fd, packet_len_table[0xbc]);
@@ -1988,12 +1948,10 @@ void clif_storageclose(MapSessionData *sd)
     WFIFOSET(fd, packet_len_table[0xf8]);
 }
 
-void clif_changelook_accessories(BlockList *bl,
-                             MapSessionData *dest)
+void clif_changelook_accessories(BlockList *bl, MapSessionData *dest)
 {
-    int i;
 
-    for (i = LOOK_SHOES; i <= LOOK_LAST; i++)
+    for (LOOK i : { LOOK::SHOES, LOOK::GLOVES, LOOK::CAPE, LOOK::MISC1, LOOK::MISC2})
         clif_changelook_towards(bl, i, 0, dest);
 }
 
@@ -2965,10 +2923,10 @@ static void clif_parse_LoadEndAck(int, MapSessionData *sd)
 
     // loadendack時
     // next exp
-    clif_updatestatus(sd, SP_NEXTBASEEXP);
-    clif_updatestatus(sd, SP_NEXTJOBEXP);
+    clif_updatestatus(sd, SP::NEXTBASEEXP);
+    clif_updatestatus(sd, SP::NEXTJOBEXP);
     // skill point
-    clif_updatestatus(sd, SP_SKILLPOINT);
+    clif_updatestatus(sd, SP::SKILLPOINT);
     // item
     clif_itemlist(sd);
     clif_equiplist(sd);
@@ -2989,8 +2947,8 @@ static void clif_parse_LoadEndAck(int, MapSessionData *sd)
     clif_spawnpc(sd);          // spawn
 
     // weight max , now
-    clif_updatestatus(sd, SP_MAXWEIGHT);
-    clif_updatestatus(sd, SP_WEIGHT);
+    clif_updatestatus(sd, SP::MAXWEIGHT);
+    clif_updatestatus(sd, SP::WEIGHT);
 
     // pvp
     if (sd->pvp_timer && !battle_config.pk_mode)
@@ -3017,7 +2975,7 @@ static void clif_parse_LoadEndAck(int, MapSessionData *sd)
     }
 
     // view equipment item
-    clif_changelook(sd, LOOK_WEAPON, 0);
+    clif_changelook(sd, LOOK::WEAPON, 0);
 
     // option
     clif_changeoption(sd);
@@ -3765,7 +3723,7 @@ static void clif_parse_TradeCommit(int, MapSessionData *sd)
  */
 static void clif_parse_StatusUp(int fd, MapSessionData *sd)
 {
-    pc_statusup(sd, RFIFOW(fd, 2));
+    pc_statusup(sd, static_cast<SP>(RFIFOW(fd, 2)));
 }
 
 /*==========================================

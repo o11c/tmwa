@@ -62,7 +62,7 @@ int pc_takeitem(MapSessionData *, struct flooritem_data *);
 int pc_dropitem(MapSessionData *, int, int);
 
 int pc_calcstatus(MapSessionData *, int);
-int pc_bonus(MapSessionData *, int, int);
+int pc_bonus(MapSessionData *, SP, int);
 int pc_skill(MapSessionData *, int, int, int);
 
 int pc_attack(MapSessionData *, int, int);
@@ -70,24 +70,27 @@ int pc_stopattack(MapSessionData *);
 
 int pc_gainexp(MapSessionData *, int, int);
 
-# define PC_GAINEXP_REASON_KILLING 0
-# define PC_GAINEXP_REASON_HEALING 1
-# define PC_GAINEXP_REASON_SCRIPT  2
-int pc_gainexp_reason(MapSessionData *, int, int, int reason);
+enum class PC_GAINEXP_REASON
+{
+    KILLING,
+    HEALING,
+    SCRIPT
+};
+int pc_gainexp_reason(MapSessionData *, int, int, PC_GAINEXP_REASON reason);
 int pc_extract_healer_exp(MapSessionData *, int max);    // [Fate] Used by healers: extract healer-xp from the target, return result (up to max)
 
 int pc_nextbaseexp(MapSessionData *);
 int pc_nextjobexp(MapSessionData *) __attribute__((pure));
-int pc_need_status_point(MapSessionData *, int);
-int pc_statusup(MapSessionData *, int);
-int pc_statusup2(MapSessionData *, int, int);
+int pc_need_status_point(MapSessionData *, SP);
+int pc_statusup(MapSessionData *, SP);
+int pc_statusup2(MapSessionData *, SP, int);
 int pc_skillup(MapSessionData *, int);
 int pc_resetlvl(MapSessionData *, int type);
 int pc_resetstate(MapSessionData *);
 int pc_resetskill(MapSessionData *);
 int pc_equipitem(MapSessionData *, int, int);
-int pc_unequipitem(MapSessionData *, int, int);
-int pc_unequipinvyitem(MapSessionData *, int, int);
+int pc_unequipitem(MapSessionData *, int, bool);
+int pc_unequipinvyitem(MapSessionData *, int, bool);
 int pc_useitem(MapSessionData *, int);
 
 int pc_damage(BlockList *, MapSessionData *, int);
@@ -95,10 +98,10 @@ int pc_heal(MapSessionData *, int, int);
 int pc_itemheal(MapSessionData *sd, int hp, int sp);
 int pc_percentheal(MapSessionData *sd, int, int);
 int pc_setoption(MapSessionData *, int);
-int pc_changelook(MapSessionData *, int, int);
+int pc_changelook(MapSessionData *, LOOK, int);
 
-int pc_readparam(MapSessionData *, int);
-int pc_setparam(MapSessionData *, int, int);
+int pc_readparam(MapSessionData *, SP);
+int pc_setparam(MapSessionData *, SP, int);
 int pc_readreg(MapSessionData *, int) __attribute__((pure));
 int pc_setreg(MapSessionData *, int, int);
 char *pc_readregstr(MapSessionData *sd, int reg);

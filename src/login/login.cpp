@@ -1969,7 +1969,7 @@ static void x7942(int fd)
     // auth->memo[0] must always be '!' or stuff breaks
     char *memo = auth->memo + 1;
     STRZCPY2(sign_cast<char *>(WFIFOP(fd, 6)), auth->userid);
-    strzcpy(memo, sign_cast<const char *>(RFIFOP(fd, 28)), MIN(size_of_memo, RFIFOW(fd, 26)));
+    strzcpy(memo, sign_cast<const char *>(RFIFOP(fd, 28)), min(size_of_memo, RFIFOW(fd, 26)));
     remove_control_chars(memo);
     WFIFOL(fd, 2) = auth->account_id;
     login_log.info("'ladmin': Modification of a memo field (account: %s, new memo: %s, ip: %s)\n",

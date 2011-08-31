@@ -222,7 +222,7 @@ static int spellguard_can_satisfy(spellguard_check_t *check, MapSessionData *cas
         && check_prerequisites(caster, check->catalysts)
         && check_prerequisites(caster, check->components))
     {
-        unsigned casttime = MAX(check->casttime, magic_conf::min_casttime);
+        unsigned casttime = max(check->casttime, magic_conf::min_casttime);
 
         caster->cast_tick = tick + casttime;
 

@@ -51,14 +51,14 @@ void clif_scriptinput(MapSessionData *, int); //self
 void clif_scriptinputstr(MapSessionData *sd, int npcid);  // self
 void clif_additem(MapSessionData *, int, int, PickupFail);   //self
 void clif_delitem(MapSessionData *, int, int);    //self
-void clif_updatestatus(MapSessionData *, int);    //self
+void clif_updatestatus(MapSessionData *, SP);    //self
 void clif_damage(BlockList *, BlockList *, unsigned int, int, int, int, int, int, int);    // area
 #define clif_takeitem(src,dst) clif_damage(src,dst,0,0,0,0,0,1,0)
-void clif_changelook(BlockList *, int, int);   // area
+void clif_changelook(BlockList *, LOOK, int);   // area
 void clif_changelook_accessories(BlockList *bl, MapSessionData *dst); // area or target; list gloves, boots etc.
 void clif_arrowequip(MapSessionData *sd, int val);    //self
 void clif_arrow_fail(MapSessionData *sd, int type);   //self
-void clif_statusupack(MapSessionData *, int, int, int);   // self
+void clif_statusupack(MapSessionData *, SP, bool, int);   // self
 void clif_equipitemack(MapSessionData *, int, int, int);  // self
 void clif_unequipitemack(MapSessionData *, int, int, int);    // self
 void clif_misceffect(BlockList *, int);    // area

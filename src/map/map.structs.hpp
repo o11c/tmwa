@@ -5,6 +5,8 @@
 # include "itemdb.structs.hpp"
 # include "path.structs.hpp"
 
+# include "../lib/earray.hpp"
+
 # include "../common/socket.structs.hpp"
 # include "../common/mmo.hpp"
 
@@ -100,9 +102,41 @@ class invocation_t;
 
 struct quick_regeneration
 {                               // [Fate]
-int amount;                // Amount of HP/SP left to regenerate
-uint8_t speed;        // less is faster (number of half-second ticks to wait between updates)
-uint8_t tickdelay;    // number of ticks to next update
+    int amount;                // Amount of HP/SP left to regenerate
+    uint8_t speed;        // less is faster (number of half-second ticks to wait between updates)
+    uint8_t tickdelay;    // number of ticks to next update
+};
+
+enum class EQUIP
+{
+    NONE = -1,
+
+    MISC2 = 0,
+    CAPE = 1,
+    SHOES = 2,
+    GLOVES = 3,
+    LEGS = 4,
+    CHEST = 5,
+    HELMET = 6,
+    MISC1 = 7,
+    // SHIELD is also used for dual-wielding and two-handed weapons
+    SHIELD = 8,
+    WEAPON = 9,
+    ARROW = 10,
+
+    COUNT = 11
+};
+constexpr EQUIP EQUIPs[11] =
+{
+    EQUIP::MISC2, EQUIP::CAPE, EQUIP::SHOES, EQUIP::GLOVES, EQUIP::LEGS,
+    EQUIP::CHEST, EQUIP::HELMET, EQUIP::MISC1, EQUIP::SHIELD, EQUIP::WEAPON,
+    EQUIP::ARROW,
+};
+
+constexpr EQUIP EQUIPs_no_arrow[10] =
+{
+    EQUIP::MISC2, EQUIP::CAPE, EQUIP::SHOES, EQUIP::GLOVES, EQUIP::LEGS,
+    EQUIP::CHEST, EQUIP::HELMET, EQUIP::MISC1, EQUIP::SHIELD, EQUIP::WEAPON,
 };
 
 class MapSessionData : public SessionData, public BlockList
@@ -145,7 +179,7 @@ public:
     uint8_t tmw_version;  // tmw client version
     struct mmo_charstatus status;
     struct item_data *inventory_data[MAX_INVENTORY];
-    short equip_index[11];
+    earray<short, EQUIP, EQUIP::COUNT> equip_index;
     int weight, max_weight;
     fixed_string<16> mapname;
     int fd, new_fd;
@@ -208,7 +242,7 @@ public:
     int fame;
 
     short weapontype1, weapontype2;
-    int paramb[6], paramc[6], parame[6], paramcard[6];
+    earray<int, ATTR, ATTR::COUNT> paramb, paramc, parame;
     int hit, flee, flee2, aspd, amotion, dmotion;
     int watk, watk2;
     int def, def2, mdef, mdef2, critical, matk1, matk2;
@@ -530,152 +564,172 @@ struct flooritem_data : public BlockList
     flooritem_data() : BlockList(BL_ITEM) {}
 };
 
-enum SP
+enum class SP : uint16_t
 {
-    SP_SPEED            = 0,
-    SP_BASEEXP          = 1,
-    SP_JOBEXP           = 2,
+    NONE                        = 0xffff,
 
-    SP_HP               = 5,
-    SP_MAXHP            = 6,
-    SP_SP               = 7,
-    SP_MAXSP            = 8,
-    SP_STATUSPOINT      = 9,
-    SP_BASELEVEL        = 11,
-    SP_SKILLPOINT       = 12,
-    SP_STR              = 13,
-    SP_AGI              = 14,
-    SP_VIT              = 15,
-    SP_INT              = 16,
-    SP_DEX              = 17,
-    SP_LUK              = 18,
+    SPEED                       = 0,
+    BASEEXP                     = 1,
+    JOBEXP                      = 2,
 
-    SP_ZENY             = 20,
-    SP_SEX              = 21,
-    SP_NEXTBASEEXP      = 22,
-    SP_NEXTJOBEXP       = 23,
-    SP_WEIGHT           = 24,
-    SP_MAXWEIGHT        = 25,
+    HP                          = 5,
+    MAXHP                       = 6,
+    SP                          = 7,
+    MAXSP                       = 8,
+    STATUSPOINT                 = 9,
+    BASELEVEL                   = 11,
+    SKILLPOINT                  = 12,
 
-    SP_USTR             = 32,
-    SP_UAGI             = 33,
-    SP_UVIT             = 34,
-    SP_UINT             = 35,
-    SP_UDEX             = 36,
-    SP_ULUK             = 37,
+    STR                         = 13,
+    AGI                         = 14,
+    VIT                         = 15,
+    INT                         = 16,
+    DEX                         = 17,
+    LUK                         = 18,
 
-    SP_ATK1             = 41,
-    SP_ATK2             = 42,
-    SP_MATK1            = 43,
-    SP_MATK2            = 44,
-    SP_DEF1             = 45,
-    SP_DEF2             = 46,
-    SP_MDEF1            = 47,
-    SP_MDEF2            = 48,
-    SP_HIT              = 49,
-    SP_FLEE1            = 50,
-    SP_FLEE2            = 51,
-    SP_CRITICAL         = 52,
-    SP_ASPD             = 53,
+    ZENY                        = 20,
+    SEX                         = 21,
+    NEXTBASEEXP                 = 22,
+    NEXTJOBEXP                  = 23,
+    WEIGHT                      = 24,
+    MAXWEIGHT                   = 25,
 
-    SP_JOBLEVEL         = 55,
+    USTR                        = 32,
+    UAGI                        = 33,
+    UVIT                        = 34,
+    UINT                        = 35,
+    UDEX                        = 36,
+    ULUK                        = 37,
 
-    SP_FAME             = 59,
-    SP_UNBREAKABLE      = 60,
+    ATK1                        = 41,
+    ATK2                        = 42,
+    MATK1                       = 43,
+    MATK2                       = 44,
+    DEF1                        = 45,
+    DEF2                        = 46,
+    MDEF1                       = 47,
+    MDEF2                       = 48,
+    HIT                         = 49,
+    FLEE1                       = 50,
+    FLEE2                       = 51,
+    CRITICAL                    = 52,
+    ASPD                        = 53,
 
-    SP_GM = 500,
+    JOBLEVEL                    = 55,
 
-    SP_ATTACKRANGE      = 1000,
-    SP_ATKELE           = 1001,
-    SP_DEFELE           = 1002,
-    SP_CASTRATE         = 1003,
-    SP_MAXHPRATE        = 1004,
-    SP_MAXSPRATE        = 1005,
-    SP_SPRATE           = 1006,
+    FAME                        = 59,
+    UNBREAKABLE                 = 60,
 
-    SP_BASE_ATK         = 1014,
-    SP_ASPD_RATE        = 1015,
-    SP_HP_RECOV_RATE    = 1016,
-    SP_SP_RECOV_RATE    = 1017,
-    SP_SPEED_RATE       = 1018,
-    SP_CRITICAL_DEF     = 1019,
-    SP_NEAR_ATK_DEF     = 1020,
-    SP_LONG_ATK_DEF     = 1021,
-    SP_DOUBLE_RATE      = 1022,
-    SP_DOUBLE_ADD_RATE  = 1023,
-    SP_MATK             = 1024,
-    SP_MATK_RATE        = 1025,
-    SP_IGNORE_DEF_ELE   = 1026,
-    SP_IGNORE_DEF_RACE  = 1027,
-    SP_ATK_RATE         = 1028,
-    SP_SPEED_ADDRATE    = 1029,
-    SP_ASPD_ADDRATE     = 1030,
-    SP_MAGIC_ATK_DEF    = 1031,
-    SP_MISC_ATK_DEF     = 1032,
-    SP_IGNORE_MDEF_ELE  = 1033,
-    SP_IGNORE_MDEF_RACE = 1034,
+    GM                          = 500,
 
-    SP_PERFECT_HIT_RATE = 1038,
-    SP_PERFECT_HIT_ADD_RATE     = 1039,
-    SP_CRITICAL_RATE    = 1040,
-    SP_GET_ZENY_NUM     = 1041,
-    SP_ADD_GET_ZENY_NUM = 1042,
+    ATTACKRANGE                 = 1000,
+    ATKELE                      = 1001,
+    DEFELE                      = 1002,
+    CASTRATE                    = 1003,
+    MAXHPRATE                   = 1004,
+    MAXSPRATE                   = 1005,
+    SPRATE                      = 1006,
 
-    SP_DEF_RATIO_ATK_ELE        = 1048,
-    SP_DEF_RATIO_ATK_RACE       = 1049,
-    SP_ADD_SPEED        = 1050,
-    SP_HIT_RATE         = 1051,
-    SP_FLEE_RATE        = 1052,
-    SP_FLEE2_RATE       = 1053,
-    SP_DEF_RATE         = 1054,
-    SP_DEF2_RATE        = 1055,
-    SP_MDEF_RATE        = 1056,
-    SP_MDEF2_RATE       = 1057,
-    SP_SPLASH_RANGE     = 1058,
-    SP_SPLASH_ADD_RANGE = 1059,
+    BASE_ATK                    = 1014,
+    ASPD_RATE                   = 1015,
+    HP_RECOV_RATE               = 1016,
+    SP_RECOV_RATE               = 1017,
+    SPEED_RATE                  = 1018,
+    CRITICAL_DEF                = 1019,
+    NEAR_ATK_DEF                = 1020,
+    LONG_ATK_DEF                = 1021,
+    DOUBLE_RATE                 = 1022,
+    DOUBLE_ADD_RATE             = 1023,
+    MATK                        = 1024,
+    MATK_RATE                   = 1025,
+    IGNORE_DEF_ELE              = 1026,
+    IGNORE_DEF_RACE             = 1027,
+    ATK_RATE                    = 1028,
+    SPEED_ADDRATE               = 1029,
+    ASPD_ADDRATE                = 1030,
+    MAGIC_ATK_DEF               = 1031,
+    MISC_ATK_DEF                = 1032,
+    IGNORE_MDEF_ELE             = 1033,
+    IGNORE_MDEF_RACE            = 1034,
 
-    SP_SHORT_WEAPON_DAMAGE_RETURN       = 1063,
-    SP_LONG_WEAPON_DAMAGE_RETURN        = 1064,
+    PERFECT_HIT_RATE            = 1038,
+    PERFECT_HIT_ADD_RATE        = 1039,
+    CRITICAL_RATE               = 1040,
+    GET_ZENY_NUM                = 1041,
+    ADD_GET_ZENY_NUM            = 1042,
 
-    SP_MAGIC_DAMAGE_RETURN      = 1071,
+    DEF_RATIO_ATK_ELE           = 1048,
+    DEF_RATIO_ATK_RACE          = 1049,
+    ADD_SPEED                   = 1050,
+    HIT_RATE                    = 1051,
+    FLEE_RATE                   = 1052,
+    FLEE2_RATE                  = 1053,
+    DEF_RATE                    = 1054,
+    DEF2_RATE                   = 1055,
+    MDEF_RATE                   = 1056,
+    MDEF2_RATE                  = 1057,
+    SPLASH_RANGE                = 1058,
+    SPLASH_ADD_RANGE            = 1059,
 
-    SP_ALL_STATS        = 1073,
-    SP_AGI_VIT          = 1074,
-    SP_AGI_DEX_STR      = 1075,
-    SP_PERFECT_HIDE     = 1076,
+    SHORT_WEAPON_DAMAGE_RETURN  = 1063,
+    LONG_WEAPON_DAMAGE_RETURN   = 1064,
 
-    SP_RESTART_FULL_RECORVER = 2000,
-    SP_NO_CASTCANCEL    = 2001,
+    MAGIC_DAMAGE_RETURN         = 1071,
 
-    SP_NO_MAGIC_DAMAGE  = 2003,
-    SP_NO_WEAPON_DAMAGE = 2004,
-    SP_NO_GEMSTONE      = 2005,
-    SP_NO_CASTCANCEL2   = 2006,
+    ALL_STATS                   = 1073,
+    AGI_VIT                     = 1074,
+    AGI_DEX_STR                 = 1075,
+    PERFECT_HIDE                = 1076,
+
+    RESTART_FULL_RECORVER       = 2000,
+    NO_CASTCANCEL               = 2001,
+
+    NO_MAGIC_DAMAGE             = 2003,
+    NO_WEAPON_DAMAGE            = 2004,
+    NO_GEMSTONE                 = 2005,
+    NO_CASTCANCEL2              = 2006,
 };
 
-enum LOOK
+constexpr bool SP_IS_BASE_ATTR(SP type)
 {
-    LOOK_BASE = 0,
-    LOOK_HAIR = 1,
-    LOOK_WEAPON = 2,
-    LOOK_HEAD_BOTTOM = 3,
-    LOOK_HEAD_TOP = 4,
-    LOOK_HEAD_MID = 5,
-    LOOK_HAIR_COLOR = 6,
+    return type >= SP::STR && type <= SP::LUK;
+}
 
-    LOOK_SHIELD = 8,
-    LOOK_SHOES = 9,
-    LOOK_GLOVES = 10,
-    LOOK_CAPE = 11,
-    LOOK_MISC1 = 12,
-    LOOK_MISC2 = 13,
-    LOOK_LAST = LOOK_MISC2
-};
-
-enum EQUIP
+constexpr SP ATTR_TO_SP_BASE(ATTR attr)
 {
-    EQUIP_SHIELD = 8,
-    EQUIP_WEAPON = 9
+    return SP(int(attr) + int(SP::STR));
+}
+constexpr SP ATTR_TO_SP_UP(ATTR attr)
+{
+    return SP(int(attr) + int(SP::USTR));
+}
+constexpr ATTR ATTR_FROM_SP_BASE(SP sp)
+{
+    return ATTR(int(sp) - int(SP::STR));
+}
+constexpr ATTR ATTR_FROM_SP_UP(SP sp)
+{
+    return ATTR(int(sp) - int(SP::USTR));
+}
+
+enum class LOOK : uint8_t
+{
+    BASE = 0,
+    HAIR = 1,
+    WEAPON = 2,
+    LEGS = 3,
+    HEAD = 4,
+    CHEST = 5,
+    HAIR_COLOR = 6,
+
+    SHIELD = 8,
+    SHOES = 9,
+    GLOVES = 10,
+    CAPE = 11,
+    MISC1 = 12,
+    MISC2 = 13,
+
+    COUNT = 14
 };
 
 #endif //MAP_STRUCTS

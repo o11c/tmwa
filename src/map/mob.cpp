@@ -2453,7 +2453,7 @@ int mob_damage(BlockList *src, struct mob_data *md, int damage,
                 if (drop_rate <= 0 && battle_config.drop_rate0item == 1)
                     drop_rate = 1;
                 if (battle_config.drops_by_luk > 0 && sd && md)
-                    drop_rate += (sd->status.luk * battle_config.drops_by_luk) / 100;   // drops affected by luk [Valaris]
+                    drop_rate += (sd->status.stats[ATTR::LUK] * battle_config.drops_by_luk) / 100;   // drops affected by luk [Valaris]
                 if (sd && md && battle_config.pk_mode == 1
                     && (mob_db[md->mob_class].lv - sd->status.base_level >= 20))
                     drop_rate *= 1.25;  // pk_mode increase drops if 20 level difference [Valaris]

@@ -667,11 +667,12 @@ static bool fun_is_equipped(val_t& result, val_t args[])
 
     MapSessionData *chr = ARG_PC(0);
     int retval = 0;
-    for (int i = 0; i < 11; i++)
-        if (chr->equip_index[i] >= 0
-            && chr->status.inventory[chr->equip_index[i]].nameid == item.nameid)
+    for (auto& ii : chr->equip_index)
+        if (ii >= 0 && chr->status.inventory[ii].nameid == item.nameid)
         {
-            retval = i + 1;
+            // magic.conf only uses it as bool ... replace with
+            // retval = 1; ?
+            retval = &ii - chr->equip_index.begin() + 1;
             break;
         }
 
@@ -746,7 +747,7 @@ static bool fun_distance(val_t& result, val_t args[])
     if (ARG_LOCATION(0).m != ARG_LOCATION(1).m)
         RESULT_INT = INT_MAX;
     else
-        RESULT_INT = MAX(abs(ARG_LOCATION(0).x - ARG_LOCATION(1).x),
+        RESULT_INT = max(abs(ARG_LOCATION(0).x - ARG_LOCATION(1).x),
                          abs(ARG_LOCATION(0).y - ARG_LOCATION(1).y));
     return 0;
 }

@@ -13,7 +13,8 @@
 // スキルデータベース
 struct skill_db
 {
-    int stat, poolflags, max_raise;
+    SP stat;
+    int poolflags, max_raise;
 };
 extern struct skill_db skill_db[MAX_SKILL];
 
@@ -108,7 +109,6 @@ int skill_pool_activate(MapSessionData *sd, int skill);  // Skill into skill poo
 int skill_pool_is_activated(MapSessionData *sd, int skill) __attribute__((pure));  // Skill into skill pool.  Return is zero when activated.
 int skill_pool_deactivate(MapSessionData *sd, int skill);    // Skill out of skill pool.  Return is zero iff okay.
 const char *skill_name(int skill) __attribute__((pure));   // Yield configurable skill name
-int skill_stat(int skill) __attribute__((pure));    // Yields the stat associated with a skill.  Returns zero if none, or SP_STR, SP_VIT, ... otherwise
 int skill_power(MapSessionData *sd, int skill);  // Yields the power of a skill.  This is zero if the skill is unknown or if it's a pool skill that is outside of the skill pool,
                              // otherwise a value from 0 to 255 (with 200 being the `normal maximum')
 int skill_power_bl(BlockList *bl, int skill); // Yields the power of a skill.  This is zero if the skill is unknown or if it's a pool skill that is outside of the skill pool,

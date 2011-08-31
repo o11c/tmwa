@@ -111,7 +111,7 @@ int battle_get_max_hp(BlockList *bl)
 
     int max_hp = static_cast<struct mob_data *>(bl)->stats[MOB_MAX_HP];
     percent_adjust(max_hp, battle_config.monster_hp_rate);
-    return MAX(1, max_hp);
+    return max(1, max_hp);
 }
 
 /// Get strength of a being
@@ -120,9 +120,9 @@ int battle_get_str(BlockList *bl)
     nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
-        return MAX(0, static_cast<struct mob_data *>(bl)->stats[MOB_STR]);
+        return max(0, static_cast<struct mob_data *>(bl)->stats[MOB_STR]);
     if (bl->type == BL_PC)
-        return MAX(0, static_cast<MapSessionData *>(bl)->paramc[0]);
+        return max(0, static_cast<MapSessionData *>(bl)->paramc[ATTR::STR]);
     return 0;
 }
 
@@ -131,9 +131,9 @@ int battle_get_agi(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
-        return MAX(0, static_cast<struct mob_data *>(bl)->stats[MOB_AGI]);
+        return max(0, static_cast<struct mob_data *>(bl)->stats[MOB_AGI]);
     if (bl->type == BL_PC)
-        return MAX(0, static_cast<MapSessionData *>(bl)->paramc[1]);
+        return max(0, static_cast<MapSessionData *>(bl)->paramc[ATTR::AGI]);
     return 0;
 }
 
@@ -142,9 +142,9 @@ int battle_get_vit(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
-        return MAX(0, static_cast<struct mob_data *>(bl)->stats[MOB_VIT]);
+        return max(0, static_cast<struct mob_data *>(bl)->stats[MOB_VIT]);
     if (bl->type == BL_PC)
-        return MAX(0, static_cast<MapSessionData *>(bl)->paramc[2]);
+        return max(0, static_cast<MapSessionData *>(bl)->paramc[ATTR::VIT]);
     return 0;
 }
 
@@ -153,9 +153,9 @@ int battle_get_int(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
-        return MAX(0, static_cast<struct mob_data *>(bl)->stats[MOB_INT]);
+        return max(0, static_cast<struct mob_data *>(bl)->stats[MOB_INT]);
     if (bl->type == BL_PC)
-        return MAX(0, static_cast<MapSessionData *>(bl)->paramc[3]);
+        return max(0, static_cast<MapSessionData *>(bl)->paramc[ATTR::INT]);
     return 0;
 }
 
@@ -164,9 +164,9 @@ int battle_get_dex(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
-        return MAX(0, static_cast<struct mob_data *>(bl)->stats[MOB_DEX]);
+        return max(0, static_cast<struct mob_data *>(bl)->stats[MOB_DEX]);
     if (bl->type == BL_PC)
-        return MAX(0, static_cast<MapSessionData *>(bl)->paramc[4]);
+        return max(0, static_cast<MapSessionData *>(bl)->paramc[ATTR::DEX]);
     return 0;
 }
 
@@ -175,9 +175,9 @@ int battle_get_luk(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
-        return MAX(0, static_cast<struct mob_data *>(bl)->stats[MOB_LUK]);
+        return max(0, static_cast<struct mob_data *>(bl)->stats[MOB_LUK]);
     if (bl->type == BL_PC)
-        return MAX(0, static_cast<MapSessionData *>(bl)->paramc[5]);
+        return max(0, static_cast<MapSessionData *>(bl)->paramc[ATTR::LUK]);
     return 0;
 }
 
@@ -197,7 +197,7 @@ int battle_get_flee(BlockList *bl)
     // +25 for 200
     flee += skill_power_bl(bl, TMW_SPEED) >> 3;
 
-    return MAX(1, flee);
+    return max(1, flee);
 }
 
 /// Calculate a being's ability to hit something
@@ -215,7 +215,7 @@ int battle_get_hit(BlockList *bl)
         // +12 for 200
         hit += (skill_power_bl(bl, TMW_BRAWLING) >> 4);
 
-    return MAX(1, hit);
+    return max(1, hit);
 }
 
 /// Calculate a being's luck at not getting hit
@@ -234,7 +234,7 @@ int battle_get_flee2(BlockList *bl)
     // +25 for 200
     flee2 += skill_power_bl(bl, TMW_SPEED) >> 3;
 
-    return MAX(1, flee2);
+    return max(1, flee2);
 }
 
 /// Calculate being's ability to make a critical hit
@@ -244,7 +244,7 @@ static int battle_get_critical(BlockList *bl)
 
     if (bl->type == BL_PC)
         // FIXME was this intended?
-        return MAX(1, static_cast<MapSessionData *>(bl)->critical - battle_get_luk(bl));
+        return max(1, static_cast<MapSessionData *>(bl)->critical - battle_get_luk(bl));
     return battle_get_luk(bl) * 3 + 1;
 }
 
@@ -254,7 +254,7 @@ int battle_get_baseatk(BlockList *bl)
     nullpo_retr(1, bl);
 
     if (bl->type == BL_PC)
-        return MAX(1, static_cast<int>(static_cast<MapSessionData *>(bl)->base_atk));
+        return max(1, static_cast<int>(static_cast<MapSessionData *>(bl)->base_atk));
 
     int str = battle_get_str(bl);
     int dstr = str / 10;
@@ -267,9 +267,9 @@ int battle_get_atk(BlockList *bl)
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
-        return MAX(0, static_cast<int>(static_cast<MapSessionData *>(bl)->watk));
+        return max(0, static_cast<int>(static_cast<MapSessionData *>(bl)->watk));
     if (bl->type == BL_MOB)
-        return MAX(0, static_cast<int>(static_cast<struct mob_data *>(bl)->stats[MOB_ATK1]));
+        return max(0, static_cast<int>(static_cast<struct mob_data *>(bl)->stats[MOB_ATK1]));
     return 0;
 }
 
@@ -292,7 +292,7 @@ int battle_get_atk2(BlockList *bl)
         return static_cast<MapSessionData *>(bl)->watk2;
     if (bl->type != BL_MOB)
         return 0;
-    return MAX(0, static_cast<int>(static_cast<struct mob_data *>(bl)->stats[MOB_ATK2]));
+    return max(0, static_cast<int>(static_cast<struct mob_data *>(bl)->stats[MOB_ATK2]));
 }
 
 /// Get maximum attack strength of a PC's second weapon
@@ -326,7 +326,7 @@ int battle_get_def(BlockList *bl)
         if (sc_data[SC_POISON].timer && bl->type != BL_PC)
             percent_adjust(def, 75);
     }
-    return MAX(0, def);
+    return max(0, def);
 }
 
 /// Get a being's magical defense
@@ -350,7 +350,7 @@ int battle_get_mdef(BlockList *bl)
                 mdef = 90;
         }
     }
-    return MAX(0, mdef);
+    return max(0, mdef);
 }
 
 /// Get a being's secondary defense
@@ -370,7 +370,7 @@ int battle_get_def2(BlockList *bl)
         if (sc_data[SC_POISON].timer && bl->type != BL_PC)
             percent_adjust(def2, 75);
     }
-    return MAX(1, def2);
+    return max(1, def2);
 }
 
 /// Get a being's walk delay
@@ -384,7 +384,7 @@ int battle_get_speed(BlockList *bl)
     int speed = 1000;
     if (bl->type == BL_MOB)
         speed = static_cast<struct mob_data *>(bl)->stats[MOB_SPEED];
-    return MAX(1, speed);
+    return max(1, speed);
 }
 
 /// Get a being's attack delay
@@ -547,23 +547,23 @@ int battle_get_mode(BlockList *bl)
     return 0x01;
 }
 
-/// stat_id: like SP_VIT
+/// stat_id: like SP::VIT
 // this is only used by the skill pool system
-int battle_get_stat(int stat_id, BlockList *bl)
+int battle_get_stat(SP stat_id, BlockList *bl)
 {
     switch (stat_id)
     {
-    case SP_STR:
+    case SP::STR:
         return battle_get_str(bl);
-    case SP_AGI:
+    case SP::AGI:
         return battle_get_agi(bl);
-    case SP_DEX:
+    case SP::DEX:
         return battle_get_dex(bl);
-    case SP_VIT:
+    case SP::VIT:
         return battle_get_vit(bl);
-    case SP_INT:
+    case SP::INT:
         return battle_get_int(bl);
-    case SP_LUK:
+    case SP::LUK:
         return battle_get_luk(bl);
     default:
         return 0;
@@ -922,12 +922,12 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
 }
 
 /// Check if a PC is unarmed
-int battle_is_unarmed(BlockList *bl)
+bool battle_is_unarmed(BlockList *bl)
 {
     if (!bl || bl->type != BL_PC)
         return 0;
     MapSessionData *sd = static_cast<MapSessionData *>(bl);
-    return sd->equip_index[EQUIP_SHIELD] == -1 && sd->equip_index[EQUIP_WEAPON] == -1;
+    return sd->equip_index[EQUIP::SHIELD] == -1 && sd->equip_index[EQUIP::WEAPON] == -1;
 }
 
 /// A PC attacks another being
@@ -979,10 +979,10 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
     if (flee < 1)
         flee = 1;
 
-    int target_distance = MAX(abs(sd->x - target->x), abs(sd->y - target->y));
+    int target_distance = max(abs(sd->x - target->x), abs(sd->y - target->y));
     // NOTE: dividing by 75 means the penalty distance is only decreased by 2
     // even at maximum skill, whereas the range increases every 60, maximum 3
-    int malus_dist = MAX(0, target_distance - skill_power(sd, AC_OWL) / 75);
+    int malus_dist = max(0, target_distance - skill_power(sd, AC_OWL) / 75);
     int hitrate = battle_get_hit(sd) - flee + 80;
     hitrate -= malus_dist * (malus_dist + 1);
 
@@ -1002,13 +1002,13 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
     int atkmin = dex;
     int atkmin_ = dex;
     sd->state.arrow_atk = 0;
-    if (sd->equip_index[9] >= 0 && sd->inventory_data[sd->equip_index[9]])
-        percent_adjust(atkmin, 80 + sd->inventory_data[sd->equip_index[9]]->wlv * 20);
-    if (sd->equip_index[8] >= 0 && sd->inventory_data[sd->equip_index[8]])
-        percent_adjust(atkmin_, 80 + sd->inventory_data[sd->equip_index[8]]->wlv * 20);
+    if (sd->equip_index[EQUIP::WEAPON] >= 0 && sd->inventory_data[sd->equip_index[EQUIP::WEAPON]])
+        percent_adjust(atkmin, 80 + sd->inventory_data[sd->equip_index[EQUIP::WEAPON]]->wlv * 20);
+    if (sd->equip_index[EQUIP::SHIELD] >= 0 && sd->inventory_data[sd->equip_index[EQUIP::SHIELD]])
+        percent_adjust(atkmin_, 80 + sd->inventory_data[sd->equip_index[EQUIP::SHIELD]]->wlv * 20);
     if (sd->status.weapon == 11)
     {
-        atkmin = watk * MIN(atkmin, watk) / 100;
+        atkmin = watk * min(atkmin, watk) / 100;
         wd.flag = (wd.flag & ~BF_RANGEMASK) | BF_LONG;
         if (sd->arrow_ele > 0)
             s_ele = sd->arrow_ele;
@@ -1363,9 +1363,9 @@ AttackResult battle_weapon_attack(BlockList *src, BlockList *target, tick_t tick
 
     if (sd && sd->status.weapon == 11)
     {
-        if (sd->equip_index[10] >= 0)
+        if (sd->equip_index[EQUIP::ARROW] >= 0)
         {
-            pc_delitem(sd, sd->equip_index[10], 1, 0);
+            pc_delitem(sd, sd->equip_index[EQUIP::ARROW], 1, 0);
         }
         else
         {
@@ -1432,7 +1432,7 @@ AttackResult battle_weapon_attack(BlockList *src, BlockList *target, tick_t tick
 
     if (sd)
     {
-        int weapon_index = sd->equip_index[9];
+        int weapon_index = sd->equip_index[EQUIP::WEAPON];
         int weapon = 0;
         if (sd->inventory_data[weapon_index] && sd->status.inventory[weapon_index].equip & 0x2)
             weapon = sd->inventory_data[weapon_index]->nameid;
@@ -1546,7 +1546,7 @@ bool battle_check_range(BlockList *src, BlockList *bl, int range)
     if (src->m != bl->m)
         return 0;
 
-    int arange = MAX(abs(bl->x - src->x), abs(bl->y - src->y));
+    int arange = max(abs(bl->x - src->x), abs(bl->y - src->y));
 
 
     if (range > 0 && range < arange)

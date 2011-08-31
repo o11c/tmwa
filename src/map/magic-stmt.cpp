@@ -74,14 +74,14 @@ static void char_set_weapon_icon(MapSessionData *subject, int count, int icon, i
     clif_fixpcpos(subject);
     if (count)
     {
-        clif_changelook(subject, LOOK_WEAPON, look);
+        clif_changelook(subject, LOOK::WEAPON, look);
         if (icon)
             clif_status_change(subject, icon, 1);
     }
     else
     {
         // Set it to `normal'
-        clif_changelook(subject, LOOK_WEAPON, subject->status.weapon);
+        clif_changelook(subject, LOOK::WEAPON, subject->status.weapon);
     }
 }
 
@@ -93,14 +93,14 @@ static void char_set_attack_info(MapSessionData *subject, int speed, int range)
     if (speed == 0)
     {
         pc_calcstatus(subject, 1);
-        clif_updatestatus(subject, SP_ASPD);
-        clif_updatestatus(subject, SP_ATTACKRANGE);
+        clif_updatestatus(subject, SP::ASPD);
+        clif_updatestatus(subject, SP::ATTACKRANGE);
     }
     else
     {
         subject->aspd = speed;
-        clif_updatestatus(subject, SP_ASPD);
-        clif_updatestatus(subject, SP_ATTACKRANGE);
+        clif_updatestatus(subject, SP::ASPD);
+        clif_updatestatus(subject, SP::ATTACKRANGE);
     }
 }
 
@@ -687,7 +687,7 @@ static bool op_set_hair_colour(env_t *, val_t *args)
     if (!c)
         return 1;
 
-    pc_changelook(c, LOOK_HAIR_COLOR, ARG_INT(1));
+    pc_changelook(c, LOOK::HAIR_COLOR, ARG_INT(1));
 
     return 0;
 }
@@ -699,7 +699,7 @@ static bool op_set_hair_style(env_t *, val_t *args)
     if (!c)
         return 1;
 
-    pc_changelook(c, LOOK_HAIR, ARG_INT(1));
+    pc_changelook(c, LOOK::HAIR, ARG_INT(1));
 
     return 0;
 }
@@ -736,7 +736,7 @@ static bool op_gain_experience(env_t *, val_t *args)
     if (!c)
         return 1;
 
-    pc_gainexp_reason(c, ARG_INT(1), ARG_INT(2), ARG_INT(3));
+    pc_gainexp_reason(c, ARG_INT(1), ARG_INT(2), static_cast<PC_GAINEXP_REASON>(ARG_INT(3)));
     return 0;
 }
 

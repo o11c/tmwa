@@ -268,7 +268,7 @@ static void skill_status_change_timer(timer_id tid, tick_t tick, uint32_t id, in
             break;
 
         case SC_FLYING_BACKPACK:
-            clif_updatestatus(sd, SP_WEIGHT);
+            clif_updatestatus(sd, SP::WEIGHT);
             break;
 
     }
@@ -290,8 +290,8 @@ int skill_status_effect(BlockList *bl, int type, int val1, tick_t tick, int spel
     MapSessionData *sd = NULL;
     struct status_change *sc_data;
     short *sc_count, *option, *opt1, *opt2, *opt3;
-    int opt_flag = 0, calc_flag = 0, updateflag =
-        0;
+    int opt_flag = 0, calc_flag = 0;
+    SP updateflag = SP::NONE;
     int scdef = 0;
 
     nullpo_ret(bl);
@@ -371,7 +371,7 @@ int skill_status_effect(BlockList *bl, int type, int val1, tick_t tick, int spel
         case SC_PHYS_SHIELD:
             break;
         case SC_FLYING_BACKPACK:
-            updateflag = SP_WEIGHT;
+            updateflag = SP::WEIGHT;
             break;
         default:
             map_log("UnknownStatusChange [%d]\n", type);
@@ -418,7 +418,7 @@ int skill_status_effect(BlockList *bl, int type, int val1, tick_t tick, int spel
     if (bl->type == BL_PC && calc_flag)
         pc_calcstatus(sd, 0);  /* ステータス再計算 */
 
-    if (bl->type == BL_PC && updateflag)
+    if (bl->type == BL_PC && updateflag != SP::NONE)
         clif_updatestatus(sd, updateflag); /* ステータスをクライアントに送る */
 
     return 0;
@@ -472,26 +472,24 @@ int skill_status_change_clear(BlockList *bl, int type)
  * 初期化系
  */
 
-static int scan_stat(char *statname)
+static SP scan_stat(char *statname)
 {
     if (!strcasecmp(statname, "str"))
-        return SP_STR;
+        return SP::STR;
     if (!strcasecmp(statname, "dex"))
-        return SP_DEX;
+        return SP::DEX;
     if (!strcasecmp(statname, "agi"))
-        return SP_AGI;
+        return SP::AGI;
     if (!strcasecmp(statname, "vit"))
-        return SP_VIT;
+        return SP::VIT;
     if (!strcasecmp(statname, "int"))
-        return SP_INT;
+        return SP::INT;
     if (!strcasecmp(statname, "luk"))
-        return SP_LUK;
-    if (!strcasecmp(statname, "none"))
-        return 0;
-
-    else
+        return SP::LUK;
+    if (strcasecmp(statname, "none"))
         fprintf(stderr, "Unknown stat `%s'\n", statname);
-    return 0;
+
+    return SP::NONE;
 }
 
 static char *set_skill_name(int idx, const char *name)
@@ -702,31 +700,22 @@ int skill_pool_deactivate(MapSessionData *sd, int skill_id)
     return 1;
 }
 
-int skill_stat(int skill_id)
-{
-    return skill_db[skill_id].stat;
-}
-
 int skill_power(MapSessionData *sd, int skill_id)
 {
-    int stat = skill_stat(skill_id);
-    int stat_value, skill_value;
-    int result;
+    SP stat = skill_db[skill_id].stat;
 
-    if (stat == 0 || !skill_pool_is_activated(sd, skill_id))
+    if (stat == SP::NONE || !skill_pool_is_activated(sd, skill_id))
         return 0;
 
-    stat_value = battle_get_stat(stat, sd);
-    skill_value = sd->status.skill[skill_id].lv;
+    int stat_value = battle_get_stat(stat, sd);
+    int skill_value = sd->status.skill[skill_id].lv;
 
     if ((skill_value * 10) - 1 > stat_value)
         skill_value += (stat_value / 10);
     else
         skill_value *= 2;
 
-    result = (skill_value * stat_value) / 10;
-
-    return result;
+    return (skill_value * stat_value) / 10;
 }
 
 int skill_power_bl(BlockList *bl, int skill)

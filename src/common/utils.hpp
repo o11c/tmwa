@@ -112,17 +112,17 @@ bool lt(A a, B b)
 }
 
 template<class A, class B>
-typename min_type<A, B>::type MIN(A a, B b) __attribute__((const));
+typename min_type<A, B>::type min(A a, B b) __attribute__((const));
 template<class A, class B>
-typename min_type<A, B>::type MIN(A a, B b)
+typename min_type<A, B>::type min(A a, B b)
 {
     return lt(a, b) ? a : b;
 }
 
 template<class A, class B>
-typename max_type<A, B>::type MAX(A a, B b) __attribute__((const));
+typename max_type<A, B>::type max(A a, B b) __attribute__((const));
 template<class A, class B>
-typename max_type<A, B>::type MAX(A a, B b)
+typename max_type<A, B>::type max(A a, B b)
 {
     return lt(b, a) ? a : b;
 }

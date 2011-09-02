@@ -57,10 +57,10 @@ void clif_damage(BlockList *, BlockList *, unsigned int, int, int, int, int, int
 void clif_changelook(BlockList *, LOOK, int);   // area
 void clif_changelook_accessories(BlockList *bl, MapSessionData *dst); // area or target; list gloves, boots etc.
 void clif_arrowequip(MapSessionData *sd, int val);    //self
-void clif_arrow_fail(MapSessionData *sd, int type);   //self
+void clif_arrow_fail(MapSessionData *sd, ArrowFail type);   //self
 void clif_statusupack(MapSessionData *, SP, bool, int);   // self
-void clif_equipitemack(MapSessionData *, int, int, int);  // self
-void clif_unequipitemack(MapSessionData *, int, int, int);    // self
+void clif_equipitemack(MapSessionData *, int, EPOS, bool);  // self
+void clif_unequipitemack(MapSessionData *, int, EPOS, bool);    // self
 void clif_misceffect(BlockList *, int);    // area
 void clif_changeoption(BlockList *);   // area
 void clif_useitemack(MapSessionData *, int, int, int);    // self

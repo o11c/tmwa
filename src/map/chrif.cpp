@@ -372,7 +372,8 @@ static void chrif_changedsex(int fd)
     // to avoid any problem with equipment and invalid sex, equipment is unequiped.
     for (int i = 0; i < MAX_INVENTORY; i++)
     {
-        if (sd->status.inventory[i].nameid && sd->status.inventory[i].equip)
+        if (sd->status.inventory[i].nameid
+                && sd->status.inventory[i].equip != EPOS::NONE)
             pc_unequipitem(sd, i, 0);
     }
     // save character
@@ -560,7 +561,7 @@ static void ladmin_itemfrob_fix_item(int source, int dest, struct item *item)
     if (item && item->nameid == source)
     {
         item->nameid = dest;
-        item->equip = 0;
+        item->equip = EPOS::NONE;
     }
 }
 
@@ -598,7 +599,7 @@ static void ladmin_itemfrob_c(BlockList *bl, int source_id,
             if (item && item->nameid == source_id)
             {
                 item->nameid = dest_id;
-                if (item->equip)
+                if (item->equip != EPOS::NONE)
                     pc_unequipitem(pc, j, 0);
                 item->nameid = dest_id;
             }

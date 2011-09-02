@@ -5,6 +5,9 @@ SHELL=/bin/bash
 
 PROGS = tmwa-login tmwa-char tmwa-map tmwa-admin
 all: ${PROGS}
+# Convenience target to rebuild stuff unlikely to break
+# after I change something in src/lib or src/common
+easy: tmwa-login tmwa-char tmwa-admin
 
 include make/suffixes.make
 include make/defaults.make

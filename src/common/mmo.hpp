@@ -6,6 +6,7 @@
 # include "../lib/fixed_string.hpp"
 # include "../lib/ip.hpp"
 # include "../lib/earray.hpp"
+# include "../lib/enum.hpp"
 
 # define MAX_MAP_PER_SERVER 512
 # define MAX_INVENTORY 100
@@ -36,12 +37,31 @@ typedef uint32_t party_t;
 // kept for now to prevent breaking TOO much code
 typedef uint8_t level_t;
 
+BIT_ENUM(EPOS, uint16_t)
+{
+    NONE    = 0x0000,
+
+    LEGS    = 0x0001,
+    WEAPON  = 0x0002,
+    GLOVES  = 0x0004,
+    CAPE    = 0x0008,
+    MISC1   = 0x0010,
+    SHIELD  = 0x0020,
+    SHOES   = 0x0040,
+    MISC2   = 0x0080,
+    HELMET  = 0x0100,
+    CHEST   = 0x0200,
+    ARROW   = 0x8000,
+
+    ALL     = 0x83FF
+};
+
 struct item
 {
     uint16_t nameid;
     uint16_t amount;
     // I think this is a mask of equip slots, but only one is usually (ever?) used
-    uint16_t equip;
+    EPOS equip;
 };
 
 struct Point

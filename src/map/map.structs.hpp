@@ -107,38 +107,6 @@ struct quick_regeneration
     uint8_t tickdelay;    // number of ticks to next update
 };
 
-enum class EQUIP
-{
-    NONE = -1,
-
-    MISC2 = 0,
-    CAPE = 1,
-    SHOES = 2,
-    GLOVES = 3,
-    LEGS = 4,
-    CHEST = 5,
-    HELMET = 6,
-    MISC1 = 7,
-    // SHIELD is also used for dual-wielding and two-handed weapons
-    SHIELD = 8,
-    WEAPON = 9,
-    ARROW = 10,
-
-    COUNT = 11
-};
-constexpr EQUIP EQUIPs[11] =
-{
-    EQUIP::MISC2, EQUIP::CAPE, EQUIP::SHOES, EQUIP::GLOVES, EQUIP::LEGS,
-    EQUIP::CHEST, EQUIP::HELMET, EQUIP::MISC1, EQUIP::SHIELD, EQUIP::WEAPON,
-    EQUIP::ARROW,
-};
-
-constexpr EQUIP EQUIPs_no_arrow[10] =
-{
-    EQUIP::MISC2, EQUIP::CAPE, EQUIP::SHOES, EQUIP::GLOVES, EQUIP::LEGS,
-    EQUIP::CHEST, EQUIP::HELMET, EQUIP::MISC1, EQUIP::SHIELD, EQUIP::WEAPON,
-};
-
 class MapSessionData : public SessionData, public BlockList
 {
 public:

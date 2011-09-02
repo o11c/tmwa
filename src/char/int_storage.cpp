@@ -29,7 +29,7 @@ actually_store:
                         "%d,%d,%d,%d,"
                         "%d,%d,%d,%d ",
                     0/*id*/, p->storage_[i].nameid, p->storage_[i].amount,
-                    p->storage_[i].equip, 0/*identify*/,
+                    static_cast<uint16_t>(p->storage_[i].equip), 0/*identify*/,
                     0/*refine*/, 0/*attribute*/,
                     0/*card[0]*/, 0/*card[1]*/,
                     0/*card[2]*/, 0/*card[3]*/);
@@ -63,7 +63,7 @@ static bool storage_fromstr(const char *str, struct storage *p)
                         "%hu,%*d,%*d,%*d,"
                         "%*d,%*d,%*d,%*d%n",
                    /*id,*/ &p->storage_[i].nameid, &p->storage_[i].amount,
-                   &p->storage_[i].equip, /*identify,*/
+                   reinterpret_cast<uint16_t *>(&p->storage_[i].equip), /*identify,*/
                    /*refine,*/ /*attribute,*/
                    /*card[0],*/ /*card[1],*/
                    /*card[2],*/ /*card[3],*/

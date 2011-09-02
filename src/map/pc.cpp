@@ -73,15 +73,6 @@ static char statp[255][7];
 static int dirx[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
 static int diry[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
 
-// should be uint16_t but that would require a bunch of static_cast
-// I'll probably replace these with a bit enum
-static earray<unsigned, EQUIP, EQUIP::COUNT> equip_pos =
-{
-    0x0080, 0x0008, 0x0040, 0x0004, 0x0001,
-    0x0200, 0x0100, 0x0010, 0x0020, 0x0002,
-    0x8000
-};
-
 //static struct dbt *gm_account_db;
 static struct gm_account *gm_account = NULL;
 static int GM_num = 0;
@@ -332,17 +323,14 @@ int pc_setnewpc(MapSessionData *sd, account_t account_id, charid_t char_id,
     return 0;
 }
 
-int pc_equippoint(MapSessionData *sd, int n)
+EPOS pc_equippoint(MapSessionData *sd, int n)
 {
-    int ep = 0;
-    nullpo_ret(sd);
+    nullpo_retr(EPOS(), sd);
 
     if (!sd->inventory_data[n])
-        return 0;
+        return EPOS();
 
-    ep = sd->inventory_data[n]->equip;
-
-    return ep;
+    return sd->inventory_data[n]->equip;
 }
 
 static int pc_setinventorydata(MapSessionData *sd)
@@ -401,20 +389,20 @@ static int pc_setequipindex(MapSessionData *sd)
         for (EQUIP j : EQUIPs)
             if (sd->status.inventory[i].equip & equip_pos[j])
                 sd->equip_index[j] = i;
-        if (sd->status.inventory[i].equip & 0x0002)
+        if (sd->status.inventory[i].equip & EPOS::WEAPON)
         {
             if (sd->inventory_data[i])
                 sd->weapontype1 = sd->inventory_data[i]->look;
             else
                 sd->weapontype1 = 0;
         }
-        if (sd->status.inventory[i].equip & 0x0020)
+        if (sd->status.inventory[i].equip & EPOS::SHIELD)
         {
             if (sd->inventory_data[i])
             {
                 if (sd->inventory_data[i]->type == 4)
                 {
-                    if (sd->status.inventory[i].equip == 0x0020)
+                    if (sd->status.inventory[i].equip == EPOS::SHIELD)
                         sd->weapontype2 = sd->inventory_data[i]->look;
                     else
                         sd->weapontype2 = 0;
@@ -855,7 +843,7 @@ int pc_calcstatus(MapSessionData *sd, int first)
             sd->def += sd->inventory_data[idx]->def;
             if (sd->inventory_data[idx]->type == 4)
             {
-                if (i == EQUIP::SHIELD && sd->status.inventory[idx].equip == 0x20)
+                if (i == EQUIP::SHIELD && sd->status.inventory[idx].equip == EPOS::SHIELD)
                 {
                     //二刀流用データ入力
                     sd->watk_ += sd->inventory_data[idx]->atk;
@@ -1817,8 +1805,8 @@ PickupFail pc_additem(MapSessionData *sd, struct item *item_data,
             memcpy(&sd->status.inventory[i], item_data,
                     sizeof(sd->status.inventory[0]));
 
-            if (item_data->equip)
-                sd->status.inventory[i].equip = 0;
+            if (item_data->equip != EPOS::NONE)
+                sd->status.inventory[i].equip = EPOS::NONE;
 
             sd->status.inventory[i].amount = amount;
             sd->inventory_data[i] = data;
@@ -1853,7 +1841,7 @@ int pc_delitem(MapSessionData *sd, int n, int amount, int type)
     sd->weight -= sd->inventory_data[n]->weight * amount;
     if (sd->status.inventory[n].amount <= 0)
     {
-        if (sd->status.inventory[n].equip)
+        if (sd->status.inventory[n].equip != EPOS::NONE)
             pc_unequipitem(sd, n, 0);
         memset(&sd->status.inventory[n], 0,
                 sizeof(sd->status.inventory[0]));
@@ -2456,7 +2444,7 @@ int pc_checkskill(MapSessionData *sd, int skill_id)
  * 装 備品のチェック
  *------------------------------------------
  */
-int pc_checkequip(MapSessionData *sd, int pos)
+int pc_checkequip(MapSessionData *sd, EPOS pos)
 {
     nullpo_retr(-1, sd);
 
@@ -3390,8 +3378,8 @@ int pc_damage(BlockList *src, MapSessionData *sd,
                 for (i = 0; i < MAX_INVENTORY; i++)
                 {
                     int k;
-                    if ((type == 1 && !sd->status.inventory[i].equip)
-                        || (type == 2 && sd->status.inventory[i].equip)
+                    if ((type == 1 && sd->status.inventory[i].equip == EPOS::NONE)
+                        || (type == 2 && sd->status.inventory[i].equip != EPOS::NONE)
                         || type == 3)
                     {
                         //InventoryIndexを格納
@@ -3411,7 +3399,7 @@ int pc_damage(BlockList *src, MapSessionData *sd,
                     int n = eq_n[MRAND(eq_num)];  //該当アイテムの中からランダム
                     if (MRAND(10000) < per)
                     {
-                        if (sd->status.inventory[n].equip)
+                        if (sd->status.inventory[n].equip != EPOS::NONE)
                             pc_unequipitem(sd, n, 0);
                         pc_dropitem(sd, n, 1);
                     }
@@ -3423,12 +3411,12 @@ int pc_damage(BlockList *src, MapSessionData *sd,
                 {
                     if (sd->status.inventory[i].nameid == id    //ItemIDが一致していて
                         && MRAND(10000) < per  //ドロップ率判定もOKで
-                        && ((type == 1 && !sd->status.inventory[i].equip)   //タイプ判定もOKならドロップ
-                            || (type == 2 && sd->status.inventory[i].equip)
+                        && ((type == 1 && sd->status.inventory[i].equip == EPOS::NONE)   //タイプ判定もOKならドロップ
+                            || (type == 2 && sd->status.inventory[i].equip != EPOS::NONE)
                             || type == 3))
                     {
-                        if (sd->status.inventory[i].equip)
-                            pc_unequipitem(sd, i, 0);
+                        if (sd->status.inventory[i].equip != EPOS::NONE)
+                            pc_unequipitem(sd, i, false);
                         pc_dropitem(sd, i, 1);
                         break;
                     }
@@ -4392,52 +4380,56 @@ int pc_cleareventtimer(MapSessionData *sd)
  */
 static int pc_signal_advanced_equipment_change(MapSessionData *sd, int n)
 {
-    if (sd->status.inventory[n].equip & 0x0040)
+    if (sd->status.inventory[n].equip & EPOS::SHOES)
         clif_changelook(sd, LOOK::SHOES, 0);
-    if (sd->status.inventory[n].equip & 0x0004)
+    if (sd->status.inventory[n].equip & EPOS::GLOVES)
         clif_changelook(sd, LOOK::GLOVES, 0);
-    if (sd->status.inventory[n].equip & 0x0008)
+    if (sd->status.inventory[n].equip & EPOS::CAPE)
         clif_changelook(sd, LOOK::CAPE, 0);
-    if (sd->status.inventory[n].equip & 0x0010)
+    if (sd->status.inventory[n].equip & EPOS::MISC1)
         clif_changelook(sd, LOOK::MISC1, 0);
-    if (sd->status.inventory[n].equip & 0x0080)
+    if (sd->status.inventory[n].equip & EPOS::MISC2)
         clif_changelook(sd, LOOK::MISC2, 0);
     return 0;
 }
 
-int pc_equipitem(MapSessionData *sd, int n, int pos)
+int pc_equipitem(MapSessionData *sd, int n)
 {
     nullpo_ret(sd);
 
     if (n < 0 || n >= MAX_INVENTORY)
     {
-        clif_equipitemack(sd, 0, 0, 0);
+        clif_equipitemack(sd, 0, EPOS::NONE, false);
         return 0;
     }
 
     int nameid = sd->status.inventory[n].nameid;
     struct item_data *id = sd->inventory_data[n];
-    pos = pc_equippoint(sd, n);
+    EPOS pos = pc_equippoint(sd, n);
 
-    map_log("equip %d(%d) %x:%x\n", nameid, n, id->equip, pos);
+    map_log("equip %d(%d) %x:%x\n", nameid, n,
+            static_cast<uint16_t>(id->equip), static_cast<uint16_t>(pos));
     if (!pc_isequip(sd, n) || !pos)
     {                           // [Valaris]
-        clif_equipitemack(sd, n, 0, 0);    // fail
+        clif_equipitemack(sd, n, EPOS::NONE, false);    // fail
         return 0;
     }
 
-    if (pos == 0x88)
+    if (pos == (EPOS::CAPE | EPOS::MISC2))
     {                           // アクセサリ用例外処理
-        int epor = 0;
+        EPOS epor = EPOS::NONE;
         if (sd->equip_index[EQUIP::MISC2] >= 0)
             epor |= sd->status.inventory[sd->equip_index[EQUIP::MISC2]].equip;
         if (sd->equip_index[EQUIP::CAPE] >= 0)
             epor |= sd->status.inventory[sd->equip_index[EQUIP::CAPE]].equip;
-        epor &= 0x88;
-        pos = epor == 0x08 ? 0x80 : 0x08;
+        epor &= (EPOS::CAPE | EPOS::MISC2);
+        pos = epor == EPOS::CAPE
+            ? EPOS::MISC2
+            : EPOS::CAPE;
     }
 
-    int arrow = pc_search_inventory(sd, pc_checkequip(sd, 9));    // Added by RoVeRT
+    // BUG: This code is *definitely* not doing what it is supposed to be doing
+    int arrow = pc_search_inventory(sd, pc_checkequip(sd, (EPOS::LEGS | EPOS::CAPE)));    // Added by RoVeRT
     for (EQUIP i : EQUIPs)
     {
         if (pos & equip_pos[i])
@@ -4448,15 +4440,15 @@ int pc_equipitem(MapSessionData *sd, int n, int pos)
         }
     }
     // 弓矢装備
-    if (pos == 0x8000)
+    if (pos == EPOS::ARROW)
     {
         clif_arrowequip(sd, n);
-        clif_arrow_fail(sd, 3);    // 3=矢が装備できました
+        clif_arrow_fail(sd, ArrowFail::EQUIPPING);
     }
     else
     {
         /* Don't update re-equipping if we're using a spell */
-        if (!(pos == 4 && sd->attack_spell_override))
+        if (!(pos == EPOS::GLOVES && sd->attack_spell_override))
             clif_equipitemack(sd, n, pos, 1);
     }
 
@@ -4475,20 +4467,20 @@ int pc_equipitem(MapSessionData *sd, int n, int pos)
             view = sd->inventory_data[n]->nameid;
     }
 
-    if (sd->status.inventory[n].equip & 0x0002)
+    if (sd->status.inventory[n].equip & EPOS::WEAPON)
     {
         sd->weapontype1 = view;
         pc_calcweapontype(sd);
         pc_set_weapon_look(sd);
     }
-    if (sd->status.inventory[n].equip & 0x0020)
+    if (sd->status.inventory[n].equip & EPOS::SHIELD)
     {
         if (sd->inventory_data[n])
         {
             if (sd->inventory_data[n]->type == 4)
             {
                 sd->status.shield = 0;
-                if (sd->status.inventory[n].equip == 0x0020)
+                if (sd->status.inventory[n].equip == EPOS::SHIELD)
                     sd->weapontype2 = view;
             }
             else if (sd->inventory_data[n]->type == 5)
@@ -4502,17 +4494,17 @@ int pc_equipitem(MapSessionData *sd, int n, int pos)
         pc_calcweapontype(sd);
         clif_changelook(sd, LOOK::SHIELD, sd->status.shield);
     }
-    if (sd->status.inventory[n].equip & 0x0001)
+    if (sd->status.inventory[n].equip & EPOS::LEGS)
     {
         sd->status.legs = view;
         clif_changelook(sd, LOOK::LEGS, sd->status.legs);
     }
-    if (sd->status.inventory[n].equip & 0x0100)
+    if (sd->status.inventory[n].equip & EPOS::HELMET)
     {
         sd->status.head = view;
         clif_changelook(sd, LOOK::HEAD, sd->status.head);
     }
-    if (sd->status.inventory[n].equip & 0x0200)
+    if (sd->status.inventory[n].equip & EPOS::CHEST)
     {
         sd->status.chest = view;
         clif_changelook(sd, LOOK::CHEST, sd->status.chest);
@@ -4522,7 +4514,7 @@ int pc_equipitem(MapSessionData *sd, int n, int pos)
     if (itemdb_look(sd->status.inventory[n].nameid) == 11 && arrow)
     {                           // Added by RoVeRT
         clif_arrowequip(sd, arrow);
-        sd->status.inventory[arrow].equip = 32768;
+        sd->status.inventory[arrow].equip = EPOS::ARROW;
     }
     pc_calcstatus(sd, 0);
     return 0;
@@ -4536,52 +4528,53 @@ int pc_unequipitem(MapSessionData *sd, int n, bool type)
 {
     nullpo_ret(sd);
 
-    map_log("unmap_logequip %d %x:%x\n", n, pc_equippoint(sd, n),
-                sd->status.inventory[n].equip);
-    if (sd->status.inventory[n].equip)
+    map_log("unequip %d %x:%x\n", n,
+            static_cast<uint16_t>(pc_equippoint(sd, n)),
+            static_cast<uint16_t>(sd->status.inventory[n].equip));
+    if (sd->status.inventory[n].equip != EPOS::NONE)
     {
         for (EQUIP i : EQUIPs)
         {
             if (sd->status.inventory[n].equip & equip_pos[i])
                 sd->equip_index[i] = -1;
         }
-        if (sd->status.inventory[n].equip & 0x0002)
+        if (sd->status.inventory[n].equip & EPOS::WEAPON)
         {
             sd->weapontype1 = 0;
             sd->status.weapon = sd->weapontype2;
             pc_calcweapontype(sd);
             pc_set_weapon_look(sd);
         }
-        if (sd->status.inventory[n].equip & 0x0020)
+        if (sd->status.inventory[n].equip & EPOS::SHIELD)
         {
             sd->status.shield = sd->weapontype2 = 0;
             pc_calcweapontype(sd);
             clif_changelook(sd, LOOK::SHIELD, sd->status.shield);
         }
-        if (sd->status.inventory[n].equip & 0x0001)
+        if (sd->status.inventory[n].equip & EPOS::LEGS)
         {
             sd->status.legs = 0;
             clif_changelook(sd, LOOK::LEGS,
                              sd->status.legs);
         }
-        if (sd->status.inventory[n].equip & 0x0100)
+        if (sd->status.inventory[n].equip & EPOS::HELMET)
         {
             sd->status.head = 0;
             clif_changelook(sd, LOOK::HEAD, sd->status.head);
         }
-        if (sd->status.inventory[n].equip & 0x0200)
+        if (sd->status.inventory[n].equip & EPOS::CHEST)
         {
             sd->status.chest = 0;
             clif_changelook(sd, LOOK::CHEST, sd->status.chest);
         }
         pc_signal_advanced_equipment_change(sd, n);
 
-        clif_unequipitemack(sd, n, sd->status.inventory[n].equip, 1);
-        sd->status.inventory[n].equip = 0;
+        clif_unequipitemack(sd, n, sd->status.inventory[n].equip, true);
+        sd->status.inventory[n].equip = EPOS::NONE;
     }
     else
     {
-        clif_unequipitemack(sd, n, 0, 0);
+        clif_unequipitemack(sd, n, EPOS::NONE, false);
     }
     if (!type)
     {
@@ -4597,7 +4590,7 @@ int pc_unequipinvyitem(MapSessionData *sd, int n, bool type)
 
     for (EQUIP i : EQUIPs)
     {
-        if (equip_pos[i] > 0 && sd->equip_index[i] == n)
+        if (equip_pos[i] != EPOS::NONE && sd->equip_index[i] == n)
         {
             //Slot taken, remove item from there.
             pc_unequipitem(sd, sd->equip_index[i], type);
@@ -4657,14 +4650,14 @@ int pc_checkitem(MapSessionData *sd)
             continue;
         if (sd->status.inventory[i].equip & ~pc_equippoint(sd, i))
         {
-            sd->status.inventory[i].equip = 0;
+            sd->status.inventory[i].equip = EPOS::NONE;
             calc_flag = 1;
         }
         //装備制限チェック
-        if (sd->status.inventory[i].equip && maps[sd->m].flag.pvp
+        if (sd->status.inventory[i].equip != EPOS::NONE && maps[sd->m].flag.pvp
             && (it->flag.no_equip == 1 || it->flag.no_equip == 3))
         {                       //PvP制限
-            sd->status.inventory[i].equip = 0;
+            sd->status.inventory[i].equip = EPOS::NONE;
             calc_flag = 1;
         }
     }

@@ -205,7 +205,7 @@ static void itemdb_readdb(void)
             id->magic_bonus = atoi(str[10]);
             // id->slot = atoi(str[11]);
             id->sex = atoi(str[12]);
-            id->equip = atoi(str[13]);
+            id->equip = static_cast<EPOS>(atoi(str[13]));
             id->wlv = atoi(str[14]);
             id->elv = atoi(str[15]);
             id->look = atoi(str[16]);

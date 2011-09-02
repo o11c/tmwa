@@ -1368,14 +1368,14 @@ int atcommand_item(int fd, MapSessionData *sd,
     return 0;
 }
 
-/// Remove all of your items
+/// Remove all of your items, except your equipment
 int atcommand_itemreset(int fd, MapSessionData *sd,
                          const char *, const char *)
 {
 
     for (int i = 0; i < MAX_INVENTORY; i++)
     {
-        if (sd->status.inventory[i].amount && sd->status.inventory[i].equip == 0)
+        if (sd->status.inventory[i].amount && ! sd->status.inventory[i].equip)
             pc_delitem(sd, i, sd->status.inventory[i].amount, 0);
     }
     clif_displaymessage(fd, "All of your items have been removed.");
@@ -3090,7 +3090,7 @@ int atcommand_char_wipe(int fd, MapSessionData *sd,
     {
         if (sd->status.inventory[i].amount)
         {
-            if (sd->status.inventory[i].equip)
+            if (sd->status.inventory[i].equip != EPOS::NONE)
                 pc_unequipitem(pl_sd, i, false);
             pc_delitem(pl_sd, i, sd->status.inventory[i].amount, 0);
         }
@@ -3706,39 +3706,57 @@ int atcommand_character_item_list(int fd, MapSessionData *sd,
             sprintf(output, "------ Items list of '%s' ------", pl_sd->status.name);
             clif_displaymessage(fd, output);
         }
-        int equip = pl_sd->status.inventory[i].equip;
+        EPOS equip = pl_sd->status.inventory[i].equip;
 
         char equipstr[100] = "";
-        if (equip)
+        if (equip != EPOS::NONE)
             strcpy(equipstr, "| equipped: ");
-        if (equip & 4)
+        if (equip & EPOS::GLOVES)
             strcat(equipstr, "robe/garment, ");
-        if (equip & 8)
+        if (equip & EPOS::CAPE)
             strcat(equipstr, "left accessory, ");
-        if (equip & 16)
+        if (equip & EPOS::MISC1)
             strcat(equipstr, "body/armor, ");
-        if ((equip & 34) == 2)
+        switch (equip & (EPOS::WEAPON | EPOS::SHIELD))
+        {
+        case EPOS::WEAPON:
             strcat(equipstr, "right hand, ");
-        if ((equip & 34) == 32)
+            break;
+        case EPOS::SHIELD:
             strcat(equipstr, "left hand, ");
-        if ((equip & 34) == 34)
+            break;
+        case EPOS::WEAPON | EPOS::SHIELD:
             strcat(equipstr, "both hands, ");
-        if (equip & 64)
+            break;
+        }
+        if (equip & EPOS::SHOES)
             strcat(equipstr, "feet, ");
-        if (equip & 128)
+        if (equip & EPOS::MISC2)
             strcat(equipstr, "right accessory, ");
-        if ((equip & 769) == 1)
+        switch(equip & (EPOS::LEGS | EPOS::HELMET | EPOS::CHEST))
+        {
+        case EPOS::LEGS:
             strcat(equipstr, "lower head, ");
-        if ((equip & 769) == 256)
+            break;
+        case EPOS::HELMET:
             strcat(equipstr, "top head, ");
-        if ((equip & 769) == 257)
+            break;
+        case EPOS::LEGS | EPOS::HELMET:
             strcat(equipstr, "lower/top head, ");
-        if ((equip & 769) == 512)
+            break;
+        case EPOS::CHEST:
             strcat(equipstr, "mid head, ");
-        if ((equip & 769) == 513)
+            break;
+        case EPOS::CHEST | EPOS::LEGS:
             strcat(equipstr, "lower/mid head, ");
-        if ((equip & 769) == 769)
+            break;
+        case EPOS::HELMET | EPOS::CHEST:
+            strcat(equipstr, "mid/top head, ");
+            break;
+        case EPOS::LEGS | EPOS::HELMET | EPOS::CHEST:
             strcat(equipstr, "lower/mid/top head, ");
+            break;
+        }
         // remove final ', '
         equipstr[strlen(equipstr) - 2] = '\0';
 
@@ -3970,7 +3988,7 @@ int atcommand_storeall(int fd, MapSessionData *sd,
     {
         if (sd->status.inventory[i].amount)
         {
-            if (sd->status.inventory[i].equip)
+            if (sd->status.inventory[i].equip != EPOS::NONE)
                 pc_unequipitem(sd, i, false);
             storage_storageadd(sd, i, sd->status.inventory[i].amount);
         }

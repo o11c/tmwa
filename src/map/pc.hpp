@@ -35,10 +35,10 @@ int pc_setnewpc(MapSessionData *, account_t, charid_t, uint32_t, uint8_t);
 int pc_authok(int, int, time_t, short tmw_version, const struct mmo_charstatus *);
 int pc_authfail(int);
 
-int pc_equippoint(MapSessionData *sd, int n);
+EPOS pc_equippoint(MapSessionData *sd, int n);
 
 int pc_checkskill(MapSessionData *sd, int skill_id) __attribute__((pure));
-int pc_checkequip(MapSessionData *sd, int pos);
+int pc_checkequip(MapSessionData *sd, EPOS pos);
 
 int pc_walktoxy(MapSessionData *, int, int);
 int pc_stop_walking(MapSessionData *, int);
@@ -88,7 +88,7 @@ int pc_skillup(MapSessionData *, int);
 int pc_resetlvl(MapSessionData *, int type);
 int pc_resetstate(MapSessionData *);
 int pc_resetskill(MapSessionData *);
-int pc_equipitem(MapSessionData *, int, int);
+int pc_equipitem(MapSessionData *, int);
 int pc_unequipitem(MapSessionData *, int, bool);
 int pc_unequipinvyitem(MapSessionData *, int, bool);
 int pc_useitem(MapSessionData *, int);

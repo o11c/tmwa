@@ -64,10 +64,33 @@ struct dbt *script_get_userfunc_db(void)
     return userfunc_db;
 }
 
-static char epos[][100] =
+
+// scripts use a different set of enum constants (ugh)
+// TODO change this to use the main enum class EQUIP
+enum class EQ_SCR
 {
-    "Head", "Body", "Left hand", "Right hand", "Robe", "Shoes", "Accessory 1",
-    "Accessory 2", "Head 2", "Head 3", "Not Equipped"
+    none,
+
+    head, shield, hand2, hand1, gloves,
+    shoes, misc1, misc2, torso, legs,
+
+    count
+};
+
+constexpr earray<EPOS, EQ_SCR, EQ_SCR::count> equip =
+{
+    EPOS::NONE,
+
+    EPOS::HELMET, EPOS::MISC1, EPOS::SHIELD, EPOS::WEAPON, EPOS::GLOVES,
+    EPOS::SHOES, EPOS::CAPE, EPOS::MISC2, EPOS::CHEST, EPOS::LEGS,
+};
+
+constexpr earray<const char *, EQ_SCR, EQ_SCR::count> epos =
+{
+    "Not Equipped",
+
+    "Head", "Shield", "Left hand", "Right hand", "Gloves",
+    "Shoes", "Accessory 1", "Accessory 2", "Torso", "Legs"
 };
 
 static struct Script_Config
@@ -124,7 +147,6 @@ BUILTIN(strcharinfo);
 BUILTIN(getequipid);
 BUILTIN(getequipname);
 BUILTIN(getequipisequiped);
-BUILTIN(getequipisenableref);
 BUILTIN(statusup);
 BUILTIN(statusup2);
 BUILTIN(bonus);
@@ -284,7 +306,6 @@ static struct builtin_function_t
     BUILTIN_ARGS(getequipid, "i"),
     BUILTIN_ARGS(getequipname, "i"),
     BUILTIN_ARGS(getequipisequiped, "i"),
-    BUILTIN_ARGS(getequipisenableref, "i"),
     BUILTIN_ARGS(statusup, "i"),
     BUILTIN_ARGS(statusup2, "ii"),
     BUILTIN_ARGS(bonus, "ii"),
@@ -2621,32 +2642,23 @@ void builtin_strcharinfo(struct script_state *st)
     }
 }
 
-unsigned int equip[10] =
-    { 0x0100, 0x0010, 0x0020, 0x0002, 0x0004, 0x0040, 0x0008, 0x0080, 0x0200,
-    0x0001
-};
-
 /*==========================================
  * GetEquipID(Pos);     Pos: 1-10
  *------------------------------------------
  */
 void builtin_getequipid(struct script_state *st)
 {
-    int i, num;
-    MapSessionData *sd;
-    struct item_data *item;
-
-    sd = script_rid2sd(st);
+    MapSessionData *sd = script_rid2sd(st);
     if (sd == NULL)
     {
         printf("getequipid: sd == NULL\n");
         return;
     }
-    num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    i = pc_checkequip(sd, equip[num - 1]);
+    EQ_SCR num = static_cast<EQ_SCR>(conv_num(st, &(st->stack->stack_data[st->start + 2])));
+    int i = pc_checkequip(sd, equip[num]);
     if (i >= 0)
     {
-        item = sd->inventory_data[i];
+        struct item_data *item = sd->inventory_data[i];
         if (item)
             push_val(st->stack, C_INT, item->nameid);
         else
@@ -2664,26 +2676,23 @@ void builtin_getequipid(struct script_state *st)
  */
 void builtin_getequipname(struct script_state *st)
 {
-    int i, num;
-    MapSessionData *sd;
-    struct item_data *item;
     char *buf;
-
     CREATE(buf, char, 64);
-    sd = script_rid2sd(st);
-    num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    i = pc_checkequip(sd, equip[num - 1]);
+
+    MapSessionData *sd = script_rid2sd(st);
+    EQ_SCR num = static_cast<EQ_SCR>(conv_num(st, &(st->stack->stack_data[st->start + 2])));
+    int i = pc_checkequip(sd, equip[num]);
     if (i >= 0)
     {
-        item = sd->inventory_data[i];
+        struct item_data *item = sd->inventory_data[i];
         if (item)
-            sprintf(buf, "%s-[%s]", epos[num-1], item->jname);
+            sprintf(buf, "%s-[%s]", epos[num], item->jname);
         else
-            sprintf(buf, "%s-[%s]", epos[num-1], epos[10]);
+            sprintf(buf, "%s-[%s]", epos[num], epos[EQ_SCR::none]);
     }
     else
     {
-        sprintf(buf, "%s-[%s]", epos[num-1], epos[num-1]);
+        sprintf(buf, "%s-[%s]", epos[num], epos[num]);
     }
     push_str(st->stack, C_STR, buf);
 }
@@ -2694,40 +2703,10 @@ void builtin_getequipname(struct script_state *st)
  */
 void builtin_getequipisequiped(struct script_state *st)
 {
-    int i, num;
-    MapSessionData *sd;
-
-    num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    sd = script_rid2sd(st);
-    i = pc_checkequip(sd, equip[num - 1]);
+    EQ_SCR num = static_cast<EQ_SCR>(conv_num(st, &(st->stack->stack_data[st->start + 2])));
+    MapSessionData *sd = script_rid2sd(st);
+    int i = pc_checkequip(sd, equip[num]);
     if (i >= 0)
-    {
-        push_val(st->stack, C_INT, 1);
-    }
-    else
-    {
-        push_val(st->stack, C_INT, 0);
-    }
-}
-
-/*==========================================
- * 装備品精錬可能チェック
- *------------------------------------------
- */
-void builtin_getequipisenableref(struct script_state *st)
-{
-    int i, num;
-    MapSessionData *sd;
-
-    num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    sd = script_rid2sd(st);
-    i = pc_checkequip(sd, equip[num - 1]);
-    if (i >= 0 && num < 7 && sd->inventory_data[i]
-        && (num != 1 || sd->inventory_data[i]->def > 1
-            || (sd->inventory_data[i]->def == 1
-                && sd->inventory_data[i]->equip_script == NULL)
-            || (sd->inventory_data[i]->def <= 0
-                && sd->inventory_data[i]->equip_script != NULL)))
     {
         push_val(st->stack, C_INT, 1);
     }
@@ -2743,11 +2722,8 @@ void builtin_getequipisenableref(struct script_state *st)
  */
 void builtin_statusup(struct script_state *st)
 {
-    int type;
-    MapSessionData *sd;
-
-    type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    sd = script_rid2sd(st);
+    SP type = static_cast<SP>(conv_num(st, &(st->stack->stack_data[st->start + 2])));
+    MapSessionData *sd = script_rid2sd(st);
     pc_statusup(sd, static_cast<SP>(type));
 }
 
@@ -4135,11 +4111,11 @@ void builtin_getinventorylist(struct script_state *st)
             && sd->status.inventory[i].amount > 0)
         {
             pc_setreg(sd, add_str("@inventorylist_id") + (j << 24),
-                       sd->status.inventory[i].nameid);
+                      sd->status.inventory[i].nameid);
             pc_setreg(sd, add_str("@inventorylist_amount") + (j << 24),
-                       sd->status.inventory[i].amount);
+                      sd->status.inventory[i].amount);
             pc_setreg(sd, add_str("@inventorylist_equip") + (j << 24),
-                       sd->status.inventory[i].equip);
+                      static_cast<uint16_t>(sd->status.inventory[i].equip));
             j++;
         }
     }
@@ -5453,33 +5429,6 @@ static void script_autosave_mapreg(timer_id, tick_t)
         script_save_mapreg();
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-static int set_posword(char *p)
-{
-    char *np, *str[15];
-    int i = 0;
-    for (i = 0; i < 11; i++)
-    {
-        if ((np = strchr(p, ',')) != NULL)
-        {
-            str[i] = p;
-            *np = 0;
-            p = np + 1;
-        }
-        else
-        {
-            str[i] = p;
-            p += strlen(p);
-        }
-        if (str[i])
-            strcpy(epos[i], str[i]);
-    }
-    return 0;
-}
-
 int script_config_read(const char *cfgName)
 {
     int i;
@@ -5506,10 +5455,6 @@ int script_config_read(const char *cfgName)
         i = sscanf(line, "%[^:]: %[^\r\n]", w1, w2);
         if (i != 2)
             continue;
-        if (strcasecmp(w1, "refine_posword") == 0)
-        {
-            set_posword(w2);
-        }
         if (strcasecmp(w1, "import") == 0)
         {
             script_config_read(w2);

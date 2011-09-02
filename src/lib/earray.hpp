@@ -16,7 +16,6 @@ class earray
 public:
     earray() = default;
 
-    constexpr earray(const E (&arg)[asi(max)]) : elts(arg) {}
     // needed due to funny initializer_list rules
     // (all E2 are E)
     template<typename... E2>

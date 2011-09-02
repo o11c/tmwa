@@ -23,4 +23,9 @@ enum class PickupFail : uint8_t
     DROP_STEAL = 6,
 };
 
+enum class ArrowFail : uint16_t
+{
+    NO_AMMO = 0,
+    EQUIPPING = 3,
+};
 #endif //CLIF_STRUCTS

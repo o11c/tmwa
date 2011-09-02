@@ -1127,7 +1127,7 @@ void clif_additem(MapSessionData *sd, int n, int amount, PickupFail fail)
         WFIFOW(fd, 13) = 0;//card[1];
         WFIFOW(fd, 15) = 0;//card[2];
         WFIFOW(fd, 17) = 0;//card[3];
-        WFIFOW(fd, 19) = pc_equippoint(sd, n);
+        WFIFOW(fd, 19) = static_cast<uint16_t>(pc_equippoint(sd, n));
         WFIFOB(fd, 21) = (sd->inventory_data[n]->type == 7) ? 4 : sd->inventory_data[n]->type;
         WFIFOB(fd, 22) = static_cast<uint8_t>(fail);
     }
@@ -1169,14 +1169,14 @@ void clif_itemlist(MapSessionData *sd)
         WFIFOB(fd, n * 18 + 8) = sd->inventory_data[i]->type;
         WFIFOB(fd, n * 18 + 9) = 0;//identify;
         WFIFOW(fd, n * 18 + 10) = sd->status.inventory[i].amount;
-        if (sd->inventory_data[i]->equip == 0x8000)
+        if (sd->inventory_data[i]->equip == EPOS::ARROW)
         {
-            WFIFOW(fd, n * 18 + 12) = 0x8000;
-            if (sd->status.inventory[i].equip)
+            WFIFOW(fd, n * 18 + 12) = static_cast<uint16_t>(EPOS::ARROW);
+            if (sd->status.inventory[i].equip != EPOS::NONE)
                 arrow = i;
         }
         else
-            WFIFOW(fd, n * 18 + 12) = 0;
+            WFIFOW(fd, n * 18 + 12) = static_cast<uint16_t>(EPOS::NONE);
         WFIFOW(fd, n * 18 + 14) = 0;//card[0]
         WFIFOW(fd, n * 18 + 16) = 0;//card[1]
         WFIFOW(fd, n * 18 + 18) = 0;//card[2]
@@ -1215,8 +1215,8 @@ void clif_equiplist(MapSessionData *sd)
         WFIFOW(fd, n * 20 + 6) = sd->status.inventory[i].nameid;
         WFIFOB(fd, n * 20 + 8) = (sd->inventory_data[i]->type == 7) ? 4 : sd->inventory_data[i]->type;
         WFIFOB(fd, n * 20 + 9) = 0;//identify;
-        WFIFOW(fd, n * 20 + 10) = pc_equippoint(sd, i);
-        WFIFOW(fd, n * 20 + 12) = sd->status.inventory[i].equip;
+        WFIFOW(fd, n * 20 + 10) = static_cast<uint16_t>(pc_equippoint(sd, i));
+        WFIFOW(fd, n * 20 + 12) = static_cast<uint16_t>(sd->status.inventory[i].equip);
         WFIFOB(fd, n * 20 + 14) = 0;//broken or attribute;
         WFIFOB(fd, n * 20 + 15) = 0;//refine;
         WFIFOW(fd, n * 20 + 16) = 0;//card[0];
@@ -1295,8 +1295,8 @@ void clif_storageequiplist(MapSessionData *sd, struct storage *stor)
         WFIFOW(fd, n * 20 + 6) = stor->storage_[i].nameid;
         WFIFOB(fd, n * 20 + 8) = id->type;
         WFIFOB(fd, n * 20 + 9) = //identify;
-        WFIFOW(fd, n * 20 + 10) = id->equip;
-        WFIFOW(fd, n * 20 + 12) = stor->storage_[i].equip;
+        WFIFOW(fd, n * 20 + 10) = static_cast<uint16_t>(id->equip);
+        WFIFOW(fd, n * 20 + 12) = static_cast<uint16_t>(stor->storage_[i].equip);
         WFIFOB(fd, n * 20 + 14) = 0;//broken or attribute;
         WFIFOB(fd, n * 20 + 15) = 0;//refine;
         WFIFOW(fd, n * 20 + 16) = 0;//card[0];
@@ -1464,37 +1464,35 @@ void clif_updatestatus(MapSessionData *sd, SP type)
     WFIFOSET(fd, packet_len_table[WFIFOW(fd, 0)]);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// Change a being's LOOK towards everybody
 void clif_changelook(BlockList *bl, LOOK type, int val)
 {
     return clif_changelook_towards(bl, type, val, NULL);
 }
 
+/// Change a being's LOOK towards somebody in particular (or everybody if NULL)
 void clif_changelook_towards(BlockList *bl, LOOK type, int val,
                              MapSessionData *dstsd)
 {
-    uint8_t rbuf[32];
-    uint8_t *buf = dstsd ? WFIFOP(dstsd->fd, 0) : rbuf;  // pick target buffer or general-purpose one
-    MapSessionData *sd = NULL;
-
     nullpo_retv(bl);
 
+    uint8_t rbuf[32];
+    uint8_t *buf = dstsd ? WFIFOP(dstsd->fd, 0) : rbuf;
+
+    MapSessionData *sd = NULL;
     if (bl->type == BL_PC)
         sd = static_cast<MapSessionData *>(bl);
 
     if (sd && sd->status.option & OPTION_INVISIBILITY)
         return;
 
-    if (sd
-        && (type == LOOK::WEAPON || type == LOOK::SHIELD || type >= LOOK::SHOES))
+    if (sd && (type == LOOK::WEAPON || type == LOOK::SHIELD || type >= LOOK::SHOES))
     {
         WBUFW(buf, 0) = 0x1d7;
         WBUFL(buf, 2) = bl->id;
         if (type >= LOOK::SHOES)
         {
+            // shoes, gloves, cape, misc1, misc2
             EQUIP equip_point = equip_points[type];
 
             WBUFB(buf, 6) = static_cast<uint8_t>(type);
@@ -1544,52 +1542,47 @@ void clif_changelook_towards(BlockList *bl, LOOK type, int val,
     }
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// show player their status
+// actually sent whenever the client has changed map
 static void clif_initialstatus(MapSessionData *sd)
 {
-    int fd;
-    uint8_t *buf;
-
     nullpo_retv(sd);
 
-    fd = sd->fd;
-    buf = WFIFOP(fd, 0);
+    int fd = sd->fd;
 
-    WBUFW(buf, 0) = 0xbd;
-    WBUFW(buf, 2) = sd->status.status_point;
-    WBUFB(buf, 4) = min(255, sd->status.stats[ATTR::STR]);
-    WBUFB(buf, 5) = pc_need_status_point(sd, SP::STR);
-    WBUFB(buf, 6) = min(255, sd->status.stats[ATTR::AGI]);
-    WBUFB(buf, 7) = pc_need_status_point(sd, SP::AGI);
-    WBUFB(buf, 8) = min(255, sd->status.stats[ATTR::VIT]);
-    WBUFB(buf, 9) = pc_need_status_point(sd, SP::VIT);
-    WBUFB(buf, 10) = min(255, sd->status.stats[ATTR::INT]);
-    WBUFB(buf, 11) = pc_need_status_point(sd, SP::INT);
-    WBUFB(buf, 12) = min(255, sd->status.stats[ATTR::DEX]);
-    WBUFB(buf, 13) = pc_need_status_point(sd, SP::DEX);
-    WBUFB(buf, 14) = min(255, sd->status.stats[ATTR::LUK]);
-    WBUFB(buf, 15) = pc_need_status_point(sd, SP::LUK);
+    WFIFOW(fd, 0) = 0xbd;
+    WFIFOW(fd, 2) = sd->status.status_point;
+    WFIFOB(fd, 4) = min(255, sd->status.stats[ATTR::STR]);
+    WFIFOB(fd, 5) = pc_need_status_point(sd, SP::STR);
+    WFIFOB(fd, 6) = min(255, sd->status.stats[ATTR::AGI]);
+    WFIFOB(fd, 7) = pc_need_status_point(sd, SP::AGI);
+    WFIFOB(fd, 8) = min(255, sd->status.stats[ATTR::VIT]);
+    WFIFOB(fd, 9) = pc_need_status_point(sd, SP::VIT);
+    WFIFOB(fd, 10) = min(255, sd->status.stats[ATTR::INT]);
+    WFIFOB(fd, 11) = pc_need_status_point(sd, SP::INT);
+    WFIFOB(fd, 12) = min(255, sd->status.stats[ATTR::DEX]);
+    WFIFOB(fd, 13) = pc_need_status_point(sd, SP::DEX);
+    WFIFOB(fd, 14) = min(255, sd->status.stats[ATTR::LUK]);
+    WFIFOB(fd, 15) = pc_need_status_point(sd, SP::LUK);
 
-    WBUFW(buf, 16) = sd->base_atk + sd->watk;
-    WBUFW(buf, 18) = sd->watk2;    //atk bonus
-    WBUFW(buf, 20) = sd->matk1;
-    WBUFW(buf, 22) = sd->matk2;
-    WBUFW(buf, 24) = sd->def;  // def
-    WBUFW(buf, 26) = sd->def2;
-    WBUFW(buf, 28) = sd->mdef; // mdef
-    WBUFW(buf, 30) = sd->mdef2;
-    WBUFW(buf, 32) = sd->hit;
-    WBUFW(buf, 34) = sd->flee;
-    WBUFW(buf, 36) = sd->flee2 / 10;
-    WBUFW(buf, 38) = sd->critical / 10;
-    WBUFW(buf, 40) = 0;//sd->status.karma;
-    WBUFW(buf, 42) = 0;//sd->status.manner;
+    WFIFOW(fd, 16) = sd->base_atk + sd->watk;
+    WFIFOW(fd, 18) = sd->watk2;    //atk bonus
+    WFIFOW(fd, 20) = sd->matk1;
+    WFIFOW(fd, 22) = sd->matk2;
+    WFIFOW(fd, 24) = sd->def;  // def
+    WFIFOW(fd, 26) = sd->def2;
+    WFIFOW(fd, 28) = sd->mdef; // mdef
+    WFIFOW(fd, 30) = sd->mdef2;
+    WFIFOW(fd, 32) = sd->hit;
+    WFIFOW(fd, 34) = sd->flee;
+    WFIFOW(fd, 36) = sd->flee2 / 10;
+    WFIFOW(fd, 38) = sd->critical / 10;
+    WFIFOW(fd, 40) = 0;//sd->status.karma;
+    WFIFOW(fd, 42) = 0;//sd->status.manner;
 
     WFIFOSET(fd, packet_len_table[0xbd]);
 
+    // These repeat some of the above, but also provide bonus information.
     clif_updatestatus(sd, SP::STR);
     clif_updatestatus(sd, SP::AGI);
     clif_updatestatus(sd, SP::VIT);
@@ -1601,45 +1594,33 @@ static void clif_initialstatus(MapSessionData *sd)
     clif_updatestatus(sd, SP::ASPD);
 }
 
-/*==========================================
- *矢装備
- *------------------------------------------
- */
+/// inform client that arrows are now equipped
 void clif_arrowequip(MapSessionData *sd, int val)
 {
-    int fd;
-
     nullpo_retv(sd);
 
-    if (sd->attacktarget && sd->attacktarget > 0)   // [Valaris]
-        sd->attacktarget = 0;
+    sd->attacktarget = 0;
 
-    fd = sd->fd;
+    int fd = sd->fd;
     WFIFOW(fd, 0) = 0x013c;
-    WFIFOW(fd, 2) = val + 2;   //矢のアイテムID
+    WFIFOW(fd, 2) = val + 2;
 
     WFIFOSET(fd, packet_len_table[0x013c]);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-void clif_arrow_fail(MapSessionData *sd, int type)
+/// Sent when there aren't any arrow, OR when arrows are equipped
+void clif_arrow_fail(MapSessionData *sd, ArrowFail type)
 {
     nullpo_retv(sd);
 
     int fd = sd->fd;
     WFIFOW(fd, 0) = 0x013b;
-    WFIFOW(fd, 2) = type;
+    WFIFOW(fd, 2) = static_cast<uint16_t>(type);
 
     WFIFOSET(fd, packet_len_table[0x013b]);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
+/// What happened when player tried to increase a stat
 void clif_statusupack(MapSessionData *sd, SP type, bool ok, int val)
 {
     nullpo_retv(sd);
@@ -1652,34 +1633,32 @@ void clif_statusupack(MapSessionData *sd, SP type, bool ok, int val)
     WFIFOSET(fd, packet_len_table[0xbc]);
 }
 
-/*==========================================
- *
- *------------------------------------------
- */
-void clif_equipitemack(MapSessionData *sd, int n, int pos, int ok)
+/// What happened when player tried to equip an item
+void clif_equipitemack(MapSessionData *sd, int n, EPOS pos, bool ok)
 {
     nullpo_retv(sd);
 
     int fd = sd->fd;
     WFIFOW(fd, 0) = 0xaa;
     WFIFOW(fd, 2) = n + 2;
-    WFIFOW(fd, 4) = pos;
+    WFIFOW(fd, 4) = static_cast<uint16_t>(pos);
     WFIFOB(fd, 6) = ok;
     WFIFOSET(fd, packet_len_table[0xaa]);
 }
 
+// TODO resume here
 /*==========================================
  *
  *------------------------------------------
  */
-void clif_unequipitemack(MapSessionData *sd, int n, int pos, int ok)
+void clif_unequipitemack(MapSessionData *sd, int n, EPOS pos, bool ok)
 {
     nullpo_retv(sd);
 
     int fd = sd->fd;
     WFIFOW(fd, 0) = 0xac;
     WFIFOW(fd, 2) = n + 2;
-    WFIFOW(fd, 4) = pos;
+    WFIFOW(fd, 4) = static_cast<uint16_t>(pos);
     WFIFOB(fd, 6) = ok;
     WFIFOSET(fd, packet_len_table[0xac]);
 }
@@ -3561,10 +3540,10 @@ static void clif_parse_EquipItem(int fd, MapSessionData *sd)
     //ペット用装備であるかないか
     if (sd->inventory_data[idx])
     {
-        uint16_t what = RFIFOW(fd, 4);
-        if (sd->inventory_data[idx]->type == 10)
-            what = 0x8000;    // 矢を無理やり装備できるように（−−；
-        pc_equipitem(sd, idx, what);
+//         uint16_t what = RFIFOW(fd, 4);
+//         if (sd->inventory_data[idx]->type == 10)
+//             what = 0x8000;
+        pc_equipitem(sd, idx);
     }
 }
 

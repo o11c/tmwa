@@ -194,8 +194,8 @@ static void mmo_char_tofile(FILE *fp, struct mmo_charstatus *p)
         if (p->inventory[i].nameid)
         {
             fprintf(fp, "%d,%hu,%hu,%hu," "%d,%d,%d," "%d,%d,%d,%d,%d ",
-                    0 /*id*/, p->inventory[i].nameid,
-                    p->inventory[i].amount, p->inventory[i].equip,
+                    0 /*id*/, p->inventory[i].nameid, p->inventory[i].amount,
+                    static_cast<uint16_t>(p->inventory[i].equip),
 
                     0/*identify*/, 0/*refine*/,
                     0/*attribute*/,
@@ -304,7 +304,8 @@ static int mmo_char_fromstr(char *str, struct mmo_charstatus *p)
     for (int i = 0; str[0] && str[0] != '\t'; i++)
     {
         int sn = sscanf(str, "%*d,%hu,%hu,%hu,%*d,%*d,%*d,%*d,%*d,%*d,%*d,%*d%n",
-                        &p->inventory[i].nameid, &p->inventory[i].amount, &p->inventory[i].equip,
+                        &p->inventory[i].nameid, &p->inventory[i].amount,
+                        reinterpret_cast<uint16_t *>(&p->inventory[i].equip),
                         &next);
         if (sn != 12)
             return -4;
@@ -1000,11 +1001,11 @@ static unsigned count_users(void)
 }
 
 /// Return item type that is equipped in the given slot
-static int find_equip_view(struct mmo_charstatus *p, unsigned int equipmask)
+static int find_equip_view(struct mmo_charstatus *p, EPOS equipmask)
 {
     for (int i = 0; i < MAX_INVENTORY; i++)
         if (p->inventory[i].nameid && p->inventory[i].amount
-            && p->inventory[i].equip & equipmask)
+                && p->inventory[i].equip & equipmask)
             return p->inventory[i].nameid;
     return 0;
 }
@@ -1044,10 +1045,10 @@ static void mmo_char_send006b(int fd, CharSessionData *sd)
         // [Fate] We no longer reveal this to the player, as its meaning is weird.
         WFIFOL(fd, j + 16) = 0;    //p->job_level;
 
-        WFIFOW(fd, j + 20) = find_equip_view(p, 0x0040);  // 9: shoes
-        WFIFOW(fd, j + 22) = find_equip_view(p, 0x0004);  // 10: gloves
-        WFIFOW(fd, j + 24) = find_equip_view(p, 0x0008);  // 11: cape
-        WFIFOW(fd, j + 26) = find_equip_view(p, 0x0010);  // 12: misc1
+        WFIFOW(fd, j + 20) = find_equip_view(p, EPOS::SHOES);
+        WFIFOW(fd, j + 22) = find_equip_view(p, EPOS::GLOVES);
+        WFIFOW(fd, j + 24) = find_equip_view(p, EPOS::CAPE);
+        WFIFOW(fd, j + 26) = find_equip_view(p, EPOS::MISC1);
         WFIFOL(fd, j + 28) = p->option;
 
         WFIFOL(fd, j + 32) = 0;//p->karma;
@@ -1069,7 +1070,7 @@ static void mmo_char_send006b(int fd, CharSessionData *sd)
         WFIFOW(fd, j + 66) = p->head;
         WFIFOW(fd, j + 68) = p->chest;
         WFIFOW(fd, j + 70) = p->hair_color;
-        WFIFOW(fd, j + 72) = find_equip_view(p, 0x0080);  // 13: misc2
+        WFIFOW(fd, j + 72) = find_equip_view(p, EPOS::MISC2);
 //      WFIFOW(fd,j+72) = p->clothes_color;
 
         memcpy(WFIFOP(fd, j + 74), p->name, 24);
@@ -1327,7 +1328,7 @@ static void parse_tologin(int fd)
                 char_dat[i].sex = sex;
                 // to avoid any problem with equipment and invalid sex, equipment is unequiped.
                 for (int j = 0; j < MAX_INVENTORY; j++)
-                    char_dat[i].inventory[j].equip = 0;
+                    char_dat[i].inventory[j].equip = EPOS::NONE;
                 char_dat[i].weapon = 0;
                 char_dat[i].shield = 0;
                 char_dat[i].head = 0;
@@ -2320,10 +2321,10 @@ static void parse_char(int fd)
             WFIFOL(fd, 2 + 12) = chardat->job_exp;
             WFIFOL(fd, 2 + 16) = 0; // chardat->job_level;
             // these didn't used to be sent
-            WFIFOW(fd, 2 + 20) = find_equip_view(chardat, 0x0040);  // 9: shoes
-            WFIFOW(fd, 2 + 22) = find_equip_view(chardat, 0x0004);  // 10: gloves
-            WFIFOW(fd, 2 + 24) = find_equip_view(chardat, 0x0008);  // 11: cape
-            WFIFOW(fd, 2 + 26) = find_equip_view(chardat, 0x0010);  // 12: misc1
+            WFIFOW(fd, 2 + 20) = find_equip_view(chardat, EPOS::SHOES);
+            WFIFOW(fd, 2 + 22) = find_equip_view(chardat, EPOS::GLOVES);
+            WFIFOW(fd, 2 + 24) = find_equip_view(chardat, EPOS::CAPE);
+            WFIFOW(fd, 2 + 26) = find_equip_view(chardat, EPOS::MISC1);
 
             WFIFOL(fd, 2 + 28) = chardat->option;
             WFIFOL(fd, 2 + 32) = 0;//chardat->karma;

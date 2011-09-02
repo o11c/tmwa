@@ -1369,7 +1369,7 @@ AttackResult battle_weapon_attack(BlockList *src, BlockList *target, tick_t tick
         }
         else
         {
-            clif_arrow_fail(sd, 0);
+            clif_arrow_fail(sd, ArrowFail::NO_AMMO);
             return AttackResult::ZERO;
         }
     }
@@ -1434,7 +1434,8 @@ AttackResult battle_weapon_attack(BlockList *src, BlockList *target, tick_t tick
     {
         int weapon_index = sd->equip_index[EQUIP::WEAPON];
         int weapon = 0;
-        if (sd->inventory_data[weapon_index] && sd->status.inventory[weapon_index].equip & 0x2)
+        if (sd->inventory_data[weapon_index]
+                && sd->status.inventory[weapon_index].equip & EPOS::WEAPON)
             weapon = sd->inventory_data[weapon_index]->nameid;
 
         map_log("PC%d %d:%d,%d WPNDMG %s%d %d FOR %d WPN %d",

@@ -300,9 +300,15 @@ struct letdef_t
     expr_t *expr;
 };
 
-SHIFT_ENUM(SpellFlag, uint8_t)
+BIT_ENUM(SpellFlag, uint8_t)
 {
-    LOCAL, SILENT, NONMAGIC
+    NONE        = 0,
+
+    LOCAL       = 1 << 0,
+    SILENT      = 1 << 1,
+    NONMAGIC    = 1 << 2,
+
+    ALL = LOCAL | SILENT | NONMAGIC
 };
 
 struct spell_t
@@ -443,12 +449,16 @@ inline bool operator ==(const status_change_ref_t& lhs, const status_change_ref_
     return lhs.sc_type == rhs.sc_type && lhs.bl_id == rhs.bl_id;
 }
 
-SHIFT_ENUM(InvocationFlag, uint8_t)
+BIT_ENUM(InvocationFlag, uint8_t)
 {
+    NONE = 0,
+
     // removed since it is the same as checking whether there is a subject
-//    BOUND,
-    ABORTED,
-    STOPATTACK
+//    BOUND        = 1 << 0,
+    ABORTED     = 1 << 1,
+    STOPATTACK  = 1 << 2,
+
+    ALL = ABORTED | STOPATTACK
 };
 
 struct invocation_t : public BlockList

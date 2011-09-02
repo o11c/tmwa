@@ -1,146 +1,194 @@
 #ifndef ENUM_HPP
 #define ENUM_HPP
 
-template<class Self, class U>
-struct operators
+#include <type_traits>
+
+namespace _eops
 {
-private:
-    U u;
-protected:
-    constexpr operators() = default;
-    constexpr operators(U raw) : u(raw) {}
-    ~operators() = default;
+    template<class Enum>
+    class _underlie
+    {
+        static_assert(std::is_enum<Enum>::value, "only enums have an underlying type");
+        typedef typename std::make_unsigned<Enum>::type _unsigned;
+        typedef typename std::make_signed<Enum>::type _signed;
+    public:
+        typedef typename std::conditional<Enum(-1) < Enum(0), _signed, _unsigned>::type type;
+    };
 
-    // helper method in order for derived classes' from_raw() method to work,
-    // because according to the strange rules of C++, a protected constructor
-    // is only available in a subclass's constructor, unlike protected methods
-    static operators from_raw(U raw)
-    {
-        return operators(raw);
-    }
-public:
-    constexpr explicit operator bool()
-    {
-        return u;
-    }
-    constexpr bool operator ! ()
-    {
-        return !u;
-    }
-    friend constexpr Self operator | (const Self& l, const Self& r)
-    {
-        return Self(operators(l.u | r.u));
-    }
-    friend constexpr Self operator & (const Self& l, const Self& r)
-    {
-        return Self(operators(l.u & r.u));
-    }
-    friend constexpr Self operator ^ (const Self& l, const Self& r)
-    {
-        return Self(operators(l.u ^ r.u));
-    }
-    friend constexpr Self operator ~ (const Self& r)
-    {
-        return Self(operators(~r.u));
-    }
-    friend constexpr bool operator == (const Self& l, const Self& r)
-    {
-        return l.u == r.u;
-    }
-    friend constexpr bool operator != (const Self& l, const Self& r)
-    {
-        return l.u != r.u;
-    }
-    Self& operator = (const Self& o)
-    {
-        u = o.u;
-        return static_cast<Self&>(*this);
-    }
-    Self& operator |= (const Self& o)
-    {
-        u = o.u;
-        return static_cast<Self&>(*this);
-    }
-    Self& operator &= (const Self& o)
-    {
-        u = o.u;
-        return static_cast<Self&>(*this);
-    }
-    Self& operator ^= (const Self& o)
-    {
-        u = o.u;
-        return static_cast<Self&>(*this);
-    }
-};
+    /// A type used as the return type of all operators
+    // needed because 'operator bool' must be a method
+    // but 'enum class' can't have methods
 
-#define BIT_ENUM(Name, underlying_type)                         \
-struct Name : operators<Name, underlying_type>                  \
-{                                                               \
-    enum impl_t : underlying_type;                              \
-    /* implicitly constexpr */                                  \
-    Name() = default;                                           \
-    constexpr Name(impl_t v) :                                  \
-        operators<Name, underlying_type>(v) {}                  \
-    constexpr Name(const operators<Name, underlying_type>& p) : \
-        operators<Name, underlying_type>(p) {}                  \
-    static Name from_raw(underlying_type v)                     \
-    {                                                           \
-        return operators<Name, underlying_type>::from_raw(v);   \
-    }                                                           \
-};                                                              \
-/* Separate definitions because of when it gets instantiated */ \
-constexpr Name operator | (Name::impl_t l, Name::impl_t r)      \
-{                                                               \
-    return Name(l) | Name(r);                                   \
-}                                                               \
-constexpr Name operator & (Name::impl_t l, Name::impl_t r)      \
-{                                                               \
-    return Name(l) & Name(r);                                   \
-}                                                               \
-constexpr Name operator ^ (Name::impl_t l, Name::impl_t r)      \
-{                                                               \
-    return Name(l) ^ Name(r);                                   \
-}                                                               \
-constexpr Name operator ~ (Name::impl_t r)                      \
-{                                                               \
-    return ~Name(r);                                            \
-}                                                               \
-enum Name::impl_t : underlying_type
-// user-supplied braces and enum values
+    template<class Enum>
+    struct Enum_or_bool
+    {
+        Enum val;
 
-#define SHIFT_ENUM(Name, underlying_type)                       \
-struct Name : operators<Name, underlying_type>                  \
-{                                                               \
-    enum impl_t : underlying_type;                              \
-    /* implicitly constexpr */                                  \
-    Name() = default;                                           \
-    constexpr Name(impl_t v) :                                  \
-        operators<Name, underlying_type>(1 << v) {}             \
-    constexpr Name(const operators<Name, underlying_type>& p) : \
-        operators<Name, underlying_type>(p) {}                  \
-    static Name from_raw(underlying_type v)                     \
-    {                                                           \
-        return operators<Name, underlying_type>::from_raw(v);   \
-    }                                                           \
-};                                                              \
-/* Separate definitions because of when it gets instantiated */ \
-constexpr Name operator | (Name::impl_t l, Name::impl_t r)      \
-{                                                               \
-    return Name(l) | Name(r);                                   \
-}                                                               \
-constexpr Name operator & (Name::impl_t l, Name::impl_t r)      \
-{                                                               \
-    return Name(l) & Name(r);                                   \
-}                                                               \
-constexpr Name operator ^ (Name::impl_t l, Name::impl_t r)      \
-{                                                               \
-    return Name(l) ^ Name(r);                                   \
-}                                                               \
-constexpr Name operator ~ (Name::impl_t r)                      \
-{                                                               \
-    return ~Name(r);                                            \
-}                                                               \
-enum Name::impl_t : underlying_type
+        constexpr operator Enum()
+        {
+            return val;
+        }
+        constexpr explicit operator bool()
+        {
+            // You can only convert to bool, if there is an explicit Enum::NONE
+            // (since this method is only instantiated if used,
+            // you can always convert to Enum)
+            return val != Enum::NONE;
+        }
+        constexpr bool operator !()
+        {
+            return val == Enum::NONE;
+        }
+
+        constexpr Enum_or_bool(Enum v) : val(v) {}
+    };
+
+
+    template<class E>
+    constexpr bool operator !(E r)
+    {
+        typedef typename std::enable_if<std::is_enum<E>::value, E>::type type;
+        return r == E::NONE;
+    }
+    template<class E>
+    constexpr bool operator !(Enum_or_bool<E> r)
+    {
+        typedef typename std::enable_if<std::is_enum<E>::value, E>::type type;
+        return !E(r);
+    }
+
+
+    template<class E>
+    constexpr Enum_or_bool<E> operator | (E l, E r)
+    {
+        typedef typename std::enable_if<std::is_enum<E>::value, E>::type type;
+        typedef typename _underlie<E>::type U;
+        return E(U(l) | U(r));
+    }
+    template<class E>
+    constexpr Enum_or_bool<E> operator | (Enum_or_bool<E> l, E r)
+    {
+        return E(l) | r;
+    }
+    template<class E>
+    constexpr Enum_or_bool<E> operator | (E l, Enum_or_bool<E> r)
+    {
+        return l | E(r);
+    }
+    template<class E>
+    constexpr Enum_or_bool<E> operator | (Enum_or_bool<E> l, Enum_or_bool<E> r)
+    {
+        return E(l) | E(r);
+    }
+
+
+    template<class E>
+    constexpr Enum_or_bool<E> operator & (E l, E r)
+    {
+        typedef typename std::enable_if<std::is_enum<E>::value, E>::type type;
+        typedef typename _underlie<E>::type U;
+        return E(U(l) & U(r));
+    }
+    template<class E>
+    constexpr Enum_or_bool<E> operator & (Enum_or_bool<E> l, E r)
+    {
+        return E(l) & r;
+    }
+    template<class E>
+    constexpr Enum_or_bool<E> operator & (E l, Enum_or_bool<E> r)
+    {
+        return l & E(r);
+    }
+    template<class E>
+    constexpr Enum_or_bool<E> operator & (Enum_or_bool<E> l, Enum_or_bool<E> r)
+    {
+        return E(l) & E(r);
+    }
+
+
+    template<class E>
+    constexpr Enum_or_bool<E> operator ^ (E l, E r)
+    {
+        typedef typename std::enable_if<std::is_enum<E>::value, E>::type type;
+        typedef typename _underlie<E>::type U;
+        return E(U(l) ^ U(r));
+    }
+    template<class E>
+    constexpr Enum_or_bool<E> operator ^ (Enum_or_bool<E> l, E r)
+    {
+        return E(l) ^ r;
+    }
+    template<class E>
+    constexpr Enum_or_bool<E> operator ^ (E l, Enum_or_bool<E> r)
+    {
+        return l ^ E(r);
+    }
+    template<class E>
+    constexpr Enum_or_bool<E> operator ^ (Enum_or_bool<E> l, Enum_or_bool<E> r)
+    {
+        return E(l) ^ E(r);
+    }
+
+
+    template<class E>
+    constexpr Enum_or_bool<E> operator ~(E r)
+    {
+        typedef typename std::enable_if<std::is_enum<E>::value, E>::type type;
+        return E::ALL ^ r;
+    }
+    template<class E>
+    constexpr Enum_or_bool<E> operator ~(Enum_or_bool<E> r)
+    {
+        return E::ALL ^ E(r);
+    }
+
+
+    template<class E>
+    E& operator |= (E& l, E r)
+    {
+        typedef typename std::enable_if<std::is_enum<E>::value, E>::type type;
+        return l = l | r;
+    }
+    template<class E>
+    E& operator |= (E& l, Enum_or_bool<E> r)
+    {
+        return l = l | E(r);
+    }
+
+
+    template<class E>
+    E& operator &= (E& l, E r)
+    {
+        typedef typename std::enable_if<std::is_enum<E>::value, E>::type type;
+        return l = l & r;
+    }
+    template<class E>
+    E& operator &= (E& l, Enum_or_bool<E> r)
+    {
+        return l = l & E(r);
+    }
+
+
+    template<class E>
+    E& operator ^= (E& l, E r)
+    {
+        typedef typename std::enable_if<std::is_enum<E>::value, E>::type type;
+        return l = l ^ r;
+    }
+    template<class E>
+    E& operator ^= (E& l, Enum_or_bool<E> r)
+    {
+        return l = l ^ (r);
+    }
+} // namespace _eops
+
+# define BIT_ENUM(N, U) \
+namespace _eops         \
+{                       \
+    enum class N : U;   \
+}                       \
+using _eops::N;         \
+enum class _eops::N : U \
 // user-supplied braces and enum values
 
 #endif //ENUM_HPP

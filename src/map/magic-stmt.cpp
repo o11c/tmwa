@@ -251,11 +251,15 @@ static bool op_itemheal(env_t *env, val_t *args)
     return 0;
 }
 
-SHIFT_ENUM(Shroud, uint8_t)
+BIT_ENUM(Shroud, uint8_t)
 {
-    HIDE_NAME_TALKING_FLAG,
-    DISAPPEAR_ON_PICKUP_FLAG,
-    DISAPPEAR_ON_TALK_FLAG
+    NONE = 0,
+
+    HIDE_NAME_TALKING_FLAG      = 1 << 0,
+    DISAPPEAR_ON_PICKUP_FLAG    = 1 << 1,
+    DISAPPEAR_ON_TALK_FLAG      = 1 << 2,
+
+    ALL = HIDE_NAME_TALKING_FLAG | DISAPPEAR_ON_PICKUP_FLAG | DISAPPEAR_ON_TALK_FLAG
 };
 
 static bool op_shroud(env_t *, val_t *args)
@@ -265,7 +269,7 @@ static bool op_shroud(env_t *, val_t *args)
     if (!subject)
         return 0;
 
-    Shroud arg = Shroud::from_raw(ARG_INT(1));
+    Shroud arg = static_cast<Shroud>(ARG_INT(1));
 
     subject->state.shroud_active = 1;
     subject->state.shroud_hides_name_talking = bool(arg & Shroud::HIDE_NAME_TALKING_FLAG);

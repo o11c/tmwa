@@ -35,9 +35,9 @@ bool eathena_interactive_session;
 //   (see login_athena.conf, 'admin_state' parameter)
 //-------------------------------------------------------------------------
 char loginserverip[16] = "127.0.0.1";   // IP of login-server
-int loginserverport = 6900;    // Port of login-server
+int32_t loginserverport = 6900;    // Port of login-server
 char loginserveradminpassword[24] = "admin";    // Administration password
-int passenc = 2;               // Encoding type of the password
+int32_t passenc = 2;               // Encoding type of the password
 char ladmin_log_filename[1024] = "log/ladmin.log";
 
 // TODO - use the common method
@@ -227,19 +227,19 @@ char ladmin_log_filename[1024] = "log/ladmin.log";
 //    Displays complete information of an account.
 //
 //-------------------------------------------------------------------------
-int login_fd;
+int32_t login_fd;
 IP_Address login_ip;
-int bytes_to_read = 0;         // flag to know if we waiting bytes from login-server
+int32_t bytes_to_read = 0;         // flag to know if we waiting bytes from login-server
 char command_[1024];
 char parameters[1024];
-int list_first, list_last, list_type, list_count;  // parameter to display a list of accounts
-int already_exit_function = 0; // sometimes, the exit function is called twice... so, don't log twice the message
+int32_t list_first, list_last, list_type, list_count;  // parameter to display a list of accounts
+int32_t already_exit_function = 0; // sometimes, the exit function is called twice... so, don't log twice the message
 
 //------------------------------
 // Writing function of logs file
 //------------------------------
-static int ladmin_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
-int ladmin_log(const char *fmt, ...)
+static int32_t ladmin_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+int32_t ladmin_log(const char *fmt, ...)
 {
     FILE *logfp;
     va_list ap;
@@ -258,7 +258,7 @@ int ladmin_log(const char *fmt, ...)
             gettimeofday(&tv, NULL);
             strftime(tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, localtime(&tv.tv_sec));
             sprintf(tmpstr + strlen(tmpstr), ".%03d: %s",
-                    static_cast<int>(tv.tv_usec / 1000), fmt);
+                    static_cast<int32_t>(tv.tv_usec / 1000), fmt);
             vfprintf(logfp, tmpstr, ap);
         }
         fclose_(logfp);
@@ -271,7 +271,7 @@ int ladmin_log(const char *fmt, ...)
 //---------------------------------------------
 // Function to return ordonal text of a number.
 //---------------------------------------------
-static const char *makeordinal(int number)
+static const char *makeordinal(int32_t number)
 {
     if ((number % 10) < 4 && (number % 10) != 0
         && (number < 10 || number > 20))
@@ -292,9 +292,9 @@ static const char *makeordinal(int number)
 //-----------------------------------------------------------------------------------------
 // Function to test of the validity of an account name (return 0 if incorrect, and 1 if ok)
 //-----------------------------------------------------------------------------------------
-static int verify_accountname(char *account_name)
+static int32_t verify_accountname(char *account_name)
 {
-    int i;
+    int32_t i;
 
     for (i = 0; account_name[i]; i++)
     {
@@ -328,11 +328,11 @@ static int verify_accountname(char *account_name)
 //----------------------------------
 // Sub-function: Input of a password
 //----------------------------------
-static int typepasswd(char *password)
+static int32_t typepasswd(char *password)
 {
     char password1[1023], password2[1023];
-    int letter;
-    int i;
+    int32_t letter;
+    int32_t i;
 
     ladmin_log("No password was given. Request to obtain a password.\n");
 
@@ -367,9 +367,9 @@ static int typepasswd(char *password)
 //------------------------------------------------------------------------------------
 // Sub-function: Test of the validity of password (return 0 if incorrect, and 1 if ok)
 //------------------------------------------------------------------------------------
-static int verify_password(char *password)
+static int32_t verify_password(char *password)
 {
-    int i;
+    int32_t i;
 
     for (i = 0; password[i]; i++)
     {
@@ -403,7 +403,7 @@ static int verify_password(char *password)
 //------------------------------------------------------------------
 // Sub-function: Check the name of a command (return complete name)
 //-----------------------------------------------------------------
-static int check_command(char *command)
+static int32_t check_command(char *command)
 {
 // help
     if (strncmp(command, "aide", 2) == 0 && strncmp(command, "aide", strlen(command)) == 0)  // not 1 letter command: 'aide' or 'add'?
@@ -533,7 +533,7 @@ static int check_command(char *command)
 static void display_help(char *param)
 {
     char command[1023];
-    int i;
+    int32_t i;
 
     memset(command, '\0', sizeof(command));
 
@@ -877,10 +877,10 @@ static void display_help(char *param)
 //-----------------------------
 // Sub-function: add an account
 //-----------------------------
-static int addaccount(char *param, int emailflag)
+static int32_t addaccount(char *param, int32_t emailflag)
 {
     char name[1023], sex[1023], email[1023], password[1023];
-//  int i;
+//  int32_t i;
 
     memset(name, '\0', sizeof(name));
     memset(sex, '\0', sizeof(sex));
@@ -988,12 +988,12 @@ static int addaccount(char *param, int emailflag)
 //---------------------------------------------------------------------------------
 // Sub-function: Add/substract time to the final date of a banishment of an account
 //---------------------------------------------------------------------------------
-static int banaddaccount(char *param)
+static int32_t banaddaccount(char *param)
 {
     char name[1023], modif[1023];
-    int year, month, day, hour, minute, second;
+    int32_t year, month, day, hour, minute, second;
     char *p_modif;
-    int value, i;
+    int32_t value, i;
 
     memset(name, '\0', sizeof(name));
     memset(modif, '\0', sizeof(modif));
@@ -1154,9 +1154,9 @@ static int banaddaccount(char *param)
 // Sub-function of sub-function banaccount, unbanaccount or bansetaccount
 // Set the final date of a banishment of an account
 //-----------------------------------------------------------------------
-static int bansetaccountsub(char *name, const char *date, const char *time_)
+static int32_t bansetaccountsub(char *name, const char *date, const char *time_)
 {
-    int year, month, day, hour, minute, second;
+    int32_t year, month, day, hour, minute, second;
     time_t ban_until_time;      // # of seconds 1/1/1970 (timestamp): ban time limit of the account (0 = no ban)
     struct tm *tmtime;
 
@@ -1266,7 +1266,7 @@ static int bansetaccountsub(char *name, const char *date, const char *time_)
 //---------------------------------------------------------------------
 // Sub-function: Set the final date of a banishment of an account (ban)
 //---------------------------------------------------------------------
-static int banaccount(char *param)
+static int32_t banaccount(char *param)
 {
     char name[1023], date[1023], time_[1023];
 
@@ -1294,7 +1294,7 @@ static int banaccount(char *param)
 //------------------------------------------------------------------------
 // Sub-function: Set the final date of a banishment of an account (banset)
 //------------------------------------------------------------------------
-static int bansetaccount(char *param)
+static int32_t bansetaccount(char *param)
 {
     char name[1023], date[1023], time_[1023];
 
@@ -1325,7 +1325,7 @@ static int bansetaccount(char *param)
 //-------------------------------------------------
 // Sub-function: unbanishment of an account (unban)
 //-------------------------------------------------
-static int unbanaccount(char *param)
+static int32_t unbanaccount(char *param)
 {
     char name[1023];
 
@@ -1353,7 +1353,7 @@ static int unbanaccount(char *param)
 // Sub-function: Asking to check the validity of a password
 // (Note: never send back a password with login-server!! security of passwords)
 //---------------------------------------------------------
-static int checkaccount(char *param)
+static int32_t checkaccount(char *param)
 {
     char name[1023], password[1023];
 
@@ -1397,12 +1397,12 @@ static int checkaccount(char *param)
 //------------------------------------------------
 // Sub-function: Asking for deletion of an account
 //------------------------------------------------
-static int delaccount(char *param)
+static int32_t delaccount(char *param)
 {
     char name[1023];
     char letter;
     char confirm[1023];
-    int i;
+    int32_t i;
 
     memset(name, '\0', sizeof(name));
 
@@ -1453,7 +1453,7 @@ static int delaccount(char *param)
 //----------------------------------------------------------
 // Sub-function: Asking to modification of an account e-mail
 //----------------------------------------------------------
-static int changeemail(char *param)
+static int32_t changeemail(char *param)
 {
     char name[1023], email[1023];
 
@@ -1514,7 +1514,7 @@ static int changeemail(char *param)
 //-----------------------------------------------------
 // Sub-function: Asking of the number of online players
 //-----------------------------------------------------
-static int getlogincount(void)
+static int32_t getlogincount(void)
 {
     ladmin_log("Request to login-server to obtain the # of online players.\n");
 
@@ -1528,10 +1528,10 @@ static int getlogincount(void)
 //----------------------------------------------------------
 // Sub-function: Asking to modify the GM level of an account
 //----------------------------------------------------------
-static int changegmlevel(char *param)
+static int32_t changegmlevel(char *param)
 {
     char name[1023];
-    int GM_level;
+    int32_t GM_level;
 
     memset(name, '\0', sizeof(name));
     GM_level = 0;
@@ -1574,7 +1574,7 @@ static int changegmlevel(char *param)
 //---------------------------------------------
 // Sub-function: Asking to obtain an account id
 //---------------------------------------------
-static int idaccount(char *param)
+static int32_t idaccount(char *param)
 {
     char name[1023];
 
@@ -1609,7 +1609,7 @@ static int idaccount(char *param)
 //----------------------------------------------------------------------------
 // Sub-function: Asking to displaying information about an account (by its id)
 //----------------------------------------------------------------------------
-static int infoaccount(int account_id)
+static int32_t infoaccount(int32_t account_id)
 {
     if (account_id < 0)
     {
@@ -1631,7 +1631,7 @@ static int infoaccount(int account_id)
 //---------------------------------------
 // Sub-function: Send a broadcast message
 //---------------------------------------
-static int sendbroadcast(short type, char *message)
+static int32_t sendbroadcast(int16_t type, char *message)
 {
     if (strlen(message) == 0)
     {
@@ -1661,10 +1661,10 @@ static int sendbroadcast(short type, char *message)
 //--------------------------------------------------------
 // Sub-function: Asking to Displaying of the accounts list
 //--------------------------------------------------------
-static int listaccount(char *param, int type)
+static int32_t listaccount(char *param, int32_t type)
 {
-//int list_first, list_last, list_type; // parameter to display a list of accounts
-    int i;
+//int32_t list_first, list_last, list_type; // parameter to display a list of accounts
+    int32_t i;
 
     list_type = type;
 
@@ -1729,9 +1729,9 @@ static int listaccount(char *param, int type)
 //--------------------------------------------------------
 // Sub-function: Frobnicate items
 //--------------------------------------------------------
-static int itemfrob(char *param)
+static int32_t itemfrob(char *param)
 {
-    int source_id, dest_id;
+    int32_t source_id, dest_id;
 
     if (sscanf(param, "%d %d", &source_id, &dest_id) < 2)
     {
@@ -1751,7 +1751,7 @@ static int itemfrob(char *param)
 //--------------------------------------------
 // Sub-function: Asking to modify a memo field
 //--------------------------------------------
-static int changememo(char *param)
+static int32_t changememo(char *param)
 {
     char name[1023], memo[1023];
 
@@ -1798,7 +1798,7 @@ static int changememo(char *param)
 //-----------------------------------------------
 // Sub-function: Asking to obtain an account name
 //-----------------------------------------------
-static int nameaccount(int id)
+static int32_t nameaccount(int32_t id)
 {
     if (id < 0)
     {
@@ -1821,7 +1821,7 @@ static int nameaccount(int id)
 // Sub-function: Asking to modify a password
 // (Note: never send back a password with login-server!! security of passwords)
 //------------------------------------------
-static int changepasswd(char *param)
+static int32_t changepasswd(char *param)
 {
     char name[1023], password[1023];
 
@@ -1866,7 +1866,7 @@ static int changepasswd(char *param)
 // Sub-function: Request to login-server to reload GM configuration file
 // this function have no answer
 //----------------------------------------------------------------------
-static int reloadGM(void)
+static int32_t reloadGM(void)
 {
     WFIFOW(login_fd, 0) = 0x7955;
     WFIFOSET(login_fd, 2);
@@ -1883,7 +1883,7 @@ static int reloadGM(void)
 //-----------------------------------------------------
 // Sub-function: Asking to modify the sex of an account
 //-----------------------------------------------------
-static int changesex(char *param)
+static int32_t changesex(char *param)
 {
     char name[1023], sex[1023];
 
@@ -1928,7 +1928,7 @@ static int changesex(char *param)
 // Sub-function of sub-function changestate, blockaccount or unblockaccount
 // Asking to modify the state of an account
 //-------------------------------------------------------------------------
-static int changestatesub(char *name, int state, const char *error_message7)
+static int32_t changestatesub(char *name, int32_t state, const char *error_message7)
 {
     char error_message[1023];   // need to use, because we can modify error_message7
 
@@ -1992,10 +1992,10 @@ static int changestatesub(char *name, int state, const char *error_message7)
 //-------------------------------------------------------
 // Sub-function: Asking to modify the state of an account
 //-------------------------------------------------------
-static int changestate(char *param)
+static int32_t changestate(char *param)
 {
     char name[1023], error_message[1023];
-    int state;
+    int32_t state;
 
     memset(name, '\0', sizeof(name));
     memset(error_message, '\0', sizeof(error_message));
@@ -2021,7 +2021,7 @@ static int changestate(char *param)
 //-------------------------------------------
 // Sub-function: Asking to unblock an account
 //-------------------------------------------
-static int unblockaccount(char *param)
+static int32_t unblockaccount(char *param)
 {
     char name[1023];
 
@@ -2047,7 +2047,7 @@ static int unblockaccount(char *param)
 //-------------------------------------------
 // Sub-function: Asking to unblock an account
 //-------------------------------------------
-static int blockaccount(char *param)
+static int32_t blockaccount(char *param)
 {
     char name[1023];
 
@@ -2073,12 +2073,12 @@ static int blockaccount(char *param)
 //---------------------------------------------------------------------
 // Sub-function: Add/substract time to the validity limit of an account
 //---------------------------------------------------------------------
-static int timeaddaccount(char *param)
+static int32_t timeaddaccount(char *param)
 {
     char name[1023], modif[1023];
-    int year, month, day, hour, minute, second;
+    int32_t year, month, day, hour, minute, second;
     char *p_modif;
-    int value, i;
+    int32_t value, i;
 
     memset(name, '\0', sizeof(name));
     memset(modif, '\0', sizeof(modif));
@@ -2238,10 +2238,10 @@ static int timeaddaccount(char *param)
 //-------------------------------------------------
 // Sub-function: Set a validity limit of an account
 //-------------------------------------------------
-static int timesetaccount(char *param)
+static int32_t timesetaccount(char *param)
 {
     char name[1023], date[1023], time_[1023];
-    int year, month, day, hour, minute, second;
+    int32_t year, month, day, hour, minute, second;
     time_t connect_until_time;  // # of seconds 1/1/1970 (timestamp): Validity limit of the account (0 = unlimited)
     struct tm *tmtime;
 
@@ -2367,7 +2367,7 @@ static int timesetaccount(char *param)
 //------------------------------------------------------------------------------
 // Sub-function: Asking to displaying information about an account (by its name)
 //------------------------------------------------------------------------------
-static int whoaccount(char *param)
+static int32_t whoaccount(char *param)
 {
     char name[1023];
 
@@ -2401,7 +2401,7 @@ static int whoaccount(char *param)
 //--------------------------------------------------------
 // Sub-function: Asking of the version of the login-server
 //--------------------------------------------------------
-static int checkloginversion(void)
+static int32_t checkloginversion(void)
 {
     ladmin_log("Request to login-server to obtain its version.\n");
 
@@ -2417,9 +2417,9 @@ static int checkloginversion(void)
 // this function wait until user type a command
 // and analyse the command.
 //---------------------------------------------
-static int prompt(void)
+static int32_t prompt(void)
 {
-    int i, j;
+    int32_t i, j;
     char buf[1024];
     char *p;
 
@@ -2692,7 +2692,7 @@ static int prompt(void)
 //-------------------------------------------------------------
 // Function: Parse receiving informations from the login-server
 //-------------------------------------------------------------
-static void parse_fromlogin(int fd)
+static void parse_fromlogin(int32_t fd)
 {
     if (session[fd]->eof)
     {
@@ -2819,11 +2819,11 @@ static void parse_fromlogin(int fd)
                 }
                 else
                 {
-                    int i;
+                    int32_t i;
                     ladmin_log("  Receiving of a accounts list.\n");
                     for (i = 4; i < RFIFOW(fd, 2); i += 38)
                     {
-                        int j;
+                        int32_t j;
                         char userid[24];
                         char lower_userid[24];
                         memcpy(userid, RFIFOP(fd, i + 5), sizeof(userid));
@@ -2844,7 +2844,7 @@ static void parse_fromlogin(int fd)
                             if (RFIFOB(fd, i + 4) == 0)
                                 printf("   ");
                             else
-                                printf("%2d ", static_cast<int>(RFIFOB(fd, i + 4)));
+                                printf("%2d ", static_cast<int32_t>(RFIFOB(fd, i + 4)));
                             printf("%-24s", userid);
                             if (RFIFOB(fd, i + 29) == 0)
                                 printf("%-5s ", "Femal");
@@ -3034,7 +3034,7 @@ static void parse_fromlogin(int fd)
                     return;
                 {
                     // Get length of the received packet
-                    int i;
+                    int32_t i;
                     char name[20];
                     ladmin_log("  Receiving of the number of online players.\n");
                     // Read information of the servers
@@ -3324,7 +3324,7 @@ static void parse_fromlogin(int fd)
             case 0x794f:       // answer of a broadcast
                 if (RFIFOREST(fd) < 4)
                     return;
-                if (RFIFOW(fd, 2) == static_cast<unsigned short>(-1))
+                if (RFIFOW(fd, 2) == static_cast<uint16_t>(-1))
                 {
                     printf("Message sending failed. No online char-server.\n");
                     ladmin_log("Message sending failed. No online char-server.\n");
@@ -3424,7 +3424,7 @@ static void parse_fromlogin(int fd)
                         else
                         {
                             printf(" Id:     %d (GM level %d)\n",
-                                    RFIFOL(fd, 2), static_cast<int>(RFIFOB(fd, 6)));
+                                    RFIFOL(fd, 2), static_cast<int32_t>(RFIFOB(fd, 6)));
                         }
                         printf(" Name:   '%s'\n", userid);
                         if (RFIFOB(fd, 31) == 0)
@@ -3525,7 +3525,7 @@ static void parse_fromlogin(int fd)
 //------------------------------------
 // Function to connect to login-server
 //------------------------------------
-static int Connect_login_server(void)
+static int32_t Connect_login_server(void)
 {
     Iprintf("Attempt to connect to login-server...\n");
     ladmin_log("Attempt to connect to login-server...\n");
@@ -3559,7 +3559,7 @@ static int Connect_login_server(void)
 //-----------------------------------
 // Reading general configuration file
 //-----------------------------------
-static int ladmin_config_read(const char *cfgName)
+static int32_t ladmin_config_read(const char *cfgName)
 {
     char line[1024], w1[1024], w2[1024];
     FILE *fp;
@@ -3661,7 +3661,7 @@ void term_func(void)
 //------------------------
 // Main function of ladmin
 //------------------------
-void do_init(int argc, char **argv)
+void do_init(int32_t argc, char **argv)
 {
     eathena_interactive_session = isatty(0);
     // read ladmin configuration

@@ -8,38 +8,38 @@
 # include <functional>
 
 extern map_data_local maps[];
-extern int map_num;
-extern int autosave_interval;
+extern int32_t map_num;
+extern int32_t autosave_interval;
 
 extern char motd_txt[];
 
 extern char whisper_server_name[24];
 
 // global information
-void map_setusers(int);
-int map_getusers(void) __attribute__((pure));
+void map_setusers(int32_t);
+int32_t map_getusers(void) __attribute__((pure));
 // block freeing
-int map_freeblock(BlockList *bl);
-int map_freeblock_lock(void);
-int map_freeblock_unlock(void);
+int32_t map_freeblock(BlockList *bl);
+int32_t map_freeblock_lock(void);
+int32_t map_freeblock_unlock(void);
 // block related
 bool map_addblock(BlockList *);
-int map_delblock(BlockList *);
+int32_t map_delblock(BlockList *);
 typedef std::function<void (BlockList *)> MapForEachFunc;
-void map_foreachinarea_impl(MapForEachFunc, int, int, int, int, int, BlockType);
+void map_foreachinarea_impl(MapForEachFunc, int32_t, int32_t, int32_t, int32_t, int32_t, BlockType);
 template<class... Args>
-void map_foreachinarea(void (&func)(BlockList *, Args...), int m,
-                       int x_0, int y_0, int x_1, int y_1, BlockType type,
+void map_foreachinarea(void (&func)(BlockList *, Args...), int32_t m,
+                       int32_t x_0, int32_t y_0, int32_t x_1, int32_t y_1, BlockType type,
                        Args... args)
 {
     map_foreachinarea_impl(std::bind(func, std::placeholders::_1, args...),
                            m, x_0, y_0, x_1, y_1, type);
 }
 
-void map_foreachinmovearea_impl(MapForEachFunc, int, int, int, int, int, int, int, BlockType);
+void map_foreachinmovearea_impl(MapForEachFunc, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, BlockType);
 template<class... Args>
-void map_foreachinmovearea(void (&func)(BlockList *, Args...), int m,
-                           int x_0, int y_0, int x_1, int y_1, int dx, int dy,
+void map_foreachinmovearea(void (&func)(BlockList *, Args...), int32_t m,
+                           int32_t x_0, int32_t y_0, int32_t x_1, int32_t y_1, int32_t dx, int32_t dy,
                            BlockType type, Args... args)
 {
     map_foreachinmovearea_impl(std::bind(func, std::placeholders::_1, args...),
@@ -60,7 +60,7 @@ void map_foreachobject(void (&func)(BlockList *, Args...), Args... args)
 
 void map_quit(MapSessionData *);
 // npc
-int map_addnpc(int, struct npc_data *);
+int32_t map_addnpc(int32_t, struct npc_data *);
 
 extern FILE *map_logfile;
 void map_log(const char *format, ...) __attribute__((format(printf, 1, 2)));
@@ -73,11 +73,11 @@ inline void map_clearflooritem(uint32_t id)
 {
     map_clearflooritem_timer(NULL, 0, id);
 }
-int map_addflooritem_any(struct item *, int amount, uint16_t m, uint16_t x, uint16_t y,
+int32_t map_addflooritem_any(struct item *, int32_t amount, uint16_t m, uint16_t x, uint16_t y,
                            MapSessionData **owners,
-                           int *owner_protection,
-                          int lifetime, int dispersal);
-int map_addflooritem(struct item *, int amount, uint16_t m, uint16_t x, uint16_t y,
+                           int32_t *owner_protection,
+                          int32_t lifetime, int32_t dispersal);
+int32_t map_addflooritem(struct item *, int32_t amount, uint16_t m, uint16_t x, uint16_t y,
                        MapSessionData *, MapSessionData *,
                       MapSessionData *);
 
@@ -85,10 +85,10 @@ int map_addflooritem(struct item *, int amount, uint16_t m, uint16_t x, uint16_t
 void map_addchariddb(charid_t charid, const char *name);
 const char *map_charid2nick(charid_t) __attribute__((pure));
 
-MapSessionData *map_id2sd(unsigned int) __attribute__((pure));
-MapSessionData *map_id2authsd(unsigned int) __attribute__((pure));
-BlockList *map_id2bl(unsigned int) __attribute__((pure));
-int map_mapname2mapid(const fixed_string<16>&) __attribute__((pure));
+MapSessionData *map_id2sd(uint32_t) __attribute__((pure));
+MapSessionData *map_id2authsd(uint32_t) __attribute__((pure));
+BlockList *map_id2bl(uint32_t) __attribute__((pure));
+int32_t map_mapname2mapid(const fixed_string<16>&) __attribute__((pure));
 bool map_mapname2ipport(const fixed_string<16>&, IP_Address *, in_port_t *);
 bool map_setipport(const fixed_string<16>& name, IP_Address ip, in_port_t port);
 
@@ -97,9 +97,9 @@ void map_deliddb(BlockList *bl);
 void map_foreachiddb(DB_Func func);
 
 void map_addnickdb(MapSessionData *);
-int map_scriptcont(MapSessionData *sd, int id);  /* Continues a script either on a spell or on an NPC */
+int32_t map_scriptcont(MapSessionData *sd, int32_t id);  /* Continues a script either on a spell or on an NPC */
 MapSessionData *map_nick2sd(const char *) __attribute__((pure));
-int compare_item(struct item *a, struct item *b) __attribute__((pure));
+int32_t compare_item(struct item *a, struct item *b) __attribute__((pure));
 
 // iterate over players
 MapSessionData *map_get_first_session(void) __attribute__((pure));
@@ -108,10 +108,10 @@ MapSessionData *map_get_next_session(MapSessionData *current) __attribute__((pur
 MapSessionData *map_get_prev_session(MapSessionData *current) __attribute__((pure));
 
 // edit the gat data
-uint8_t map_getcell(int, int, int) __attribute__((pure));
-void map_setcell(int, int, int, uint8_t);
+uint8_t map_getcell(int32_t, int32_t, int32_t) __attribute__((pure));
+void map_setcell(int32_t, int32_t, int32_t, uint8_t);
 
 // get the general direction from block's location to the coordinates
-Direction map_calc_dir(BlockList *src, int x, int y);
+Direction map_calc_dir(BlockList *src, int32_t x, int32_t y);
 
 #endif // MAP_HPP

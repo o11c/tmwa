@@ -2,7 +2,7 @@
 
 #include <cstdio>
 
-static void nullpo_info(const char *file, int line, const char *func)
+static void nullpo_info(const char *file, int32_t line, const char *func)
 {
     if (!file)
         file = "??";
@@ -12,7 +12,7 @@ static void nullpo_info(const char *file, int line, const char *func)
     fprintf(stderr, "%s:%d: in func `%s': NULL pointer\n", file, line, func);
 }
 
-bool nullpo_chk(const char *file, int line, const char *func, const void *target)
+bool nullpo_chk(const char *file, int32_t line, const char *func, const void *target)
 {
     if (target)
         return 0;

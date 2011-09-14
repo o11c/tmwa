@@ -72,13 +72,13 @@ struct Point
 
 struct skill
 {
-    unsigned short id, lv, flags;
+    uint16_t id, lv, flags;
 };
 
 struct global_reg
 {
     char str[32];
-    int value;
+    int32_t value;
 };
 
 enum class ATTR
@@ -98,20 +98,20 @@ struct mmo_charstatus
     account_t account_id;
     charid_t partner_id;
 
-    int base_exp, job_exp, zeny;
+    int32_t base_exp, job_exp, zeny;
 
-    short status_point, skill_point;
-    int hp, max_hp, sp, max_sp;
-    short option;
-    short hair, hair_color;
+    int16_t status_point, skill_point;
+    int32_t hp, max_hp, sp, max_sp;
+    int16_t option;
+    int16_t hair, hair_color;
     party_t party_id;
 
-    short weapon, shield;
-    short head, chest, legs;
+    int16_t weapon, shield;
+    int16_t head, chest, legs;
 
     char name[24];
     level_t base_level, job_level;
-    earray<short, ATTR, ATTR::COUNT> stats;
+    earray<int16_t, ATTR, ATTR::COUNT> stats;
     uint8_t char_num, sex;
 
     IP_Address mapip;
@@ -120,20 +120,20 @@ struct mmo_charstatus
     Point last_point, save_point, memo_point[10];
     struct item inventory[MAX_INVENTORY];
     struct skill skill[MAX_SKILL];
-    int global_reg_num;
+    int32_t global_reg_num;
     struct global_reg global_reg[GLOBAL_REG_NUM];
-    int account_reg_num;
+    int32_t account_reg_num;
     struct global_reg account_reg[ACCOUNT_REG_NUM];
-    int account_reg2_num;
+    int32_t account_reg2_num;
     struct global_reg account_reg2[ACCOUNT_REG2_NUM];
 };
 
 struct storage
 {
-    int dirty;
+    int32_t dirty;
     account_t account_id;
-    short storage_status;
-    short storage_amount;
+    int16_t storage_status;
+    int16_t storage_amount;
     struct item storage_[MAX_STORAGE];
 };
 
@@ -147,7 +147,7 @@ struct party_member
 {
     account_t account_id;
     char name[24], map[16];
-    int leader;
+    int32_t leader;
     bool online;
     level_t lv;
     class MapSessionData *sd;
@@ -164,8 +164,8 @@ struct party
 
 struct square
 {
-    int val1[5];
-    int val2[5];
+    int32_t val1[5];
+    int32_t val2[5];
 };
 
 /// Reason a login can fail

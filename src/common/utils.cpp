@@ -64,7 +64,7 @@ bool strzcpy(char *dst, const char *src, size_t n)
 /// Make a string safe by replacing control characters with _
 void remove_control_chars(char *str)
 {
-    for (int i = 0; str[i]; i++)
+    for (int32_t i = 0; str[i]; i++)
         if (!(str[i] & 0xE0))
             str[i] = '_';
 }
@@ -72,7 +72,7 @@ void remove_control_chars(char *str)
 /// Check if there are any control chars
 bool has_control_chars(char *str)
 {
-    for (int i = 0; str[i]; i++)
+    for (int32_t i = 0; str[i]; i++)
         if (!(str[i] & 0xE0))
             return true;
     return false;
@@ -119,7 +119,7 @@ bool e_mail_check(const char *email)
 // Parses booleans: on/off and yes/no in english, français, deutsch, español
 // Then falls back to atoi (which means non-integers are parsed as 0)
 // TODO replace by config_parse_bool and config_parse_int?
-int config_switch(const char *str)
+int32_t config_switch(const char *str)
 {
     if (strcasecmp(str, "on") == 0 || strcasecmp(str, "yes") == 0
         || strcasecmp(str, "oui") == 0 || strcasecmp(str, "ja") == 0
@@ -141,7 +141,7 @@ const char *stamp_now(bool millis)
     static char tmpstr[DATE_FORMAT_MAX + 4];
     strftime(tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime(&tv.tv_sec));
     if (millis)
-        sprintf(tmpstr + DATE_FORMAT_MAX - 1, ".%03u", static_cast<unsigned int>(tv.tv_usec / 1000));
+        sprintf(tmpstr + DATE_FORMAT_MAX - 1, ".%03u", static_cast<uint32_t>(tv.tv_usec / 1000));
     return tmpstr;
 }
 

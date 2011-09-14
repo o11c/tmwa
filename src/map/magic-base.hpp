@@ -20,7 +20,7 @@ POD_string magic_find_anchor_invocation(POD_string teleport_location) __attribut
 /**
  * Adds a component selection to a component holder(which may initially be NULL)
  */
-void magic_add_component(component_t *& component_holder, int id, int count);
+void magic_add_component(component_t *& component_holder, int32_t id, int32_t count);
 
 area_t *magic_find_anchor(POD_string name) __attribute__((pure));
 
@@ -28,7 +28,7 @@ area_t *magic_find_anchor(POD_string name) __attribute__((pure));
  * The parameter `param' must have been dynamically allocated; ownership is transferred to the resultant env_t.
  */
 env_t *spell_create_env(spell_t *spell,
-                        MapSessionData *caster, int spellpower, POD_string param);
+                        MapSessionData *caster, int32_t spellpower, POD_string param);
 
 effect_set_t *spell_trigger(spell_t *spell, MapSessionData *caster, env_t *env);
 
@@ -50,8 +50,8 @@ namespace magic_conf
 {
     extern std::vector<std::pair<POD_string, val_t>> vars;
 
-    //extern int obscure_chance;
-    extern int min_casttime;
+    //extern int32_t obscure_chance;
+    extern int32_t min_casttime;
 
     extern std::map<POD_string, POD_string> spell_names;
     extern std::map<POD_string, spell_t *> spells;
@@ -60,7 +60,7 @@ namespace magic_conf
     extern std::map<POD_string, area_t *> anchors;
 };
 
-inline val_t& env_t::VAR(int i)
+inline val_t& env_t::VAR(int32_t i)
 {
     if (!vars || vars[i].ty == TY::UNDEF)
         return magic_conf::vars[i].second;

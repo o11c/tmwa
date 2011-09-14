@@ -41,7 +41,7 @@ struct item_data *itemdb_searchname(const char *str)
  * DBの存在確認
  *------------------------------------------
  */
-struct item_data *itemdb_exists(int nameid)
+struct item_data *itemdb_exists(int32_t nameid)
 {
     return static_cast<struct item_data *>(numdb_search(item_db, nameid).p);
 }
@@ -50,7 +50,7 @@ struct item_data *itemdb_exists(int nameid)
  * DBの検索
  *------------------------------------------
  */
-struct item_data *itemdb_search(int nameid)
+struct item_data *itemdb_search(int32_t nameid)
 {
     struct item_data *id = static_cast<struct item_data *>(numdb_search(item_db, nameid).p);
     if (id)
@@ -92,9 +92,9 @@ struct item_data *itemdb_search(int nameid)
  *
  *------------------------------------------
  */
-int itemdb_isequip(int nameid)
+int32_t itemdb_isequip(int32_t nameid)
 {
-    int type = itemdb_type(nameid);
+    int32_t type = itemdb_type(nameid);
     if (type == 0 || type == 2 || type == 3 || type == 6 || type == 10)
         return 0;
     return 1;
@@ -104,11 +104,11 @@ int itemdb_isequip(int nameid)
  *
  *------------------------------------------
  */
-int itemdb_isequip2(struct item_data *data)
+int32_t itemdb_isequip2(struct item_data *data)
 {
     if (data)
     {
-        int type = data->type;
+        int32_t type = data->type;
         if (type == 0 || type == 2 || type == 3 || type == 6 || type == 10)
             return 0;
         else
@@ -121,9 +121,9 @@ int itemdb_isequip2(struct item_data *data)
  *
  *------------------------------------------
  */
-int itemdb_isequip3(int nameid)
+int32_t itemdb_isequip3(int32_t nameid)
 {
-    int type = itemdb_type(nameid);
+    int32_t type = itemdb_type(nameid);
     if (type == 4 || type == 5 || type == 8)
         return 1;
     return 0;
@@ -137,8 +137,8 @@ static void itemdb_readdb(void)
 {
     FILE *fp;
     char line[1024];
-    int ln = 0, lines = 0;
-    int nameid, j;
+    int32_t ln = 0, lines = 0;
+    int32_t nameid, j;
     char *str[32];
     char *p, *np;
     struct item_data *id;

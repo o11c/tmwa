@@ -34,8 +34,8 @@ struct skill_name_db skill_names[] =
     {0, 0, 0}
 };
 
-static const int dirx[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
-static const int diry[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
+static const int32_t dirx[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
+static const int32_t diry[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
 
 /* スキルデータベース */
 struct skill_db skill_db[MAX_SKILL];
@@ -43,7 +43,7 @@ struct skill_db skill_db[MAX_SKILL];
 #define UNARMED_PLAYER_DAMAGE_MIN(bl)   (skill_power_bl((bl), TMW_BRAWLING) >> 4)   // +50 for 200
 #define UNARMED_PLAYER_DAMAGE_MAX(bl)   (skill_power_bl((bl), TMW_BRAWLING))    // +200 for 200
 
-int skill_get_max_raise(int id)
+int32_t skill_get_max_raise(int32_t id)
 {
     return skill_db[id].max_raise;
 }
@@ -54,14 +54,14 @@ int skill_get_max_raise(int id)
  * スキル詠唱キャンセル
  *------------------------------------------
  */
-int skill_castcancel(BlockList *bl)
+int32_t skill_castcancel(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
     {
         MapSessionData *sd = static_cast<MapSessionData *>(bl);
-        unsigned long tick = gettick();
+        tick_t tick = gettick();
         nullpo_ret(sd);
         sd->canact_tick = tick;
         sd->canmove_tick = tick;
@@ -84,7 +84,7 @@ int skill_castcancel(BlockList *bl)
  * ステータス異常終了
  *------------------------------------------
  */
-int skill_status_change_active(BlockList *bl, int type)
+int32_t skill_status_change_active(BlockList *bl, int32_t type)
 {
     struct status_change *sc_data;
 
@@ -100,11 +100,11 @@ int skill_status_change_active(BlockList *bl, int type)
     return sc_data[type].timer != NULL;
 }
 
-int skill_status_change_end(BlockList *bl, int type, timer_id tid)
+int32_t skill_status_change_end(BlockList *bl, int32_t type, timer_id tid)
 {
     struct status_change *sc_data;
-    int opt_flag = 0, calc_flag = 0;
-    short *sc_count, *option, *opt1, *opt2, *opt3;
+    int32_t opt_flag = 0, calc_flag = 0;
+    int16_t *sc_count, *option, *opt1, *opt2, *opt3;
 
     nullpo_ret(bl);
     if (bl->type != BL_PC && bl->type != BL_MOB)
@@ -184,9 +184,9 @@ int skill_status_change_end(BlockList *bl, int type, timer_id tid)
 
 void skill_update_heal_animation(MapSessionData *sd)
 {
-    const int mask = 0x100;
-    int was_active;
-    int is_active;
+    const int32_t mask = 0x100;
+    int32_t was_active;
+    int32_t is_active;
 
     nullpo_retv(sd);
     was_active = sd->opt2 & mask;
@@ -207,12 +207,12 @@ void skill_update_heal_animation(MapSessionData *sd)
  * ステータス異常終了タイマー
  *------------------------------------------
  */
-static void skill_status_change_timer(timer_id tid, tick_t tick, uint32_t id, int type)
+static void skill_status_change_timer(timer_id tid, tick_t tick, uint32_t id, int32_t type)
 {
     BlockList *bl;
     MapSessionData *sd = NULL;
     struct status_change *sc_data;
-    //short *sc_count; //使ってない？
+    //int16_t *sc_count; //使ってない？
 
     if ((bl = map_id2bl(id)) == NULL)
         return;               //該当IDがすでに消滅しているというのはいかにもありそうなのでスルーしてみる
@@ -235,7 +235,7 @@ static void skill_status_change_timer(timer_id tid, tick_t tick, uint32_t id, in
         case SC_POISON:
             if (sc_data[SC_SLOWPOISON].timer == NULL)
             {
-                const int resist_poison =
+                const int32_t resist_poison =
                     skill_power_bl(bl, TMW_RESIST_POISON) >> 3;
                 if (resist_poison)
                     sc_data[type].val1 -= MRAND(resist_poison + 1);
@@ -243,7 +243,7 @@ static void skill_status_change_timer(timer_id tid, tick_t tick, uint32_t id, in
                 if ((--sc_data[type].val1) > 0)
                 {
 
-                    int hp = battle_get_max_hp(bl);
+                    int32_t hp = battle_get_max_hp(bl);
                     if (battle_get_hp(bl) > hp >> 4)
                     {
                         if (bl->type == BL_PC)
@@ -280,19 +280,19 @@ static void skill_status_change_timer(timer_id tid, tick_t tick, uint32_t id, in
  * ステータス異常開始
  *------------------------------------------
  */
-int skill_status_change_start(BlockList *bl, int type, int val1, tick_t tick)
+int32_t skill_status_change_start(BlockList *bl, int32_t type, int32_t val1, tick_t tick)
 {
     return skill_status_effect(bl, type, val1, tick, 0);
 }
 
-int skill_status_effect(BlockList *bl, int type, int val1, tick_t tick, int spell_invocation)
+int32_t skill_status_effect(BlockList *bl, int32_t type, int32_t val1, tick_t tick, int32_t spell_invocation)
 {
     MapSessionData *sd = NULL;
     struct status_change *sc_data;
-    short *sc_count, *option, *opt1, *opt2, *opt3;
-    int opt_flag = 0, calc_flag = 0;
+    int16_t *sc_count, *option, *opt1, *opt2, *opt3;
+    int32_t opt_flag = 0, calc_flag = 0;
     SP updateflag = SP::NONE;
-    int scdef = 0;
+    int32_t scdef = 0;
 
     nullpo_ret(bl);
     nullpo_ret(sc_data = battle_get_sc_data(bl));
@@ -360,7 +360,7 @@ int skill_status_effect(BlockList *bl, int type, int val1, tick_t tick, int spel
         case SC_POISON:        /* 毒 */
             calc_flag = 1;
             {
-                int sc_def =
+                int32_t sc_def =
                     100 - (battle_get_vit(bl) + battle_get_luk(bl) / 5);
                 tick = tick * sc_def / 100;
             }
@@ -428,11 +428,11 @@ int skill_status_effect(BlockList *bl, int type, int val1, tick_t tick, int spel
  * ステータス異常全解除
  *------------------------------------------
  */
-int skill_status_change_clear(BlockList *bl, int type)
+int32_t skill_status_change_clear(BlockList *bl, int32_t type)
 {
     struct status_change *sc_data;
-    short *sc_count, *option, *opt1, *opt2, *opt3;
-    int i;
+    int16_t *sc_count, *option, *opt1, *opt2, *opt3;
+    int32_t i;
 
     nullpo_ret(bl);
     nullpo_ret(sc_data = battle_get_sc_data(bl));
@@ -482,7 +482,7 @@ static SP scan_stat(char *statname)
         return SP::AGI;
     if (!strcasecmp(statname, "vit"))
         return SP::VIT;
-    if (!strcasecmp(statname, "int"))
+    if (!strcasecmp(statname, "int32_t"))
         return SP::INT;
     if (!strcasecmp(statname, "luk"))
         return SP::LUK;
@@ -492,9 +492,9 @@ static SP scan_stat(char *statname)
     return SP::NONE;
 }
 
-static char *set_skill_name(int idx, const char *name)
+static char *set_skill_name(int32_t idx, const char *name)
 {
-    for (int i = 0; skill_names[i].id; i++)
+    for (int32_t i = 0; skill_names[i].id; i++)
         if (skill_names[i].id == idx)
         {
             char *dup = strdup(name);
@@ -504,9 +504,9 @@ static char *set_skill_name(int idx, const char *name)
     return NULL;
 }
 /// read skill_db.txt
-static int skill_readdb(void)
+static int32_t skill_readdb(void)
 {
-    int i, j;
+    int32_t i, j;
     FILE *fp;
     char line[1024], *p;
 
@@ -611,12 +611,12 @@ void do_init_skill(void)
 
 
 
-int skill_pool_skills[MAX_POOL_SKILLS];
-int skill_pool_skills_size = 0;
+int32_t skill_pool_skills[MAX_POOL_SKILLS];
+int32_t skill_pool_skills_size = 0;
 
-static int skill_pool_size(MapSessionData *sd);
+static int32_t skill_pool_size(MapSessionData *sd);
 
-void skill_pool_register(int id)
+void skill_pool_register(int32_t id)
 {
     if (skill_pool_skills_size + 1 >= MAX_POOL_SKILLS)
     {
@@ -628,7 +628,7 @@ void skill_pool_register(int id)
     skill_pool_skills[skill_pool_skills_size++] = id;
 }
 
-const char *skill_name(int skill)
+const char *skill_name(int32_t skill)
 {
     if (skill > 0 && skill < MAX_SKILL)
         return skill_names[skill].desc;
@@ -636,13 +636,13 @@ const char *skill_name(int skill)
         return NULL;
 }
 
-int skill_pool(MapSessionData *sd, int *skills)
+int32_t skill_pool(MapSessionData *sd, int32_t *skills)
 {
-    int i, count = 0;
+    int32_t i, count = 0;
 
     for (i = 0; count < MAX_SKILL_POOL && i < skill_pool_skills_size; i++)
     {
-        int skill_id = skill_pool_skills[i];
+        int32_t skill_id = skill_pool_skills[i];
         if (sd->status.skill[skill_id].flags & SKILL_POOL_ACTIVATED)
         {
             if (skills)
@@ -654,17 +654,17 @@ int skill_pool(MapSessionData *sd, int *skills)
     return count;
 }
 
-int skill_pool_size(MapSessionData *sd)
+int32_t skill_pool_size(MapSessionData *sd)
 {
     return skill_pool(sd, NULL);
 }
 
-int skill_pool_max(MapSessionData *sd)
+int32_t skill_pool_max(MapSessionData *sd)
 {
     return sd->status.skill[TMW_SKILLPOOL].lv;
 }
 
-int skill_pool_activate(MapSessionData *sd, int skill_id)
+int32_t skill_pool_activate(MapSessionData *sd, int32_t skill_id)
 {
     if (sd->status.skill[skill_id].flags & SKILL_POOL_ACTIVATED)
         return 0;               // Already there
@@ -682,12 +682,12 @@ int skill_pool_activate(MapSessionData *sd, int skill_id)
     return 1;                   // failed
 }
 
-int skill_pool_is_activated(MapSessionData *sd, int skill_id)
+int32_t skill_pool_is_activated(MapSessionData *sd, int32_t skill_id)
 {
     return sd->status.skill[skill_id].flags & SKILL_POOL_ACTIVATED;
 }
 
-int skill_pool_deactivate(MapSessionData *sd, int skill_id)
+int32_t skill_pool_deactivate(MapSessionData *sd, int32_t skill_id)
 {
     if (sd->status.skill[skill_id].flags & SKILL_POOL_ACTIVATED)
     {
@@ -700,15 +700,15 @@ int skill_pool_deactivate(MapSessionData *sd, int skill_id)
     return 1;
 }
 
-int skill_power(MapSessionData *sd, int skill_id)
+int32_t skill_power(MapSessionData *sd, int32_t skill_id)
 {
     SP stat = skill_db[skill_id].stat;
 
     if (stat == SP::NONE || !skill_pool_is_activated(sd, skill_id))
         return 0;
 
-    int stat_value = battle_get_stat(stat, sd);
-    int skill_value = sd->status.skill[skill_id].lv;
+    int32_t stat_value = battle_get_stat(stat, sd);
+    int32_t skill_value = sd->status.skill[skill_id].lv;
 
     if ((skill_value * 10) - 1 > stat_value)
         skill_value += (stat_value / 10);
@@ -718,7 +718,7 @@ int skill_power(MapSessionData *sd, int skill_id)
     return (skill_value * stat_value) / 10;
 }
 
-int skill_power_bl(BlockList *bl, int skill)
+int32_t skill_power_bl(BlockList *bl, int32_t skill)
 {
     if (bl->type == BL_PC)
         return skill_power(static_cast<MapSessionData *>(bl), skill);

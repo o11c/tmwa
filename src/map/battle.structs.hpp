@@ -26,10 +26,10 @@ enum class AttackResult
 
 struct Damage
 {
-    int damage, damage2;
-    int type, div_;
-    int amotion, dmotion;
-    int flag;
+    int32_t damage, damage2;
+    int32_t type, div_;
+    int32_t amotion, dmotion;
+    int32_t flag;
     AttackResult dmg_lv;
 };
 

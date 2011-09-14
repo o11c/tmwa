@@ -14,13 +14,13 @@
 struct skill_db
 {
     SP stat;
-    int poolflags, max_raise;
+    int32_t poolflags, max_raise;
 };
 extern struct skill_db skill_db[MAX_SKILL];
 
 struct skill_name_db
 {
-    int id;                    // skill id
+    int32_t id;                    // skill id
     const char *name;                 // search strings
     const char *desc;                 // description that shows up for search's
 };
@@ -31,17 +31,17 @@ class MapSessionData;
 
 void do_init_skill(void);
 
-int skill_get_max_raise(int id) __attribute__((pure));
+int32_t skill_get_max_raise(int32_t id) __attribute__((pure));
 
 // 詠唱キャンセル
-int skill_castcancel(BlockList *bl);
+int32_t skill_castcancel(BlockList *bl);
 
 // ステータス異常
-int skill_status_effect(BlockList *bl, int type, int val1, tick_t tick, int spell_invocation);
-int skill_status_change_start(BlockList *bl, int type, int val1, tick_t tick);
-int skill_status_change_active(BlockList *bl, int type);  // [fate]
-int skill_status_change_end(BlockList *bl, int type, timer_id tid);
-int skill_status_change_clear(BlockList *bl, int type);
+int32_t skill_status_effect(BlockList *bl, int32_t type, int32_t val1, tick_t tick, int32_t spell_invocation);
+int32_t skill_status_change_start(BlockList *bl, int32_t type, int32_t val1, tick_t tick);
+int32_t skill_status_change_active(BlockList *bl, int32_t type);  // [fate]
+int32_t skill_status_change_end(BlockList *bl, int32_t type, timer_id tid);
+int32_t skill_status_change_clear(BlockList *bl, int32_t type);
 
 void skill_update_heal_animation(MapSessionData *sd); // [Fate]  Check whether the healing flag must be updated, do so if needed
 
@@ -53,44 +53,44 @@ enum
 };
 
 /// effects
-const int SC_SENDMAX = 256;
-const int SC_SLOWPOISON = 14;
-const int SC_SPEEDPOTION0 = 37;
-const int SC_HEALING = 70;
-const int SC_POISON = 132;
-const int SC_ATKPOT = 185;
+const int32_t SC_SENDMAX = 256;
+const int32_t SC_SLOWPOISON = 14;
+const int32_t SC_SPEEDPOTION0 = 37;
+const int32_t SC_HEALING = 70;
+const int32_t SC_POISON = 132;
+const int32_t SC_ATKPOT = 185;
 
 // Added for Fate's spells
-const int SC_HIDE = 194;              // Hide from `detect' magic
-const int SC_HALT_REGENERATE = 195;   // Suspend regeneration
-const int SC_FLYING_BACKPACK = 196;   // Flying backpack
-const int SC_MBARRIER = 197;          // Magical barrier; magic resistance (val1 : power (%))
-const int SC_HASTE = 198;             // `Haste' spell (val1 : power)
-const int SC_PHYS_SHIELD = 199;       // `Protect' spell; reduce damage (val1: power)
+const int32_t SC_HIDE = 194;              // Hide from `detect' magic
+const int32_t SC_HALT_REGENERATE = 195;   // Suspend regeneration
+const int32_t SC_FLYING_BACKPACK = 196;   // Flying backpack
+const int32_t SC_MBARRIER = 197;          // Magical barrier; magic resistance (val1 : power (%))
+const int32_t SC_HASTE = 198;             // `Haste' spell (val1 : power)
+const int32_t SC_PHYS_SHIELD = 199;       // `Protect' spell; reduce damage (val1: power)
 
 /// skills
 
-const int NV_EMOTE = 1;
-const int NV_TRADE = 2;
-const int NV_PARTY = 3;
+const int32_t NV_EMOTE = 1;
+const int32_t NV_TRADE = 2;
+const int32_t NV_PARTY = 3;
 
-const int AC_OWL = 45;
+const int32_t AC_OWL = 45;
 
-const int TMW_SKILLPOOL = 339;        // skill pool size
+const int32_t TMW_SKILLPOOL = 339;        // skill pool size
 
-const int TMW_MAGIC = 340;
-const int TMW_MAGIC_LIFE = 341;
-const int TMW_MAGIC_WAR = 342;
-const int TMW_MAGIC_TRANSMUTE = 343;
-const int TMW_MAGIC_NATURE = 344;
-const int TMW_MAGIC_ETHER = 345;
+const int32_t TMW_MAGIC = 340;
+const int32_t TMW_MAGIC_LIFE = 341;
+const int32_t TMW_MAGIC_WAR = 342;
+const int32_t TMW_MAGIC_TRANSMUTE = 343;
+const int32_t TMW_MAGIC_NATURE = 344;
+const int32_t TMW_MAGIC_ETHER = 345;
 
-const int TMW_BRAWLING = 350;
-const int TMW_LUCKY_COUNTER = 351;
-const int TMW_SPEED = 352;
-const int TMW_RESIST_POISON = 353;
-const int TMW_ASTRAL_SOUL = 354;
-const int TMW_RAGING = 355;
+const int32_t TMW_BRAWLING = 350;
+const int32_t TMW_LUCKY_COUNTER = 351;
+const int32_t TMW_SPEED = 352;
+const int32_t TMW_RESIST_POISON = 353;
+const int32_t TMW_ASTRAL_SOUL = 354;
+const int32_t TMW_RAGING = 355;
 
 // [Fate] Skill pools API
 
@@ -99,19 +99,19 @@ const int TMW_RAGING = 355;
 // Max. # of skills that may be classified as pool skills in db/skill_db.txt
 #define MAX_POOL_SKILLS 128
 
-extern int skill_pool_skills[MAX_POOL_SKILLS];  // All pool skills
-extern int skill_pool_skills_size;  // Number of entries in skill_pool_skills
+extern int32_t skill_pool_skills[MAX_POOL_SKILLS];  // All pool skills
+extern int32_t skill_pool_skills_size;  // Number of entries in skill_pool_skills
 
-void skill_pool_register(int id);   // [Fate] Remember that a certain skill ID belongs to a pool skill
-int skill_pool(MapSessionData *sd, int *skills); // Yields all active skills in the skill pool; no more than MAX_SKILL_POOL.  Return is number of skills.
-int skill_pool_max(MapSessionData *sd) __attribute__((pure));  // Max. number of pool skills
-int skill_pool_activate(MapSessionData *sd, int skill);  // Skill into skill pool.  Return is zero iff okay.
-int skill_pool_is_activated(MapSessionData *sd, int skill) __attribute__((pure));  // Skill into skill pool.  Return is zero when activated.
-int skill_pool_deactivate(MapSessionData *sd, int skill);    // Skill out of skill pool.  Return is zero iff okay.
-const char *skill_name(int skill) __attribute__((pure));   // Yield configurable skill name
-int skill_power(MapSessionData *sd, int skill);  // Yields the power of a skill.  This is zero if the skill is unknown or if it's a pool skill that is outside of the skill pool,
+void skill_pool_register(int32_t id);   // [Fate] Remember that a certain skill ID belongs to a pool skill
+int32_t skill_pool(MapSessionData *sd, int32_t *skills); // Yields all active skills in the skill pool; no more than MAX_SKILL_POOL.  Return is number of skills.
+int32_t skill_pool_max(MapSessionData *sd) __attribute__((pure));  // Max. number of pool skills
+int32_t skill_pool_activate(MapSessionData *sd, int32_t skill);  // Skill into skill pool.  Return is zero iff okay.
+int32_t skill_pool_is_activated(MapSessionData *sd, int32_t skill) __attribute__((pure));  // Skill into skill pool.  Return is zero when activated.
+int32_t skill_pool_deactivate(MapSessionData *sd, int32_t skill);    // Skill out of skill pool.  Return is zero iff okay.
+const char *skill_name(int32_t skill) __attribute__((pure));   // Yield configurable skill name
+int32_t skill_power(MapSessionData *sd, int32_t skill);  // Yields the power of a skill.  This is zero if the skill is unknown or if it's a pool skill that is outside of the skill pool,
                              // otherwise a value from 0 to 255 (with 200 being the `normal maximum')
-int skill_power_bl(BlockList *bl, int skill); // Yields the power of a skill.  This is zero if the skill is unknown or if it's a pool skill that is outside of the skill pool,
+int32_t skill_power_bl(BlockList *bl, int32_t skill); // Yields the power of a skill.  This is zero if the skill is unknown or if it's a pool skill that is outside of the skill pool,
                              // otherwise a value from 0 to 255 (with 200 being the `normal maximum')
 
 #endif // SKILL_HPP

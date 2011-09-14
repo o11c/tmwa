@@ -168,42 +168,42 @@ bool e_mail_check(const char *email) __attribute__((pure));
 // Parses booleans: on/off and yes/no in english, français, deutsch, español
 // Then falls back to atoi (which means non-integers are parsed as 0)
 // TODO replace by config_parse_bool and config_parse_int?
-int config_switch (const char *str);
+int32_t config_switch (const char *str);
 
 const char *stamp_now(bool millis);
 
 const char *stamp_time(time_t when, const char *def = NULL);
 
-template<int unit>
-inline void per_unit_adjust(int& val, int proportion)
+template<int32_t unit>
+inline void per_unit_adjust(int32_t& val, int32_t proportion)
 {
     if (proportion == unit)
         return;
     val = val * proportion / unit;
 }
 
-template<int unit>
-inline void per_unit_subtract(int& val, int proportion)
+template<int32_t unit>
+inline void per_unit_subtract(int32_t& val, int32_t proportion)
 {
     per_unit_adjust<unit>(val, unit - proportion);
 }
 
-template<int unit>
-inline void per_unit_add(int& val, int proportion)
+template<int32_t unit>
+inline void per_unit_add(int32_t& val, int32_t proportion)
 {
     per_unit_adjust<unit>(val, unit + proportion);
 }
 
 # define PER_UNIT_SPECIALIZE(prefix, number) \
-static inline void prefix##_adjust(int& val, int proportion) \
+static inline void prefix##_adjust(int32_t& val, int32_t proportion) \
 { \
     per_unit_adjust<number>(val, proportion); \
 } \
-static inline void prefix##_subtract(int& val, int proportion) \
+static inline void prefix##_subtract(int32_t& val, int32_t proportion) \
 { \
     per_unit_subtract<number>(val, proportion); \
 } \
-static inline void prefix##_add(int& val, int proportion) \
+static inline void prefix##_add(int32_t& val, int32_t proportion) \
 { \
     per_unit_add<number>(val, proportion); \
 }

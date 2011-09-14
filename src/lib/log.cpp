@@ -85,7 +85,7 @@ void Log::log(Level level, const char *format, va_list ap)
     gettimeofday(&tv, NULL);
     char time_str[20 + 4];
     strftime(time_str, 20, "%Y-%m-%d %H:%M:%S", gmtime(&tv.tv_sec));
-    sprintf(time_str + 19, ".%03u", static_cast<unsigned int>(tv.tv_usec / 1000));
+    sprintf(time_str + 19, ".%03u", static_cast<uint32_t>(tv.tv_usec / 1000));
 
     std::string name = hname;
     while (true)

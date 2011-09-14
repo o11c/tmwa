@@ -6,7 +6,7 @@
 bool inter_party_init(void);
 bool inter_party_save(void);
 
-bool inter_party_parse_frommap(int fd);
+bool inter_party_parse_frommap(int32_t fd);
 
 void inter_party_leave(party_t party_id, account_t account_id);
 

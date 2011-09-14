@@ -100,7 +100,7 @@ enum passwd_failure
 
 
 account_t account_id_count = START_ACCOUNT_NUM;
-int new_account_flag = 0;
+int32_t new_account_flag = 0;
 in_port_t login_port = 6901;
 
 IP_Address lan_char_ip;
@@ -119,7 +119,7 @@ bool save_unknown_packets = 0;
 /// When the gm account file was last modified
 time_t creation_time_GM_account_file;
 /// Interval (in seconds) after which to recheck GM file.
-unsigned int gm_account_filename_check_timer = 15;
+uint32_t gm_account_filename_check_timer = 15;
 
 bool display_parse_login = 0;
 bool display_parse_admin = 0;
@@ -132,16 +132,16 @@ static enum char_packets_display_t
 
 // FIXME: merge the arrays into members of struct mmo_char_server
 struct mmo_char_server server[MAX_SERVERS];
-int server_fd[MAX_SERVERS];
+int32_t server_fd[MAX_SERVERS];
 // Char-server anti-freeze system. Set to 5 when receiving
 // packet 0x2714, decrements every ANTI_FREEZE_INTERVAL seconds.
 // If it reaches zero, assume the char server has frozen and disconnect it.
 // DON'T enable this if you are going to use gdb
-int server_freezeflag[MAX_SERVERS];
+int32_t server_freezeflag[MAX_SERVERS];
 bool anti_freeze_enable = false;
-unsigned int ANTI_FREEZE_INTERVAL = 15;
+uint32_t ANTI_FREEZE_INTERVAL = 15;
 
-int login_fd;
+int32_t login_fd;
 
 enum ACO
 {
@@ -162,7 +162,7 @@ gm_level_t min_level_to_connect = 0;
 // Give possibility or not to adjust (ladmin command: timeadd) the time of an unlimited account.
 bool add_to_unlimited_account = 0;
 // Starting additional sec from now for the limited time at creation of accounts (-1: unlimited time, 0 or more: additional sec from now)
-int start_limited_time = -1;
+int32_t start_limited_time = -1;
 
 /// some random data to be MD5'ed
 // only used for ladmin
@@ -172,10 +172,10 @@ public:
     LoginSessionData() : md5keylen(MPRAND(12, 4))
     {
         // Create coding key of length [12, 16)
-        for (int i = 0; i < md5keylen; i++)
+        for (int32_t i = 0; i < md5keylen; i++)
             md5key[i] = MPRAND(1, 255);
     }
-    int md5keylen;
+    int32_t md5keylen;
     char md5key[20];
 };
 
@@ -188,14 +188,14 @@ struct auth_fifo
     enum gender sex;
     bool delflag;
 } auth_fifo[AUTH_FIFO_SIZE];
-int auth_fifo_pos = 0;
+int32_t auth_fifo_pos = 0;
 
 struct auth_dat
 {
     account_t account_id;
     enum gender sex;
     char userid[24], pass[40], lastlogin[24];
-    unsigned int logincount;
+    uint32_t logincount;
     enum auth_failure state;
     char email[40];             // e-mail (by default: a@a.com)
     char error_message[20];     // Message of error code #6 = Your are Prohibited to log in until %s (packet 0x006a)
@@ -204,11 +204,11 @@ struct auth_dat
     time_t connect_until_time;  // # of seconds 1/1/1970 (timestamp): Validity limit of the account (0 = unlimited)
     char last_ip[16];           // save of last IP of connection
     char memo[255];             // a memo field
-    int account_reg2_num;
+    int32_t account_reg2_num;
     struct global_reg account_reg2[ACCOUNT_REG2_NUM];
 }   *auth_dat;
 
-unsigned int auth_num = 0, auth_max = 0;
+uint32_t auth_num = 0, auth_max = 0;
 
 /// whether ladmin is allowed
 bool admin_state = 0;
@@ -225,7 +225,7 @@ pid_t pid = 0; // For forked DB writes
 #define VERSION_2_UPDATEHOST 0x01   // client supports updatehost
 #define VERSION_2_SERVERORDER 0x02  // send servers in forward order
 
-static const char *ip_of(int fd)
+static const char *ip_of(int32_t fd)
 {
     static char out[16];
     strcpy(out, session[fd]->client_addr.to_string().c_str());
@@ -235,16 +235,16 @@ static const char *ip_of(int fd)
 /// Sort accounts before saving or sending to ladmin
 // currently uses a bubble-sort - TODO replace with something better
 // FIXME - does this even need to be done at all?
-static void sort_accounts(int id[])
+static void sort_accounts(int32_t id[])
 {
-    for (int i = 0; i < auth_num; i++)
+    for (int32_t i = 0; i < auth_num; i++)
     {
         id[i] = i;
-        for (int j = 0; j < i; j++)
+        for (int32_t j = 0; j < i; j++)
         {
             if (auth_dat[i].account_id < auth_dat[id[j]].account_id)
             {
-                for (int k = i; k > j; k--)
+                for (int32_t k = i; k > j; k--)
                     id[k] = id[k - 1];
                 id[j] = i;      // id[i]
                 break;
@@ -288,7 +288,7 @@ static void read_gm_account(void)
     // 8 bytes * 4000 = 32k (limit of packets in windows - what about Linux?)
     // This is wrong: it only uses 5 bytes per GM, plus 4 bytes of protocol
     // Also, why does this matter, since TCP is stream-based not packet-based?
-    unsigned int count = 0;
+    uint32_t count = 0;
     char line[512];
     while (count < 4000 && fgets(line, sizeof(line), fp))
     {
@@ -386,10 +386,10 @@ static bool check_ladminip(IP_Address ip)
 static struct auth_dat *account_by_name(const char *account_name) __attribute__((pure));
 static struct auth_dat *account_by_name(const char *account_name)
 {
-    int quantity = 0;
+    int32_t quantity = 0;
     struct auth_dat *loose = NULL;
 
-    for (int i = 0; i < auth_num; i++)
+    for (int32_t i = 0; i < auth_num; i++)
     {
         if (strcmp(auth_dat[i].userid, account_name) == 0)
             return &auth_dat[i];
@@ -405,7 +405,7 @@ static struct auth_dat *account_by_name(const char *account_name)
 static struct auth_dat *account_by_id(account_t acc) __attribute__((pure));
 static struct auth_dat *account_by_id(account_t acc)
 {
-    for (int i = 0; i < auth_num; i++)
+    for (int32_t i = 0; i < auth_num; i++)
         if (auth_dat[i].account_id == acc)
             return &auth_dat[i];
     return NULL;
@@ -416,18 +416,18 @@ static void mmo_auth_to_file(FILE *fp, struct auth_dat *p)
 {
     fprintf(fp, "%u\t" "%s\t" "%s\t" "%s\t"
                 "%c\t" "%u\t" "%d\t" "%s\t"
-                "%s\t" "%ld\t" "%s\t"
-                "%s\t" "%ld\t",
+                "%s\t" "%d\t" "%s\t"
+                "%s\t" "%d\t",
             p->account_id, p->userid, p->pass, p->lastlogin,
             sex_to_char(p->sex), p->logincount, p->state, p->email,
-            p->error_message, static_cast<long>(p->connect_until_time), p->last_ip,
-            p->memo, static_cast<long>(p->ban_until_time));
+            p->error_message, static_cast<int32_t>(p->connect_until_time), p->last_ip,
+            p->memo, static_cast<int32_t>(p->ban_until_time));
 
     // Save ## variables.
     // It looks like strings aren't supported in our version of eAthena
     // There has been a bug in the char server that broke these.
     // Note that we don't actually use any of these.
-    for (int i = 0; i < p->account_reg2_num; i++)
+    for (int32_t i = 0; i < p->account_reg2_num; i++)
         if (p->account_reg2[i].str[0])
             fprintf(fp, "%s,%d ", p->account_reg2[i].str,
                      p->account_reg2[i].value);
@@ -437,8 +437,8 @@ static void mmo_auth_to_file(FILE *fp, struct auth_dat *p)
 /// Read save/account.txt
 static void mmo_auth_init(void)
 {
-    int GM_count = 0;
-    int server_count = 0;
+    int32_t GM_count = 0;
+    int32_t server_count = 0;
 
     CREATE(auth_dat, struct auth_dat, 256);
     auth_max = 256;
@@ -461,9 +461,9 @@ static void mmo_auth_init(void)
 
         struct auth_dat tmp = {};
         char sex;
-        int n;
+        int32_t n;
         uint8_t state;
-        int i = sscanf(line,
+        int32_t i = sscanf(line,
                         "%u\t"        "%23[^\t]\t"   "%39[^\t]\t"  "%39[^\t]\t"
                         "%c\t"        "%u\t"         "%hhu\t"      "%39[^\t]\t"
                         "%19[^\t]\t"  "%ld\t"
@@ -490,7 +490,7 @@ static void mmo_auth_init(void)
         }
         remove_control_chars(tmp.userid);
 
-        for (int j = 0; j < auth_num; j++)
+        for (int32_t j = 0; j < auth_num; j++)
         {
             if (auth_dat[j].account_id == tmp.account_id)
             {
@@ -549,7 +549,7 @@ static void mmo_auth_init(void)
         remove_control_chars(tmp.last_ip);
 
         char *p = line;
-        for (int j = 0; j < ACCOUNT_REG2_NUM; j++, tmp.account_reg2_num++)
+        for (int32_t j = 0; j < ACCOUNT_REG2_NUM; j++, tmp.account_reg2_num++)
         {
             p += n;
             if (sscanf(p, "%31[^\t,],%d %n", tmp.account_reg2[j].str,
@@ -581,11 +581,11 @@ static void mmo_auth_init(void)
 static void mmo_auth_sync(void)
 {
     // Note: this is a vla
-    int id[auth_num];
+    int32_t id[auth_num];
     sort_accounts(id);
 
     // Data save
-    int lock;
+    int32_t lock;
     FILE *fp = lock_fopen(account_filename, &lock);
     if (!fp)
         return;
@@ -606,9 +606,9 @@ static void mmo_auth_sync(void)
     "  memo field      : up 254 char, first char is ! to indicate MD5 password",
     "  ban time        : 0: not banned, else time until which you are banned",
     };
-    for (int i = 0; i < sizeof(header) / sizeof(header[0]); i++)
+    for (int32_t i = 0; i < sizeof(header) / sizeof(header[0]); i++)
         fprintf(fp, "// %s\n", header[i]);
-    for (int i = 0; i < auth_num; i++)
+    for (int32_t i = 0; i < auth_num; i++)
         mmo_auth_to_file(fp, &auth_dat[id[i]]);
     fprintf(fp, "%d\t%%newid%%\n", account_id_count);
 
@@ -637,11 +637,11 @@ static void check_auth_sync(timer_id, tick_t)
 
 /// Send a packet to all char servers, excluding sfd
 // often called with sfd == -1 to not exclude anything
-static void charif_sendallwos(int sfd, const uint8_t *buf, unsigned int len)
+static void charif_sendallwos(int32_t sfd, const uint8_t *buf, uint32_t len)
 {
-    for (int i = 0; i < MAX_SERVERS; i++)
+    for (int32_t i = 0; i < MAX_SERVERS; i++)
     {
-        int fd = server_fd[i];
+        int32_t fd = server_fd[i];
         if (fd >= 0 && fd != sfd)
         {
             memcpy(WFIFOP(fd, 0), buf, len);
@@ -654,10 +654,10 @@ static void charif_sendallwos(int sfd, const uint8_t *buf, unsigned int len)
 static void send_GM_accounts(void)
 {
     uint8_t buf[32000];
-    int len = 4;
+    int32_t len = 4;
     WBUFW(buf, 0) = 0x2732;
     // shouldn't we just iterate over the db instead?
-    for (int i = 0; i < auth_num; i++)
+    for (int32_t i = 0; i < auth_num; i++)
     {
         gm_level_t GM_value = isGM(auth_dat[i].account_id);
         if (GM_value)
@@ -742,7 +742,7 @@ static account_t mmo_auth_new(struct mmo_account *account, const char *email)
 }
 
 /// Try to authenticate a connection
-static enum auth_failure mmo_auth(struct mmo_account *account, int fd)
+static enum auth_failure mmo_auth(struct mmo_account *account, int32_t fd)
 {
     const char *const ip = ip_of(fd);
 
@@ -847,7 +847,7 @@ static enum auth_failure mmo_auth(struct mmo_account *account, int fd)
 /// Kill char servers that don't send the common packet after 5 calls
 static void char_anti_freeze_system(timer_id, tick_t)
 {
-    for (int i = 0; i < MAX_SERVERS; i++)
+    for (int32_t i = 0; i < MAX_SERVERS; i++)
     {
         if (server_fd[i] < 0)
             continue;
@@ -865,10 +865,10 @@ static void char_anti_freeze_system(timer_id, tick_t)
 
 /// authenticate an account to the char-server
 // uint16_t packet, uint32_t acc, uint32_t login_id[2], char sex, uint32_t ip
-static void x2712(int fd, int id)
+static void x2712(int32_t fd, int32_t id)
 {
     account_t acc = RFIFOL(fd, 2);
-    for (int i = 0; i < AUTH_FIFO_SIZE; i++)
+    for (int32_t i = 0; i < AUTH_FIFO_SIZE; i++)
     {
         if (auth_fifo[i].account_id != acc ||
                 auth_fifo[i].login_id1 != RFIFOL(fd, 6) ||
@@ -880,15 +880,15 @@ static void x2712(int fd, int id)
         auth_fifo[i].delflag = 1;
         login_log.info("Char-server '%s': authenticated %d (ip: %s).\n",
                        server[id].name, acc, ip_of(fd));
-        for (int k = 0; k < auth_num; k++)
+        for (int32_t k = 0; k < auth_num; k++)
         {
             if (auth_dat[k].account_id != acc)
                 continue;
             // send ## variables
             WFIFOW(fd, 0) = 0x2729;
             WFIFOL(fd, 4) = acc;
-            int p = 8;
-            for (int j = 0; j < auth_dat[k].account_reg2_num; j++)
+            int32_t p = 8;
+            for (int32_t j = 0; j < auth_dat[k].account_reg2_num; j++)
             {
                 STRZCPY2(sign_cast<char *>(WFIFOP(fd, p)),
                          auth_dat[k].account_reg2[j].str);
@@ -922,7 +922,7 @@ static void x2712(int fd, int id)
 
 /// Report of number of users on the server
 // uint16_t packet, uint32_t usercount
-static void x2714(int fd, int id)
+static void x2714(int32_t fd, int32_t id)
 {
     server[id].users = RFIFOL(fd, 2);
     if (anti_freeze_enable)
@@ -931,7 +931,7 @@ static void x2714(int fd, int id)
 
 /// Request initial setting of email (no answer, but may fail)
 // uint16_t packet, uint32_t acc, char email[40]
-static void x2715(int fd, int id)
+static void x2715(int32_t fd, int32_t id)
 {
     account_t acc = RFIFOL(fd, 2);
     char email[40];
@@ -963,7 +963,7 @@ static void x2715(int fd, int id)
 
 /// Request email and expiration time
 // uint16_t packet, uint32_t account
-static void x2716(int fd, int id)
+static void x2716(int32_t fd, int32_t id)
 {
     account_t acc = RFIFOL(fd, 2);
     struct auth_dat *auth = account_by_id(acc);
@@ -984,7 +984,7 @@ static void x2716(int fd, int id)
 
 /// Request to become GM
 // uint16_t packet, uint16_t len, char gm_pass[len]
-static void x2720(int fd, int id)
+static void x2720(int32_t fd, int32_t id)
 {
     uint8_t buf[10];
     account_t acc = RFIFOL(fd, 4);
@@ -1030,7 +1030,7 @@ static void x2720(int fd, int id)
 
 /// Map server request (via char-server) to change an email
 // uint16_t packet, uint32_t acc, char email[40], char new_email[40]
-static void x2722(int fd, int id)
+static void x2722(int32_t fd, int32_t id)
 {
     account_t acc = RFIFOL(fd, 2);
     char actual_email[40];
@@ -1081,7 +1081,7 @@ static void x2722(int fd, int id)
 
 /// change state of a player (only used for block/unblock)
 // uint16_t packet, uint32_t acc, uint32_t state (0 or 5)
-static void x2724(int fd, int id)
+static void x2724(int32_t fd, int32_t id)
 {
     account_t acc = RFIFOL(fd, 2);
     enum auth_failure state = static_cast<enum auth_failure>(RFIFOL(fd, 6));
@@ -1111,7 +1111,7 @@ static void x2724(int fd, int id)
     // state (or final date of a banishment)
     WBUFL(buf, 7) = state;
     charif_sendallwos(-1, buf, 11);
-    for (int j = 0; j < AUTH_FIFO_SIZE; j++)
+    for (int32_t j = 0; j < AUTH_FIFO_SIZE; j++)
         if (auth_fifo[j].account_id == acc)
             // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
             auth_fifo[j].login_id1++;
@@ -1119,7 +1119,7 @@ static void x2724(int fd, int id)
 
 /// ban request from map-server (via char-server)
 // uint16_t packet, uint32_t acc, uint16_t Y,M,D,h,m,s
-static void x2725(int fd, int id)
+static void x2725(int32_t fd, int32_t id)
 {
     account_t acc = RFIFOL(fd, 2);
     struct auth_dat *auth = account_by_id(acc);
@@ -1153,8 +1153,8 @@ static void x2725(int fd, int id)
                        server[id].name, acc, ip_of(fd));
         return;
     }
-    login_log.info("Char-server '%s': Ban request (account: %d, new final date of banishment: %ld (%s), ip: %s).\n",
-                   server[id].name, acc, static_cast<long>(timestamp), stamp_time(timestamp, "no banishment"), ip_of(fd));
+    login_log.info("Char-server '%s': Ban request (account: %d, new final date of banishment: %d (%s), ip: %s).\n",
+                   server[id].name, acc, static_cast<int32_t>(timestamp), stamp_time(timestamp, "no banishment"), ip_of(fd));
     uint8_t buf[11];
     WBUFW(buf, 0) = 0x2731;
     WBUFL(buf, 2) = auth->account_id;
@@ -1163,7 +1163,7 @@ static void x2725(int fd, int id)
     // final date of a banishment (or new state)
     WBUFL(buf, 7) = timestamp;
     charif_sendallwos(-1, buf, 11);
-    for (int j = 0; j < AUTH_FIFO_SIZE; j++)
+    for (int32_t j = 0; j < AUTH_FIFO_SIZE; j++)
         if (auth_fifo[j].account_id == acc)
             // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
             auth_fifo[j].login_id1++;
@@ -1172,7 +1172,7 @@ static void x2725(int fd, int id)
 
 /// Request for sex change
 // uint16_t packet, uint32_t acc
-static void x2727(int fd, int id)
+static void x2727(int32_t fd, int32_t id)
 {
     account_t acc = RFIFOL(fd, 2);
     struct auth_dat *auth = account_by_id(acc);
@@ -1194,7 +1194,7 @@ static void x2727(int fd, int id)
     uint8_t buf[16];
     login_log.info("Char-server '%s': change sex of %u to %c (ip: %s).\n",
                    server[id].name, acc, sex_to_char(auth->sex), ip_of(fd));
-    for (int j = 0; j < AUTH_FIFO_SIZE; j++)
+    for (int32_t j = 0; j < AUTH_FIFO_SIZE; j++)
         if (auth_fifo[j].account_id == acc)
             // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
             auth_fifo[j].login_id1++;
@@ -1207,7 +1207,7 @@ static void x2727(int fd, int id)
 /// Receive ## variables a char-server, and forward them to other char-servers
 // uint16_t packet, uint16_t len, {char[32] name, int32_t val}[]
 // note - this code assumes that len is proper, i.e len % 36 == 4
-static void x2728(int fd, int id)
+static void x2728(int32_t fd, int32_t id)
 {
     account_t acc = RFIFOL(fd, 4);
     struct auth_dat *auth = account_by_id(acc);
@@ -1220,8 +1220,8 @@ static void x2728(int fd, int id)
 
     login_log.info("Char-server '%s': receiving ## variables (account: %d, ip: %s).\n",
                    server[id].name, acc, ip_of(fd));
-    int p = 8;
-    int j;
+    int32_t p = 8;
+    int32_t j;
     for (j = 0; p < RFIFOW(fd, 2) && j < ACCOUNT_REG2_NUM; j++)
     {
         STRZCPY(auth->account_reg2[j].str, sign_cast<const char *>(RFIFOP(fd, p)));
@@ -1238,7 +1238,7 @@ static void x2728(int fd, int id)
 
 /// unban request
 // uint16_t packet, uint32_t acc
-static void x272a(int fd, int id)
+static void x272a(int32_t fd, int32_t id)
 {
     account_t acc = RFIFOL(fd, 2);
     struct auth_dat *auth = account_by_id(acc);
@@ -1261,7 +1261,7 @@ static void x272a(int fd, int id)
 
 /// request to change account password
 // uint16_t packet, uint32_t acc, char old[24], char new[24]
-static void x2740(int fd, int id)
+static void x2740(int32_t fd, int32_t id)
 {
     account_t acc = RFIFOL(fd, 2);
     char actual_pass[24];
@@ -1303,9 +1303,9 @@ send_x272a_reply:
 
 
 /// Parse packets from a char server
-static void parse_fromchar(int fd)
+static void parse_fromchar(int32_t fd)
 {
-    int id;
+    int32_t id;
     for (id = 0; id < MAX_SERVERS; id++)
         if (server_fd[id] == fd)
             break;
@@ -1464,7 +1464,7 @@ static void parse_fromchar(int fd)
 
 /// Server version
 // uint16_t packet
-static void x7530(int fd, bool ladmin)
+static void x7530(int32_t fd, bool ladmin)
 {
     login_log.info("%sRequest server version (ip: %s)\n", ladmin ? "'ladmin': " : "", ip_of(fd));
     WFIFOW(fd, 0) = 0x7531;
@@ -1476,7 +1476,7 @@ static void x7530(int fd, bool ladmin)
 
 /// Request of end of connection
 // uint16_t packet
-static void x7532(int fd, const char *pfx)
+static void x7532(int32_t fd, const char *pfx)
 {
     login_log.info("%sEnd of connection (ip: %s)\n", pfx, ip_of(fd));
     session[fd]->eof = 1;
@@ -1484,7 +1484,7 @@ static void x7532(int fd, const char *pfx)
 
 /// Request list of accounts
 // uint16_t packet, uint32_t start, uint32_t end
-static void x7920(int fd)
+static void x7920(int32_t fd)
 {
     account_t st = RFIFOL(fd, 2);
     account_t ed = RFIFOL(fd, 6);
@@ -1496,11 +1496,11 @@ static void x7920(int fd)
     login_log.info("'ladmin': List accounts from %d to %d (ip: %s)\n",
                    st, ed, ip_of(fd));
     // Note: this is a vla
-    int id[auth_num];
+    int32_t id[auth_num];
     sort_accounts(id);
     // Sending accounts information
     uint16_t len = 4;
-    for (int i = 0; i < auth_num && len < 30000; i++)
+    for (int32_t i = 0; i < auth_num && len < 30000; i++)
     {
         account_t account_id = auth_dat[id[i]].account_id;   // use sorted index
         if (account_id < st || account_id > ed)
@@ -1523,7 +1523,7 @@ static void x7920(int fd)
 
 /// Itemfrob: change ID of an existing item
 // uint16_t packet, uint32_t old_id, uint32_t new_id
-static void x7924(int fd)
+static void x7924(int32_t fd)
 {
     charif_sendallwos(-1, RFIFOP(fd, 0), 10); // forward package to char servers
     WFIFOW(fd, 0) = 0x7925;
@@ -1532,7 +1532,7 @@ static void x7924(int fd)
 
 /// Request for account creation
 // uint16_t packet, char userid[24], char passwd[24], char sex, char email[40]
-static void x7930(int fd)
+static void x7930(int32_t fd)
 {
     struct mmo_account ma;
     STRZCPY(ma.userid, sign_cast<const char *>(RFIFOP(fd, 2)));
@@ -1562,7 +1562,7 @@ static void x7930(int fd)
     }
     remove_control_chars(ma.userid);
     remove_control_chars(ma.passwd);
-    for (int i = 0; i < auth_num; i++)
+    for (int32_t i = 0; i < auth_num; i++)
     {
         if (strcmp(auth_dat[i].userid, ma.userid) == 0)
         {
@@ -1574,7 +1574,7 @@ static void x7930(int fd)
     char email[40] = {};
     STRZCPY(email, sign_cast<const char *>(RFIFOP(fd, 51)));
     remove_control_chars(email);
-    int new_id = mmo_auth_new(&ma, email);
+    int32_t new_id = mmo_auth_new(&ma, email);
     login_log.info("'ladmin': Account creation (account: %s (id: %d), sex: %c, email: %s, ip: %s)\n",
                    ma.userid, new_id, sex_to_char(ma.sex), auth_dat[auth_num-1].email, ip_of(fd));
     WFIFOL(fd, 2) = new_id;
@@ -1582,7 +1582,7 @@ static void x7930(int fd)
 
 /// Request for an account deletion
 // uint16_t packet, char userid[24]
-static void x7932(int fd)
+static void x7932(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x7933;
     WFIFOL(fd, 2) = -1;
@@ -1615,7 +1615,7 @@ static void x7932(int fd)
 
 /// Request to change password
 // uint16_t packet, char userid[24], char passwd[24]
-static void x7934(int fd)
+static void x7934(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x7935;
     WFIFOL(fd, 2) = -1;
@@ -1640,7 +1640,7 @@ static void x7934(int fd)
 /// Modify a state
 // uint16_t packet, char userid[24], uint32_t state, char error_message[20]
 // error_message is usually the date of the end of banishment
-static void x7936(int fd)
+static void x7936(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x7937;
     WFIFOL(fd, 2) = -1;
@@ -1686,7 +1686,7 @@ static void x7936(int fd)
         WBUFB(buf, 6) = 0; // 0: change of state, 1: ban
         WBUFL(buf, 7) = status;    // status or final date of a banishment
         charif_sendallwos(-1, buf, 11);
-        for (int j = 0; j < AUTH_FIFO_SIZE; j++)
+        for (int32_t j = 0; j < AUTH_FIFO_SIZE; j++)
             if (auth_fifo[j].account_id == auth->account_id)
                 // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
                 auth_fifo[j].login_id1++;
@@ -1697,11 +1697,11 @@ static void x7936(int fd)
 
 /// Request for servers list and # of online players
 // uint32_t packet
-static void x7938(int fd)
+static void x7938(int32_t fd)
 {
     login_log.info("'ladmin': Sending of servers list (ip: %s)\n", ip_of(fd));
-    int server_num = 0;
-    for (int i = 0; i < MAX_SERVERS; i++)
+    int32_t server_num = 0;
+    for (int32_t i = 0; i < MAX_SERVERS; i++)
     {
         if (server_fd[i] < 0)
             continue;
@@ -1720,7 +1720,7 @@ static void x7938(int fd)
 
 /// Request to check password
 // uint16_t packet, char userid[24], char passwd[24]
-static void x793a(int fd)
+static void x793a(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x793b;
     WFIFOL(fd, 2) = -1;
@@ -1754,7 +1754,7 @@ static void x793a(int fd)
 
 /// Request to modify sex
 // uint32_t packet, char userid[24], char sex
-static void x793c(int fd)
+static void x793c(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x793d;
     WFIFOL(fd, 2) = -1;
@@ -1788,7 +1788,7 @@ static void x793c(int fd)
         return;
     }
     WFIFOL(fd, 2) = auth->account_id;
-    for (int j = 0; j < AUTH_FIFO_SIZE; j++)
+    for (int32_t j = 0; j < AUTH_FIFO_SIZE; j++)
         if (auth_fifo[j].account_id == auth->account_id)
             // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
             auth_fifo[j].login_id1++;
@@ -1805,7 +1805,7 @@ static void x793c(int fd)
 
 /// Request to modify GM level
 // uint16_t packet, char userid[24], uint8_t new_gm_level
-static void x793e(int fd)
+static void x793e(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x793f;
     WFIFOL(fd, 2) = -1;
@@ -1836,7 +1836,7 @@ static void x793e(int fd)
         return;
     }
     // modification of the file
-    int lock;
+    int32_t lock;
     FILE *fp2 = lock_fopen(GM_account_filename, &lock);
     if (!fp2)
     {
@@ -1917,7 +1917,7 @@ end_x793e_lock:
 
 /// Request to modify e-mail
 // uint16_t packet, char userid[24], char email[40]
-static void x7940(int fd)
+static void x7940(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x7941;
     WFIFOL(fd, 2) = -1;
@@ -1950,7 +1950,7 @@ static void x7940(int fd)
 
 /// Request to modify memo field
 // uint16_t packet, char usercount[24], uint16_t msglen, char msg[msglen]
-static void x7942(int fd)
+static void x7942(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x7943;
     WFIFOL(fd, 2) = -1;
@@ -1978,7 +1978,7 @@ static void x7942(int fd)
 
 /// Find account id from name
 // uint16_t packet, char userid[24]
-static void x7944(int fd)
+static void x7944(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x7945;
     WFIFOL(fd, 2) = -1;
@@ -2001,7 +2001,7 @@ static void x7944(int fd)
 
 /// Find an account name from id
 // uint16_t packet, uint32_t acc
-static void x7946(int fd)
+static void x7946(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x7947;
     WFIFOL(fd, 2) = RFIFOL(fd, 2);
@@ -2021,7 +2021,7 @@ static void x7946(int fd)
 
 /// Set the validity timestamp
 // uint16_t packet, char userid[24], uint32_t timestamp
-static void x7948(int fd)
+static void x7948(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x7949;
     WFIFOL(fd, 2) = -1;
@@ -2035,13 +2035,13 @@ static void x7948(int fd)
     if (!auth)
     {
         STRZCPY2(sign_cast<char *>(WFIFOP(fd, 6)), account_name);
-        login_log.info("'ladmin': Attempt to change the validity limit of an unknown account (account: %s, received validity: %ld (%s), ip: %s)\n",
-                       account_name, static_cast<long>(timestamp), tmpstr, ip_of(fd));
+        login_log.info("'ladmin': Attempt to change the validity limit of an unknown account (account: %s, received validity: %d (%s), ip: %s)\n",
+                       account_name, static_cast<int32_t>(timestamp), tmpstr, ip_of(fd));
         return;
     }
     STRZCPY2(sign_cast<char *>(WFIFOP(fd, 6)), auth->userid);
-    login_log.info("'ladmin': Change of a validity limit (account: %s, new validity: %ld (%s), ip: %s)\n",
-                   auth->userid, static_cast<long>(timestamp), tmpstr, ip_of(fd));
+    login_log.info("'ladmin': Change of a validity limit (account: %s, new validity: %d (%s), ip: %s)\n",
+                   auth->userid, static_cast<int32_t>(timestamp), tmpstr, ip_of(fd));
     auth->connect_until_time = timestamp;
     WFIFOL(fd, 2) = auth->account_id;
     WFIFOL(fd, 30) = timestamp;
@@ -2049,7 +2049,7 @@ static void x7948(int fd)
 
 /// Set the banishment timestamp
 // uint16_t packet, char userid[24], uint32_t timestamp
-static void x794a(int fd)
+static void x794a(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x794b;
     WFIFOL(fd, 2) = -1;
@@ -2066,15 +2066,15 @@ static void x794a(int fd)
     if (!auth)
     {
         STRZCPY2(sign_cast<char *>(WFIFOP(fd, 6)), account_name);
-        login_log.info("'ladmin': Attempt to change the final date of a banishment of an unknown account (account: %s, received final date of banishment: %ld (%s), ip: %s)\n",
-                       account_name, static_cast<long>(timestamp), tmpstr, ip_of(fd));
+        login_log.info("'ladmin': Attempt to change the final date of a banishment of an unknown account (account: %s, received final date of banishment: %d (%s), ip: %s)\n",
+                       account_name, static_cast<int32_t>(timestamp), tmpstr, ip_of(fd));
         return;
     }
 
     STRZCPY2(sign_cast<char *>(WFIFOP(fd, 6)), auth->userid);
     WFIFOL(fd, 2) = auth->account_id;
-    login_log.info("'ladmin': Change of the final date of a banishment (account: %s, new final date of banishment: %ld (%s), ip: %s)\n",
-                   auth->userid, static_cast<long>(timestamp), tmpstr, ip_of(fd));
+    login_log.info("'ladmin': Change of the final date of a banishment (account: %s, new final date of banishment: %d (%s), ip: %s)\n",
+                   auth->userid, static_cast<int32_t>(timestamp), tmpstr, ip_of(fd));
     if (auth->ban_until_time == timestamp)
         return;
     auth->ban_until_time = timestamp;
@@ -2086,7 +2086,7 @@ static void x794a(int fd)
     WBUFB(buf, 6) = 1; // 0: change of status, 1: ban
     WBUFL(buf, 7) = timestamp; // status or final date of a banishment
     charif_sendallwos(-1, buf, 11);
-    for (int j = 0; j < AUTH_FIFO_SIZE; j++)
+    for (int32_t j = 0; j < AUTH_FIFO_SIZE; j++)
         if (auth_fifo[j].account_id == auth->account_id)
             // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
             auth_fifo[j].login_id1++;
@@ -2094,7 +2094,7 @@ static void x794a(int fd)
 
 /// Adjust the banishment end timestamp
 // uint16_t packet, char userid[24], int16_t year,mon,day,hr,min,sec
-static void x794c(int fd)
+static void x794c(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x794d;
     WFIFOL(fd, 2) = -1;
@@ -2130,12 +2130,12 @@ static void x794c(int fd)
         timestamp = 0;
 
     const char *tmpstr = stamp_time(timestamp, "no banishment");
-    login_log.info("'ladmin': Adjustment of a final date of a banishment (account: %s, (%+d y %+d m %+d d %+d h %+d mn %+d s) -> new validity: %ld (%s), ip: %s)\n",
+    login_log.info("'ladmin': Adjustment of a final date of a banishment (account: %s, (%+d y %+d m %+d d %+d h %+d mn %+d s) -> new validity: %d (%s), ip: %s)\n",
                    auth->userid,
-                   static_cast<short>(RFIFOW(fd, 26)), static_cast<short>(RFIFOW(fd, 28)),
-                   static_cast<short>(RFIFOW(fd, 30)), static_cast<short>(RFIFOW(fd, 32)),
-                   static_cast<short>(RFIFOW(fd, 34)), static_cast<short>(RFIFOW(fd, 36)),
-                   static_cast<long>(timestamp), tmpstr, ip_of(fd));
+                   static_cast<int16_t>(RFIFOW(fd, 26)), static_cast<int16_t>(RFIFOW(fd, 28)),
+                   static_cast<int16_t>(RFIFOW(fd, 30)), static_cast<int16_t>(RFIFOW(fd, 32)),
+                   static_cast<int16_t>(RFIFOW(fd, 34)), static_cast<int16_t>(RFIFOW(fd, 36)),
+                   static_cast<int32_t>(timestamp), tmpstr, ip_of(fd));
     WFIFOL(fd, 30) = timestamp;
     if (auth->ban_until_time == timestamp)
         return;
@@ -2148,7 +2148,7 @@ static void x794c(int fd)
     WBUFB(buf, 6) = 1; // 0: change of status, 1: ban
     WBUFL(buf, 7) = timestamp; // status or final date of a banishment
     charif_sendallwos(-1, buf, 11);
-    for (int j = 0; j < AUTH_FIFO_SIZE; j++)
+    for (int32_t j = 0; j < AUTH_FIFO_SIZE; j++)
         if (auth_fifo[j].account_id == auth->account_id)
             // ?? to avoid reconnection error when come back from map-server (char-server will ask again the authentication)
             auth_fifo[j].login_id1++;
@@ -2157,7 +2157,7 @@ static void x794c(int fd)
 /// Broadcast a message
 // uint16_t packet, uint16_t color, uint32_t msglen, char msg[msglen]
 // color is not with TMW client, but eA had yellow == 0, else blue
-static void x794e(int fd)
+static void x794e(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x794f;
     WFIFOW(fd, 2) = -1;
@@ -2168,7 +2168,7 @@ static void x794e(int fd)
         return;
     }
     // at least 1 char-server
-    int i;
+    int32_t i;
     for (i = 0; i < MAX_SERVERS; i++)
         if (server_fd[i] >= 0)
             break;
@@ -2192,7 +2192,7 @@ static void x794e(int fd)
 
 /// Adjust the validity timestamp
 // uint16_t packet, char userid[24], int16_t year,mon,day,hr,min,sec
-static void x7950(int fd)
+static void x7950(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x7951;
     WFIFOL(fd, 2) = -1;
@@ -2237,24 +2237,24 @@ static void x7950(int fd)
 
     if (timestamp == auth->connect_until_time)
     {
-        login_log.info("'ladmin': No adjustment of a validity limit (account: %s, %ld (%s), ip: %s)\n",
+        login_log.info("'ladmin': No adjustment of a validity limit (account: %s, %d (%s), ip: %s)\n",
                        auth->userid,
-                       static_cast<long>(auth->connect_until_time), tmpstr, ip_of(fd));
+                       static_cast<int32_t>(auth->connect_until_time), tmpstr, ip_of(fd));
         return;
     }
 
     const char *tmpstr2 = stamp_time(timestamp, "unlimited");
-    login_log.info("'ladmin': Adjustment of a validity limit (account: %s, %ld (%s) + (%+d y %+d m %+d d %+d h %+d mn %+d s) -> new validity: %ld (%s), ip: %s)\n",
+    login_log.info("'ladmin': Adjustment of a validity limit (account: %s, %d (%s) + (%+d y %+d m %+d d %+d h %+d mn %+d s) -> new validity: %d (%s), ip: %s)\n",
                    auth->userid,
-                   static_cast<long>(auth->connect_until_time), tmpstr,
-                   static_cast<short>(RFIFOW(fd, 26)), static_cast<short>(RFIFOW(fd, 28)),
-                   static_cast<short>(RFIFOW(fd, 30)), static_cast<short>(RFIFOW(fd, 32)),
-                   static_cast<short>(RFIFOW(fd, 34)), static_cast<short>(RFIFOW(fd, 36)),
-                   static_cast<long>(timestamp), tmpstr2, ip_of(fd));
+                   static_cast<int32_t>(auth->connect_until_time), tmpstr,
+                   static_cast<int16_t>(RFIFOW(fd, 26)), static_cast<int16_t>(RFIFOW(fd, 28)),
+                   static_cast<int16_t>(RFIFOW(fd, 30)), static_cast<int16_t>(RFIFOW(fd, 32)),
+                   static_cast<int16_t>(RFIFOW(fd, 34)), static_cast<int16_t>(RFIFOW(fd, 36)),
+                   static_cast<int32_t>(timestamp), tmpstr2, ip_of(fd));
     auth->connect_until_time = timestamp;
 }
 
-static void ladmin_reply_account_info(int fd, struct auth_dat *auth)
+static void ladmin_reply_account_info(int32_t fd, struct auth_dat *auth)
 {
     WFIFOL(fd, 2) = auth->account_id;
     WFIFOB(fd, 6) = isGM(auth->account_id);
@@ -2277,7 +2277,7 @@ static void ladmin_reply_account_info(int fd, struct auth_dat *auth)
 /// Account information by name
 // uint16_t packet, char userid[24]
 // FIXME reduce duplication
-static void x7952(int fd)
+static void x7952(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x7953;
     WFIFOL(fd, 2) = -1;
@@ -2302,7 +2302,7 @@ static void x7952(int fd)
 /// Account information by id
 // uint16_t packet, uint32_t acc
 // FIXME reduce duplication
-static void x7954(int fd)
+static void x7954(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x7953;
     WFIFOL(fd, 2) = RFIFOL(fd, 2);
@@ -2323,7 +2323,7 @@ static void x7954(int fd)
 
 /// Request to reload GM file (no answer)
 // uint16_t packet
-static void x7955(int fd)
+static void x7955(int32_t fd)
 {
     login_log.info("'ladmin': Request to re-load GM configuration file (ip: %s).\n",
                    ip_of(fd));
@@ -2334,7 +2334,7 @@ static void x7955(int fd)
 
 
 /// Parse packets from an administration login
-static void parse_admin(int fd)
+static void parse_admin(int32_t fd)
 {
     if (session[fd]->eof)
     {
@@ -2614,7 +2614,7 @@ static bool lan_ip_check(IP_Address addr)
 /// Client is alive
 // uint16_t packet, char userid[24]
 // this packet is not sent by any known TMW server/client
-static void x200(int)
+static void x200(int32_t)
 {
 }
 
@@ -2622,13 +2622,13 @@ static void x200(int)
 // uint16_t packet, char crypted_userid[16]
 // (new ragexe from 22 june 2004)
 // this packet is not sent by any known TMW server/client
-static void x204(int)
+static void x204(int32_t)
 {
 }
 
 /// Client connect
 // uint16_t packet, uint8_t unk[4], char userid[24], char passwd[24], uint8_t version_2_flags
-static void x64(int fd)
+static void x64(int32_t fd)
 {
     struct mmo_account account;
     STRZCPY(account.userid, sign_cast<const char *>(RFIFOP(fd, 6)));
@@ -2718,12 +2718,12 @@ static void x64(int fd)
     }
 
     // Load list of char servers into outbound packet
-    int server_num = 0;
+    int32_t server_num = 0;
     // This has been set since 0.0.29
     // and it will only be an inconvenience for older clients,
     // so always send in forward-order.
     // if (version_2_flags & VERSION_2_SERVERORDER)
-    for (int i = 0; i < MAX_SERVERS; i++)
+    for (int32_t i = 0; i < MAX_SERVERS; i++)
     {
         if (server_fd[i] < 0)
             continue;
@@ -2776,7 +2776,7 @@ static void x64(int fd)
 
 /// Sending request of the coding key (ladmin packet)
 // uint16_t packet
-static void x791a(int fd)
+static void x791a(int32_t fd)
 {
     if (session[fd]->session_data)
     {
@@ -2799,7 +2799,7 @@ static void x791a(int fd)
 // uint16_t packet, char userid[24], char passwd[24], char unk[4],
 //   uint32_t ip, uint16_t port, char server_name[20],
 //   char unk[2], uint16_t maintenance, uint16_t is_new
-static void x2710(int fd)
+static void x2710(int32_t fd)
 {
     struct mmo_account account;
     STRZCPY(account.userid, sign_cast<const char *>(RFIFOP(fd, 2)));
@@ -2823,7 +2823,7 @@ static void x2710(int fd)
             account.account_id = 0;
             goto char_server_ok;
         }
-        for (int i = 1; i < MAX_SERVERS; i++)
+        for (int32_t i = 1; i < MAX_SERVERS; i++)
         {
             if (server_fd[i] == -1)
             {
@@ -2861,7 +2861,7 @@ char_server_ok:
     // send GM account list to char-server
     uint16_t len = 4;
     WFIFOW(fd, 0) = 0x2732;
-    for (int i = 0; i < auth_num; i++)
+    for (int32_t i = 0; i < auth_num; i++)
     {
         gm_level_t GM_value = isGM(auth_dat[i].account_id);
         // send only existing accounts. We can not create a GM account when server is online.
@@ -2879,7 +2879,7 @@ char_server_ok:
 /// Request for administation login
 // uint16_t packet, uint16_t type = {0,1,2}, char passwd[24] (if type 0) or uint8_t hash[16] otherwise
 // ladmin always sends the encrypted form
-static void x7918(int fd)
+static void x7918(int32_t fd)
 {
     WFIFOW(fd, 0) = 0x7919;
     WFIFOB(fd, 2) = 1;
@@ -2945,7 +2945,7 @@ static void x7918(int fd)
 /// Default packet parsing
 // * normal players
 // * administation/char-server before authenticated
-static void parse_login(int fd)
+static void parse_login(int32_t fd)
 {
     if (session[fd]->eof)
     {
@@ -3264,7 +3264,7 @@ static void login_config_read(const char *cfgName)
         if (strcasecmp(w1, "order") == 0)
         {
             errno = 0;
-            int i = strtol(w2, NULL, 0);
+            int32_t i = strtol(w2, NULL, 0);
             if (errno)
                 i = -1;
             if (i == 0 || strcasecmp(w2, "deny,allow") == 0 ||
@@ -3625,7 +3625,7 @@ void term_func(void)
 {
     mmo_auth_sync();
 
-    for (int i = 0; i < MAX_SERVERS; i++)
+    for (int32_t i = 0; i < MAX_SERVERS; i++)
         delete_session(server_fd[i]);
     delete_session(login_fd);
 
@@ -3633,7 +3633,7 @@ void term_func(void)
 }
 
 /// Main function of login-server (read conf and set up parsers)
-void do_init(int argc, char **argv)
+void do_init(int32_t argc, char **argv)
 {
     // add some useful logs
     init_log();
@@ -3647,9 +3647,9 @@ void do_init(int argc, char **argv)
     save_config_in_log();
     login_lan_config_read((argc > 2) ? argv[2] : LAN_CONF_NAME);
 
-    for (int i = 0; i < AUTH_FIFO_SIZE; i++)
+    for (int32_t i = 0; i < AUTH_FIFO_SIZE; i++)
         auth_fifo[i].delflag = 1;
-    for (int i = 0; i < MAX_SERVERS; i++)
+    for (int32_t i = 0; i < MAX_SERVERS; i++)
         server_fd[i] = -1;
 
     gm_account_db = numdb_init();
@@ -3668,7 +3668,7 @@ void do_init(int argc, char **argv)
 
     // add timer to check GM accounts file modification
     // this shouldn't be needed
-    int j = gm_account_filename_check_timer;
+    int32_t j = gm_account_filename_check_timer;
     if (j)
         add_timer_interval(gettick() + j * 1000, j * 1000, check_GM_file);
 

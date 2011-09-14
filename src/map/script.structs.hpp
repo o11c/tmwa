@@ -3,27 +3,27 @@
 
 struct script_data
 {
-    int type;
+    int32_t type;
     union
     {
-        int num;
+        int32_t num;
         const char *str;
     } u;
 };
 
 struct script_stack
 {
-    int sp, sp_max;
+    int32_t sp, sp_max;
     struct script_data *stack_data;
 };
 struct script_state
 {
     struct script_stack *stack;
-    int start, end;
-    int pos, state;
-    int rid, oid;
+    int32_t start, end;
+    int32_t pos, state;
+    int32_t rid, oid;
     const char *script, *new_script;
-    int defsp, new_pos, new_defsp;
+    int32_t defsp, new_pos, new_defsp;
 };
 
 struct ArgRec
@@ -31,11 +31,11 @@ struct ArgRec
     const char *name;
     union
     {
-        int i;
+        int32_t i;
         const char *s;
     };
 
-    ArgRec(const char *n, int v) : name(n), i(v) {}
+    ArgRec(const char *n, int32_t v) : name(n), i(v) {}
     ArgRec(const char *n, const char *v) : name(n), s(v) {}
 };
 

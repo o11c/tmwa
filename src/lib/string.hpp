@@ -124,7 +124,7 @@ public:
     void replace(char *start, char *fin, const std::string& str);
 
     /// Inspection (?) methods
-    int compare(POD_string rhs) const __attribute__((pure));
+    int32_t compare(POD_string rhs) const __attribute__((pure));
     bool operator == (POD_string rhs) const __attribute__((pure));
     bool operator != (POD_string rhs) const __attribute__((pure));
     bool operator < (POD_string rhs) const __attribute__((pure));

@@ -4,8 +4,8 @@
 # include "itemdb.structs.hpp"
 
 struct item_data *itemdb_searchname(const char *name);
-struct item_data *itemdb_search(int nameid);
-struct item_data *itemdb_exists(int nameid) __attribute__((pure));
+struct item_data *itemdb_search(int32_t nameid);
+struct item_data *itemdb_exists(int32_t nameid) __attribute__((pure));
 #define itemdb_type(n) itemdb_search(n)->type
 #define itemdb_atk(n) itemdb_search(n)->atk
 #define itemdb_def(n) itemdb_search(n)->def
@@ -23,9 +23,9 @@ struct item_data *itemdb_exists(int nameid) __attribute__((pure));
 #define itemdb_value_buy(n) itemdb_search(n)->value_buy
 #define itemdb_value_sell(n) itemdb_search(n)->value_sell
 
-int itemdb_isequip(int);
-int itemdb_isequip2(struct item_data *) __attribute__((pure));
-int itemdb_isequip3(int);
+int32_t itemdb_isequip(int32_t);
+int32_t itemdb_isequip2(struct item_data *) __attribute__((pure));
+int32_t itemdb_isequip3(int32_t);
 
 void do_init_itemdb(void);
 

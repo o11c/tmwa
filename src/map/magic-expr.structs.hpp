@@ -5,7 +5,7 @@
 
 /*
  * Argument types:
- *  i : int
+ *  i : int32_t
  *  d : dir
  *  s : string
  *  e : entity

@@ -14,15 +14,15 @@
 
 struct mmo_charstatus *character_by_name(const char *character_name) __attribute__((pure));
 
-void mapif_sendallwos(int fd, const uint8_t *buf, unsigned int len);
-inline void mapif_sendall(const uint8_t *buf, unsigned int len)
+void mapif_sendallwos(int32_t fd, const uint8_t *buf, uint32_t len);
+inline void mapif_sendall(const uint8_t *buf, uint32_t len)
 {
     mapif_sendallwos(-1, buf, len);
 }
-void mapif_send(int fd, const uint8_t *buf, unsigned int len);
+void mapif_send(int32_t fd, const uint8_t *buf, uint32_t len);
 
 extern Log char_log;
 
-extern int autosave_interval;
+extern int32_t autosave_interval;
 
 #endif //CHAR_HPP

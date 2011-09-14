@@ -45,7 +45,7 @@ enum class TY : uint8_t
 
 struct location_t
 {
-    int m;
+    int32_t m;
     uint16_t x, y;
 };
 
@@ -64,13 +64,13 @@ struct area_t
         struct
         {
             location_t loc;
-            unsigned int width, height;
+            uint32_t width, height;
         } a_rect;
         area_t *a_union[2];
     };
     /// number of cells in the area
     // used (only) to "pick a random location in the area"
-    int size;
+    int32_t size;
     AreaType ty;
 
     // defined in magic-expr.cpp
@@ -82,12 +82,12 @@ struct area_t
     // union
     area_t(area_t *, area_t *);
     // rectangle
-    area_t(const location_t&, int, int);
+    area_t(const location_t&, int32_t, int32_t);
     // bar (whatever that is)
-    area_t(const location_t&, int, int, Direction);
+    area_t(const location_t&, int32_t, int32_t, Direction);
 
     // in magic-expr.cpp
-    location_t rect(unsigned int& w, unsigned int& h);
+    location_t rect(uint32_t& w, uint32_t& h);
     location_t random_location();
     bool contains(location_t);
 };
@@ -96,7 +96,7 @@ struct val_t
 {
     union
     {
-        int v_int;
+        int32_t v_int;
         POD_string v_string;
         // Used ONLY during operation/function invocation; otherwise we use v_int
         BlockList *v_entity;
@@ -160,15 +160,15 @@ struct expr_t
         {
             // *grumble* why does it need to know the name?
             const std::pair<const std::string, fun_t> *fun;
-            int line_nr, column;
-            int args_nr;
+            int32_t line_nr, column;
+            int32_t args_nr;
             expr_t *args[MAX_ARGS];
         } e_funapp;
-        int e_id;
+        int32_t e_id;
         struct
         {
             expr_t *expr;
-            int id;
+            int32_t id;
         } e_field;
     };
     ExprType ty;
@@ -208,19 +208,19 @@ struct effect_t
     {
         struct
         {
-            int id;
+            int32_t id;
             expr_t *expr;
         } e_assign;
         struct
         {
-            int var_id;
+            int32_t var_id;
             expr_t *area;
             effect_t *body;
             ForEach_FilterType filter;
         } e_foreach;
         struct
         {
-            int var_id;
+            int32_t var_id;
             expr_t *start, *stop;
             effect_t *body;
         } e_for;
@@ -234,14 +234,14 @@ struct effect_t
         struct
         {
             const std::pair<const std::string, op_t> *op;
-            int args_nr;
-            int line_nr, column;
+            int32_t args_nr;
+            int32_t line_nr, column;
             expr_t *args[MAX_ARGS];
         } e_op;
         struct
         {
-            int args_nr;
-            DArray<int> formals;
+            int32_t args_nr;
+            DArray<int32_t> formals;
             expr_t **actuals;
             effect_t *body;
         } e_call;
@@ -253,8 +253,8 @@ struct effect_t
 struct component_t
 {
     component_t *next;
-    int item_id;
-    int count;
+    int32_t item_id;
+    int32_t count;
 };
 
 
@@ -296,7 +296,7 @@ struct spellguard_t
 
 struct letdef_t
 {
-    int id;
+    int32_t id;
     expr_t *expr;
 };
 
@@ -315,17 +315,17 @@ struct spell_t
 {
     POD_string name;
 private:
-    static int spell_counter;
+    static int32_t spell_counter;
 public:
     // implemented in magic-parser.ypp
     spell_t(spellguard_t *spellguard);
     // Relative location in the definitions file
-    int idx;
+    int32_t idx;
     SpellFlag flags;
-    int arg;
+    int32_t arg;
     SpellArgType spellarg_ty;
 
-    int letdefs_nr;
+    int32_t letdefs_nr;
     letdef_t *letdefs;
 
     spellguard_t *spellguard;
@@ -363,7 +363,7 @@ struct env_t
     // in magic-expr.cpp
     val_t magic_eval(expr_t *expr);
     // implemented inline in magic-base.hpp
-    val_t& VAR(int i);
+    val_t& VAR(int32_t i);
 };
 
 # define MAX_STACK_SIZE 32
@@ -382,22 +382,22 @@ struct cont_activation_record_t
     {
         struct
         {
-            int var_id;
+            int32_t var_id;
             TY ty;
             effect_t *body;
-            std::vector<int> entities;
+            std::vector<int32_t> entities;
         } c_foreach;
         struct
         {
-            int var_id;
+            int32_t var_id;
             effect_t *body;
-            int current;
-            int stop;
+            int32_t current;
+            int32_t stop;
         } c_for;
         struct
         {
-            int args_nr;
-            DArray<int> formals;
+            int32_t args_nr;
+            DArray<int32_t> formals;
             DArray<val_t> old_actuals;
         } c_proc;
     };
@@ -440,8 +440,8 @@ struct cont_activation_record_t
 
 struct status_change_ref_t
 {
-    int sc_type;
-    int bl_id;
+    int32_t sc_type;
+    int32_t bl_id;
 };
 
 inline bool operator ==(const status_change_ref_t& lhs, const status_change_ref_t& rhs)
@@ -468,9 +468,9 @@ struct invocation_t : public BlockList
     env_t *env;
     spell_t *spell;
     // this is the person who originally invoked the spell
-    int caster;
+    int32_t caster;
     // when this person dies, the spell dies with it
-    int subject;
+    int32_t subject;
 
     // spell timer, if any
     timer_id timer;
@@ -478,7 +478,7 @@ struct invocation_t : public BlockList
     fixed_stack<cont_activation_record_t, MAX_STACK_SIZE> stack;
 
     // Script position; if nonzero, resume the script we were running.
-    int script_pos;
+    int32_t script_pos;
     effect_t *current_effect;
     // If non-NULL, this is used to spawn a cloned effect based on the same environment
     effect_t *trigger_effect;
@@ -501,14 +501,14 @@ extern env_t magic_default_env;
 // it cannot become a vector because it is used in a union
 struct args_rec_t
 {
-    int args_nr;
+    int32_t args_nr;
     expr_t *args[MAX_ARGS];
 };
 
 struct proc_t
 {
     POD_string name;
-    DArray<int> args;
+    DArray<int32_t> args;
     effect_t *body;
 };
 

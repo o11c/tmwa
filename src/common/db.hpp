@@ -7,7 +7,7 @@
 
 /// Create a map from char* to void*, with strings always nul-terminated
 struct dbt *strdb_init();
-/// Create a map from int to void*
+/// Create a map from int32_t to void*
 struct dbt *numdb_init(void);
 /// Return the value corresponding to the key, or NULL if not found
 db_val_t db_search(struct dbt *table, db_key_t key) __attribute__((pure));

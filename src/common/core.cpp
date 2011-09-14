@@ -6,14 +6,14 @@
 #include "socket.hpp"
 #include "timer.hpp"
 
-static void chld_proc(int)
+static void chld_proc(int32_t)
 {
     wait(NULL);
 }
-static void sig_proc(int)
+static void sig_proc(int32_t)
 {
     term_func();
-    for (int i = 0; i < fd_max; i++)
+    for (int32_t i = 0; i < fd_max; i++)
         if (session[i])
             close(i);
     _exit(0);
@@ -25,8 +25,8 @@ static void sig_proc(int)
 // (sigaction() is POSIX; signal() is not.)  Taken from Stevens' _Advanced
 // Programming in the UNIX Environment_.
 //
-typedef void (*sigfunc)(int);
-static sigfunc compat_signal(int signo, sigfunc func)
+typedef void (*sigfunc)(int32_t);
+static sigfunc compat_signal(int32_t signo, sigfunc func)
 {
     struct sigaction sact, oact;
 
@@ -42,7 +42,7 @@ static sigfunc compat_signal(int signo, sigfunc func)
 
 bool runflag = true;
 
-int main(int argc, char **argv)
+int32_t main(int32_t argc, char **argv)
 {
     /// Note that getpid() and getppid() may be very close
     mt_seed(time(NULL) ^ (getpid() << 16) ^ (getppid() << 8));

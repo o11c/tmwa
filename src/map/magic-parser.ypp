@@ -22,28 +22,28 @@
 /// I don't know why the code is making me do this, but it is required
 #define YYLEX_PARAM 0, 0
 
-static int intern_id(POD_string id_name);
-static expr_t *fun_expr(const char *name, int args_nr, expr_t **args, int line, int column);
-static expr_t *dot_expr(expr_t *lhs, int id);
+static int32_t intern_id(POD_string id_name);
+static expr_t *fun_expr(const char *name, int32_t args_nr, expr_t **args, int32_t line, int32_t column);
+static expr_t *dot_expr(expr_t *lhs, int32_t id);
 
 // Note: the name must be synchronized with the 'functions' in magic-expr.cpp
 #define BIN_EXPR(x, name, arg1, arg2, line, column) { expr_t *e[2]; e[0] = arg1; e[1] = arg2; x = fun_expr(name, 2, e, line, column); }
 
 static void magic_frontend_error(const char *msg);
-static void fail(int line, int column, const char *fmt, ...) __attribute__((format(printf, 3, 4))) __attribute__((noreturn));
+static void fail(int32_t line, int32_t column, const char *fmt, ...) __attribute__((format(printf, 3, 4))) __attribute__((noreturn));
 
 static spellguard_t *spellguard_implication(spellguard_t *a, spellguard_t *b);
 static effect_t *new_effect(EffectType ty);
 static effect_t *set_effect_continuation(effect_t *src, effect_t *continuation);
-static void add_spell(POD_string invocation, spell_t *spell, int line_nr, int col_nr);
-static void add_teleport_anchor(POD_string name, POD_string invocation, expr_t *location, int line_nr, int col_nr);
-static effect_t *op_effect(const char *name, int args_nr, expr_t **args, int line, int column);
+static void add_spell(POD_string invocation, spell_t *spell, int32_t line_nr, int32_t col_nr);
+static void add_teleport_anchor(POD_string name, POD_string invocation, expr_t *location, int32_t line_nr, int32_t col_nr);
+static effect_t *op_effect(const char *name, int32_t args_nr, expr_t **args, int32_t line, int32_t column);
 
-int magic_frontend_lex(YYSTYPE *, YYLTYPE *);
+int32_t magic_frontend_lex(YYSTYPE *, YYLTYPE *);
 
 static void install_proc(proc_t&& proc);
-static effect_t *call_proc(POD_string name, int args_nr, expr_t **args, int line_nr, int column);
-static void bind_constant(POD_string name, val_t *val, int line_nr, int col_nr);
+static effect_t *call_proc(POD_string name, int32_t args_nr, expr_t **args, int32_t line_nr, int32_t column);
+static void bind_constant(POD_string name, val_t *val, int32_t line_nr, int32_t col_nr);
 static val_t *find_constant(POD_string name) __attribute__((pure));
 
 }
@@ -55,21 +55,21 @@ static val_t *find_constant(POD_string name) __attribute__((pure));
 // YYSTYPE
 %union {
     SpellFlag spell_flags;
-    int i;
+    int32_t i;
     POD_string s;
-    int op;
+    int32_t op;
     val_t value;
     expr_t *expr;
     e_location_t location;
     e_area_t area;
     args_rec_t arg_list;
-    struct { int letdefs_nr; letdef_t *letdefs; } letdefs;
+    struct { int32_t letdefs_nr; letdef_t *letdefs; } letdefs;
     spell_t *spell;
-    struct { int id; SpellArgType ty; } spellarg_def;
+    struct { int32_t id; SpellArgType ty; } spellarg_def;
     letdef_t vardef;
     spellguard_t *spellguard;
     component_t *components;
-    struct { int id, count; } component;
+    struct { int32_t id, count; } component;
     effect_t *effect;
     proc_t *proc;
 
@@ -246,7 +246,7 @@ ID '=' expr
         }
         else
         {
-            int var_id = intern_id($1);
+            int32_t var_id = intern_id($1);
             magic_conf::vars[var_id].second = magic_default_env.magic_eval($3);
         }
     }
@@ -309,7 +309,7 @@ spell_flags:
     }
 ;
 
-// struct { int id; SpellArgType ty; } spellarg_def
+// struct { int32_t id; SpellArgType ty; } spellarg_def
 argopt:
 /* empty */
     {
@@ -541,7 +541,7 @@ spellbody_list
     }
 ;
 
-// struct { int letdefs_nr; letdef_t *letdefs; } letdefs
+// struct { int32_t letdefs_nr; letdef_t *letdefs; } letdefs
 defs:
 semicolons
     {
@@ -715,7 +715,7 @@ item_list: item
     }
 ;
 
-// struct {int id, count; } component;
+// struct {int32_t id, count; } component;
 item:
 INT '*' item_name
     {
@@ -727,7 +727,7 @@ INT '*' item_name
     }
 ;
 
-// int i
+// int32_t i
 item_name:
 STRING
     {
@@ -882,24 +882,24 @@ effect_list:
 
 %%
 
-static int intern_id(POD_string id_name)
+static int32_t intern_id(POD_string id_name)
 {
     size_t sz = magic_conf::vars.size();
-    for (int i = 0; i < sz; i++)
+    for (int32_t i = 0; i < sz; i++)
         if (id_name == magic_conf::vars[i].first)
         {
             id_name.free();
             return i;
         }
 
-    int i = sz;
+    int32_t i = sz;
     // Must add new
     magic_conf::vars.push_back(std::make_pair(id_name, val_t{{0}, TY::UNDEF}));
 
     return i;
 }
 
-void add_spell(POD_string invocation, spell_t *spell, int line_nr, int col_nr)
+void add_spell(POD_string invocation, spell_t *spell, int32_t line_nr, int32_t col_nr)
 {
     if (magic_conf::spell_names.find(spell->name) != magic_conf::spell_names.end())
     {
@@ -921,7 +921,7 @@ void add_spell(POD_string invocation, spell_t *spell, int line_nr, int col_nr)
     magic_conf::spells[invocation] = spell;
 }
 
-void add_teleport_anchor(POD_string name, POD_string invocation, expr_t *location, int line_nr, int col_nr)
+void add_teleport_anchor(POD_string name, POD_string invocation, expr_t *location, int32_t line_nr, int32_t col_nr)
 {
     if (magic_conf::anchor_names.find(name) != magic_conf::anchor_names.end())
     {
@@ -945,7 +945,7 @@ void add_teleport_anchor(POD_string name, POD_string invocation, expr_t *locatio
 }
 
 
-static void fail(int line, int column, const char *fmt, ...)
+static void fail(int32_t line, int32_t column, const char *fmt, ...)
 {
     va_list ap;
     fprintf(stderr, "[magic-init]  L%d:%d: ", line, column);
@@ -954,7 +954,7 @@ static void fail(int line, int column, const char *fmt, ...)
     abort();
 }
 
-static expr_t *dot_expr(expr_t *expr, int id)
+static expr_t *dot_expr(expr_t *expr, int32_t id)
 {
     expr_t *retval = magic_new_expr(ExprType::SPELLFIELD);
     retval->e_field.id = id;
@@ -963,7 +963,7 @@ static expr_t *dot_expr(expr_t *expr, int id)
     return retval;
 }
 
-static expr_t *fun_expr(const char *name, int args_nr, expr_t **args, int line, int column)
+static expr_t *fun_expr(const char *name, int32_t args_nr, expr_t **args, int32_t line, int32_t column)
 {
     const std::pair<const std::string, fun_t> *fun = magic_get_fun(name);
 
@@ -983,13 +983,13 @@ static expr_t *fun_expr(const char *name, int args_nr, expr_t **args, int line, 
     expr->e_funapp.fun = fun;
     expr->e_funapp.args_nr = args_nr;
 
-    for (int i = 0; i < args_nr; i++)
+    for (int32_t i = 0; i < args_nr; i++)
         expr->e_funapp.args[i] = args[i];
 
     return expr;
 }
 
-int spell_t::spell_counter;
+int32_t spell_t::spell_counter;
 
 spell_t::spell_t(spellguard_t *guard) : idx(++spell_counter), spellguard(guard) {}
 
@@ -1055,7 +1055,7 @@ static effect_t *set_effect_continuation(effect_t *src, effect_t *continuation)
     return retval;
 }
 
-static effect_t *op_effect(const char *name, int args_nr, expr_t **args, int line, int column)
+static effect_t *op_effect(const char *name, int32_t args_nr, expr_t **args, int32_t line, int32_t column)
 {
     const std::pair<const std::string, op_t> *op = magic_get_op(name);
 
@@ -1072,7 +1072,7 @@ static effect_t *op_effect(const char *name, int args_nr, expr_t **args, int lin
     effect->e_op.op = op;
     effect->e_op.args_nr = args_nr;
 
-    for (int i = 0; i < args_nr; i++)
+    for (int32_t i = 0; i < args_nr; i++)
         effect->e_op.args[i] = args[i];
 
     return effect;
@@ -1085,7 +1085,7 @@ static void install_proc(proc_t&& proc)
     procs[proc.name] = proc;
 }
 
-static effect_t *call_proc(POD_string name, int args_nr, expr_t **args, int line_nr, int column)
+static effect_t *call_proc(POD_string name, int32_t args_nr, expr_t **args, int32_t line_nr, int32_t column)
 {
     auto it = procs.find(name);
     if (it == procs.end())
@@ -1120,7 +1120,7 @@ struct const_def_rec
 };
 std::vector<const_def_rec> const_defs;
 
-void bind_constant(POD_string name, val_t *val, int line_nr, int col_nr)
+void bind_constant(POD_string name, val_t *val, int32_t line_nr, int32_t col_nr)
 {
     if (find_constant(name))
     {
@@ -1133,7 +1133,7 @@ void bind_constant(POD_string name, val_t *val, int line_nr, int col_nr)
 
 static val_t *find_constant(POD_string name)
 {
-    for (int i = 0; i < const_defs.size(); i++)
+    for (int32_t i = 0; i < const_defs.size(); i++)
     {
         if (const_defs[i].name == name)
         {
@@ -1145,11 +1145,11 @@ static val_t *find_constant(POD_string name)
 }
 
 
-static void INTERN_ASSERT(const char *name, int id)
+static void INTERN_ASSERT(const char *name, int32_t id)
 {
     POD_string pname = NULL;
     pname.assign(name);
-    int zid = intern_id(pname);
+    int32_t zid = intern_id(pname);
     if (zid != id)
         fprintf(stderr,
                 "[magic-conf] INTERNAL ERROR: Builtin special var %s interned to %d, not %d as it should be!\n",

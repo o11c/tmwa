@@ -6,11 +6,11 @@
 /// (Until the file is closed, it keeps the old file)
 
 // Start writing a tmpfile
-FILE *lock_fopen(const char *filename, int *info)
+FILE *lock_fopen(const char *filename, int32_t *info)
 {
     char newfile[512];
     FILE *fp;
-    int no = getpid();
+    int32_t no = getpid();
 
     // Get a filename that doesn't already exist
     do
@@ -23,7 +23,7 @@ FILE *lock_fopen(const char *filename, int *info)
 }
 
 // Delete the old file and rename the new file
-void lock_fclose(FILE * fp, const char *filename, int *info)
+void lock_fclose(FILE * fp, const char *filename, int32_t *info)
 {
     char newfile[512];
     if (fp)

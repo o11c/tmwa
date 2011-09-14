@@ -7,7 +7,7 @@ void IP_Address::from_sock(in_addr in)
 
 bool IP_Address::from_string(const std::string& in)
 {
-    int n;
+    int32_t n;
     return 4 == sscanf(in.c_str(), "%hhu.%hhu.%hhu.%hhu%n", &data[0], &data[1], &data[2], &data[3], &n)
         && n == in.length();
 }
@@ -21,7 +21,7 @@ std::string IP_Address::to_string() const
 
 bool IP_Mask::covers(IP_Address test)
 {
-    for (int i = 0; i < 4; i++)
+    for (int32_t i = 0; i < 4; i++)
     {
         if ((addr.data[i] & mask.data[i]) != (test.data[i] & mask.data[i]))
             return false;
@@ -35,7 +35,7 @@ void IP_Mask::from_string(const std::string& str)
     mask.from_n(0);
 
     uint8_t *p = addr.data;
-    int offset;
+    int32_t offset;
     switch (sscanf(str.c_str(), "%hhu.%hhu.%hhu.%hhu%n", &p[0], &p[1], &p[2], &p[3], &offset))
     {
     case 0: return;

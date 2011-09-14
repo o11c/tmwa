@@ -9,8 +9,8 @@
 #include "map.hpp"
 #include "pc.hpp"
 
-static int storage_delete(int account_id);
-static int storage_comp_item(const void *_i1, const void *_i2);
+static int32_t storage_delete(int32_t account_id);
+static int32_t storage_comp_item(const void *_i1, const void *_i2);
 static void sortage_sortitem(struct storage *stor);
 
 
@@ -20,7 +20,7 @@ static struct dbt *storage_db;
  * 倉庫内アイテムソート
  *------------------------------------------
  */
-int storage_comp_item(const void *_i1, const void *_i2)
+int32_t storage_comp_item(const void *_i1, const void *_i2)
 {
     const struct item *i1 = static_cast<const struct item *>(_i1);
     const struct item *i2 = static_cast<const struct item *>(_i2);
@@ -45,13 +45,13 @@ void sortage_sortitem(struct storage *stor)
  * 初期化とか
  *------------------------------------------
  */
-int do_init_storage(void)      // map.c::do_init()から呼ばれる
+int32_t do_init_storage(void)      // map.c::do_init()から呼ばれる
 {
     storage_db = numdb_init();
     return 1;
 }
 
-struct storage *account2storage(int account_id)
+struct storage *account2storage(int32_t account_id)
 {
     struct storage *stor =
             static_cast<struct storage *>(numdb_search(storage_db, account_id).p);
@@ -65,12 +65,12 @@ struct storage *account2storage(int account_id)
 }
 
 // Just to ask storage, without creation
-struct storage *account2storage2(int account_id)
+struct storage *account2storage2(int32_t account_id)
 {
     return static_cast<struct storage *>(numdb_search(storage_db, account_id).p);
 }
 
-int storage_delete(int account_id)
+int32_t storage_delete(int32_t account_id)
 {
     struct storage *stor =
             static_cast<struct storage *>(numdb_search(storage_db, account_id).p);
@@ -86,7 +86,7 @@ int storage_delete(int account_id)
  * カプラ倉庫を開く
  *------------------------------------------
  */
-int storage_storageopen(MapSessionData *sd)
+int32_t storage_storageopen(MapSessionData *sd)
 {
     struct storage *stor;
     nullpo_ret(sd);
@@ -118,11 +118,11 @@ int storage_storageopen(MapSessionData *sd)
  * Internal add-item function.
  *------------------------------------------
  */
-static int storage_additem(MapSessionData *sd, struct storage *stor,
-                            struct item *item_data, int amount)
+static int32_t storage_additem(MapSessionData *sd, struct storage *stor,
+                            struct item *item_data, int32_t amount)
 {
     struct item_data *data;
-    int i;
+    int32_t i;
 
     if (item_data->nameid <= 0 || amount <= 0)
         return 1;
@@ -163,8 +163,8 @@ static int storage_additem(MapSessionData *sd, struct storage *stor,
  * Internal del-item function
  *------------------------------------------
  */
-static int storage_delitem(MapSessionData *sd, struct storage *stor,
-                            int n, int amount)
+static int32_t storage_delitem(MapSessionData *sd, struct storage *stor,
+                            int32_t n, int32_t amount)
 {
 
     if (stor->storage_[n].nameid == 0 || stor->storage_[n].amount < amount)
@@ -187,7 +187,7 @@ static int storage_delitem(MapSessionData *sd, struct storage *stor,
  * Add an item to the storage from the inventory.
  *------------------------------------------
  */
-int storage_storageadd(MapSessionData *sd, int idx, int amount)
+int32_t storage_storageadd(MapSessionData *sd, int32_t idx, int32_t amount)
 {
     struct storage *stor;
 
@@ -221,7 +221,7 @@ int storage_storageadd(MapSessionData *sd, int idx, int amount)
  * Retrieve an item from the storage.
  *------------------------------------------
  */
-int storage_storageget(MapSessionData *sd, int idx, int amount)
+int32_t storage_storageget(MapSessionData *sd, int32_t idx, int32_t amount)
 {
     struct storage *stor;
 
@@ -250,7 +250,7 @@ int storage_storageget(MapSessionData *sd, int idx, int amount)
  * Modified By Valaris to save upon closing [massdriller]
  *------------------------------------------
  */
-int storage_storageclose(MapSessionData *sd)
+int32_t storage_storageclose(MapSessionData *sd)
 {
     struct storage *stor;
 
@@ -278,7 +278,7 @@ int storage_storageclose(MapSessionData *sd)
  * When quitting the game.
  *------------------------------------------
  */
-int storage_storage_quit(MapSessionData *sd)
+int32_t storage_storage_quit(MapSessionData *sd)
 {
     struct storage *stor;
 
@@ -295,7 +295,7 @@ int storage_storage_quit(MapSessionData *sd)
     return 0;
 }
 
-int storage_storage_save(int account_id, int final)
+int32_t storage_storage_save(int32_t account_id, int32_t final)
 {
     struct storage *stor;
 
@@ -323,7 +323,7 @@ int storage_storage_save(int account_id, int final)
 }
 
 //Ack from Char-server indicating the storage was saved. [Skotlex]
-int storage_storage_saved(int account_id)
+int32_t storage_storage_saved(int32_t account_id)
 {
     struct storage *stor;
 

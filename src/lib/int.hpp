@@ -52,14 +52,14 @@ inline bool is_power_of_2(uint64_t v)
     return (v & (v-1)) == 0;
 }
 
-inline unsigned highest_bit(uint64_t v)
+inline uint32_t highest_bit(uint64_t v)
 {
     // ^ instead of -
     // because I checked the ASM
     return 63 ^ __builtin_clzll(v);
 }
 
-inline unsigned lowest_bit(uint64_t v)
+inline uint32_t lowest_bit(uint64_t v)
 {
     return __builtin_ctzll(v);
 }

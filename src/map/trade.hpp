@@ -3,9 +3,9 @@
 
 # include "map.structs.hpp"
 
-void trade_traderequest(MapSessionData *sd, int target_id);
-void trade_tradeack(MapSessionData *sd, int type);
-void trade_tradeadditem(MapSessionData *sd, int index, int amount);
+void trade_traderequest(MapSessionData *sd, int32_t target_id);
+void trade_tradeack(MapSessionData *sd, int32_t type);
+void trade_tradeadditem(MapSessionData *sd, int32_t index, int32_t amount);
 void trade_tradeok(MapSessionData *sd);
 void trade_tradecancel(MapSessionData *sd);
 void trade_tradecommit(MapSessionData *sd);

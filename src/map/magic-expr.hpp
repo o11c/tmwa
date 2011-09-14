@@ -15,14 +15,14 @@ const std::pair<const std::string, fun_t> *magic_get_fun(const char *name);
 /**
  * Evaluates an expression and coerces the result into an integer
  */
-int magic_eval_int(env_t *env, expr_t *expr);
+int32_t magic_eval_int(env_t *env, expr_t *expr);
 
 /**
  * Evaluates an expression and coerces the result into a string
  */
 POD_string magic_eval_str(env_t *env, expr_t *expr);
 
-int map_is_solid(int m, int x, int y) __attribute__((pure));;
+int32_t map_is_solid(int32_t m, int32_t x, int32_t y) __attribute__((pure));;
 
 expr_t *magic_new_expr(ExprType ty);
 
@@ -30,12 +30,12 @@ void magic_clear_var(val_t *v);
 
 void magic_copy_var(val_t *dest, val_t *src);
 
-bool magic_find_item(val_t *args, int index, struct item *item, bool *stackable);
+bool magic_find_item(val_t *args, int32_t index, struct item *item, bool *stackable);
 
 # define GET_ARG_ITEM(index, dest, stackable) if (magic_find_item(args, index, &dest, &stackable)) return 1;
 
-int magic_signature_check(const char *opname, const char *funname, const char *signature,
-                          int args_nr, val_t *args, int line, int column);
+int32_t magic_signature_check(const char *opname, const char *funname, const char *signature,
+                          int32_t args_nr, val_t *args, int32_t line, int32_t column);
 
 # define ASSERT_TYPE(x, type)   (args[x].ty == type ? 0 : throw args[x].type)
 

@@ -22,7 +22,7 @@
 #define MOB_LAZYMOVEPERC 50     // Move probability in the negligent mode MOB (rate of 1000 minute)
 #define MOB_LAZYWARPPERC 20     // Warp probability in the negligent mode MOB (rate of 1000 minute)
 
-static int mob_deleteslave(struct mob_data *md);
+static int32_t mob_deleteslave(struct mob_data *md);
 
 struct mob_db mob_db[2001];
 
@@ -30,19 +30,19 @@ struct mob_db mob_db[2001];
  * Local prototype declaration   (only required thing)
  *------------------------------------------
  */
-static int distance(int, int, int, int);
-static int mob_makedummymobdb(int);
+static int32_t distance(int32_t, int32_t, int32_t, int32_t);
+static int32_t mob_makedummymobdb(int32_t);
 // last argument is actually uint8_t, but is often 0
-static void mob_timer(timer_id, tick_t, uint32_t, int);
-static int mob_unlocktarget(struct mob_data *md, int tick);
+static void mob_timer(timer_id, tick_t, uint32_t, int32_t);
+static int32_t mob_unlocktarget(struct mob_data *md, int32_t tick);
 
 /*==========================================
  * Mob is searched with a name.
  *------------------------------------------
  */
-int mobdb_searchname(const char *str)
+int32_t mobdb_searchname(const char *str)
 {
-    int i;
+    int32_t i;
 
     for (i = 0; i < sizeof(mob_db) / sizeof(mob_db[0]); i++)
     {
@@ -60,7 +60,7 @@ int mobdb_searchname(const char *str)
  * Id Mob is checked.
  *------------------------------------------
  */
-int mobdb_checkid(const int id)
+int32_t mobdb_checkid(const int32_t id)
 {
     if (id <= 0 || id >= (sizeof(mob_db) / sizeof(mob_db[0]))
         || mob_db[id].name[0] == '\0')
@@ -75,7 +75,7 @@ static void mob_init(struct mob_data *md);
  * The minimum data set for MOB spawning
  *------------------------------------------
  */
-static int mob_spawn_dataset(struct mob_data *md, const char *mobname, int mob_class)
+static int32_t mob_spawn_dataset(struct mob_data *md, const char *mobname, int32_t mob_class)
 {
     nullpo_ret(md);
 
@@ -105,7 +105,7 @@ static int mob_spawn_dataset(struct mob_data *md, const char *mobname, int mob_c
 // Mutation values indicate how `valuable' a change to each stat is, XP wise.
 // For one 256th of change, we give out that many 1024th fractions of XP change
 // (i.e., 1024 means a 100% XP increase for a single point of adjustment, 4 means 100% XP bonus for doubling the value)
-static int mutation_value[MOB_XP_BONUS] = {
+static int32_t mutation_value[MOB_XP_BONUS] = {
     2,                          // MOB_LV
     3,                          // MOB_MAX_HP
     1,                          // MOB_STR
@@ -124,7 +124,7 @@ static int mutation_value[MOB_XP_BONUS] = {
 
 // The mutation scale indicates how far `up' we can go, with 256 indicating 100%  Note that this may stack with multiple
 // calls to `mutate'.
-static int mutation_scale[MOB_XP_BONUS] = {
+static int32_t mutation_scale[MOB_XP_BONUS] = {
     16,                         // MOB_LV
     256,                        // MOB_MAX_HP
     32,                         // MOB_STR
@@ -148,7 +148,7 @@ static int mutation_scale[MOB_XP_BONUS] = {
 // (2) second, determine the absolute stat change
 // (3) third, compute the percentage stat change relative to mutation_base (p1)
 // (4) fourth, compute the XP mofication based on the smaller of (p0, p1).
-static int mutation_base[MOB_XP_BONUS] = {
+static int32_t mutation_base[MOB_XP_BONUS] = {
     30,                         // MOB_LV
     -1,                         // MOB_MAX_HP
     20,                         // MOB_STR
@@ -169,13 +169,13 @@ static int mutation_base[MOB_XP_BONUS] = {
  * Mutates a MOB.  For large `direction' values, calling this multiple times will give bigger XP boni.
  *----------------------------------------
  */
-static void mob_mutate(struct mob_data *md, int stat, int intensity)   // intensity: positive: strengthen, negative: weaken.  256 = 100%.
+static void mob_mutate(struct mob_data *md, int32_t stat, int32_t intensity)   // intensity: positive: strengthen, negative: weaken.  256 = 100%.
 {
-    int old_stat;
-    int new_stat;
-    int real_intensity;        // relative intensity
-    const int mut_base = mutation_base[stat];
-    int sign = 1;
+    int32_t old_stat;
+    int32_t new_stat;
+    int32_t real_intensity;        // relative intensity
+    const int32_t mut_base = mutation_base[stat];
+    int32_t sign = 1;
 
     if (!md || stat < 0 || stat >= MOB_XP_BONUS || intensity == 0)
         return;
@@ -214,7 +214,7 @@ static void mob_mutate(struct mob_data *md, int stat, int intensity)   // intens
     {
         // Now compute the mutation intensity relative to an absolute value.
         // Take the lesser of the two effects.
-        int real_intensity2 = (((new_stat - old_stat) << 8) / mut_base);
+        int32_t real_intensity2 = (((new_stat - old_stat) << 8) / mut_base);
 
         if (real_intensity < 0)
             if (real_intensity2 > real_intensity)
@@ -237,14 +237,14 @@ static void mob_mutate(struct mob_data *md, int stat, int intensity)   // intens
     // Sanitise
     if (md->stats[MOB_ATK1] > md->stats[MOB_ATK2])
     {
-        int swap = md->stats[MOB_ATK2];
+        int32_t swap = md->stats[MOB_ATK2];
         md->stats[MOB_ATK2] = md->stats[MOB_ATK1];
         md->stats[MOB_ATK1] = swap;
     }
 }
 
 // This calculates the exp of a given mob
-static int mob_gen_exp(struct mob_db *mob)
+static int32_t mob_gen_exp(struct mob_db *mob)
 {
     if (mob->max_hp <= 1)
         return 1;
@@ -262,7 +262,7 @@ static int mob_gen_exp(struct mob_db *mob)
     double persuit_factor =
         (3 + mob->range) * (mob->mode % 2) * 1000 / mob->speed;
     double aggression_factor = (mob->mode & 4) == 4 ? 10.0 / 9.0 : 1.0;
-    int xp =
+    int32_t xp =
         floor(effective_hp
                 * pow(sqrt(attack_factor) + sqrt(dodge_factor) + sqrt(persuit_factor) + 55, 3)
                 * aggression_factor / 2000000.0 * battle_config.base_exp_rate / 100.);
@@ -274,10 +274,10 @@ static int mob_gen_exp(struct mob_db *mob)
 
 static void mob_init(struct mob_data *md)
 {
-    int i;
-    const int mob_class = md->mob_class;
-    const int mutations_nr = mob_db[mob_class].mutations_nr;
-    const int mutation_power = mob_db[mob_class].mutation_power;
+    int32_t i;
+    const int32_t mob_class = md->mob_class;
+    const int32_t mutations_nr = mob_db[mob_class].mutations_nr;
+    const int32_t mutation_power = mob_db[mob_class].mutation_power;
 
     md->stats[MOB_LV] = mob_db[mob_class].lv;
     md->stats[MOB_MAX_HP] = mob_db[mob_class].max_hp;
@@ -297,8 +297,8 @@ static void mob_init(struct mob_data *md)
 
     for (i = 0; i < mutations_nr; i++)
     {
-        int stat_nr = MRAND(MOB_XP_BONUS + 1);
-        int strength;
+        int32_t stat_nr = MRAND(MOB_XP_BONUS + 1);
+        int32_t strength;
 
         if (stat_nr >= MOB_XP_BONUS)
             stat_nr = MOB_MAX_HP;
@@ -321,12 +321,12 @@ static void mob_init(struct mob_data *md)
  * The MOB appearance for one time(for scripts)
  *------------------------------------------
  */
-int mob_once_spawn(MapSessionData *sd, Point point,
-                   const char *mobname, int mob_class, int amount,
+int32_t mob_once_spawn(MapSessionData *sd, Point point,
+                   const char *mobname, int32_t mob_class, int32_t amount,
                    const char *event)
 {
     struct mob_data *md = NULL;
-    int m, count, r = mob_class;
+    int32_t m, count, r = mob_class;
 
     if (sd && strcmp(&point.map, "this") == 0)
         m = sd->m;
@@ -385,13 +385,13 @@ int mob_once_spawn(MapSessionData *sd, Point point,
  * The MOB appearance for one time(& area specification for scripts)
  *------------------------------------------
  */
-int mob_once_spawn_area(MapSessionData *sd, const fixed_string<16>& mapname,
-                        int x_0, int y_0, int x_1, int y_1,
-                        const char *mobname, int mob_class, int amount,
+int32_t mob_once_spawn_area(MapSessionData *sd, const fixed_string<16>& mapname,
+                        int32_t x_0, int32_t y_0, int32_t x_1, int32_t y_1,
+                        const char *mobname, int32_t mob_class, int32_t amount,
                         const char *event)
 {
-    int max, id = 0;
-    int m;
+    int32_t max, id = 0;
+    int32_t m;
 
     if (strcmp(&mapname, "this") == 0)
         m = sd->m;
@@ -406,9 +406,9 @@ int mob_once_spawn_area(MapSessionData *sd, const fixed_string<16>& mapname,
         return 0;
 
     uint16_t lx = -1, ly = -1;
-    for (int i = 0; i < amount; i++)
+    for (int32_t i = 0; i < amount; i++)
     {
-        int j = 0;
+        int32_t j = 0;
         uint16_t x, y;
         do
         {
@@ -438,7 +438,7 @@ int mob_once_spawn_area(MapSessionData *sd, const fixed_string<16>& mapname,
  * Is MOB in the state in which the present movement is possible or not?
  *------------------------------------------
  */
-static int mob_can_move(struct mob_data *md)
+static int32_t mob_can_move(struct mob_data *md)
 {
     nullpo_ret(md);
 
@@ -452,30 +452,30 @@ static int mob_can_move(struct mob_data *md)
  * Time calculation concerning one step next to mob
  *------------------------------------------
  */
-static int calc_next_walk_step(struct mob_data *md)
+static int32_t calc_next_walk_step(struct mob_data *md)
 {
     nullpo_ret(md);
 
     if (md->walkpath.path_pos >= md->walkpath.path_len)
         return -1;
-    if (static_cast<int>(md->walkpath.path[md->walkpath.path_pos]) & 1)
+    if (static_cast<int32_t>(md->walkpath.path[md->walkpath.path_pos]) & 1)
         return battle_get_speed(md) * 14 / 10;
     return battle_get_speed(md);
 }
 
-static int mob_walktoxy_sub(struct mob_data *md);
+static int32_t mob_walktoxy_sub(struct mob_data *md);
 
 /*==========================================
  * Mob Walk processing
  *------------------------------------------
  */
-static int mob_walk(struct mob_data *md, unsigned int tick, uint8_t data)
+static int32_t mob_walk(struct mob_data *md, uint32_t tick, uint8_t data)
 {
-    int moveblock;
-    int i, ctype;
-    static int dirx[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
-    static int diry[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
-    int x, y, dx, dy;
+    int32_t moveblock;
+    int32_t i, ctype;
+    static int32_t dirx[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
+    static int32_t diry[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
+    int32_t x, y, dx, dy;
 
     nullpo_ret(md);
 
@@ -496,7 +496,7 @@ static int mob_walk(struct mob_data *md, unsigned int tick, uint8_t data)
     }
     else
     {
-        if (static_cast<int>(md->walkpath.path[md->walkpath.path_pos]) >= 8)
+        if (static_cast<int32_t>(md->walkpath.path[md->walkpath.path_pos]) >= 8)
             return 1;
 
         x = md->x;
@@ -508,8 +508,8 @@ static int mob_walk(struct mob_data *md, unsigned int tick, uint8_t data)
             return 0;
         }
         md->dir = md->walkpath.path[md->walkpath.path_pos];
-        dx = dirx[static_cast<int>(md->dir)];
-        dy = diry[static_cast<int>(md->dir)];
+        dx = dirx[static_cast<int32_t>(md->dir)];
+        dy = diry[static_cast<int32_t>(md->dir)];
 
         ctype = map_getcell(md->m, x + dx, y + dy);
         if (ctype == 1 || ctype == 5)
@@ -548,7 +548,7 @@ static int mob_walk(struct mob_data *md, unsigned int tick, uint8_t data)
         i = i >> 1;
         if (i < 1 && md->walkpath.path_half == 0)
             i = 1;
-        md->timer = add_timer(tick + i, mob_timer, md->id, static_cast<int>(md->walkpath.path_pos));
+        md->timer = add_timer(tick + i, mob_timer, md->id, static_cast<int32_t>(md->walkpath.path_pos));
         md->state.state = MS::WALK;
 
         if (md->walkpath.path_pos >= md->walkpath.path_len)
@@ -561,13 +561,13 @@ static int mob_walk(struct mob_data *md, unsigned int tick, uint8_t data)
  * Check if mob should be attempting to attack
  *------------------------------------------
  */
-static int mob_check_attack(struct mob_data *md)
+static int32_t mob_check_attack(struct mob_data *md)
 {
     BlockList *tbl = NULL;
     MapSessionData *tsd = NULL;
     struct mob_data *tmd = NULL;
 
-    int mode, race, range;
+    int32_t mode, race, range;
 
     nullpo_ret(md);
 
@@ -645,7 +645,7 @@ static int mob_check_attack(struct mob_data *md)
  * Attack processing of mob
  *------------------------------------------
  */
-static int mob_attack(struct mob_data *md, unsigned int tick, int)
+static int32_t mob_attack(struct mob_data *md, uint32_t tick, int32_t)
 {
     BlockList *tbl = NULL;
 
@@ -689,10 +689,10 @@ static void mob_stopattacked(MapSessionData *sd, uint32_t id)
  * The timer in which the mob's states changes
  *------------------------------------------
  */
-static int mob_changestate(struct mob_data *md, MS state, int type)
+static int32_t mob_changestate(struct mob_data *md, MS state, int32_t type)
 {
-    unsigned int tick;
-    int i;
+    uint32_t tick;
+    int32_t i;
 
     nullpo_ret(md);
 
@@ -759,7 +759,7 @@ static int mob_changestate(struct mob_data *md, MS state, int type)
  * It branches to a walk and an attack.
  *------------------------------------------
  */
-static void mob_timer(timer_id, tick_t tick, uint32_t id, int data)
+static void mob_timer(timer_id, tick_t tick, uint32_t id, int32_t data)
 {
     struct mob_data *md;
     BlockList *bl = map_id2bl(id);
@@ -790,7 +790,7 @@ static void mob_timer(timer_id, tick_t tick, uint32_t id, int data)
             mob_changestate(md, MS::IDLE, 0);
             break;
         default:
-            map_log("mob_timer: %d ?\n", static_cast<int>(md->state.state));
+            map_log("mob_timer: %d ?\n", static_cast<int32_t>(md->state.state));
             break;
     }
     map_freeblock_unlock();
@@ -801,7 +801,7 @@ static void mob_timer(timer_id, tick_t tick, uint32_t id, int data)
  *
  *------------------------------------------
  */
-static int mob_walktoxy_sub(struct mob_data *md)
+static int32_t mob_walktoxy_sub(struct mob_data *md)
 {
     struct walkpath_data wpd;
 
@@ -824,7 +824,7 @@ static int mob_walktoxy_sub(struct mob_data *md)
  * mob move start
  *------------------------------------------
  */
-static int mob_walktoxy(struct mob_data *md, int x, int y, int easy)
+static int32_t mob_walktoxy(struct mob_data *md, int32_t x, int32_t y, int32_t easy)
 {
     struct walkpath_data wpd;
 
@@ -853,7 +853,7 @@ static int mob_walktoxy(struct mob_data *md, int x, int y, int easy)
  * mob spawn with delay(timer function)
  *------------------------------------------
  */
-static void mob_delayspawn(timer_id, tick_t, int m)
+static void mob_delayspawn(timer_id, tick_t, int32_t m)
 {
     mob_spawn(m);
 }
@@ -862,9 +862,9 @@ static void mob_delayspawn(timer_id, tick_t, int m)
  * spawn timing calculation
  *------------------------------------------
  */
-static int mob_setdelayspawn(int id)
+static int32_t mob_setdelayspawn(int32_t id)
 {
-    unsigned int spawntime, spawntime1, spawntime2, spawntime3;
+    uint32_t spawntime, spawntime1, spawntime2, spawntime3;
     struct mob_data *md;
     BlockList *bl;
 
@@ -912,10 +912,10 @@ static int mob_setdelayspawn(int id)
  * Mob spawning. Initialization is also variously here.
  *------------------------------------------
  */
-int mob_spawn(int id)
+int32_t mob_spawn(int32_t id)
 {
-    int x = 0, y = 0, i = 0, c;
-    unsigned int tick = gettick();
+    int32_t x = 0, y = 0, i = 0, c;
+    uint32_t tick = gettick();
     struct mob_data *md;
     BlockList *bl;
 
@@ -1017,9 +1017,9 @@ int mob_spawn(int id)
  * Distance calculation between two points
  *------------------------------------------
  */
-static int distance(int x_0, int y_0, int x_1, int y_1)
+static int32_t distance(int32_t x_0, int32_t y_0, int32_t x_1, int32_t y_1)
 {
-    int dx, dy;
+    int32_t dx, dy;
 
     dx = abs(x_0 - x_1);
     dy = abs(y_0 - y_1);
@@ -1030,7 +1030,7 @@ static int distance(int x_0, int y_0, int x_1, int y_1)
  * The stop of MOB's attack
  *------------------------------------------
  */
-int mob_stopattack(struct mob_data *md)
+int32_t mob_stopattack(struct mob_data *md)
 {
     md->target_id = 0;
     md->state.target_attackable = false;
@@ -1042,13 +1042,13 @@ int mob_stopattack(struct mob_data *md)
  * The stop of MOB's walking
  *------------------------------------------
  */
-int mob_stop_walking(struct mob_data *md, int type)
+int32_t mob_stop_walking(struct mob_data *md, int32_t type)
 {
     nullpo_ret(md);
 
     if (md->state.state == MS::WALK || md->state.state == MS::IDLE)
     {
-        int dx = 0, dy = 0;
+        int32_t dx = 0, dy = 0;
 
         md->walkpath.path_len = 0;
         if (type & 4)
@@ -1077,8 +1077,8 @@ int mob_stop_walking(struct mob_data *md, int type)
         clif_fixmobpos(md);
     if (type & 0x02)
     {
-        int delay = battle_get_dmotion(md);
-        unsigned int tick = gettick();
+        int32_t delay = battle_get_dmotion(md);
+        uint32_t tick = gettick();
         if (md->canmove_tick < tick)
             md->canmove_tick = tick + delay;
     }
@@ -1090,11 +1090,11 @@ int mob_stop_walking(struct mob_data *md, int type)
  * Reachability to a Specification ID existence place
  *------------------------------------------
  */
-static int mob_can_reach(struct mob_data *md, BlockList *bl, int range)
+static int32_t mob_can_reach(struct mob_data *md, BlockList *bl, int32_t range)
 {
-    int dx, dy;
+    int32_t dx, dy;
     struct walkpath_data wpd;
-    int i;
+    int32_t i;
 
     nullpo_ret(md);
     nullpo_ret(bl);
@@ -1149,11 +1149,11 @@ static int mob_can_reach(struct mob_data *md, BlockList *bl, int range)
  * Determination for an attack of a monster
  *------------------------------------------
  */
-int mob_target(struct mob_data *md, BlockList *bl, int dist)
+int32_t mob_target(struct mob_data *md, BlockList *bl, int32_t dist)
 {
     MapSessionData *sd;
-    short *option;
-    int mode, race;
+    int16_t *option;
+    int32_t mode, race;
 
     nullpo_ret(md);
     nullpo_ret(bl);
@@ -1205,11 +1205,11 @@ int mob_target(struct mob_data *md, BlockList *bl, int dist)
  * The ?? routine of an active monster
  *------------------------------------------
  */
-static void mob_ai_sub_hard_activesearch(BlockList *bl, struct mob_data *smd, int *pcc)
+static void mob_ai_sub_hard_activesearch(BlockList *bl, struct mob_data *smd, int32_t *pcc)
 {
     MapSessionData *tsd = NULL;
     struct mob_data *tmd = NULL;
-    int mode, race, dist;
+    int32_t mode, race, dist;
 
     nullpo_retv(bl);
     nullpo_retv(smd);
@@ -1279,9 +1279,9 @@ static void mob_ai_sub_hard_activesearch(BlockList *bl, struct mob_data *smd, in
  */
 static void mob_ai_sub_hard_lootsearch(BlockList *bl,
                                        struct mob_data *md,
-                                       int *itc)
+                                       int32_t *itc)
 {
-    int mode, dist;
+    int32_t mode, dist;
 
     nullpo_retv(bl);
     nullpo_retv(md);
@@ -1349,11 +1349,11 @@ static void mob_ai_sub_hard_linksearch(BlockList *bl,
  * Processing of slave monsters
  *------------------------------------------
  */
-static int mob_ai_sub_hard_slavemob(struct mob_data *md, unsigned int tick)
+static int32_t mob_ai_sub_hard_slavemob(struct mob_data *md, uint32_t tick)
 {
     struct mob_data *mmd = NULL;
     BlockList *bl;
-    int mode, race, old_dist;
+    int32_t mode, race, old_dist;
 
     nullpo_ret(md);
 
@@ -1392,7 +1392,7 @@ static int mob_ai_sub_hard_slavemob(struct mob_data *md, unsigned int tick)
         && (md->walkpath.path_pos >= md->walkpath.path_len
             || md->walkpath.path_len == 0) && md->master_dist < 15)
     {
-        int i = 0, dx, dy, ret;
+        int32_t i = 0, dx, dy, ret;
         if (md->master_dist > 4)
         {
             do
@@ -1493,7 +1493,7 @@ static int mob_ai_sub_hard_slavemob(struct mob_data *md, unsigned int tick)
  * A lock of target is stopped and mob moves to a standby state.
  *------------------------------------------
  */
-static int mob_unlocktarget(struct mob_data *md, int tick)
+static int32_t mob_unlocktarget(struct mob_data *md, int32_t tick)
 {
     nullpo_ret(md);
 
@@ -1507,22 +1507,22 @@ static int mob_unlocktarget(struct mob_data *md, int tick)
  * Random walk
  *------------------------------------------
  */
-static int mob_randomwalk(struct mob_data *md, int tick)
+static int32_t mob_randomwalk(struct mob_data *md, int32_t tick)
 {
-    const int retrycount = 20;
-    int speed;
+    const int32_t retrycount = 20;
+    int32_t speed;
 
     nullpo_ret(md);
 
     speed = battle_get_speed(md);
     if (DIFF_TICK(md->next_walktime, tick) < 0)
     {
-        int i, x, y, c, d = 12 - md->move_fail_count;
+        int32_t i, x, y, c, d = 12 - md->move_fail_count;
         if (d < 5)
             d = 5;
         for (i = 0; i < retrycount; i++)
         {                       // Search of a movable place
-            int r = mt_random();
+            int32_t r = mt_random();
             x = md->x + r % (d * 2 + 1) - d;
             y = md->y + r / (d * 2 + 1) % (d * 2 + 1) - d;
             if ((c = map_getcell(md->m, x, y)) != 1 && c != 5
@@ -1545,7 +1545,7 @@ static int mob_randomwalk(struct mob_data *md, int tick)
         }
         for (i = c = 0; i < md->walkpath.path_len; i++)
         {                       // The next walk start time is calculated.
-            if (static_cast<int>(md->walkpath.path[i]) & 1)
+            if (static_cast<int32_t>(md->walkpath.path[i]) & 1)
                 c += speed * 14 / 10;
             else
                 c += speed;
@@ -1566,9 +1566,9 @@ static void mob_ai_sub_hard(BlockList *bl, tick_t tick)
     MapSessionData *tsd = NULL;
     BlockList *tbl = NULL;
     struct flooritem_data *fitem;
-    int i, dx, dy, ret, dist;
-    int attack_type = 0;
-    int mode, race;
+    int32_t i, dx, dy, ret, dist;
+    int32_t attack_type = 0;
+    int32_t mode, race;
 
     nullpo_retv(bl);
     nullpo_retv(md = static_cast<struct mob_data *>(bl));
@@ -1988,20 +1988,20 @@ static void mob_ai_lazy(timer_id, tick_t tick)
 
 /*==========================================
  * The structure object for item drop with delay
- * Since it is only two being able to pass [ int ] a timer function
+ * Since it is only two being able to pass [ int32_t ] a timer function
  * Data is put in and passed to this structure object.
  *------------------------------------------
  */
 struct delay_item_drop
 {
-    int m, x, y;
-    int nameid, amount;
+    int32_t m, x, y;
+    int32_t nameid, amount;
     MapSessionData *first_sd, *second_sd, *third_sd;
 };
 
 struct delay_item_drop2
 {
-    int m, x, y;
+    int32_t m, x, y;
     struct item item_data;
     MapSessionData *first_sd, *second_sd, *third_sd;
 };
@@ -2079,7 +2079,7 @@ static void mob_delay_item_drop2(timer_id, tick_t, struct delay_item_drop2 *dite
  * mob data is erased.
  *------------------------------------------
  */
-int mob_delete(struct mob_data *md)
+int32_t mob_delete(struct mob_data *md)
 {
     nullpo_retr(1, md);
 
@@ -2093,7 +2093,7 @@ int mob_delete(struct mob_data *md)
     return 0;
 }
 
-int mob_catch_delete(struct mob_data *md)
+int32_t mob_catch_delete(struct mob_data *md)
 {
     nullpo_retr(1, md);
 
@@ -2107,7 +2107,7 @@ int mob_catch_delete(struct mob_data *md)
 }
 
 /// Timer for a summoned mob to expire
-void mob_timer_delete(timer_id, tick_t, int id)
+void mob_timer_delete(timer_id, tick_t, int32_t id)
 {
     BlockList *bl = map_id2bl(id);
     struct mob_data *md;
@@ -2135,7 +2135,7 @@ static void mob_deleteslave_sub(BlockList *bl, uint32_t id)
  *
  *------------------------------------------
  */
-int mob_deleteslave(struct mob_data *md)
+int32_t mob_deleteslave(struct mob_data *md)
 {
     nullpo_ret(md);
 
@@ -2154,19 +2154,19 @@ static const double damage_bonus_factor[DAMAGE_BONUS_COUNT + 1] = {
  * It is the damage of sd to damage to md.
  *------------------------------------------
  */
-int mob_damage(BlockList *src, struct mob_data *md, int damage,
-                int type)
+int32_t mob_damage(BlockList *src, struct mob_data *md, int32_t damage,
+                int32_t type)
 {
-    int minpos, mindmg;
+    int32_t minpos, mindmg;
     MapSessionData *sd = NULL, *tmpsd[DAMAGELOG_SIZE];
     struct
     {
         struct party *p;
-        int id, base_exp, job_exp;
+        int32_t id, base_exp, job_exp;
     } pt[DAMAGELOG_SIZE];
-    int pnum = 0;
-    int max_hp;
-    unsigned int tick = gettick();
+    int32_t pnum = 0;
+    int32_t max_hp;
+    uint32_t tick = gettick();
     MapSessionData *mvp_sd = NULL, *second_sd = NULL, *third_sd =
         NULL;
     double tdmg;
@@ -2224,7 +2224,7 @@ int mob_damage(BlockList *src, struct mob_data *md, int damage,
     {
         if (sd != NULL)
         {
-            int i;
+            int32_t i;
             for (i = 0, minpos = 0, mindmg = 0x7fffffff; i < DAMAGELOG_SIZE;
                  i++)
             {
@@ -2266,7 +2266,7 @@ int mob_damage(BlockList *src, struct mob_data *md, int damage,
             }
 
             nullpo_ret(md2);
-            int i;
+            int32_t i;
             for (i = 0, minpos = 0, mindmg = 0x7fffffff; i < DAMAGELOG_SIZE;
                  i++)
             {
@@ -2323,8 +2323,8 @@ int mob_damage(BlockList *src, struct mob_data *md, int damage,
     // overkill分は無いけどsumはmax_hpとは違う
 
     tdmg = 0;
-    int count = 0;
-    for (int i = 0, mvp_damage = 0; i < DAMAGELOG_SIZE; i++)
+    int32_t count = 0;
+    for (int32_t i = 0, mvp_damage = 0; i < DAMAGELOG_SIZE; i++)
     {
         if (md->dmglog[i].id == 0)
             continue;
@@ -2349,10 +2349,10 @@ int mob_damage(BlockList *src, struct mob_data *md, int damage,
     if ((maps[md->m].flag.pvp == 0) || (battle_config.pvp_exp == 1))
     {
         // 経験値の分配
-        for (int i = 0; i < DAMAGELOG_SIZE; i++)
+        for (int32_t i = 0; i < DAMAGELOG_SIZE; i++)
         {
 
-            int pid, base_exp, job_exp, flag = 1;
+            int32_t pid, base_exp, job_exp, flag = 1;
             double per;
             struct party *p;
             if (tmpsd[i] == NULL || tmpsd[i]->m != md->m)
@@ -2360,11 +2360,11 @@ int mob_damage(BlockList *src, struct mob_data *md, int damage,
 /* jAthena's exp formula
                 per = ((double)md->dmglog[i].dmg)*(9.+(double)((count > 6)? 6:count))/10./((double)max_hp) * dmg_rate;
                 temp = ((double)mob_db[md->mob_class].base_exp * (double)battle_config.base_exp_rate / 100. * per);
-                base_exp = (temp > 2147483647.)? 0x7fffffff:(int)temp;
+                base_exp = (temp > 2147483647.)? 0x7fffffff:(int32_t)temp;
                 if (mob_db[md->mob_class].base_exp > 0 && base_exp < 1) base_exp = 1;
                 if (base_exp < 0) base_exp = 0;
                 temp = ((double)mob_db[md->mob_class].job_exp * (double)battle_config.job_exp_rate / 100. * per);
-                job_exp = (temp > 2147483647.)? 0x7fffffff:(int)temp;
+                job_exp = (temp > 2147483647.)? 0x7fffffff:(int32_t)temp;
                 if (mob_db[md->mob_class].job_exp > 0 && job_exp < 1) job_exp = 1;
                 if (job_exp < 0) job_exp = 0;
 */
@@ -2405,7 +2405,7 @@ int mob_damage(BlockList *src, struct mob_data *md, int damage,
 
             if ((pid = tmpsd[i]->status.party_id) > 0)
             {                   // パーティに入っている
-                int j = 0;
+                int32_t j = 0;
                 for (j = 0; j < pnum; j++)  // 公平パーティリストにいるかどうか
                     if (pt[j].id == pid)
                         break;
@@ -2432,17 +2432,17 @@ int mob_damage(BlockList *src, struct mob_data *md, int damage,
                 pc_gainexp(tmpsd[i], base_exp, job_exp);
         }
         // 公平分配
-        for (int i = 0; i < pnum; i++)
+        for (int32_t i = 0; i < pnum; i++)
             party_exp_share(pt[i].p, md->m, pt[i].base_exp,
                              pt[i].job_exp);
 
         // item drop
         if (!(type & 1))
         {
-            for (int i = 0; i < 8; i++)
+            for (int32_t i = 0; i < 8; i++)
             {
                 struct delay_item_drop *ditem;
-                int drop_rate;
+                int32_t drop_rate;
 
                 if (md->state.special_mob_ai >= 1 && battle_config.alchemist_summon_reward != 1)    // Added [Valaris]
                     break;      // End
@@ -2480,7 +2480,7 @@ int mob_damage(BlockList *src, struct mob_data *md, int damage,
             }
             if (md->lootitem)
             {
-                for (int i = 0; i < md->lootitem_count; i++)
+                for (int32_t i = 0; i < md->lootitem_count; i++)
                 {
                     struct delay_item_drop2 *ditem;
 
@@ -2535,9 +2535,9 @@ int mob_damage(BlockList *src, struct mob_data *md, int damage,
  * mob回復
  *------------------------------------------
  */
-int mob_heal(struct mob_data *md, int heal)
+int32_t mob_heal(struct mob_data *md, int32_t heal)
 {
-    int max_hp = battle_get_max_hp(md);
+    int32_t max_hp = battle_get_max_hp(md);
 
     nullpo_ret(md);
 
@@ -2565,7 +2565,7 @@ static void mob_warpslave_sub(BlockList *bl, uint32_t id, uint16_t x, uint16_t y
  * Added by RoVeRT
  *------------------------------------------
  */
-static int mob_warpslave(struct mob_data *md, int x, int y)
+static int32_t mob_warpslave(struct mob_data *md, int32_t x, int32_t y)
 {
 //printf("warp slave\n");
     map_foreachinarea(mob_warpslave_sub, md->m,
@@ -2579,9 +2579,9 @@ static int mob_warpslave(struct mob_data *md, int x, int y)
  * mobワープ
  *------------------------------------------
  */
-int mob_warp(struct mob_data *md, int m, int x, int y, BeingRemoveType type)
+int32_t mob_warp(struct mob_data *md, int32_t m, int32_t x, int32_t y, BeingRemoveType type)
 {
-    int i = 0, c, xs = 0, ys = 0, bx = x, by = y;
+    int32_t i = 0, c, xs = 0, ys = 0, bx = x, by = y;
 
     nullpo_ret(md);
 
@@ -2656,7 +2656,7 @@ int mob_warp(struct mob_data *md, int m, int x, int y, BeingRemoveType type)
  * 自分をロックしているPCの数を数える(foreachclient)
  *------------------------------------------
  */
-static void mob_counttargeted_sub(BlockList *bl, uint32_t id, int *c,
+static void mob_counttargeted_sub(BlockList *bl, uint32_t id, int32_t *c,
                                   BlockList *src, AttackResult target_lv)
 {
     nullpo_retv(bl);
@@ -2683,10 +2683,10 @@ static void mob_counttargeted_sub(BlockList *bl, uint32_t id, int *c,
  * 自分をロックしているPCの数を数える
  *------------------------------------------
  */
-int mob_counttargeted(struct mob_data *md, BlockList *src,
+int32_t mob_counttargeted(struct mob_data *md, BlockList *src,
                       AttackResult target_lv)
 {
-    int c = 0;
+    int32_t c = 0;
 
     nullpo_ret(md);
 
@@ -2704,9 +2704,9 @@ int mob_counttargeted(struct mob_data *md, BlockList *src,
  * Since un-setting [ mob ] up was used, it is an initial provisional value setup.
  *------------------------------------------
  */
-static int mob_makedummymobdb(int mob_class)
+static int32_t mob_makedummymobdb(int32_t mob_class)
 {
-    int i;
+    int32_t i;
 
     sprintf(mob_db[mob_class].name, "mob%d", mob_class);
     sprintf(mob_db[mob_class].jname, "mob%d", mob_class);
@@ -2750,7 +2750,7 @@ static int mob_makedummymobdb(int mob_class)
  * db/mob_db.txt reading
  *------------------------------------------
  */
-static int mob_readdb(void)
+static int32_t mob_readdb(void)
 {
     FILE *fp;
     char line[1024];
@@ -2758,7 +2758,7 @@ static int mob_readdb(void)
 
     memset(mob_db, 0, sizeof(mob_db));
 
-    for (int io = 0; io < 2; io++)
+    for (int32_t io = 0; io < 2; io++)
     {
 
         fp = fopen_(filename[io], "r");
@@ -2770,13 +2770,13 @@ static int mob_readdb(void)
         }
         while (fgets(line, 1020, fp))
         {
-            int mob_class;
+            int32_t mob_class;
             char *str[57], *p, *np;
 
             if (line[0] == '/' && line[1] == '/')
                 continue;
 
-            int ii;
+            int32_t ii;
             for (ii = 0, p = line; ii < 57; ii++)
             {
                 while (*p == '\t' || *p == ' ')
@@ -2849,7 +2849,7 @@ static int mob_readdb(void)
 
             for (ii = 0; ii < 8; ii++)
             {
-                int rate = 0, type, ratemin, ratemax;
+                int32_t rate = 0, type, ratemin, ratemax;
                 mob_db[mob_class].dropitem[ii].nameid = atoi(str[29 + ii * 2]);
                 type = itemdb_type(mob_db[mob_class].dropitem[ii].nameid);
                 if (type == 0)
@@ -2905,7 +2905,7 @@ static int mob_readdb(void)
  * Circumference initialization of mob
  *------------------------------------------
  */
-int do_init_mob(void)
+int32_t do_init_mob(void)
 {
     mob_readdb();
 

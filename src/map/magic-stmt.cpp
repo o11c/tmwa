@@ -21,8 +21,8 @@
 /// Used for local spell effects
 #define INVISIBLE_NPC 127
 
-static const int heading_x[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
-static const int heading_y[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
+static const int32_t heading_x[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
+static const int32_t heading_y[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
 
 static void invocation_timer_callback(timer_id, tick_t, uint32_t id)
 {
@@ -61,9 +61,9 @@ void spell_free_invocation(invocation_t *invocation)
     map_delobject(invocation->id, BL_SPELL);
 }
 
-static void char_set_weapon_icon(MapSessionData *subject, int count, int icon, int look)
+static void char_set_weapon_icon(MapSessionData *subject, int32_t count, int32_t icon, int32_t look)
 {
-    const int old_icon = subject->attack_spell_icon_override;
+    const int32_t old_icon = subject->attack_spell_icon_override;
 
     subject->attack_spell_icon_override = icon;
     subject->attack_spell_look_override = look;
@@ -85,7 +85,7 @@ static void char_set_weapon_icon(MapSessionData *subject, int count, int icon, i
     }
 }
 
-static void char_set_attack_info(MapSessionData *subject, int speed, int range)
+static void char_set_attack_info(MapSessionData *subject, int32_t speed, int32_t range)
 {
     subject->attack_spell_delay = speed;
     subject->attack_spell_range = range;
@@ -108,7 +108,7 @@ static void char_set_attack_info(MapSessionData *subject, int speed, int range)
 void magic_stop_completely(MapSessionData *c)
 {
     // Zap all status change references to spells
-    for (int i = 0; i < MAX_STATUSCHANGE; i++)
+    for (int32_t i = 0; i < MAX_STATUSCHANGE; i++)
         c->sc_data[i].spell_invocation = 0;
 
     while (!c->active_spells.empty())
@@ -147,7 +147,7 @@ static void try_to_finish_invocation(invocation_t *invocation)
     spell_execute(invocation);
 }
 
-static int trigger_spell(int subject, int spell)
+static int32_t trigger_spell(int32_t subject, int32_t spell)
 {
     invocation_t *invocation = static_cast<invocation_t *>(map_id2bl(spell));
 
@@ -164,14 +164,14 @@ static int trigger_spell(int subject, int spell)
     return invocation->id;
 }
 
-static void timer_callback_effect(timer_id, tick_t, uint32_t id, int effect_nr)
+static void timer_callback_effect(timer_id, tick_t, uint32_t id, int32_t effect_nr)
 {
     BlockList *target = map_id2bl(id);
     if (target)
         clif_misceffect(target, effect_nr);
 }
 
-static void entity_effect(BlockList *entity, int effect_nr, int delay)
+static void entity_effect(BlockList *entity, int32_t effect_nr, int32_t delay)
 {
     add_timer(gettick() + delay, timer_callback_effect, entity->id, effect_nr);
 }
@@ -181,11 +181,11 @@ static void timer_callback_effect_npc_delete(timer_id, tick_t, uint32_t npc_id)
     delete map_id2bl(npc_id);
 }
 
-static struct npc_data *local_spell_effect(location_t loc, int effect, int tdelay)
+static struct npc_data *local_spell_effect(location_t loc, int32_t effect, int32_t tdelay)
 {
     // 1 minute should be enough for all interesting spell effects, I hope
     // unit = 2 ticks?
-    int npc_delay = 30000;
+    int32_t npc_delay = 30000;
     // the client can't handle effects directly on a tile
     // "" means the name won't show, NULL means no dialog will be opened
     npc_data *effect_npc = npc_spawn_text(loc, INVISIBLE_NPC, "", NULL);
@@ -204,7 +204,7 @@ static struct npc_data *local_spell_effect(location_t loc, int effect, int tdela
 // operations
 static bool op_sfx(env_t *, val_t *args)
 {
-    int delay = ARG_INT(2);
+    int32_t delay = ARG_INT(2);
 
     switch(args[0].ty)
     {
@@ -361,8 +361,8 @@ static bool op_move(env_t *, val_t *args)
     BlockList *subject = ARG_ENTITY(0);
     Direction dir = ARG_DIR(1);
 
-    uint16_t newx = subject->x + heading_x[static_cast<int>(dir)];
-    uint16_t newy = subject->y + heading_y[static_cast<int>(dir)];
+    uint16_t newx = subject->x + heading_x[static_cast<int32_t>(dir)];
+    uint16_t newy = subject->y + heading_y[static_cast<int32_t>(dir)];
 
     if (!map_is_solid(subject->m, newx, newy))
         entity_warp(subject, {subject->m, newx, newy});
@@ -392,7 +392,7 @@ static bool op_banish(env_t *, val_t *args)
     return 0;
 }
 
-static void record_status_change(invocation_t *invocation, int bl_id, int sc_id)
+static void record_status_change(invocation_t *invocation, int32_t bl_id, int32_t sc_id)
 {
     // TODO reduce this once things get strict types
     status_change_ref_t cr;
@@ -404,7 +404,7 @@ static void record_status_change(invocation_t *invocation, int bl_id, int sc_id)
 static bool op_status_change(env_t *env, val_t *args)
 {
     BlockList *subject = ARG_ENTITY(0);
-    int invocation_id = env->VAR(Var::INVOCATION).ty == TY::INVOCATION
+    int32_t invocation_id = env->VAR(Var::INVOCATION).ty == TY::INVOCATION
         ? env->VAR(Var::INVOCATION).v_int : 0;
     invocation_t *invocation = static_cast<invocation_t *>(map_id2bl(invocation_id));
 
@@ -433,12 +433,12 @@ static bool op_override_attack(env_t *env, val_t *args)
     if (!subject)
         return 0;
 
-    int charges = ARG_INT(1);
-    int attack_delay = ARG_INT(2);
-    int attack_range = ARG_INT(3);
-    int icon = ARG_INT(4);
-    int look = ARG_INT(5);
-    int stopattack = ARG_INT(6);
+    int32_t charges = ARG_INT(1);
+    int32_t attack_delay = ARG_INT(2);
+    int32_t attack_range = ARG_INT(3);
+    int32_t icon = ARG_INT(4);
+    int32_t look = ARG_INT(5);
+    int32_t stopattack = ARG_INT(6);
 
     if (subject->attack_spell_override)
     {
@@ -472,7 +472,7 @@ static bool op_create_item(env_t *, val_t *args)
     if (!subject)
         return 0;
 
-    int count = ARG_INT(2);
+    int32_t count = ARG_INT(2);
     if (count <= 0)
         return 0;
 
@@ -489,11 +489,11 @@ static bool op_create_item(env_t *, val_t *args)
     return 0;
 }
 
-static bool AGGRAVATION_MODE_ATTACKS_CASTER(int n)
+static bool AGGRAVATION_MODE_ATTACKS_CASTER(int32_t n)
 {
     return n == 0 || n == 2;
 }
-static bool AGGRAVATION_MODE_MAKES_AGGRESSIVE(int n)
+static bool AGGRAVATION_MODE_MAKES_AGGRESSIVE(int32_t n)
 {
     return n > 0;
 }
@@ -506,7 +506,7 @@ static bool op_aggravate(env_t *, val_t *args)
         return 0;
 
     // note: in current magic builds, mode is always 0
-    int mode = ARG_INT(1);
+    int32_t mode = ARG_INT(1);
     BlockList *victim = ARG_ENTITY(2);
 
     mob_target(other, victim, battle_get_range(victim));
@@ -535,19 +535,19 @@ static bool op_spawn(env_t *, val_t *args)
 {
     area_t *area = ARG_AREA(0);
     MapSessionData *owner = ARG_PC(1);
-    int monster_id = ARG_INT(2);
+    int32_t monster_id = ARG_INT(2);
     MonsterAttitude monster_attitude = static_cast<MonsterAttitude>(ARG_INT(3));
-    int monster_count = ARG_INT(4);
-    int monster_lifetime = ARG_INT(5);
+    int32_t monster_count = ARG_INT(4);
+    int32_t monster_lifetime = ARG_INT(5);
 
     if (monster_attitude != MonsterAttitude::SERVANT)
         owner = NULL;
 
-    for (int i = 0; i < monster_count; i++)
+    for (int32_t i = 0; i < monster_count; i++)
     {
         location_t loc = area->random_location();
 
-        int mob_id = mob_once_spawn(owner, Point{maps[loc.m].name, loc.x, loc.y}, "--ja--",    // Is that needed?
+        int32_t mob_id = mob_once_spawn(owner, Point{maps[loc.m].name, loc.x, loc.y}, "--ja--",    // Is that needed?
                                     monster_id, 1, "");
 
         mob_data *mob = static_cast<struct mob_data *>(map_id2bl(mob_id));
@@ -619,10 +619,10 @@ static bool op_injure(env_t *env, val_t *args)
 {
     BlockList *caster = ARG_ENTITY(0);
     BlockList *target = ARG_ENTITY(1);
-    int damage_caused = ARG_INT(2);
-    int mp_damage = ARG_INT(3);
-    int target_hp = battle_get_hp(target);
-    int mdef = battle_get_mdef(target);
+    int32_t damage_caused = ARG_INT(2);
+    int32_t mp_damage = ARG_INT(3);
+    int32_t target_hp = battle_get_hp(target);
+    int32_t mdef = battle_get_mdef(target);
 
     if (target->type == BL_PC
         && !maps[target->m].flag.pvp
@@ -666,7 +666,7 @@ static bool op_injure(env_t *env, val_t *args)
 static bool op_emote(env_t *, val_t *args)
 {
     BlockList *victim = ARG_ENTITY(0);
-    int emotion = ARG_INT(1);
+    int32_t emotion = ARG_INT(1);
     clif_emotion(victim, emotion);
 
     return 0;
@@ -713,11 +713,11 @@ static bool op_drop_item_for(env_t *, val_t *args)
     struct item item;
     bool stackable;
     location_t *loc = &ARG_LOCATION(0);
-    int count = ARG_INT(2);
-    int duration = ARG_INT(3);
+    int32_t count = ARG_INT(2);
+    int32_t duration = ARG_INT(3);
     MapSessionData *c = ARG_PC(4);
-    int delay = ARG_INT(5);
-    int delaytime[3] = { delay, delay, delay };
+    int32_t delay = ARG_INT(5);
+    int32_t delaytime[3] = { delay, delay, delay };
     MapSessionData *owners[3] = { c, NULL, NULL };
 
     GET_ARG_ITEM(1, item, stackable);
@@ -782,7 +782,7 @@ const std::pair<const std::string, op_t> *magic_get_op(const char *name)
     return NULL;
 }
 
-void spell_effect_report_termination(int invocation_id, int bl_id, int sc_id, int)
+void spell_effect_report_termination(int32_t invocation_id, int32_t bl_id, int32_t sc_id, int32_t)
 {
     invocation_t *invocation = static_cast<invocation_t *>(map_id2bl(invocation_id));
 
@@ -824,7 +824,7 @@ static effect_t *return_to_stack(invocation_t *invocation)
     {
         // clean up after a function returns, by restoring variables hidden by arguments
         effect_t *ret = ar->return_location;
-        for (int i = 0; i < ar->c_proc.args_nr; i++)
+        for (int32_t i = 0; i < ar->c_proc.args_nr; i++)
         {
             val_t *var = &invocation->env->vars[ar->c_proc.formals[i]];
             magic_clear_var(var);
@@ -840,7 +840,7 @@ static effect_t *return_to_stack(invocation_t *invocation)
     {
         val_t *var = &invocation->env->vars[ar->c_foreach.var_id];
 
-        int entity_id;
+        int32_t entity_id;
         do
         {
             if (ar->c_foreach.entities.empty())
@@ -903,7 +903,7 @@ static cont_activation_record_t *add_stack_entry(invocation_t *invocation,
 }
 
 static void find_entities_in_area_c(BlockList *target,
-                                    std::vector<int> *entities,
+                                    std::vector<int32_t> *entities,
                                     ForEach_FilterType filter)
 {
     // break in the switch adds "target" to *entities, return does not add it
@@ -956,7 +956,7 @@ static void find_entities_in_area_c(BlockList *target,
     entities->push_back(target->id);
 }
 
-static void find_entities_in_area(area_t *area, std::vector<int> *entities_p, ForEach_FilterType filter)
+static void find_entities_in_area(area_t *area, std::vector<int32_t> *entities_p, ForEach_FilterType filter)
 {
     switch (area->ty)
     {
@@ -967,7 +967,7 @@ static void find_entities_in_area(area_t *area, std::vector<int> *entities_p, Fo
 
     default:
     {
-        unsigned int width, height;
+        uint32_t width, height;
         location_t loc = area->rect(width, height);
         map_foreachinarea(find_entities_in_area_c,
                           loc.m, loc.x, loc.y, loc.x + width, loc.y + height,
@@ -983,7 +983,7 @@ static effect_t *run_foreach(invocation_t *invocation, effect_t *foreach,
                              effect_t *return_location)
 {
     ForEach_FilterType filter = foreach->e_foreach.filter;
-    int id = foreach->e_foreach.var_id;
+    int32_t id = foreach->e_foreach.var_id;
     effect_t *body = foreach->e_foreach.body;
 
     val_t area = invocation->env->magic_eval(foreach->e_foreach.area);
@@ -1001,7 +1001,7 @@ static effect_t *run_foreach(invocation_t *invocation, effect_t *foreach,
     if (!ar)
         return return_location;
 
-    std::vector<int> entities;
+    std::vector<int32_t> entities;
     find_entities_in_area(area.v_area, &entities, filter);
 
     // is this worthwhile?
@@ -1021,7 +1021,7 @@ static effect_t *run_foreach(invocation_t *invocation, effect_t *foreach,
 static effect_t *run_for(invocation_t *invocation, effect_t *for_,
                          effect_t *return_location)
 {
-    int id = for_->e_for.var_id;
+    int32_t id = for_->e_for.var_id;
 
     val_t start = invocation->env->magic_eval(for_->e_for.start);
     val_t stop = invocation->env->magic_eval(for_->e_for.stop);
@@ -1051,8 +1051,8 @@ static effect_t *run_for(invocation_t *invocation, effect_t *for_,
 static effect_t *run_call(invocation_t *invocation, effect_t *return_location)
 {
     effect_t *current = invocation->current_effect;
-    int args_nr = current->e_call.args_nr;
-    DArray<int> formals = current->e_call.formals;
+    int32_t args_nr = current->e_call.args_nr;
+    DArray<int32_t> formals = current->e_call.formals;
     DArray<val_t> old_actuals;
     old_actuals.resize(args_nr);
 
@@ -1063,7 +1063,7 @@ static effect_t *run_call(invocation_t *invocation, effect_t *return_location)
     ar->c_proc.old_actuals = old_actuals;
 
     // backup the function arguments
-    for (int i = 0; i < args_nr; i++)
+    for (int32_t i = 0; i < args_nr; i++)
     {
         // just overwrite the raw data, don't use magic_copy_var
         val_t& env_val = invocation->env->vars[formals[i]];
@@ -1083,9 +1083,9 @@ static effect_t *run_call(invocation_t *invocation, effect_t *return_location)
  *          >1 if we hit `sleep'; the result is the number of ticks we should sleep for.
  *          -1 if we paused to wait for a user action(via script interaction)
  */
-static int spell_run(invocation_t *invocation, bool allow_delete)
+static int32_t spell_run(invocation_t *invocation, bool allow_delete)
 {
-    const int invocation_id = invocation->id;
+    const int32_t invocation_id = invocation->id;
 #define REFRESH_INVOCATION() \
     do \
     { \
@@ -1134,7 +1134,7 @@ static int spell_run(invocation_t *invocation, bool allow_delete)
 
         case EffectType::SLEEP:
         {
-            int sleeptime = magic_eval_int(invocation->env, e->e_sleep);
+            int32_t sleeptime = magic_eval_int(invocation->env, e->e_sleep);
             invocation->current_effect = next;
             if (sleeptime > 0)
                 return sleeptime;
@@ -1153,7 +1153,7 @@ static int spell_run(invocation_t *invocation, bool allow_delete)
                 { "@caster", invocation->caster },
                 { "@caster_name$", caster ? caster->status.name : "" }
             };
-            int message_recipient = env->VAR(Var::SCRIPTTARGET).ty == TY::ENTITY
+            int32_t message_recipient = env->VAR(Var::SCRIPTTARGET).ty == TY::ENTITY
                 ? env->VAR(Var::SCRIPTTARGET).v_int
                 : invocation->caster;
             MapSessionData *recipient = map_id2sd(message_recipient);
@@ -1169,7 +1169,7 @@ static int spell_run(invocation_t *invocation, bool allow_delete)
                 clif_spawn_fake_npc_for_player(recipient, invocation->id);
 
             // Returns the new script position, or -1 once the script is finished
-            int newpos = run_script_l(e->e_script, invocation->script_pos,
+            int32_t newpos = run_script_l(e->e_script, invocation->script_pos,
                                       message_recipient, invocation->id,
                                       ARRAY_SIZEOF(arg), arg);
             if (newpos != -1)
@@ -1197,7 +1197,7 @@ static int spell_run(invocation_t *invocation, bool allow_delete)
 
             val_t args[MAX_ARGS];
 
-            for (int i = 0; i < e->e_op.args_nr; i++)
+            for (int32_t i = 0; i < e->e_op.args_nr; i++)
                 args[i] = invocation->env->magic_eval(e->e_op.args[i]);
 
             if (!magic_signature_check("effect", op->first.c_str(),
@@ -1206,7 +1206,7 @@ static int spell_run(invocation_t *invocation, bool allow_delete)
                                        e->e_op.line_nr, e->e_op.column))
                 op->second.op(invocation->env, args);
 
-            for (int i = 0; i < e->e_op.args_nr; i++)
+            for (int32_t i = 0; i < e->e_op.args_nr; i++)
                 magic_clear_var(&args[i]);
 
             REFRESH_INVOCATION(); // EffectType may have killed the caster
@@ -1219,7 +1219,7 @@ static int spell_run(invocation_t *invocation, bool allow_delete)
 
         default:
             fprintf(stderr, "[magic] INTERNAL ERROR: Unknown effect %d\n",
-                    static_cast<int>(e->ty));
+                    static_cast<int32_t>(e->ty));
             abort();
         }
 
@@ -1238,7 +1238,7 @@ static int spell_run(invocation_t *invocation, bool allow_delete)
 static void spell_execute_d(invocation_t *invocation, bool allow_deletion)
 {
     spell_update_location(invocation);
-    int delta = spell_run(invocation, allow_deletion);
+    int32_t delta = spell_run(invocation, allow_deletion);
 
     if (delta <= 0)
         // Finished, or pending user input from script
@@ -1272,11 +1272,11 @@ void spell_execute_script(invocation_t *invocation)
      * running the same spell twice! */
 }
 
-bool spell_attack(int caster_id, int target_id)
+bool spell_attack(int32_t caster_id, int32_t target_id)
 {
     MapSessionData *caster = map_id2sd(caster_id);
     invocation_t *invocation;
-    int stop_attack = 0;
+    int32_t stop_attack = 0;
 
     if (!caster)
         return 0;

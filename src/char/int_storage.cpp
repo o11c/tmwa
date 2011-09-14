@@ -14,7 +14,7 @@ static struct dbt *storage_db;
 /// Store items for one account, IF it is not empty
 static void storage_tofile(FILE *fp, struct storage *p)
 {
-    for (int i = 0; i < MAX_STORAGE; i++)
+    for (int32_t i = 0; i < MAX_STORAGE; i++)
         if (p->storage_[i].nameid && p->storage_[i].amount)
             goto actually_store;
     return;
@@ -22,7 +22,7 @@ static void storage_tofile(FILE *fp, struct storage *p)
 actually_store:
     fprintf(fp, "%u,%hu\t", p->account_id, p->storage_amount);
 
-    for (int i = 0; i < MAX_STORAGE; i++)
+    for (int32_t i = 0; i < MAX_STORAGE; i++)
         if (p->storage_[i].nameid && p->storage_[i].amount)
         {
             fprintf(fp, "%d,%d,%d,"
@@ -41,7 +41,7 @@ actually_store:
 /// Load somebody's storage
 static bool storage_fromstr(const char *str, struct storage *p)
 {
-    int next;
+    int32_t next;
     if (sscanf(str, "%u,%hd%n", &p->account_id, &p->storage_amount, &next) != 2)
         return 1;
     str += next;
@@ -57,7 +57,7 @@ static bool storage_fromstr(const char *str, struct storage *p)
         p->storage_amount = MAX_STORAGE;
     }
 
-    for (int i = 0; i < p->storage_amount; i++)
+    for (int32_t i = 0; i < p->storage_amount; i++)
     {
         if (sscanf(str, "%*d,%hd,%hd,"
                         "%hu,%*d,%*d,%*d,"
@@ -103,7 +103,7 @@ bool inter_storage_init(void)
         return 1;
     }
     char line[65536];
-    int c = 0;
+    int32_t c = 0;
     while (fgets(line, sizeof(line), fp))
     {
         c++;
@@ -145,7 +145,7 @@ bool inter_storage_save(void)
     if (!storage_db)
         return 1;
 
-    int lock;
+    int32_t lock;
     FILE *fp = lock_fopen(storage_txt, &lock);
     if (!fp)
     {
@@ -171,7 +171,7 @@ void inter_storage_delete(account_t account_id)
 
 
 /// Give map server the storage info
-static void mapif_load_storage(int fd)
+static void mapif_load_storage(int32_t fd)
 {
     account_t account_id = WFIFOL(fd, 2);
     struct storage *s = account2storage(account_id);
@@ -185,7 +185,7 @@ static void mapif_load_storage(int fd)
 
 
 /// The map server updates storage
-static void mapif_parse_save_storage(int fd)
+static void mapif_parse_save_storage(int32_t fd)
 {
     uint16_t len = RFIFOW(fd, 2);
     if (sizeof(struct storage) != len - 8)
@@ -206,7 +206,7 @@ static void mapif_parse_save_storage(int fd)
 
 /// Parse one packet from the map server
 // return 1 if we handled it
-bool inter_storage_parse_frommap(int fd)
+bool inter_storage_parse_frommap(int32_t fd)
 {
     switch (RFIFOW(fd, 0))
     {

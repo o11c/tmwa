@@ -26,26 +26,26 @@
 enum
 { LABEL_NEXTLINE = 1, LABEL_START };
 static char *script_buf;
-static int script_pos, script_size;
+static int32_t script_pos, script_size;
 
 char *str_buf;
-int str_pos, str_size;
+int32_t str_pos, str_size;
 static struct str_data_t
 {
-    int type;
-    int str;
-    int backpatch;
-    int label;
+    int32_t type;
+    int32_t str;
+    int32_t backpatch;
+    int32_t label;
     void (*func)(struct script_state *);
-    int val;
-    int next;
+    int32_t val;
+    int32_t next;
 }   *str_data;
-int str_num = LABEL_START, str_data_size;
-int str_hash[16];
+int32_t str_num = LABEL_START, str_data_size;
+int32_t str_hash[16];
 
 static struct dbt *mapreg_db = NULL;
 static struct dbt *mapregstr_db = NULL;
-static int mapreg_dirty = -1;
+static int32_t mapreg_dirty = -1;
 char mapreg_txt[256] = "save/mapreg.txt";
 #define MAPREG_AUTOSAVE_INTERVAL        (10*1000)
 
@@ -95,15 +95,15 @@ constexpr earray<const char *, EQ_SCR, EQ_SCR::count> epos =
 
 static struct Script_Config
 {
-    int warn_func_no_comma;
-    int warn_cmd_no_comma;
-    int warn_func_mismatch_paramnum;
-    int warn_cmd_mismatch_paramnum;
-    int check_cmdcount;
-    int check_gotocount;
+    int32_t warn_func_no_comma;
+    int32_t warn_cmd_no_comma;
+    int32_t warn_func_mismatch_paramnum;
+    int32_t warn_cmd_mismatch_paramnum;
+    int32_t check_cmdcount;
+    int32_t check_gotocount;
 } script_config;
-static int parse_cmd_if = 0;
-static int parse_cmd;
+static int32_t parse_cmd_if = 0;
+static int32_t parse_cmd;
 
 #define BUILTIN(name) static void builtin_ ## name (struct script_state *)
 BUILTIN(mes);
@@ -251,11 +251,11 @@ BUILTIN(unequipbyid);
 BUILTIN(getx);
 BUILTIN(gety);
 
-static void push_val(struct script_stack *stack, int type, int val);
-static int run_func(struct script_state *st);
+static void push_val(struct script_stack *stack, int32_t type, int32_t val);
+static int32_t run_func(struct script_state *st);
 
-static int mapreg_setreg(int num, int val);
-static int mapreg_setregstr(int num, const char *str);
+static int32_t mapreg_setreg(int32_t num, int32_t val);
+static int32_t mapreg_setregstr(int32_t num, const char *str);
 
 static struct builtin_function_t
 {
@@ -430,10 +430,10 @@ enum
  * 文字列のハッシュを計算
  *------------------------------------------
  */
-static int calc_hash(const uint8_t *p) __attribute__((pure));
-static int calc_hash(const uint8_t *p)
+static int32_t calc_hash(const uint8_t *p) __attribute__((pure));
+static int32_t calc_hash(const uint8_t *p)
 {
-    int h = 0;
+    int32_t h = 0;
     while (*p)
     {
         h = (h << 1) + (h >> 3) + (h >> 5) + (h >> 8);
@@ -447,10 +447,10 @@ static int calc_hash(const uint8_t *p)
  *------------------------------------------
  */
 // 既存のであれば番号、無ければ-1
-static int search_str(const char *p) __attribute__((pure));
-static int search_str(const char *p)
+static int32_t search_str(const char *p) __attribute__((pure));
+static int32_t search_str(const char *p)
 {
-    int i;
+    int32_t i;
     i = str_hash[calc_hash(sign_cast<const uint8_t *>(p))];
     while (i)
     {
@@ -468,7 +468,7 @@ static int search_str(const char *p)
  *------------------------------------------
  */
 // 既存のであれば番号、無ければ登録して新規番号
-static int add_str(const char *p, size_t len)
+static int32_t add_str(const char *p, size_t len)
 {
     char *lowcase = static_cast<char *>(malloc(len + 1));
     memcpy(lowcase, p, len);
@@ -476,10 +476,10 @@ static int add_str(const char *p, size_t len)
 
     // not really lower case anymore
 /*
-    for (int i = 0; lowcase[i]; i++)
+    for (int32_t i = 0; lowcase[i]; i++)
         lowcase[i] = tolower(lowcase[i]);
 */
-    int i = search_str(lowcase);
+    int32_t i = search_str(lowcase);
     if (i >= 0)
     {
         free(lowcase);
@@ -531,7 +531,7 @@ static int add_str(const char *p, size_t len)
     free(lowcase);
     return str_num++;
 }
-static int add_str(const char *p)
+static int32_t add_str(const char *p)
 {
     return add_str(p, strlen(p));
 }
@@ -540,7 +540,7 @@ static int add_str(const char *p)
  * スクリプトバッファサイズの確認と拡張
  *------------------------------------------
  */
-static void check_script_buf(int size)
+static void check_script_buf(int32_t size)
 {
     if (script_pos + size >= script_size)
     {
@@ -555,7 +555,7 @@ static void check_script_buf(int size)
  * スクリプトバッファに１バイト書き込む
  *------------------------------------------
  */
-static void add_scriptb(int a)
+static void add_scriptb(int32_t a)
 {
     check_script_buf(1);
     script_buf[script_pos++] = a;
@@ -565,7 +565,7 @@ static void add_scriptb(int a)
  * スクリプトバッファにデータタイプを書き込む
  *------------------------------------------
  */
-static void add_scriptc(int a)
+static void add_scriptc(int32_t a)
 {
     while (a >= 0x40)
     {
@@ -579,7 +579,7 @@ static void add_scriptc(int a)
  * スクリプトバッファに整数を書き込む
  *------------------------------------------
  */
-static void add_scripti(int a)
+static void add_scripti(int32_t a)
 {
     while (a >= 0x40)
     {
@@ -594,9 +594,9 @@ static void add_scripti(int a)
  *------------------------------------------
  */
 // 最大16Mまで
-static void add_scriptl(int l)
+static void add_scriptl(int32_t l)
 {
-    int backpatch = str_data[l].backpatch;
+    int32_t backpatch = str_data[l].backpatch;
 
     switch (str_data[l].type)
     {
@@ -631,15 +631,15 @@ static void add_scriptl(int l)
  * ラベルを解決する
  *------------------------------------------
  */
-static void set_label(int l, int pos)
+static void set_label(int32_t l, int32_t pos)
 {
-    int i, next;
+    int32_t i, next;
 
     str_data[l].type = C_POS;
     str_data[l].label = pos;
     for (i = str_data[l].backpatch; i >= 0 && i != 0x00ffffff;)
     {
-        next = (*reinterpret_cast<int *>(script_buf + i)) & 0x00ffffff;
+        next = (*reinterpret_cast<int32_t *>(script_buf + i)) & 0x00ffffff;
         script_buf[i - 1] = C_POS;
         script_buf[i] = pos;
         script_buf[i + 1] = pos >> 8;
@@ -714,7 +714,7 @@ static const char *skip_word(const char *p)
 }
 
 static const char *startptr;
-static int startline;
+static int32_t startline;
 
 /*==========================================
  * エラーメッセージ出力
@@ -722,7 +722,7 @@ static int startline;
  */
 static void disp_error_message(const char *mes, const char *pos)
 {
-    int line;
+    int32_t line;
     const char *p;
 
     for (line = startline, p = startptr; p && *p; line++)
@@ -732,7 +732,7 @@ static void disp_error_message(const char *mes, const char *pos)
         if (lineend == NULL || pos < lineend)
         {
             printf("%s line %d : ", mes, line);
-            for (int i = 0;
+            for (int32_t i = 0;
                  (linestart[i] != '\r') && (linestart[i] != '\n')
                  && linestart[i]; i++)
             {
@@ -748,10 +748,10 @@ static void disp_error_message(const char *mes, const char *pos)
     }
 }
 
-static const char *parse_subexpr(const char *, int);
+static const char *parse_subexpr(const char *, int32_t);
 static const char *parse_simpleexpr(const char *p)
 {
-    int i;
+    int32_t i;
     p = skip_space(p);
 
     if (*p == ';' || *p == ',')
@@ -809,7 +809,7 @@ static const char *parse_simpleexpr(const char *p)
             exit(1);
         }
         const char *p2 = skip_word(p);
-        int l = add_str(p, p2 - p);
+        int32_t l = add_str(p, p2 - p);
 
         parse_cmd = l;          // warn_*_mismatch_paramnumのために必要
         if (l == search_str("if")) // warn_cmd_no_commaのために必要
@@ -843,9 +843,9 @@ static const char *parse_simpleexpr(const char *p)
  * 式の解析
  *------------------------------------------
  */
-const char *parse_subexpr(const char *p, int limit)
+const char *parse_subexpr(const char *p, int32_t limit)
 {
-    int op, opl, len;
+    int32_t op, opl, len;
 
     p = skip_space(p);
 
@@ -892,7 +892,7 @@ const char *parse_subexpr(const char *p, int limit)
         p += len;
         if (op == C_FUNC)
         {
-            int i = 0, func = parse_cmd;
+            int32_t i = 0, func = parse_cmd;
             const char *plist[128];
 
             if (str_data[func].type != C_FUNC)
@@ -927,7 +927,7 @@ const char *parse_subexpr(const char *p, int limit)
                 && script_config.warn_func_mismatch_paramnum)
             {
                 const char *arg = builtin_functions[str_data[func].val].arg;
-                int j = 0;
+                int32_t j = 0;
                 for (j = 0; arg[j]; j++)
                     if (arg[j] == '*')
                         break;
@@ -975,7 +975,7 @@ static const char *parse_expr(const char *p)
  */
 static const char *parse_line(const char *p)
 {
-    int i = 0, cmd;
+    int32_t i = 0, cmd;
     const char *plist[128];
 
     p = skip_space(p);
@@ -1026,7 +1026,7 @@ static const char *parse_line(const char *p)
         && script_config.warn_cmd_mismatch_paramnum)
     {
         const char *arg = builtin_functions[str_data[cmd].val].arg;
-        int j = 0;
+        int32_t j = 0;
         for (j = 0; arg[j]; j++)
             if (arg[j] == '*')
                 break;
@@ -1046,7 +1046,7 @@ static const char *parse_line(const char *p)
  */
 static void add_builtin_functions(void)
 {
-    int i, n;
+    int32_t i, n;
     for (i = 0; builtin_functions[i].func; i++)
     {
         n = add_str(builtin_functions[i].name);
@@ -1064,7 +1064,7 @@ static void read_constdb(void)
 {
     FILE *fp;
     char line[1024], name[1024];
-    int val, n, i, type;
+    int32_t val, n, i, type;
 
     fp = fopen_("db/const.txt", "r");
     if (fp == NULL)
@@ -1097,7 +1097,7 @@ static void read_constdb(void)
  * スクリプトの解析
  *------------------------------------------
  */
-const char *parse_script(const char *src, int line)
+const char *parse_script(const char *src, int32_t line)
 {
     static bool first = 1;
 
@@ -1113,7 +1113,7 @@ const char *parse_script(const char *src, int line)
     str_data[LABEL_NEXTLINE].type = C_NOP;
     str_data[LABEL_NEXTLINE].backpatch = -1;
     str_data[LABEL_NEXTLINE].label = -1;
-    for (int i = LABEL_START; i < str_num; i++)
+    for (int32_t i = LABEL_START; i < str_num; i++)
     {
         if (str_data[i].type == C_POS || str_data[i].type == C_NAME)
         {
@@ -1148,7 +1148,7 @@ const char *parse_script(const char *src, int line)
         const char *tmpp = skip_space(p_skipw);
         if (*tmpp == ':')
         {
-            int l = add_str(p, p_skipw - p);
+            int32_t l = add_str(p, p_skipw - p);
             if (str_data[l].label != -1)
             {
                 disp_error_message("dup label ", p);
@@ -1181,16 +1181,16 @@ const char *parse_script(const char *src, int line)
     RECREATE(script_buf, char, script_pos + 1);
 
     // 未解決のラベルを解決
-    for (int i = LABEL_START; i < str_num; i++)
+    for (int32_t i = LABEL_START; i < str_num; i++)
     {
         if (str_data[i].type == C_NOP)
         {
-            int j, next;
+            int32_t j, next;
             str_data[i].type = C_NAME;
             str_data[i].label = i;
             for (j = str_data[i].backpatch; j >= 0 && j != 0x00ffffff;)
             {
-                next = (*reinterpret_cast<int *>(script_buf + j)) & 0x00ffffff;
+                next = (*reinterpret_cast<int32_t *>(script_buf + j)) & 0x00ffffff;
                 script_buf[j] = i;
                 script_buf[j + 1] = i >> 8;
                 script_buf[j + 2] = i >> 16;
@@ -1227,7 +1227,7 @@ static MapSessionData *script_rid2sd(struct script_state *st)
  * 変数の読み取り
  *------------------------------------------
  */
-static int get_val(struct script_state *st, struct script_data *data)
+static int32_t get_val(struct script_state *st, struct script_data *data)
 {
     MapSessionData *sd = NULL;
     if (data->type == C_NAME)
@@ -1314,7 +1314,7 @@ static int get_val(struct script_state *st, struct script_data *data)
  * 変数の読み取り2
  *------------------------------------------
  */
-static const void *get_val2(struct script_state *st, int num)
+static const void *get_val2(struct script_state *st, int32_t num)
 {
     struct script_data dat;
     dat.type = C_NAME;
@@ -1330,7 +1330,7 @@ static const void *get_val2(struct script_state *st, int num)
  * 変数設定用
  *------------------------------------------
  */
-static int set_reg(MapSessionData *sd, int num, const char *name, const void *v)
+static int32_t set_reg(MapSessionData *sd, int32_t num, const char *name, const void *v)
 {
     const char prefix = *name;
     const char postfix = name[strlen(name) - 1];
@@ -1355,7 +1355,7 @@ static int set_reg(MapSessionData *sd, int num, const char *name, const void *v)
     else
     {
         // 数値
-        int val = reinterpret_cast<int>(v);
+        int32_t val = reinterpret_cast<int32_t>(v);
         if (str_data[num & 0x00ffffff].type == C_PARAM)
         {
             pc_setparam(sd, static_cast<SP>(str_data[num & 0x00ffffff].val), val);
@@ -1414,7 +1414,7 @@ static const char *conv_str(struct script_state *st, struct script_data *data)
  * 数値へ変換
  *------------------------------------------
  */
-static int conv_num(struct script_state *st, struct script_data *data)
+static int32_t conv_num(struct script_state *st, struct script_data *data)
 {
     const char *p;
     get_val(st, data);
@@ -1433,7 +1433,7 @@ static int conv_num(struct script_state *st, struct script_data *data)
  * スタックへ数値をプッシュ
  *------------------------------------------
  */
-void push_val(struct script_stack *stack, int type, int val)
+void push_val(struct script_stack *stack, int32_t type, int32_t val)
 {
     if (stack->sp >= stack->sp_max)
     {
@@ -1453,7 +1453,7 @@ void push_val(struct script_stack *stack, int type, int val)
  * スタックへ文字列をプッシュ
  *------------------------------------------
  */
-static void push_str(struct script_stack *stack, int type, const char *str)
+static void push_str(struct script_stack *stack, int32_t type, const char *str)
 {
     if (stack->sp >= stack->sp_max)
     {
@@ -1473,7 +1473,7 @@ static void push_str(struct script_stack *stack, int type, const char *str)
  * スタックへ複製をプッシュ
  *------------------------------------------
  */
-static void push_copy(struct script_stack *stack, int pos)
+static void push_copy(struct script_stack *stack, int32_t pos)
 {
     switch (stack->stack_data[pos].type)
     {
@@ -1494,9 +1494,9 @@ static void push_copy(struct script_stack *stack, int pos)
  * スタックからポップ
  *------------------------------------------
  */
-static void pop_stack(struct script_stack *stack, int start, int end)
+static void pop_stack(struct script_stack *stack, int32_t start, int32_t end)
 {
-    int i;
+    int32_t i;
     for (i = start; i < end; i++)
     {
         if (stack->stack_data[i].type == C_STR)
@@ -1532,7 +1532,7 @@ void builtin_mes(struct script_state *st)
  */
 void builtin_goto(struct script_state *st)
 {
-    int pos;
+    int32_t pos;
 
     if (st->stack->stack_data[st->start + 2].type != C_POS)
     {
@@ -1557,13 +1557,13 @@ void builtin_callfunc(struct script_state *st)
 
     if ((scr = static_cast<char *>(strdb_search(script_get_userfunc_db(), str).p)))
     {
-        int i, j;
+        int32_t i, j;
         for (i = st->start + 3, j = 0; i < st->end; i++, j++)
             push_copy(st->stack, i);
 
         push_val(st->stack, C_INT, j); // 引数の数をプッシュ
         push_val(st->stack, C_INT, st->defsp); // 現在の基準スタックポインタをプッシュ
-        push_val(st->stack, C_INT, reinterpret_cast<int>(st->script));  // 現在のスクリプトをプッシュ
+        push_val(st->stack, C_INT, reinterpret_cast<int32_t>(st->script));  // 現在のスクリプトをプッシュ
         push_val(st->stack, C_RETINFO, st->pos);   // 現在のスクリプト位置をプッシュ
 
         st->pos = 0;
@@ -1584,14 +1584,14 @@ void builtin_callfunc(struct script_state *st)
  */
 void builtin_callsub(struct script_state *st)
 {
-    int pos = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    int i, j;
+    int32_t pos = conv_num(st, &(st->stack->stack_data[st->start + 2]));
+    int32_t i, j;
     for (i = st->start + 3, j = 0; i < st->end; i++, j++)
         push_copy(st->stack, i);
 
     push_val(st->stack, C_INT, j); // 引数の数をプッシュ
     push_val(st->stack, C_INT, st->defsp); // 現在の基準スタックポインタをプッシュ
-    push_val(st->stack, C_INT, reinterpret_cast<int>(st->script));  // 現在のスクリプトをプッシュ
+    push_val(st->stack, C_INT, reinterpret_cast<int32_t>(st->script));  // 現在のスクリプトをプッシュ
     push_val(st->stack, C_RETINFO, st->pos);   // 現在のスクリプト位置をプッシュ
 
     st->pos = pos;
@@ -1605,8 +1605,8 @@ void builtin_callsub(struct script_state *st)
  */
 void builtin_getarg(struct script_state *st)
 {
-    int num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    int max, stsp;
+    int32_t num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
+    int32_t max, stsp;
     if (st->defsp < 4
         || st->stack->stack_data[st->defsp - 1].type != C_RETINFO)
     {
@@ -1670,15 +1670,15 @@ void builtin_close2(struct script_state *st)
  */
 void builtin_menu(struct script_state *st)
 {
-    int menu_choices = 0;
-    int finished_menu_items = 0;   // [fate] set to 1 after we hit the first empty string
+    int32_t menu_choices = 0;
+    int32_t finished_menu_items = 0;   // [fate] set to 1 after we hit the first empty string
 
     MapSessionData *sd;
 
     sd = script_rid2sd(st);
 
     // We don't need to do this iteration if the player cancels, strictly speaking.
-    for (int i = st->start + 2; i < st->end; i += 2)
+    for (int32_t i = st->start + 2; i < st->end; i += 2)
     {
         conv_str(st, &(st->stack->stack_data[i]));
         size_t choice_len = strlen(st->stack->stack_data[i].u.str);
@@ -1695,7 +1695,7 @@ void builtin_menu(struct script_state *st)
         sd->state.menu_or_input = 1;
 
         std::vector<std::string> choices;
-        for (int i = st->start + 2; menu_choices > 0; i += 2, --menu_choices)
+        for (int32_t i = st->start + 2; menu_choices > 0; i += 2, --menu_choices)
         {
             choices.push_back(st->stack->stack_data[i].u.str);
         }
@@ -1712,7 +1712,7 @@ void builtin_menu(struct script_state *st)
         sd->state.menu_or_input = 0;
         if (sd->npc_menu > 0 && sd->npc_menu <= menu_choices)
         {
-            int pos;
+            int32_t pos;
             if (st->stack->
                 stack_data[st->start + sd->npc_menu * 2 + 1].type != C_POS)
             {
@@ -1736,7 +1736,7 @@ void builtin_menu(struct script_state *st)
  */
 void builtin_rand(struct script_state *st)
 {
-    int range, min, max;
+    int32_t range, min, max;
 
     if (st->end > st->start + 3)
     {
@@ -1744,7 +1744,7 @@ void builtin_rand(struct script_state *st)
         max = conv_num(st, &(st->stack->stack_data[st->start + 3]));
         if (max < min)
         {
-            int tmp;
+            int32_t tmp;
             tmp = min;
             min = max;
             max = tmp;
@@ -1765,7 +1765,7 @@ void builtin_rand(struct script_state *st)
  */
 void builtin_pow(struct script_state *st)
 {
-    int a, b;
+    int32_t a, b;
 
     a = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     b = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -1779,7 +1779,7 @@ void builtin_pow(struct script_state *st)
  */
 void builtin_isat(struct script_state *st)
 {
-    int x, y;
+    int32_t x, y;
     const char *str;
     MapSessionData *sd = script_rid2sd(st);
 
@@ -1804,8 +1804,8 @@ void builtin_warp(struct script_state *st)
     MapSessionData *sd = script_rid2sd(st);
 
     const char *str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
-    short x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
-    short y = conv_num(st, &(st->stack->stack_data[st->start + 4]));
+    int16_t x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
+    int16_t y = conv_num(st, &(st->stack->stack_data[st->start + 4]));
     if (strcmp(str, "Random") == 0)
         pc_randomwarp(sd, BeingRemoveType::WARP);
     else if (strcmp(str, "SavePoint") == 0)
@@ -1846,16 +1846,16 @@ void builtin_areawarp(struct script_state *st)
 {
     fixed_string<16> src_map;
     src_map.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
-    int x_0 = conv_num(st, &(st->stack->stack_data[st->start + 3]));
-    int y_0 = conv_num(st, &(st->stack->stack_data[st->start + 4]));
-    int x_1 = conv_num(st, &(st->stack->stack_data[st->start + 5]));
-    int y_1 = conv_num(st, &(st->stack->stack_data[st->start + 6]));
+    int32_t x_0 = conv_num(st, &(st->stack->stack_data[st->start + 3]));
+    int32_t y_0 = conv_num(st, &(st->stack->stack_data[st->start + 4]));
+    int32_t x_1 = conv_num(st, &(st->stack->stack_data[st->start + 5]));
+    int32_t y_1 = conv_num(st, &(st->stack->stack_data[st->start + 6]));
     fixed_string<16> dst_map;
     dst_map.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 7])));
-    short x = conv_num(st, &(st->stack->stack_data[st->start + 8]));
-    short y = conv_num(st, &(st->stack->stack_data[st->start + 9]));
+    int16_t x = conv_num(st, &(st->stack->stack_data[st->start + 8]));
+    int16_t y = conv_num(st, &(st->stack->stack_data[st->start + 9]));
 
-    int m = map_mapname2mapid(src_map);
+    int32_t m = map_mapname2mapid(src_map);
     if (m < 0)
         return;
 
@@ -1869,7 +1869,7 @@ void builtin_areawarp(struct script_state *st)
  */
 void builtin_heal(struct script_state *st)
 {
-    int hp, sp;
+    int32_t hp, sp;
 
     hp = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     sp = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -1882,7 +1882,7 @@ void builtin_heal(struct script_state *st)
  */
 void builtin_itemheal(struct script_state *st)
 {
-    int hp, sp;
+    int32_t hp, sp;
 
     hp = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     sp = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -1895,7 +1895,7 @@ void builtin_itemheal(struct script_state *st)
  */
 void builtin_percentheal(struct script_state *st)
 {
-    int hp, sp;
+    int32_t hp, sp;
 
     hp = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     sp = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -1909,7 +1909,7 @@ void builtin_percentheal(struct script_state *st)
 void builtin_input(struct script_state *st)
 {
     MapSessionData *sd = NULL;
-    int num =
+    int32_t num =
         (st->end >
          st->start + 2) ? st->stack->stack_data[st->start + 2].u.num : 0;
     const char *name =
@@ -1974,7 +1974,7 @@ void builtin_input(struct script_state *st)
  */
 void builtin_if(struct script_state *st)
 {
-    int sel, i;
+    int32_t sel, i;
 
     sel = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     if (!sel)
@@ -1999,7 +1999,7 @@ void builtin_if(struct script_state *st)
 void builtin_set(struct script_state *st)
 {
     MapSessionData *sd = NULL;
-    int num = st->stack->stack_data[st->start + 2].u.num;
+    int32_t num = st->stack->stack_data[st->start + 2].u.num;
     char *name = str_buf + str_data[num & 0x00ffffff].str;
     char prefix = *name;
     char postfix = name[strlen(name) - 1];
@@ -2022,7 +2022,7 @@ void builtin_set(struct script_state *st)
     else
     {
         // 数値
-        int val = conv_num(st, &(st->stack->stack_data[st->start + 3]));
+        int32_t val = conv_num(st, &(st->stack->stack_data[st->start + 3]));
         set_reg(sd, num, name, reinterpret_cast<void *>(val));
     }
 }
@@ -2034,11 +2034,11 @@ void builtin_set(struct script_state *st)
 void builtin_setarray(struct script_state *st)
 {
     MapSessionData *sd = NULL;
-    int num = st->stack->stack_data[st->start + 2].u.num;
+    int32_t num = st->stack->stack_data[st->start + 2].u.num;
     char *name = str_buf + str_data[num & 0x00ffffff].str;
     char prefix = *name;
     char postfix = name[strlen(name) - 1];
-    int i, j;
+    int32_t i, j;
 
     if (prefix != '$' && prefix != '@')
     {
@@ -2071,12 +2071,12 @@ void builtin_setarray(struct script_state *st)
 void builtin_cleararray(struct script_state *st)
 {
     MapSessionData *sd = NULL;
-    int num = st->stack->stack_data[st->start + 2].u.num;
+    int32_t num = st->stack->stack_data[st->start + 2].u.num;
     char *name = str_buf + str_data[num & 0x00ffffff].str;
     char prefix = *name;
     char postfix = name[strlen(name) - 1];
-    int sz = conv_num(st, &(st->stack->stack_data[st->start + 4]));
-    int i;
+    int32_t sz = conv_num(st, &(st->stack->stack_data[st->start + 4]));
+    int32_t i;
 
     if (prefix != '$' && prefix != '@')
     {
@@ -2108,16 +2108,16 @@ void builtin_cleararray(struct script_state *st)
 void builtin_copyarray(struct script_state *st)
 {
     MapSessionData *sd = NULL;
-    int num = st->stack->stack_data[st->start + 2].u.num;
+    int32_t num = st->stack->stack_data[st->start + 2].u.num;
     char *name = str_buf + str_data[num & 0x00ffffff].str;
     char prefix = *name;
     char postfix = name[strlen(name) - 1];
-    int num2 = st->stack->stack_data[st->start + 3].u.num;
+    int32_t num2 = st->stack->stack_data[st->start + 3].u.num;
     char *name2 = str_buf + str_data[num2 & 0x00ffffff].str;
     char prefix2 = *name2;
     char postfix2 = name2[strlen(name2) - 1];
-    int sz = conv_num(st, &(st->stack->stack_data[st->start + 4]));
-    int i;
+    int32_t sz = conv_num(st, &(st->stack->stack_data[st->start + 4]));
+    int32_t i;
 
     if (prefix != '$' && prefix != '@' && prefix2 != '$' && prefix2 != '@')
     {
@@ -2140,15 +2140,15 @@ void builtin_copyarray(struct script_state *st)
  * 配列変数のサイズ所得
  *------------------------------------------
  */
-static int getarraysize(struct script_state *st, int num, int postfix)
+static int32_t getarraysize(struct script_state *st, int32_t num, int32_t postfix)
 {
-    int i = (num >> 24), c = i;
+    int32_t i = (num >> 24), c = i;
     for (; i < 128; i++)
     {
         const void *v = get_val2(st, num + (i << 24));
         if (postfix == '$' && *static_cast<const char *>(v))
             c = i;
-        if (postfix != '$' && reinterpret_cast<int>(v))
+        if (postfix != '$' && reinterpret_cast<int32_t>(v))
             c = i;
     }
     return c + 1;
@@ -2156,7 +2156,7 @@ static int getarraysize(struct script_state *st, int num, int postfix)
 
 void builtin_getarraysize(struct script_state *st)
 {
-    int num = st->stack->stack_data[st->start + 2].u.num;
+    int32_t num = st->stack->stack_data[st->start + 2].u.num;
     char *name = str_buf + str_data[num & 0x00ffffff].str;
     char prefix = *name;
     char postfix = name[strlen(name) - 1];
@@ -2177,12 +2177,12 @@ void builtin_getarraysize(struct script_state *st)
 void builtin_deletearray(struct script_state *st)
 {
     MapSessionData *sd = NULL;
-    int num = st->stack->stack_data[st->start + 2].u.num;
+    int32_t num = st->stack->stack_data[st->start + 2].u.num;
     char *name = str_buf + str_data[num & 0x00ffffff].str;
     char prefix = *name;
     char postfix = name[strlen(name) - 1];
-    int count = 1;
-    int i, sz = getarraysize(st, num, postfix) - (num >> 24) - count + 1;
+    int32_t count = 1;
+    int32_t i, sz = getarraysize(st, num, postfix) - (num >> 24) - count + 1;
 
     if ((st->end > st->start + 3))
         count = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -2217,7 +2217,7 @@ void builtin_getelementofarray(struct script_state *st)
 {
     if (st->stack->stack_data[st->start + 2].type == C_NAME)
     {
-        int i = conv_num(st, &(st->stack->stack_data[st->start + 3]));
+        int32_t i = conv_num(st, &(st->stack->stack_data[st->start + 3]));
         if (i > 127 || i < 0)
         {
             printf
@@ -2245,7 +2245,7 @@ void builtin_getelementofarray(struct script_state *st)
 void builtin_setlook(struct script_state *st)
 {
     LOOK type = static_cast<LOOK>(conv_num(st, &(st->stack->stack_data[st->start + 2])));
-    int val = conv_num(st, &(st->stack->stack_data[st->start + 3]));
+    int32_t val = conv_num(st, &(st->stack->stack_data[st->start + 3]));
 
     pc_changelook(script_rid2sd(st), type, val);
 }
@@ -2256,7 +2256,7 @@ void builtin_setlook(struct script_state *st)
  */
 void builtin_countitem(struct script_state *st)
 {
-    int nameid = 0, count = 0, i;
+    int32_t nameid = 0, count = 0, i;
     MapSessionData *sd;
 
     struct script_data *data;
@@ -2294,7 +2294,7 @@ void builtin_countitem(struct script_state *st)
  */
 void builtin_checkweight(struct script_state *st)
 {
-    int nameid = 0, amount;
+    int32_t nameid = 0, amount;
     MapSessionData *sd;
     struct script_data *data;
 
@@ -2335,7 +2335,7 @@ void builtin_checkweight(struct script_state *st)
  */
 void builtin_getitem(struct script_state *st)
 {
-    int nameid, amount;
+    int32_t nameid, amount;
     struct item item_tmp;
     MapSessionData *sd;
     struct script_data *data;
@@ -2385,8 +2385,8 @@ void builtin_getitem(struct script_state *st)
  */
 void builtin_makeitem(struct script_state *st)
 {
-    int nameid, amount;
-    int x, y, m;
+    int32_t nameid, amount;
+    int32_t x, y, m;
     struct item item_tmp;
     MapSessionData *sd;
     struct script_data *data;
@@ -2432,7 +2432,7 @@ void builtin_makeitem(struct script_state *st)
  */
 void builtin_delitem(struct script_state *st)
 {
-    int nameid = 0, amount, i;
+    int32_t nameid = 0, amount, i;
     MapSessionData *sd;
     struct script_data *data;
 
@@ -2495,7 +2495,7 @@ void builtin_delitem(struct script_state *st)
  */
 void builtin_readparam(struct script_state *st)
 {
-    int type;
+    int32_t type;
     MapSessionData *sd;
 
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
@@ -2520,7 +2520,7 @@ void builtin_readparam(struct script_state *st)
  */
 void builtin_getcharid(struct script_state *st)
 {
-    int num;
+    int32_t num;
     MapSessionData *sd;
 
     num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
@@ -2548,7 +2548,7 @@ void builtin_getcharid(struct script_state *st)
  *指定IDのPT名取得
  *------------------------------------------
  */
-static char *builtin_getpartyname_sub(int party_id)
+static char *builtin_getpartyname_sub(int32_t party_id)
 {
     struct party *p;
 
@@ -2569,7 +2569,7 @@ static char *builtin_getpartyname_sub(int party_id)
 void builtin_getpartyname(struct script_state *st)
 {
     char *name;
-    int party_id;
+    int32_t party_id;
 
     party_id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     name = builtin_getpartyname_sub(party_id);
@@ -2586,7 +2586,7 @@ void builtin_getpartyname(struct script_state *st)
 void builtin_getpartymember(struct script_state *st)
 {
     struct party *p;
-    int i, j = 0;
+    int32_t i, j = 0;
 
     p = NULL;
     p = party_search(conv_num(st, &(st->stack->stack_data[st->start + 2])));
@@ -2614,7 +2614,7 @@ void builtin_getpartymember(struct script_state *st)
 void builtin_strcharinfo(struct script_state *st)
 {
     MapSessionData *sd;
-    int num;
+    int32_t num;
 
     sd = script_rid2sd(st);
     num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
@@ -2654,7 +2654,7 @@ void builtin_getequipid(struct script_state *st)
         return;
     }
     EQ_SCR num = static_cast<EQ_SCR>(conv_num(st, &(st->stack->stack_data[st->start + 2])));
-    int i = pc_checkequip(sd, equip[num]);
+    int32_t i = pc_checkequip(sd, equip[num]);
     if (i >= 0)
     {
         struct item_data *item = sd->inventory_data[i];
@@ -2680,7 +2680,7 @@ void builtin_getequipname(struct script_state *st)
 
     MapSessionData *sd = script_rid2sd(st);
     EQ_SCR num = static_cast<EQ_SCR>(conv_num(st, &(st->stack->stack_data[st->start + 2])));
-    int i = pc_checkequip(sd, equip[num]);
+    int32_t i = pc_checkequip(sd, equip[num]);
     if (i >= 0)
     {
         struct item_data *item = sd->inventory_data[i];
@@ -2704,7 +2704,7 @@ void builtin_getequipisequiped(struct script_state *st)
 {
     EQ_SCR num = static_cast<EQ_SCR>(conv_num(st, &(st->stack->stack_data[st->start + 2])));
     MapSessionData *sd = script_rid2sd(st);
-    int i = pc_checkequip(sd, equip[num]);
+    int32_t i = pc_checkequip(sd, equip[num]);
     if (i >= 0)
     {
         push_val(st->stack, C_INT, 1);
@@ -2733,7 +2733,7 @@ void builtin_statusup(struct script_state *st)
 void builtin_statusup2(struct script_state *st)
 {
     SP type = static_cast<SP>(conv_num(st, &(st->stack->stack_data[st->start + 2])));
-    int val = conv_num(st, &(st->stack->stack_data[st->start + 3]));
+    int32_t val = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     MapSessionData *sd = script_rid2sd(st);
     pc_statusup2(sd, type, val);
 }
@@ -2745,7 +2745,7 @@ void builtin_statusup2(struct script_state *st)
 void builtin_bonus(struct script_state *st)
 {
     SP type = static_cast<SP>(conv_num(st, &(st->stack->stack_data[st->start + 2])));
-    int val = conv_num(st, &(st->stack->stack_data[st->start + 3]));
+    int32_t val = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     MapSessionData *sd = script_rid2sd(st);
     pc_bonus(sd, type, val);
 }
@@ -2756,7 +2756,7 @@ void builtin_bonus(struct script_state *st)
  */
 void builtin_skill(struct script_state *st)
 {
-    int id, level, flag = 1;
+    int32_t id, level, flag = 1;
     MapSessionData *sd;
 
     id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
@@ -2774,7 +2774,7 @@ void builtin_skill(struct script_state *st)
  */
 void builtin_setskill(struct script_state *st)
 {
-    int id, level;
+    int32_t id, level;
     MapSessionData *sd;
 
     id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
@@ -2792,7 +2792,7 @@ void builtin_setskill(struct script_state *st)
  */
 void builtin_getskilllv(struct script_state *st)
 {
-    int id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
+    int32_t id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     push_val(st->stack, C_INT, pc_checkskill(script_rid2sd(st), id));
 }
 
@@ -2835,7 +2835,7 @@ void builtin_getopt2(struct script_state *st)
 
 void builtin_setopt2(struct script_state *st)
 {
-    int new_opt2;
+    int32_t new_opt2;
     MapSessionData *sd;
 
     new_opt2 = conv_num(st, &(st->stack->stack_data[st->start + 2]));
@@ -2853,7 +2853,7 @@ void builtin_setopt2(struct script_state *st)
  */
 void builtin_checkoption(struct script_state *st)
 {
-    int type;
+    int32_t type;
     MapSessionData *sd;
 
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
@@ -2875,7 +2875,7 @@ void builtin_checkoption(struct script_state *st)
  */
 void builtin_setoption(struct script_state *st)
 {
-    int type;
+    int32_t type;
     MapSessionData *sd;
 
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
@@ -2891,8 +2891,8 @@ void builtin_savepoint(struct script_state *st)
 {
     fixed_string<16> str;
     str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
-    short x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
-    short y = conv_num(st, &(st->stack->stack_data[st->start + 4]));
+    int16_t x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
+    int16_t y = conv_num(st, &(st->stack->stack_data[st->start + 4]));
     pc_setsavepoint(script_rid2sd(st), Point{str, x, y});
 }
 
@@ -2908,7 +2908,7 @@ void builtin_savepoint(struct script_state *st)
  */
 void builtin_gettimetick(struct script_state *st)   /* Asgard Version */
 {
-    int type;
+    int32_t type;
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
 
     switch (type)
@@ -2929,7 +2929,7 @@ void builtin_gettimetick(struct script_state *st)   /* Asgard Version */
         case 2:
             push_val(st->stack, C_INT, time(NULL));
             break;
-        /* System tick (unsigned int, and yes, it will wrap). */
+        /* System tick (uint32_t, and yes, it will wrap). */
         case 0:
         default:
             push_val(st->stack, C_INT, gettick());
@@ -2946,7 +2946,7 @@ void builtin_gettimetick(struct script_state *st)   /* Asgard Version */
  */
 void builtin_gettime(struct script_state *st)   /* Asgard Version */
 {
-    int type;
+    int32_t type;
     time_t timer;
     struct tm *t;
 
@@ -2992,7 +2992,7 @@ void builtin_gettimestr(struct script_state *st)
 {
     char *tmpstr;
     const char *fmtstr;
-    int maxlen;
+    int32_t maxlen;
     time_t now = time(NULL);
 
     fmtstr = conv_str(st, &(st->stack->stack_data[st->start + 2]));
@@ -3011,7 +3011,7 @@ void builtin_gettimestr(struct script_state *st)
  */
 void builtin_openstorage(struct script_state *st)
 {
-//  int sync = 0;
+//  int32_t sync = 0;
 //  if (st->end >= 3) sync = conv_num(st,& (st->stack->stack_data[st->start+2]));
     MapSessionData *sd = script_rid2sd(st);
 
@@ -3030,7 +3030,7 @@ void builtin_openstorage(struct script_state *st)
 void builtin_getexp(struct script_state *st)
 {
     MapSessionData *sd = script_rid2sd(st);
-    int base = 0, job = 0;
+    int32_t base = 0, job = 0;
 
     base = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     job = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -3051,8 +3051,8 @@ void builtin_monster(struct script_state *st)
     uint16_t x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     uint16_t y = conv_num(st, &(st->stack->stack_data[st->start + 4]));
     const char *str = conv_str(st, &(st->stack->stack_data[st->start + 5]));
-    int mob_class = conv_num(st, &(st->stack->stack_data[st->start + 6]));
-    int amount = conv_num(st, &(st->stack->stack_data[st->start + 7]));
+    int32_t mob_class = conv_num(st, &(st->stack->stack_data[st->start + 6]));
+    int32_t amount = conv_num(st, &(st->stack->stack_data[st->start + 7]));
     const char *event = "";
     if (st->end > st->start + 8)
         event = conv_str(st, &(st->stack->stack_data[st->start + 8]));
@@ -3066,7 +3066,7 @@ void builtin_monster(struct script_state *st)
  */
 void builtin_areamonster(struct script_state *st)
 {
-    int mob_class, amount, x_0, y_0, x_1, y_1;
+    int32_t mob_class, amount, x_0, y_0, x_1, y_1;
     const char *str, *event = "";
 
     fixed_string<16> map;
@@ -3109,7 +3109,7 @@ static void builtin_killmonster_sub(BlockList *bl, const char *event, bool allfl
 void builtin_killmonster(struct script_state *st)
 {
     const char *event;
-    int m;
+    int32_t m;
     fixed_string<16> mapname;
     mapname.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     event = conv_str(st, &(st->stack->stack_data[st->start + 3]));
@@ -3128,7 +3128,7 @@ static void builtin_killmonsterall_sub(BlockList *bl)
 
 void builtin_killmonsterall(struct script_state *st)
 {
-    int m;
+    int32_t m;
     fixed_string<16> mapname;
     mapname.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
 
@@ -3167,7 +3167,7 @@ void builtin_donpcevent(struct script_state *st)
 void builtin_addtimer(struct script_state *st)
 {
     const char *event;
-    int tick;
+    int32_t tick;
     tick = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     event = conv_str(st, &(st->stack->stack_data[st->start + 3]));
     pc_addeventtimer(script_rid2sd(st), tick, event);
@@ -3224,8 +3224,8 @@ void builtin_stopnpctimer(struct script_state *st)
  */
 void builtin_getnpctimer(struct script_state *st)
 {
-    int type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    int val = 0;
+    int32_t type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
+    int32_t val = 0;
     struct npc_data_script *nd = static_cast<struct npc_data_script *>(map_id2bl(st->oid));
 
     switch (type)
@@ -3249,7 +3249,7 @@ void builtin_getnpctimer(struct script_state *st)
  */
 void builtin_setnpctimer(struct script_state *st)
 {
-    int tick = conv_num(st, &(st->stack->stack_data[st->start + 2]));
+    int32_t tick = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     struct npc_data_script *nd = static_cast<struct npc_data_script *>(map_id2bl(st->oid));
 
     npc_settimerevent_tick(nd, tick);
@@ -3262,7 +3262,7 @@ void builtin_setnpctimer(struct script_state *st)
 void builtin_announce(struct script_state *st)
 {
     const char *str;
-    int flag;
+    int32_t flag;
     str = conv_str(st, &(st->stack->stack_data[st->start + 2]));
     flag = conv_num(st, &(st->stack->stack_data[st->start + 3]));
 
@@ -3281,7 +3281,7 @@ void builtin_announce(struct script_state *st)
  * 天の声アナウンス（特定マップ）
  *------------------------------------------
  */
-static void builtin_mapannounce_sub(BlockList *bl, const char *str, size_t len, int flag)
+static void builtin_mapannounce_sub(BlockList *bl, const char *str, size_t len, int32_t flag)
 {
     clif_GMmessage(bl, str, len, flag | 3);
 }
@@ -3289,7 +3289,7 @@ static void builtin_mapannounce_sub(BlockList *bl, const char *str, size_t len, 
 void builtin_mapannounce(struct script_state *st)
 {
     const char *str;
-    int flag, m;
+    int32_t flag, m;
 
     fixed_string<16> mapname;
     mapname.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
@@ -3310,8 +3310,8 @@ void builtin_mapannounce(struct script_state *st)
 void builtin_areaannounce(struct script_state *st)
 {
     const char *str;
-    int flag, m;
-    int x_0, y_0, x_1, y_1;
+    int32_t flag, m;
+    int32_t x_0, y_0, x_1, y_1;
 
     fixed_string<16> map;
     map.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
@@ -3336,9 +3336,9 @@ void builtin_areaannounce(struct script_state *st)
  */
 void builtin_getusers(struct script_state *st)
 {
-    int flag = conv_num(st, &(st->stack->stack_data[st->start + 2]));
+    int32_t flag = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     BlockList *bl = map_id2bl((flag & 0x08) ? st->oid : st->rid);
-    int val = 0;
+    int32_t val = 0;
     switch (flag & 0x07)
     {
         case 0:
@@ -3357,7 +3357,7 @@ void builtin_getusers(struct script_state *st)
  */
 void builtin_getmapusers(struct script_state *st)
 {
-    int m;
+    int32_t m;
     fixed_string<16> str;
     str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     if ((m = map_mapname2mapid(str)) < 0)
@@ -3372,14 +3372,14 @@ void builtin_getmapusers(struct script_state *st)
  * エリア指定ユーザー数所得
  *------------------------------------------
  */
-static void builtin_getareausers_sub(BlockList *, int *users)
+static void builtin_getareausers_sub(BlockList *, int32_t *users)
 {
     ++*users;
 }
 
 void builtin_getareausers(struct script_state *st)
 {
-    int m, x_0, y_0, x_1, y_1, users = 0;
+    int32_t m, x_0, y_0, x_1, y_1, users = 0;
     fixed_string<16> str;
     str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     x_0 = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -3400,7 +3400,7 @@ void builtin_getareausers(struct script_state *st)
  * エリア指定ドロップアイテム数所得
  *------------------------------------------
  */
-static void builtin_getareadropitem_sub(BlockList *bl, int item, int *amount)
+static void builtin_getareadropitem_sub(BlockList *bl, int32_t item, int32_t *amount)
 {
     struct flooritem_data *drop = static_cast<struct flooritem_data *>(bl);
 
@@ -3408,7 +3408,7 @@ static void builtin_getareadropitem_sub(BlockList *bl, int item, int *amount)
         (*amount) += drop->item_data.amount;
 }
 
-static void builtin_getareadropitem_sub_anddelete(BlockList *bl, int item, int *amount)
+static void builtin_getareadropitem_sub_anddelete(BlockList *bl, int32_t item, int32_t *amount)
 {
     struct flooritem_data *drop = static_cast<struct flooritem_data *>(bl);
 
@@ -3422,7 +3422,7 @@ static void builtin_getareadropitem_sub_anddelete(BlockList *bl, int item, int *
 
 void builtin_getareadropitem(struct script_state *st)
 {
-    int m, x_0, y_0, x_1, y_1, item, amount = 0, delitems = 0;
+    int32_t m, x_0, y_0, x_1, y_1, item, amount = 0, delitems = 0;
     struct script_data *data;
 
     fixed_string<16> str;
@@ -3514,7 +3514,7 @@ void builtin_hideonnpc(struct script_state *st)
 void builtin_sc_start(struct script_state *st)
 {
     BlockList *bl;
-    int type, tick, val1;
+    int32_t type, tick, val1;
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     tick = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     val1 = conv_num(st, &(st->stack->stack_data[st->start + 4]));
@@ -3533,7 +3533,7 @@ void builtin_sc_start(struct script_state *st)
 void builtin_sc_start2(struct script_state *st)
 {
     BlockList *bl;
-    int type, tick, val1, per;
+    int32_t type, tick, val1, per;
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     tick = conv_num(st, &(st->stack->stack_data[st->start + 3]));
     val1 = conv_num(st, &(st->stack->stack_data[st->start + 4]));
@@ -3554,7 +3554,7 @@ void builtin_sc_start2(struct script_state *st)
 void builtin_sc_end(struct script_state *st)
 {
     BlockList *bl;
-    int type;
+    int32_t type;
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     bl = map_id2bl(st->rid);
     skill_status_change_end(bl, type, NULL);
@@ -3565,7 +3565,7 @@ void builtin_sc_end(struct script_state *st)
 void builtin_sc_check(struct script_state *st)
 {
     BlockList *bl;
-    int type;
+    int32_t type;
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     bl = map_id2bl(st->rid);
 
@@ -3579,8 +3579,8 @@ void builtin_sc_check(struct script_state *st)
 void builtin_getscrate(struct script_state *st)
 {
     BlockList *bl;
-    int sc_def = 100, sc_def_vit2;
-    int type, rate, luk;
+    int32_t sc_def = 100, sc_def_vit2;
+    int32_t type, rate, luk;
 
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     rate = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -3619,7 +3619,7 @@ void builtin_resetlvl(struct script_state *st)
 {
     MapSessionData *sd;
 
-    int type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
+    int32_t type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
 
     sd = script_rid2sd(st);
     pc_resetlvl(sd, type);
@@ -3716,7 +3716,7 @@ enum
 
 void builtin_setmapflagnosave(struct script_state *st)
 {
-    int m, x, y;
+    int32_t m, x, y;
     fixed_string<16> str, str2;
     str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     str2.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 3])));
@@ -3734,7 +3734,7 @@ void builtin_setmapflagnosave(struct script_state *st)
 
 void builtin_setmapflag(struct script_state *st)
 {
-    int m, i;
+    int32_t m, i;
     fixed_string<16> str;
     str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     i = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -3776,7 +3776,7 @@ void builtin_setmapflag(struct script_state *st)
 
 void builtin_removemapflag(struct script_state *st)
 {
-    int m, i;
+    int32_t m, i;
 
     fixed_string<16> str;
     str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
@@ -3819,7 +3819,7 @@ void builtin_removemapflag(struct script_state *st)
 
 void builtin_pvpon(struct script_state *st)
 {
-    int m;
+    int32_t m;
 
     fixed_string<16> str;
     str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
@@ -3845,7 +3845,7 @@ void builtin_pvpon(struct script_state *st)
 
 void builtin_pvpoff(struct script_state *st)
 {
-    int m;
+    int32_t m;
 
     fixed_string<16> str;
     str.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
@@ -3877,7 +3877,7 @@ void builtin_pvpoff(struct script_state *st)
 
 void builtin_emotion(struct script_state *st)
 {
-    int type;
+    int32_t type;
     type = conv_num(st, &(st->stack->stack_data[st->start + 2]));
     if (type < 0 || type > 100)
         return;
@@ -3888,18 +3888,18 @@ void builtin_mapwarp(struct script_state *st)   // Added by RoVeRT
 {
     fixed_string<16> src_map;
     src_map.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
-    int m = map_mapname2mapid(src_map);
+    int32_t m = map_mapname2mapid(src_map);
     if (m < 0)
         return;
 
-    int x_0 = 0;
-    int y_0 = 0;
-    int x_1 = maps[m].xs;
-    int y_1 = maps[m].ys;
+    int32_t x_0 = 0;
+    int32_t y_0 = 0;
+    int32_t x_1 = maps[m].xs;
+    int32_t y_1 = maps[m].ys;
     fixed_string<16> dst_map;
     dst_map.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 3])));
-    short x = conv_num(st, &(st->stack->stack_data[st->start + 4]));
-    short y = conv_num(st, &(st->stack->stack_data[st->start + 5]));
+    int16_t x = conv_num(st, &(st->stack->stack_data[st->start + 4]));
+    int16_t y = conv_num(st, &(st->stack->stack_data[st->start + 5]));
 
     map_foreachinarea(builtin_areawarp_sub,
                       m, x_0, y_0, x_1, y_1, BL_PC, Point{dst_map, x, y});
@@ -3931,7 +3931,7 @@ void builtin_stoptimer(struct script_state *st) // Added by RoVeRT
     npc_do_ontimer(st->oid, map_id2sd(st->rid), 0);
 }
 
-static void builtin_mobcount_sub(BlockList *bl, const char *event, int *c)    // Added by RoVeRT
+static void builtin_mobcount_sub(BlockList *bl, const char *event, int32_t *c)    // Added by RoVeRT
 {
     if (strcmp(event, static_cast<struct mob_data *>(bl)->npc_event) == 0)
         ++*c;
@@ -3940,7 +3940,7 @@ static void builtin_mobcount_sub(BlockList *bl, const char *event, int *c)    //
 void builtin_mobcount(struct script_state *st)  // Added by RoVeRT
 {
     const char *event;
-    int m, c = 0;
+    int32_t m, c = 0;
     fixed_string<16> mapname;
     mapname.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
     event = conv_str(st, &(st->stack->stack_data[st->start + 3]));
@@ -3994,8 +3994,8 @@ void builtin_divorce(struct script_state *st)
 void builtin_strmobinfo(struct script_state *st)
 {
 
-    int num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
-    int mob_class = conv_num(st, &(st->stack->stack_data[st->start + 3]));
+    int32_t num = conv_num(st, &(st->stack->stack_data[st->start + 2]));
+    int32_t mob_class = conv_num(st, &(st->stack->stack_data[st->start + 3]));
 
     if (num <= 0 || num >= 8 || (mob_class >= 0 && mob_class <= 1000) || mob_class > 2000)
         return;
@@ -4045,7 +4045,7 @@ void builtin_getitemname(struct script_state *st)
     }
     else
     {
-        int item_id = conv_num(st, data);
+        int32_t item_id = conv_num(st, data);
         i_data = itemdb_search(item_id);
     }
 
@@ -4103,8 +4103,8 @@ void builtin_getinventorylist(struct script_state *st)
     if (!sd)
         return;
 
-    int j = 0;
-    for (int i = 0; i < MAX_INVENTORY; i++)
+    int32_t j = 0;
+    for (int32_t i = 0; i < MAX_INVENTORY; i++)
     {
         if (sd->status.inventory[i].nameid > 0
             && sd->status.inventory[i].amount > 0)
@@ -4124,7 +4124,7 @@ void builtin_getinventorylist(struct script_state *st)
 void builtin_getskilllist(struct script_state *st)
 {
     MapSessionData *sd = script_rid2sd(st);
-    int i, j = 0;
+    int32_t i, j = 0;
     if (!sd)
         return;
     for (i = 0; i < MAX_SKILL; i++)
@@ -4146,16 +4146,16 @@ void builtin_getskilllist(struct script_state *st)
 void builtin_getactivatedpoolskilllist(struct script_state *st)
 {
     MapSessionData *sd = script_rid2sd(st);
-    int pool_skills[MAX_SKILL_POOL];
-    int pool_size = skill_pool(sd, pool_skills);
-    int i, count = 0;
+    int32_t pool_skills[MAX_SKILL_POOL];
+    int32_t pool_size = skill_pool(sd, pool_skills);
+    int32_t i, count = 0;
 
     if (!sd)
         return;
 
     for (i = 0; i < pool_size; i++)
     {
-        int skill_id = pool_skills[i];
+        int32_t skill_id = pool_skills[i];
 
         if (sd->status.skill[skill_id].id == skill_id)
         {
@@ -4176,14 +4176,14 @@ void builtin_getactivatedpoolskilllist(struct script_state *st)
 void builtin_getunactivatedpoolskilllist(struct script_state *st)
 {
     MapSessionData *sd = script_rid2sd(st);
-    int i, count = 0;
+    int32_t i, count = 0;
 
     if (!sd)
         return;
 
     for (i = 0; i < skill_pool_skills_size; i++)
     {
-        int skill_id = skill_pool_skills[i];
+        int32_t skill_id = skill_pool_skills[i];
 
         if (sd->status.skill[skill_id].id == skill_id && !(sd->status.skill[skill_id].flags & SKILL_POOL_ACTIVATED))
         {
@@ -4204,14 +4204,14 @@ void builtin_getunactivatedpoolskilllist(struct script_state *st)
 void builtin_getpoolskilllist(struct script_state *st)
 {
     MapSessionData *sd = script_rid2sd(st);
-    int i, count = 0;
+    int32_t i, count = 0;
 
     if (!sd)
         return;
 
     for (i = 0; i < skill_pool_skills_size; i++)
     {
-        int skill_id = skill_pool_skills[i];
+        int32_t skill_id = skill_pool_skills[i];
 
         if (sd->status.skill[skill_id].id == skill_id)
         {
@@ -4232,7 +4232,7 @@ void builtin_getpoolskilllist(struct script_state *st)
 void builtin_poolskill(struct script_state *st)
 {
     MapSessionData *sd = script_rid2sd(st);
-    int skill_id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
+    int32_t skill_id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
 
     skill_pool_activate(sd, skill_id);
     clif_skillinfoblock(sd);
@@ -4241,7 +4241,7 @@ void builtin_poolskill(struct script_state *st)
 void builtin_unpoolskill(struct script_state *st)
 {
     MapSessionData *sd = script_rid2sd(st);
-    int skill_id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
+    int32_t skill_id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
 
     skill_pool_deactivate(sd, skill_id);
     clif_skillinfoblock(sd);
@@ -4250,7 +4250,7 @@ void builtin_unpoolskill(struct script_state *st)
 void builtin_checkpoolskill(struct script_state *st)
 {
     MapSessionData *sd = script_rid2sd(st);
-    int skill_id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
+    int32_t skill_id = conv_num(st, &(st->stack->stack_data[st->start + 2]));
 
     push_val(st->stack, C_INT, skill_pool_is_activated(sd, skill_id));
 }
@@ -4258,7 +4258,7 @@ void builtin_checkpoolskill(struct script_state *st)
 void builtin_clearitem(struct script_state *st)
 {
     MapSessionData *sd = script_rid2sd(st);
-    int i;
+    int32_t i;
     if (sd == NULL)
         return;
     for (i = 0; i < MAX_INVENTORY; i++)
@@ -4281,8 +4281,8 @@ void builtin_clearitem(struct script_state *st)
  */
 void builtin_misceffect(struct script_state *st)
 {
-    int type;
-    int id = 0;
+    int32_t type;
+    int32_t id = 0;
     const char *name = NULL;
     BlockList *bl = NULL;
 
@@ -4329,7 +4329,7 @@ void builtin_soundeffect(struct script_state *st)
 {
     MapSessionData *sd = script_rid2sd(st);
     const char *name;
-    int type = 0;
+    int32_t type = 0;
 
     name = conv_str(st, &(st->stack->stack_data[st->start + 2]));
     type = conv_num(st, &(st->stack->stack_data[st->start + 3]));
@@ -4438,8 +4438,8 @@ void builtin_movenpc(struct script_state *st)
 //     MapSessionData *sd = script_rid2sd(st);
 
 //     const char *map = conv_str (st, &(st->stack->stack_data[st->start + 2]));
-    int x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
-    int y = conv_num(st, &(st->stack->stack_data[st->start + 4]));
+    int32_t x = conv_num(st, &(st->stack->stack_data[st->start + 3]));
+    int32_t y = conv_num(st, &(st->stack->stack_data[st->start + 4]));
     const char *npc = conv_str(st, &(st->stack->stack_data[st->start + 5]));
 
     struct npc_data *nd = npc_name2id(npc);
@@ -4459,7 +4459,7 @@ void builtin_movenpc(struct script_state *st)
  */
 void builtin_npcwarp(struct script_state *st)
 {
-    int x, y;
+    int32_t x, y;
     const char *npc;
     struct npc_data *nd = NULL;
 
@@ -4471,7 +4471,7 @@ void builtin_npcwarp(struct script_state *st)
     if (!nd)
         return;
 
-    short m = nd->m;
+    int16_t m = nd->m;
 
     /* Crude sanity checks. */
     if (m < 0 || !nd->prev
@@ -4537,7 +4537,7 @@ void builtin_npctalk(struct script_state *st)
 
 void builtin_hasitems(struct script_state *st)
 {
-    int i;
+    int32_t i;
     MapSessionData *sd;
 
     sd = script_rid2sd(st);
@@ -4563,7 +4563,7 @@ void builtin_getlook(struct script_state *st)
     MapSessionData *sd = script_rid2sd(st);
 
     LOOK type = static_cast<LOOK>(conv_num(st, &(st->stack->stack_data[st->start + 2])));
-    int val = -1;
+    int32_t val = -1;
     switch (type)
     {
         case LOOK::HAIR:        //1
@@ -4600,7 +4600,7 @@ void builtin_getlook(struct script_state *st)
 */
 void builtin_getsavepoint(struct script_state *st)
 {
-    int x, y, type;
+    int32_t x, y, type;
     char *mapname;
     MapSessionData *sd;
 
@@ -4630,16 +4630,16 @@ void builtin_getsavepoint(struct script_state *st)
  *     areatimer
  *------------------------------------------
  */
-static void builtin_areatimer_sub(BlockList *bl, int tick, const char *event)
+static void builtin_areatimer_sub(BlockList *bl, int32_t tick, const char *event)
 {
     pc_addeventtimer(static_cast<MapSessionData *>(bl), tick, event);
 }
 
 void builtin_areatimer(struct script_state *st)
 {
-    int tick, m;
+    int32_t tick, m;
     const char *event;
-    int x_0, y_0, x_1, y_1;
+    int32_t x_0, y_0, x_1, y_1;
 
     fixed_string<16> mapname;
     mapname.copy_from(conv_str(st, &(st->stack->stack_data[st->start + 2])));
@@ -4663,7 +4663,7 @@ void builtin_areatimer(struct script_state *st)
  */
 void builtin_isin(struct script_state *st)
 {
-    int x_1, y_1, x2, y2;
+    int32_t x_1, y_1, x2, y2;
     const char *str;
     MapSessionData *sd = script_rid2sd(st);
 
@@ -4717,7 +4717,7 @@ void builtin_isdead(struct script_state *st)
 void builtin_fakenpcname(struct script_state *st)
 {
     const char *name, *newname;
-    int newsprite;
+    int32_t newsprite;
     struct npc_data *nd;
 
     name = conv_str(st, &(st->stack->stack_data[st->start + 2]));
@@ -4765,9 +4765,9 @@ void builtin_gety(struct script_state *st)
  * コマンドの読み取り
  *------------------------------------------
  */
-static int get_com(const char *script, int *pos)
+static int32_t get_com(const char *script, int32_t *pos)
 {
-    int i, j;
+    int32_t i, j;
     if (static_cast<uint8_t>(script[*pos]) >= 0x80)
     {
         return C_INT;
@@ -4787,9 +4787,9 @@ static int get_com(const char *script, int *pos)
  * 数値の所得
  *------------------------------------------
  */
-static int get_num(const char *script, int *pos)
+static int32_t get_num(const char *script, int32_t *pos)
 {
-    int i, j;
+    int32_t i, j;
     i = 0;
     j = 0;
     while (static_cast<uint8_t>(script[*pos]) >= 0xc0)
@@ -4805,7 +4805,7 @@ static int get_num(const char *script, int *pos)
  * スタックから値を取り出す
  *------------------------------------------
  */
-static int pop_val(struct script_state *st)
+static int32_t pop_val(struct script_state *st)
 {
     if (st->stack->sp <= 0)
         return 0;
@@ -4860,11 +4860,11 @@ static void op_add(struct script_state *st)
  * 二項演算子(文字列)
  *------------------------------------------
  */
-static void op_2str(struct script_state *st, int op, int sp1, int sp2)
+static void op_2str(struct script_state *st, int32_t op, int32_t sp1, int32_t sp2)
 {
     const char *s1 = st->stack->stack_data[sp1].u.str,
         *s2 = st->stack->stack_data[sp2].u.str;
-    int a = 0;
+    int32_t a = 0;
 
     switch (op)
     {
@@ -4903,7 +4903,7 @@ static void op_2str(struct script_state *st, int op, int sp1, int sp2)
  * 二項演算子(数値)
  *------------------------------------------
  */
-static void op_2num(struct script_state *st, int op, int i1, int i2)
+static void op_2num(struct script_state *st, int32_t op, int32_t i1, int32_t i2)
 {
     switch (op)
     {
@@ -4966,9 +4966,9 @@ static void op_2num(struct script_state *st, int op, int i1, int i2)
  * 二項演算子
  *------------------------------------------
  */
-static void op_2(struct script_state *st, int op)
+static void op_2(struct script_state *st, int32_t op)
 {
-    int i1, i2;
+    int32_t i1, i2;
     const char *s1 = NULL, *s2 = NULL;
 
     i2 = pop_val(st);
@@ -4992,7 +4992,7 @@ static void op_2(struct script_state *st, int op)
     else
     {
         // si,is => error
-        printf("script: op_2: int&str, str&int not allow.");
+        printf("script: op_2: int32_t&str, str&int32_t not allow.");
         push_val(st->stack, C_INT, 0);
     }
 }
@@ -5001,9 +5001,9 @@ static void op_2(struct script_state *st, int op)
  * 単項演算子
  *------------------------------------------
  */
-static void op_1num(struct script_state *st, int op)
+static void op_1num(struct script_state *st, int32_t op)
 {
-    int i1;
+    int32_t i1;
     i1 = pop_val(st);
     switch (op)
     {
@@ -5024,9 +5024,9 @@ static void op_1num(struct script_state *st, int op)
  * 関数の実行
  *------------------------------------------
  */
-int run_func(struct script_state *st)
+int32_t run_func(struct script_state *st)
 {
-    int io, start_sp, end_sp, func;
+    int32_t io, start_sp, end_sp, func;
 
     end_sp = st->stack->sp;
     for (io = end_sp - 1; io >= 0 && st->stack->stack_data[io].type != C_ARG;
@@ -5067,8 +5067,8 @@ int run_func(struct script_state *st)
     if (st->state == RETFUNC)
     {
         // ユーザー定義関数からの復帰
-        int olddefsp = st->defsp;
-        int ii;
+        int32_t olddefsp = st->defsp;
+        int32_t ii;
 
         pop_stack(st->stack, st->defsp, start_sp); // 復帰に邪魔なスタック削除
         if (st->defsp < 4
@@ -5081,7 +5081,7 @@ int run_func(struct script_state *st)
         }
         ii = conv_num(st, &(st->stack->stack_data[st->defsp - 4])); // 引数の数所得
         st->pos = conv_num(st, &(st->stack->stack_data[st->defsp - 1]));   // スクリプト位置の復元
-        int tmp = conv_num(st, &(st->stack->stack_data[st->defsp - 2]));   // スクリプトを復元
+        int32_t tmp = conv_num(st, &(st->stack->stack_data[st->defsp - 2]));   // スクリプトを復元
         st->script = reinterpret_cast<char *>(tmp);
         st->defsp = conv_num(st, &(st->stack->stack_data[st->defsp - 3])); // 基準スタックポインタを復元
 
@@ -5097,12 +5097,12 @@ int run_func(struct script_state *st)
  * スクリプトの実行メイン部分
  *------------------------------------------
  */
-static int run_script_main(const char *script, int pos, int, int,
+static int32_t run_script_main(const char *script, int32_t pos, int32_t, int32_t,
                            struct script_state *st, const char *rootscript)
 {
-    int c, rerun_pos;
-    int cmdcount = script_config.check_cmdcount;
-    int gotocount = script_config.check_gotocount;
+    int32_t c, rerun_pos;
+    int32_t cmdcount = script_config.check_cmdcount;
+    int32_t gotocount = script_config.check_gotocount;
     struct script_stack *stack = st->stack;
 
     st->defsp = stack->sp;
@@ -5127,7 +5127,7 @@ static int run_script_main(const char *script, int pos, int, int,
                 break;
             case C_POS:
             case C_NAME:
-                push_val(stack, c, (*reinterpret_cast<const int *>(script + st->pos)) & 0xffffff);
+                push_val(stack, c, (*reinterpret_cast<const int32_t *>(script + st->pos)) & 0xffffff);
                 st->pos += 3;
                 break;
             case C_ARG:
@@ -5240,18 +5240,18 @@ static int run_script_main(const char *script, int pos, int, int,
  * スクリプトの実行
  *------------------------------------------
  */
-int run_script(const char *script, int pos, int rid, int oid)
+int32_t run_script(const char *script, int32_t pos, int32_t rid, int32_t oid)
 {
     return run_script_l(script, pos, rid, oid, 0, NULL);
 }
 
-int run_script_l(const char *script, int pos, int rid, int oid, int args_nr, ArgRec *args)
+int32_t run_script_l(const char *script, int32_t pos, int32_t rid, int32_t oid, int32_t args_nr, ArgRec *args)
 {
     struct script_stack stack;
     struct script_state st;
     MapSessionData *sd = map_id2sd(rid);
     const char *rootscript = script;
-    int i;
+    int32_t i;
     if (script == NULL || pos < 0)
         return -1;
 
@@ -5296,7 +5296,7 @@ int run_script_l(const char *script, int pos, int rid, int oid, int args_nr, Arg
  * マップ変数の変更
  *------------------------------------------
  */
-int mapreg_setreg(int num, int val)
+int32_t mapreg_setreg(int32_t num, int32_t val)
 {
     if (val != 0)
         numdb_insert(mapreg_db, num, val);
@@ -5311,7 +5311,7 @@ int mapreg_setreg(int num, int val)
  * 文字列型マップ変数の変更
  *------------------------------------------
  */
-int mapreg_setregstr(int num, const char *str)
+int32_t mapreg_setregstr(int32_t num, const char *str)
 {
     char *p;
 
@@ -5335,7 +5335,7 @@ int mapreg_setregstr(int num, const char *str)
  * 永続的マップ変数の読み込み
  *------------------------------------------
  */
-static int script_load_mapreg(void)
+static int32_t script_load_mapreg(void)
 {
     FILE *fp;
     char line[1024];
@@ -5346,7 +5346,7 @@ static int script_load_mapreg(void)
     while (fgets(line, sizeof(line), fp))
     {
         char buf1[256], buf2[1024], *p;
-        int n, v, s, i;
+        int32_t n, v, s, i;
         if (sscanf(line, "%255[^,],%d\t%n", buf1, &i, &n) != 2 &&
             (i = 0, sscanf(line, "%[^\t]\t%n", buf1, &n) != 1))
             continue;
@@ -5384,20 +5384,20 @@ static int script_load_mapreg(void)
  */
 static void script_save_mapreg_intsub(db_key_t key, db_val_t data, FILE *fp)
 {
-    int num = key.i & 0x00ffffff, i = key.i >> 24;
+    int32_t num = key.i & 0x00ffffff, i = key.i >> 24;
     const char *name = str_buf + str_data[num].str;
     if (name[1] != '@')
     {
         if (i == 0)
-            fprintf(fp, "%s\t%d\n", name, static_cast<int>(data.i));
+            fprintf(fp, "%s\t%d\n", name, static_cast<int32_t>(data.i));
         else
-            fprintf(fp, "%s,%d\t%d\n", name, i, static_cast<int>(data.i));
+            fprintf(fp, "%s,%d\t%d\n", name, i, static_cast<int32_t>(data.i));
     }
 }
 
 static void script_save_mapreg_strsub(db_key_t key, db_val_t data, FILE *fp)
 {
-    int num = key.i & 0x00ffffff, i = key.i >> 24;
+    int32_t num = key.i & 0x00ffffff, i = key.i >> 24;
     char *name = str_buf + str_data[num].str;
     if (name[1] != '@')
     {
@@ -5408,10 +5408,10 @@ static void script_save_mapreg_strsub(db_key_t key, db_val_t data, FILE *fp)
     }
 }
 
-static int script_save_mapreg(void)
+static int32_t script_save_mapreg(void)
 {
     FILE *fp;
-    int lock;
+    int32_t lock;
 
     if ((fp = lock_fopen(mapreg_txt, &lock)) == NULL)
         return -1;
@@ -5428,9 +5428,9 @@ static void script_autosave_mapreg(timer_id, tick_t)
         script_save_mapreg();
 }
 
-int script_config_read(const char *cfgName)
+int32_t script_config_read(const char *cfgName)
 {
-    int i;
+    int32_t i;
     char line[1024], w1[1024], w2[1024];
     FILE *fp;
 
@@ -5480,7 +5480,7 @@ static void userfunc_db_final(db_key_t key, db_val_t data)
     free(data.p);
 }
 
-int do_final_script(void)
+int32_t do_final_script(void)
 {
     if (mapreg_dirty >= 0)
         script_save_mapreg();
@@ -5510,7 +5510,7 @@ int do_final_script(void)
  * 初期化
  *------------------------------------------
  */
-int do_init_script(void)
+int32_t do_init_script(void)
 {
     mapreg_db = numdb_init();
     mapregstr_db = numdb_init();

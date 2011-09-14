@@ -23,17 +23,17 @@ inline void socket_data::rfifo_change_packet(uint16_t newpacket)
 extern struct socket_data *session[FD_SETSIZE];
 
 /// Maximum used FD, +1
-extern int fd_max;
+extern int32_t fd_max;
 
 /// open a socket, bind, and listen. Return an fd, or -1 if socket() fails,
 /// but exit if bind() or listen() fails
-int make_listen_port(uint16_t port);
+int32_t make_listen_port(uint16_t port);
 /// Connect to an address, return a connected socket or -1
-int make_connection(IP_Address ip, uint16_t port);
+int32_t make_connection(IP_Address ip, uint16_t port);
 /// free() the structure and close() the fd
-void delete_session(int);
+void delete_session(int32_t);
 /// Make a the internal queues bigger
-void realloc_fifo(int fd, size_t rfifo_size, size_t wfifo_size);
+void realloc_fifo(int32_t fd, size_t rfifo_size, size_t wfifo_size);
 /// Update all sockets that can be read/written from the queues
 void do_sendrecv(uint32_t next);
 /// Call the parser function for every socket that has read data
@@ -45,7 +45,7 @@ void do_socket(void);
 /// Change the default parser for newly connected clients
 // typically called once per server, but individual clients may identify
 // themselves as servers
-void set_defaultparse(void (*defaultparse)(int));
+void set_defaultparse(void (*defaultparse)(int32_t));
 
 /// Wrappers to track number of free FDs
 void fclose_(FILE * fp);
@@ -57,30 +57,30 @@ bool free_fds(void) __attribute__((pure));
 // TODO replace these with inline functions since we're not superstitious
 // maybe members of socket_data?
 /// Check how much can be read
-inline size_t RFIFOREST(int fd)
+inline size_t RFIFOREST(int32_t fd)
 {
     return session[fd]->rdata_size-session[fd]->rdata_pos;
 }
 /// Read from the queue
-inline const uint8_t *RFIFOP(int fd, size_t pos)
+inline const uint8_t *RFIFOP(int32_t fd, size_t pos)
 {
     return session[fd]->rdata + session[fd]->rdata_pos + pos;
 }
-inline uint8_t RFIFOB(int fd, size_t pos)
+inline uint8_t RFIFOB(int32_t fd, size_t pos)
 {
     return *reinterpret_cast<const uint8_t*>(RFIFOP(fd, pos));
 }
-inline uint16_t RFIFOW(int fd, size_t pos)
+inline uint16_t RFIFOW(int32_t fd, size_t pos)
 {
     return *reinterpret_cast<const uint16_t*>(RFIFOP(fd, pos));
 }
-inline uint32_t RFIFOL(int fd, size_t pos)
+inline uint32_t RFIFOL(int32_t fd, size_t pos)
 {
     return *reinterpret_cast<const uint32_t*>(RFIFOP(fd, pos));
 }
 
 /// Done reading
-void RFIFOSKIP(int fd, size_t len);
+void RFIFOSKIP(int32_t fd, size_t len);
 
 /// Read from an arbitrary buffer
 inline const uint8_t *RBUFP(uint8_t *p, size_t pos)
@@ -102,24 +102,24 @@ inline uint32_t RBUFL(uint8_t *p, size_t pos)
 
 
 /// Write to the queue
-inline uint8_t *WFIFOP(int fd, size_t pos)
+inline uint8_t *WFIFOP(int32_t fd, size_t pos)
 {
     return session[fd]->wdata + session[fd]->wdata_size + pos;
 }
-inline uint8_t& WFIFOB(int fd, size_t pos)
+inline uint8_t& WFIFOB(int32_t fd, size_t pos)
 {
     return *reinterpret_cast<uint8_t*>(WFIFOP(fd, pos));
 }
-inline uint16_t& WFIFOW(int fd, size_t pos)
+inline uint16_t& WFIFOW(int32_t fd, size_t pos)
 {
     return *reinterpret_cast<uint16_t*>(WFIFOP(fd, pos));
 }
-inline uint32_t& WFIFOL(int fd, size_t pos)
+inline uint32_t& WFIFOL(int32_t fd, size_t pos)
 {
     return *reinterpret_cast<uint32_t*>(WFIFOP(fd, pos));
 }
 /// Finish writing
-void WFIFOSET(int fd, size_t len);
+void WFIFOSET(int32_t fd, size_t len);
 
 /// Write to an arbitrary buffer
 inline uint8_t *WBUFP(uint8_t *p, size_t pos)

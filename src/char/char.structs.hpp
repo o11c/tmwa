@@ -16,7 +16,7 @@ struct mmo_map_server
 {
     IP_Address ip;
     in_port_t port;
-    int users;
+    int32_t users;
     fixed_string<16> map[MAX_MAP_PER_SERVER];
 };
 

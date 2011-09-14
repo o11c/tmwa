@@ -48,29 +48,29 @@ constexpr earray<EPOS, EQUIP, EQUIP::COUNT> equip_pos =
 
 struct item_data
 {
-    int nameid;
+    int32_t nameid;
     char name[24], jname[24];
-    int value_buy;
-    int value_sell;
-    int type;
-    int sex;
+    int32_t value_buy;
+    int32_t value_sell;
+    int32_t type;
+    int32_t sex;
     EPOS equip;
-    int weight;
-    int atk;
-    int def;
-    int range;
-    int magic_bonus;
-    int look;
+    int32_t weight;
+    int32_t atk;
+    int32_t def;
+    int32_t range;
+    int32_t magic_bonus;
+    int32_t look;
     /// Base level require to equip this
-    int elv;
+    int32_t elv;
     /// "Weapon level", used in damage calculations
-    int wlv;
+    int32_t wlv;
     const char *use_script;
     const char *equip_script;
     struct
     {
         bool available:1;
-        unsigned no_equip:3;
+        uint32_t no_equip:3;
         bool no_drop:1;
         bool no_use:1;
     } flag;

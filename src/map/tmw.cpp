@@ -13,11 +13,11 @@
 #include "mob.hpp"
 #include "pc.hpp"
 
-static int tmw_ShorterStrlen(const char *s1, const char *s2);
-static int tmw_CheckChatLameness(const char *message) __attribute__((pure));
-static void tmw_AutoBan(MapSessionData *sd, const char *reason, int length);
+static int32_t tmw_ShorterStrlen(const char *s1, const char *s2);
+static int32_t tmw_CheckChatLameness(const char *message) __attribute__((pure));
+static void tmw_AutoBan(MapSessionData *sd, const char *reason, int32_t length);
 
-int tmw_CheckChatSpam(MapSessionData *sd, const char *message)
+int32_t tmw_CheckChatSpam(MapSessionData *sd, const char *message)
 {
     nullpo_retr(1, sd);
     time_t now = time(NULL);
@@ -80,7 +80,7 @@ int tmw_CheckChatSpam(MapSessionData *sd, const char *message)
     return 0;
 }
 
-void tmw_AutoBan(MapSessionData *sd, const char *reason, int length)
+void tmw_AutoBan(MapSessionData *sd, const char *reason, int32_t length)
 {
     char anotherbuf[512];
 
@@ -106,17 +106,17 @@ void tmw_AutoBan(MapSessionData *sd, const char *reason, int length)
 }
 
 // Compares the length of two strings and returns that of the shorter
-int tmw_ShorterStrlen(const char *s1, const char *s2)
+int32_t tmw_ShorterStrlen(const char *s1, const char *s2)
 {
-    int s1_len = strlen(s1);
-    int s2_len = strlen(s2);
+    int32_t s1_len = strlen(s1);
+    int32_t s2_len = strlen(s2);
     return (s2_len >= s1_len ? s1_len : s2_len);
 }
 
 // Returns true if more than 50% of input message is caps or punctuation
-int tmw_CheckChatLameness(const char *message)
+int32_t tmw_CheckChatLameness(const char *message)
 {
-    int count, lame;
+    int32_t count, lame;
 
     for (count = lame = 0; *message; message++, count++)
         if (isupper(*message) || ispunct(*message))

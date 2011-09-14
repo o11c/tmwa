@@ -83,26 +83,26 @@ void free(BlockList *) = delete;
 
 struct script_reg
 {
-    int index;
-    int data;
+    int32_t index;
+    int32_t data;
 };
 struct script_regstr
 {
-    int index;
+    int32_t index;
     char data[256];
 };
 struct status_change
 {
     timer_id timer;
-    int val1;
-    int spell_invocation;      /* [Fate] If triggered by a spell, record here */
+    int32_t val1;
+    int32_t spell_invocation;      /* [Fate] If triggered by a spell, record here */
 };
 
 class invocation_t;
 
 struct quick_regeneration
 {                               // [Fate]
-    int amount;                // Amount of HP/SP left to regenerate
+    int32_t amount;                // Amount of HP/SP left to regenerate
     uint8_t speed;        // less is faster (number of half-second ticks to wait between updates)
     uint8_t tickdelay;    // number of ticks to next update
 };
@@ -117,16 +117,16 @@ public:
         bool change_walk_target:1;
         bool attack_continue:1;
         bool menu_or_input:1;
-        unsigned dead_sit:2;
+        uint32_t dead_sit:2;
         bool waitingdisconnect:1;
-        unsigned lr_flag:2;
+        uint32_t lr_flag:2;
         bool connect_new:1;
         bool arrow_atk:1;
-        unsigned attack_type:3;
+        uint32_t attack_type:3;
         bool produce_flag:1;
         bool make_arrow_flag:1;
         // TODO replace with a more generic storage system
-        unsigned storage_flag:1;    //0: closed, 1: Normal Storage open
+        uint32_t storage_flag:1;    //0: closed, 1: Normal Storage open
         bool shroud_active:1;
         bool shroud_hides_name_talking:1;
         bool shroud_disappears_on_pickup:1;
@@ -143,25 +143,25 @@ public:
         bool no_weapon_damage:1;
         bool no_gemstone:1;
     } special_state;
-    int char_id, login_id1, login_id2, sex;
+    int32_t char_id, login_id1, login_id2, sex;
     uint8_t tmw_version;  // tmw client version
     struct mmo_charstatus status;
     struct item_data *inventory_data[MAX_INVENTORY];
-    earray<short, EQUIP, EQUIP::COUNT> equip_index;
-    int weight, max_weight;
+    earray<int16_t, EQUIP, EQUIP::COUNT> equip_index;
+    int32_t weight, max_weight;
     fixed_string<16> mapname;
-    int fd, new_fd;
-    short to_x, to_y;
-    short speed, prev_speed;
-    short opt1, opt2, opt3;
+    int32_t fd, new_fd;
+    int16_t to_x, to_y;
+    int16_t speed, prev_speed;
+    int16_t opt1, opt2, opt3;
     Direction dir, head_dir;
     struct walkpath_data walkpath;
     timer_id walktimer;
-    int npc_id, areanpc_id, npc_shopid;
-    int npc_pos;
-    int npc_menu;
-    int npc_amount;
-    int npc_stack, npc_stackmax;
+    int32_t npc_id, areanpc_id, npc_shopid;
+    int32_t npc_pos;
+    int32_t npc_menu;
+    int32_t npc_amount;
+    int32_t npc_stack, npc_stackmax;
     const char *npc_script, *npc_scriptroot;
     struct script_data *npc_stackbuf;
     char npc_str[256];
@@ -172,104 +172,104 @@ public:
     } npc_flags;
 
     timer_id attacktimer;
-    int attacktarget;
+    int32_t attacktarget;
     AttackResult attacktarget_lv;
-    unsigned int attackabletime;
+    uint32_t attackabletime;
 
     /// Used with the GM commands to iterate over players
-    int followtarget;
+    int32_t followtarget;
 
-    unsigned int cast_tick;     // [Fate] Next tick at which spellcasting is allowed
+    uint32_t cast_tick;     // [Fate] Next tick at which spellcasting is allowed
     std::set<invocation_t *> active_spells;
-    int attack_spell_override; // [Fate] When an attack spell is active for this player, they trigger it
+    int32_t attack_spell_override; // [Fate] When an attack spell is active for this player, they trigger it
     // like a weapon.  Check pc_attack_timer() for details.
-    short attack_spell_icon_override;   // Weapon equipment slot (slot 4) item override
-    short attack_spell_look_override;   // Weapon `look' (attack animation) override
-    short attack_spell_charges; // [Fate] Remaining number of charges for the attack spell
-    short attack_spell_delay;   // [Fate] ms delay after spell attack
-    short attack_spell_range;   // [Fate] spell range
-    short spellpower_bonus_target, spellpower_bonus_current;    // [Fate] Spellpower boni.  _current is the active one.
+    int16_t attack_spell_icon_override;   // Weapon equipment slot (slot 4) item override
+    int16_t attack_spell_look_override;   // Weapon `look' (attack animation) override
+    int16_t attack_spell_charges; // [Fate] Remaining number of charges for the attack spell
+    int16_t attack_spell_delay;   // [Fate] ms delay after spell attack
+    int16_t attack_spell_range;   // [Fate] spell range
+    int16_t spellpower_bonus_target, spellpower_bonus_current;    // [Fate] Spellpower boni.  _current is the active one.
     //_current slowly approximates _target, and _target is determined by equipment.
 
-    short attackrange, attackrange_;
+    int16_t attackrange, attackrange_;
 
     // [Fate] Used for gradual healing; amount of enqueued regeneration
     struct quick_regeneration quick_regeneration_hp, quick_regeneration_sp;
     // [Fate] XP that can be extracted from this player by healing
-    int heal_xp;               // i.e., OTHER players (healers) can partake in this player's XP
+    int32_t heal_xp;               // i.e., OTHER players (healers) can partake in this player's XP
 
     timer_id invincible_timer;
-    unsigned int canact_tick;
-    unsigned int canmove_tick;
-    unsigned int canlog_tick;
-    int hp_sub, sp_sub;
-    int inchealhptick, inchealsptick, inchealspirithptick,
+    uint32_t canact_tick;
+    uint32_t canmove_tick;
+    uint32_t canlog_tick;
+    int32_t hp_sub, sp_sub;
+    int32_t inchealhptick, inchealsptick, inchealspirithptick,
     inchealspiritsptick;
     // -- moonsoul (new tick for berserk self-damage)
-    int berserkdamagetick;
-    int fame;
+    int32_t berserkdamagetick;
+    int32_t fame;
 
-    short weapontype1, weapontype2;
-    earray<int, ATTR, ATTR::COUNT> paramb, paramc, parame;
-    int hit, flee, flee2, aspd, amotion, dmotion;
-    int watk, watk2;
-    int def, def2, mdef, mdef2, critical, matk1, matk2;
-    int atk_ele, def_ele, star;
-    int castrate, hprate, sprate, dsprate;
-    int watk_, watk_2;    //二刀流のために追加
-    int atk_ele_, star_;  //二刀流のために追加
-    int base_atk, atk_rate;
-    int arrow_atk, arrow_ele, arrow_cri, arrow_hit, arrow_range;
-    int nhealhp, nhealsp, nshealhp, nshealsp, nsshealhp, nsshealsp;
-    int aspd_rate, speed_rate, hprecov_rate, sprecov_rate, critical_def,
+    int16_t weapontype1, weapontype2;
+    earray<int32_t, ATTR, ATTR::COUNT> paramb, paramc, parame;
+    int32_t hit, flee, flee2, aspd, amotion, dmotion;
+    int32_t watk, watk2;
+    int32_t def, def2, mdef, mdef2, critical, matk1, matk2;
+    int32_t atk_ele, def_ele, star;
+    int32_t castrate, hprate, sprate, dsprate;
+    int32_t watk_, watk_2;    //二刀流のために追加
+    int32_t atk_ele_, star_;  //二刀流のために追加
+    int32_t base_atk, atk_rate;
+    int32_t arrow_atk, arrow_ele, arrow_cri, arrow_hit, arrow_range;
+    int32_t nhealhp, nhealsp, nshealhp, nshealsp, nsshealhp, nsshealsp;
+    int32_t aspd_rate, speed_rate, hprecov_rate, sprecov_rate, critical_def,
     double_rate;
-    int near_attack_def_rate, long_attack_def_rate, magic_def_rate,
+    int32_t near_attack_def_rate, long_attack_def_rate, magic_def_rate,
     misc_def_rate;
-    int matk_rate, ignore_def_ele, ignore_def_race, ignore_def_ele_,
+    int32_t matk_rate, ignore_def_ele, ignore_def_race, ignore_def_ele_,
     ignore_def_race_;
-    int ignore_mdef_ele, ignore_mdef_race;
-    int perfect_hit, get_zeny_num;
-    int critical_rate, hit_rate, flee_rate, flee2_rate, def_rate, def2_rate,
+    int32_t ignore_mdef_ele, ignore_mdef_race;
+    int32_t perfect_hit, get_zeny_num;
+    int32_t critical_rate, hit_rate, flee_rate, flee2_rate, def_rate, def2_rate,
     mdef_rate, mdef2_rate;
-    int def_ratio_atk_ele, def_ratio_atk_ele_, def_ratio_atk_race,
+    int32_t def_ratio_atk_ele, def_ratio_atk_ele_, def_ratio_atk_race,
     def_ratio_atk_race_;
 
-    int double_add_rate, speed_add_rate, aspd_add_rate, perfect_hit_add,
+    int32_t double_add_rate, speed_add_rate, aspd_add_rate, perfect_hit_add,
     get_zeny_add_num;
-    short splash_range, splash_add_range;
-    int short_weapon_damage_return, long_weapon_damage_return;
-    short break_weapon_rate, break_armor_rate;
-    short add_steal_rate;
+    int16_t splash_range, splash_add_range;
+    int32_t short_weapon_damage_return, long_weapon_damage_return;
+    int16_t break_weapon_rate, break_armor_rate;
+    int16_t add_steal_rate;
 
-    int magic_damage_return;   // AppleGirl Was Here
-    int random_attack_increase_add, random_attack_increase_per;    // [Valaris]
-    int perfect_hiding;        // [Valaris]
+    int32_t magic_damage_return;   // AppleGirl Was Here
+    int32_t random_attack_increase_add, random_attack_increase_per;    // [Valaris]
+    int32_t perfect_hiding;        // [Valaris]
 
-    int die_counter;
-    short doridori_counter;
+    int32_t die_counter;
+    int16_t doridori_counter;
 
-    int reg_num;
+    int32_t reg_num;
     struct script_reg *reg;
-    int regstr_num;
+    int32_t regstr_num;
     struct script_regstr *regstr;
 
     struct status_change sc_data[MAX_STATUSCHANGE];
-    short sc_count;
+    int16_t sc_count;
 
-    int trade_partner;
-    int deal_item_index[10];
-    int deal_item_amount[10];
-    int deal_zeny;
-    short deal_locked;
+    int32_t trade_partner;
+    int32_t deal_item_index[10];
+    int32_t deal_item_amount[10];
+    int32_t deal_zeny;
+    int16_t deal_locked;
 
-    int party_sended, party_invite, party_invite_account;
-    int party_hp, party_x, party_y;
+    int32_t party_sended, party_invite, party_invite_account;
+    int32_t party_hp, party_x, party_y;
 
     char message[80];
 
-    int catch_target_class;
+    int32_t catch_target_class;
 
-    int pvp_point, pvp_rank, pvp_lastusers;
+    int32_t pvp_point, pvp_rank, pvp_lastusers;
     timer_id pvp_timer;
 
     char eventqueue[MAX_EVENTQUEUE][50];
@@ -281,41 +281,41 @@ public:
 
     time_t chat_reset_due;
     time_t chat_repeat_reset_due;
-    int chat_lines_in;
-    int chat_total_repeats;
+    int32_t chat_lines_in;
+    int32_t chat_total_repeats;
     char chat_lastmsg[513];
 
-    unsigned int flood_rates[0x220];
+    uint32_t flood_rates[0x220];
     time_t packet_flood_reset_due;
-    int packet_flood_in;
+    int32_t packet_flood_in;
 
     MapSessionData() : BlockList(BL_PC) {}
 };
 
 struct npc_timerevent_list
 {
-    int timer, pos;
+    int32_t timer, pos;
 };
 struct npc_label_list
 {
     char name[24];
-    int pos;
+    int32_t pos;
 };
 struct npc_item_list
 {
-    int nameid, value;
+    int32_t nameid, value;
 };
 struct npc_data : public BlockList
 {
     const NPC_Subtype subtype;
-    short n;
-    short npc_class;
+    int16_t n;
+    int16_t npc_class;
     Direction dir;
-    short speed;
+    int16_t speed;
     char name[24];
     char exname[24];
-    short opt1, opt2, opt3, option;
-    short flag;
+    int16_t opt1, opt2, opt3, option;
+    int16_t flag;
     // ここにメンバを追加してはならない(shop_itemが可変長の為)
 
     char eventqueue[MAX_EVENTQUEUE][50];
@@ -325,7 +325,7 @@ struct npc_data : public BlockList
         char *name;
     } eventtimer[MAX_EVENTTIMER];
 
-    short arenaflag;
+    int16_t arenaflag;
 
 protected:
     npc_data(NPC_Subtype sub) : BlockList(BL_NPC), subtype(sub) {}
@@ -337,14 +337,14 @@ struct npc_data_script : npc_data
     struct
     {
         const char *script;
-        short xs, ys;
+        int16_t xs, ys;
         timer_id timerid;
-        int timer, timeramount, nexttimer;
-        unsigned int timertick;
+        int32_t timer, timeramount, nexttimer;
+        uint32_t timertick;
         struct npc_timerevent_list *timer_event;
-        int label_list_num;
+        int32_t label_list_num;
         struct npc_label_list *label_list;
-        int src_id;
+        int32_t src_id;
     } scr;
     npc_data_script() : npc_data(SCRIPT) {}
     ~npc_data_script();
@@ -359,7 +359,7 @@ struct npc_data_warp : npc_data
 {
     struct
     {
-        short xs, ys;
+        int16_t xs, ys;
         Point dst;
     } warp;
     npc_data_warp() : npc_data(WARP) {}
@@ -406,12 +406,12 @@ enum class MS : uint8_t
 
 struct mob_data : public BlockList
 {
-    short n;
-    short base_class, mob_class, mode;
+    int16_t n;
+    int16_t base_class, mob_class, mode;
     Direction dir;
-    short m_0, x_0, y_0, xs, ys;
+    int16_t m_0, x_0, y_0, xs, ys;
     char name[24];
-    int spawndelay_1, spawndelay2;
+    int32_t spawndelay_1, spawndelay2;
     struct
     {
         MS state;
@@ -421,39 +421,39 @@ struct mob_data : public BlockList
         bool master_check:1;
         bool change_walk_target:1;
         bool walk_easy:1;
-        unsigned special_mob_ai:3;
+        uint32_t special_mob_ai:3;
     } state;
     timer_id timer;
-    short to_x, to_y;
-    int hp;
-    int target_id, attacked_id;
+    int16_t to_x, to_y;
+    int32_t hp;
+    int32_t target_id, attacked_id;
     AttackResult target_lv;
     struct walkpath_data walkpath;
-    unsigned int next_walktime;
-    unsigned int attackabletime;
-    unsigned int last_deadtime, last_spawntime, last_thinktime;
-    unsigned int canmove_tick;
-    short move_fail_count;
+    uint32_t next_walktime;
+    uint32_t attackabletime;
+    uint32_t last_deadtime, last_spawntime, last_thinktime;
+    uint32_t canmove_tick;
+    int16_t move_fail_count;
     struct
     {
-        int id;
-        int dmg;
+        int32_t id;
+        int32_t dmg;
     } dmglog[DAMAGELOG_SIZE];
     struct item *lootitem;
-    short lootitem_count;
+    int16_t lootitem_count;
 
     struct status_change sc_data[MAX_STATUSCHANGE];
-    short sc_count;
-    short opt1, opt2, opt3, option;
-    short min_chase;
+    int16_t sc_count;
+    int16_t opt1, opt2, opt3, option;
+    int16_t min_chase;
     timer_id deletetimer;
 
-    int def_ele;
-    int master_id, master_dist;
-    int exclusion_src, exclusion_party;
+    int32_t def_ele;
+    int32_t master_id, master_dist;
+    int32_t exclusion_src, exclusion_party;
     char npc_event[50];
-    unsigned short stats[MOB_LAST]; // [Fate] mob-specific stats
-    short size;
+    uint16_t stats[MOB_LAST]; // [Fate] mob-specific stats
+    int16_t size;
 
     mob_data() : BlockList(BL_MOB) {}
     ~mob_data()
@@ -481,12 +481,12 @@ class map_data_local : public map_data
 public:
     BlockList **block;
     BlockList **block_mob;
-    int *block_count, *block_mob_count;
-    int m;
-    short xs, ys;
-    short bxs, bys;
-    int npc_num;
-    int users;
+    int32_t *block_count, *block_mob_count;
+    int32_t m;
+    int16_t xs, ys;
+    int16_t bxs, bys;
+    int32_t npc_num;
+    int32_t users;
     struct
     {
         bool alias:1;
@@ -513,9 +513,9 @@ public:
     struct npc_data *npc[MAX_NPC_PER_MAP];
     struct
     {
-        int drop_id;
-        int drop_type;
-        int drop_per;
+        int32_t drop_id;
+        int32_t drop_type;
+        int32_t drop_per;
     } drop_list[MAX_DROP_PER_MAP];
 };
 #define read_gat(m,x,y) (maps[m].gat[(x)+(y)*maps[m].xs])
@@ -523,10 +523,10 @@ public:
 
 struct flooritem_data : public BlockList
 {
-    short subx, suby;
+    int16_t subx, suby;
     timer_id cleartimer;
-    int first_get_id, second_get_id, third_get_id;
-    unsigned int first_get_tick, second_get_tick, third_get_tick;
+    int32_t first_get_id, second_get_id, third_get_id;
+    uint32_t first_get_tick, second_get_tick, third_get_tick;
     struct item item_data;
 
     flooritem_data() : BlockList(BL_ITEM) {}
@@ -665,19 +665,19 @@ constexpr bool SP_IS_BASE_ATTR(SP type)
 
 constexpr SP ATTR_TO_SP_BASE(ATTR attr)
 {
-    return SP(int(attr) + int(SP::STR));
+    return SP(int32_t(attr) + int32_t(SP::STR));
 }
 constexpr SP ATTR_TO_SP_UP(ATTR attr)
 {
-    return SP(int(attr) + int(SP::USTR));
+    return SP(int32_t(attr) + int32_t(SP::USTR));
 }
 constexpr ATTR ATTR_FROM_SP_BASE(SP sp)
 {
-    return ATTR(int(sp) - int(SP::STR));
+    return ATTR(int32_t(sp) - int32_t(SP::STR));
 }
 constexpr ATTR ATTR_FROM_SP_UP(SP sp)
 {
-    return ATTR(int(sp) - int(SP::USTR));
+    return ATTR(int32_t(sp) - int32_t(SP::USTR));
 }
 
 enum class LOOK : uint8_t

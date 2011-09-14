@@ -16,7 +16,7 @@
  * 取引要請を相手に送る
  *------------------------------------------
  */
-void trade_traderequest(MapSessionData *sd, int target_id)
+void trade_traderequest(MapSessionData *sd, int32_t target_id)
 {
     MapSessionData *target_sd;
 
@@ -70,7 +70,7 @@ void trade_traderequest(MapSessionData *sd, int target_id)
  * 取引要請
  *------------------------------------------
  */
-void trade_tradeack(MapSessionData *sd, int type)
+void trade_tradeack(MapSessionData *sd, int32_t type)
 {
     MapSessionData *target_sd;
     nullpo_retv(sd);
@@ -101,15 +101,15 @@ void trade_tradeack(MapSessionData *sd, int type)
  * アイテム追加
  *------------------------------------------
  */
-void trade_tradeadditem(MapSessionData *sd, int idx, int amount)
+void trade_tradeadditem(MapSessionData *sd, int32_t idx, int32_t amount)
 {
     MapSessionData *target_sd;
     struct item_data *id;
-    int trade_i;
-    int trade_weight = 0;
-    int free_ = 0;
-    int c;
-    int i;
+    int32_t trade_i;
+    int32_t trade_weight = 0;
+    int32_t free_ = 0;
+    int32_t c;
+    int32_t i;
 
     nullpo_retv(sd);
 
@@ -227,7 +227,7 @@ void trade_tradeadditem(MapSessionData *sd, int idx, int amount)
 void trade_tradeok(MapSessionData *sd)
 {
     MapSessionData *target_sd;
-    int trade_i;
+    int32_t trade_i;
 
     nullpo_retv(sd);
 
@@ -259,7 +259,7 @@ void trade_tradeok(MapSessionData *sd)
 void trade_tradecancel(MapSessionData *sd)
 {
     MapSessionData *target_sd;
-    int trade_i;
+    int32_t trade_i;
 
     nullpo_retv(sd);
 
@@ -310,7 +310,7 @@ void trade_tradecancel(MapSessionData *sd)
 void trade_tradecommit(MapSessionData *sd)
 {
     MapSessionData *target_sd;
-    int trade_i;
+    int32_t trade_i;
 
     nullpo_retv(sd);
 
@@ -347,7 +347,7 @@ void trade_tradecommit(MapSessionData *sd)
                 {
                     if (sd->deal_item_amount[trade_i] != 0)
                     {
-                        int n = sd->deal_item_index[trade_i] - 2;
+                        int32_t n = sd->deal_item_index[trade_i] - 2;
                         PickupFail flag = pc_additem(target_sd,
                                                      &sd->status.inventory[n],
                                                      sd->deal_item_amount[trade_i]);
@@ -360,7 +360,7 @@ void trade_tradecommit(MapSessionData *sd)
                     }
                     if (target_sd->deal_item_amount[trade_i] != 0)
                     {
-                        int n = target_sd->deal_item_index[trade_i] - 2;
+                        int32_t n = target_sd->deal_item_index[trade_i] - 2;
                         PickupFail flag = pc_additem(sd,
                                                      &target_sd->status.inventory[n],
                                                      target_sd->deal_item_amount[trade_i]);
@@ -374,7 +374,7 @@ void trade_tradecommit(MapSessionData *sd)
                 }
                 if (sd->deal_zeny)
                 {
-                    int deal = sd->deal_zeny;
+                    int32_t deal = sd->deal_zeny;
                     sd->deal_zeny = 0;
                     sd->status.zeny -= deal;
                     clif_updatestatus(sd, SP::ZENY);
@@ -383,7 +383,7 @@ void trade_tradecommit(MapSessionData *sd)
                 }
                 if (target_sd->deal_zeny)
                 {
-                    int deal = target_sd->deal_zeny;
+                    int32_t deal = target_sd->deal_zeny;
                     target_sd->deal_zeny = 0;
                     target_sd->status.zeny -= deal;
                     clif_updatestatus(target_sd, SP::ZENY);

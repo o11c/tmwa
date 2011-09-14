@@ -3,13 +3,13 @@
 
 void inter_init(const char *file);
 void inter_save(void);
-int inter_parse_frommap(int fd);
-void inter_mapif_init(int fd) __attribute__((deprecated));
+int32_t inter_parse_frommap(int32_t fd);
+void inter_mapif_init(int32_t fd) __attribute__((deprecated));
 
-int inter_check_length(int fd, int length) __attribute__((pure));
+int32_t inter_check_length(int32_t fd, int32_t length) __attribute__((pure));
 
 # define inter_cfgName "conf/inter_athena.conf"
 
-extern int party_share_level;
+extern int32_t party_share_level;
 
 #endif // INTER_HPP

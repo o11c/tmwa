@@ -89,7 +89,7 @@ static const uint64_t primitive_polynomials[65] =
     //    V    v    V    v    V    v    V    v    V    v    V    v    ,
 };
 
-uint64_t lfsr_next_internal(uint64_t last, int bits, bool allow_zero_state)
+uint64_t lfsr_next_internal(uint64_t last, int32_t bits, bool allow_zero_state)
 {
     bool next_bit = __builtin_parityll(last & primitive_polynomials[bits]) & 1;
     last <<= 1;

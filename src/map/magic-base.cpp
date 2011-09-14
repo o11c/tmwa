@@ -9,7 +9,7 @@
 #include "magic.hpp"
 #include "magic-expr.hpp"
 
-static void set_int(val_t& v, int i)
+static void set_int(val_t& v, int32_t i)
 {
     v.ty = TY::INT;
     v.v_int = i;
@@ -44,8 +44,8 @@ namespace magic_conf
 {
     std::vector<std::pair<POD_string, val_t>> vars;
 
-    //int obscure_chance;
-    int min_casttime;
+    //int32_t obscure_chance;
+    int32_t min_casttime;
 
     std::map<POD_string, POD_string> spell_names;
     std::map<POD_string, spell_t *> spells;
@@ -97,18 +97,18 @@ env_t::env_t() : vars(new val_t[magic_conf::vars.size()]) {}
 
 env_t::env_t(const env_t& src) : vars(new val_t[magic_conf::vars.size()])
 {
-    for (int i = 0; i < magic_conf::vars.size(); i++)
+    for (int32_t i = 0; i < magic_conf::vars.size(); i++)
         magic_copy_var(&vars[i], &src.vars[i]);
 }
 
 env_t::~env_t()
 {
-    for (int i = 0; i < magic_conf::vars.size(); i++)
+    for (int32_t i = 0; i < magic_conf::vars.size(); i++)
         magic_clear_var(&vars[i]);
     delete[] vars;
 }
 
-env_t *spell_create_env(spell_t *spell, MapSessionData *caster, int spellpower,
+env_t *spell_create_env(spell_t *spell, MapSessionData *caster, int32_t spellpower,
                         POD_string param)
 {
     env_t *env = new env_t;
@@ -132,7 +132,7 @@ env_t *spell_create_env(spell_t *spell, MapSessionData *caster, int spellpower,
         break;
     default:
         fprintf(stderr, "Unexpected spellarg type %d\n",
-                static_cast<int>(spell->spellarg_ty));
+                static_cast<int32_t>(spell->spellarg_ty));
         abort();
     }
 
@@ -152,7 +152,7 @@ static void free_components(component_t *& component_holder)
     component_holder = NULL;
 }
 
-void magic_add_component(component_t *& component_holder, int id, int count)
+void magic_add_component(component_t *& component_holder, int32_t id, int32_t count)
 {
     if (count <= 0)
         return;
@@ -192,7 +192,7 @@ static void copy_components(component_t *& component_holder, component_t *compon
 struct spellguard_check_t
 {
     component_t *catalysts, *components;
-    int mana, casttime;
+    int32_t mana, casttime;
 };
 
 static bool check_prerequisites(MapSessionData *caster, component_t *component)
@@ -214,7 +214,7 @@ static void consume_components(MapSessionData *caster, component_t *component)
     }
 }
 
-static int spellguard_can_satisfy(spellguard_check_t *check, MapSessionData *caster)
+static int32_t spellguard_can_satisfy(spellguard_check_t *check, MapSessionData *caster)
 {
     tick_t tick = gettick();
 
@@ -222,7 +222,7 @@ static int spellguard_can_satisfy(spellguard_check_t *check, MapSessionData *cas
         && check_prerequisites(caster, check->catalysts)
         && check_prerequisites(caster, check->components))
     {
-        unsigned casttime = max(check->casttime, magic_conf::min_casttime);
+        uint32_t casttime = max(check->casttime, magic_conf::min_casttime);
 
         caster->cast_tick = tick + casttime;
 
@@ -291,7 +291,7 @@ static effect_set_t *spellguard_check_sub(spellguard_check_t *check,
             return NULL;
 
     default:
-        fprintf(stderr, "Unexpected spellguard type %d\n", static_cast<int>(guard->ty));
+        fprintf(stderr, "Unexpected spellguard type %d\n", static_cast<int32_t>(guard->ty));
         return NULL;
     }
 
@@ -320,7 +320,7 @@ effect_set_t *spell_trigger(spell_t *spell, MapSessionData *caster, env_t *env)
 {
     spellguard_t *guard = spell->spellguard;
 
-    for (int i = 0; i < spell->letdefs_nr; i++)
+    for (int32_t i = 0; i < spell->letdefs_nr; i++)
         env->vars[spell->letdefs[i].id] = env->magic_eval(spell->letdefs[i].expr);
 
     return check_spellguard(guard, caster, env);

@@ -15,13 +15,13 @@ static party_t party_newid = 100;
 
 static void mapif_party_broken(party_t party_id, uint8_t flag);
 static bool party_check_empty(struct party *p);
-static void mapif_parse_PartyLeave(int fd, party_t party_id, account_t account_id);
+static void mapif_parse_PartyLeave(int32_t fd, party_t party_id, account_t account_id);
 
 /// Save party
 static void inter_party_tofile(FILE *fp, struct party *p)
 {
     fprintf(fp, "%u\t%s\t%d,%d\t", p->party_id, p->name, p->exp, p->item);
-    for (int i = 0; i < MAX_PARTY; i++)
+    for (int32_t i = 0; i < MAX_PARTY; i++)
     {
         struct party_member *m = &p->member[i];
         fprintf(fp, "%d,%d\t%s\t", m->account_id, m->leader, (m->account_id ? m->name : "-"));
@@ -35,17 +35,17 @@ static bool inter_party_fromstr(const char *str, struct party *p)
     memset(p, 0, sizeof(struct party));
 
     // can't scanf a bool
-    int exp, item;
+    int32_t exp, item;
     if (sscanf(str, "%d\t%23[^\t]\t%d,%d\t", &p->party_id, p->name, &exp, &item) != 4)
         return 1;
     p->exp = exp;
     p->item = item;
 
     // skip those tabs
-    for (int j = 0; j < 3 && str; j++)
+    for (int32_t j = 0; j < 3 && str; j++)
         str = strchr(str + 1, '\t');
 
-    for (int i = 0; i < MAX_PARTY; i++)
+    for (int32_t i = 0; i < MAX_PARTY; i++)
     {
         struct party_member *m = &p->member[i];
         if (!str)
@@ -54,7 +54,7 @@ static bool inter_party_fromstr(const char *str, struct party *p)
         if (sscanf(str + 1, "%d,%d\t%23[^\t]\t", &m->account_id, &m->leader, m->name) != 3)
             return 1;
 
-        for (int j = 0; j < 2 && str; j++)
+        for (int32_t j = 0; j < 2 && str; j++)
             str = strchr(str + 1, '\t');
     }
     return 0;
@@ -69,12 +69,12 @@ bool inter_party_init(void)
     if (!fp)
         return 1;
 
-    int c = 0;
+    int32_t c = 0;
     char line[8192];
     while (fgets(line, sizeof(line), fp))
     {
         party_t i;
-        int j = 0;
+        int32_t j = 0;
         if (sscanf(line, "%d\t%%newid%%\n%n", &i, &j) == 1 && j > 0 && party_newid <= i)
         {
             party_newid = i;
@@ -110,7 +110,7 @@ static void inter_party_save_sub(db_key_t, db_val_t data, FILE *fp)
 /// Save all parties
 bool inter_party_save(void)
 {
-    int lock;
+    int32_t lock;
     FILE *fp = lock_fopen(party_txt, &lock);
     if (!fp)
     {
@@ -146,7 +146,7 @@ static bool party_check_exp_share(struct party *p)
     level_t maxlv = 0;
     level_t minlv = 0xff;
 
-    for (int i = 0; i < MAX_PARTY; i++)
+    for (int32_t i = 0; i < MAX_PARTY; i++)
     {
         level_t lv = p->member[i].lv;
         if (p->member[i].online)
@@ -163,7 +163,7 @@ static bool party_check_exp_share(struct party *p)
 /// Check if party is empty, and clear it if it is
 bool party_check_empty(struct party *p)
 {
-    for (int i = 0; i < MAX_PARTY; i++)
+    for (int32_t i = 0; i < MAX_PARTY; i++)
         if (p->member[i].account_id)
             return 0;
     mapif_party_broken(p->party_id, 0);
@@ -180,7 +180,7 @@ static void party_check_conflict_sub(db_key_t, db_val_t data, party_t party_id, 
     if (p->party_id == party_id)
         return;
 
-    for (int i = 0; i < MAX_PARTY; i++)
+    for (int32_t i = 0; i < MAX_PARTY; i++)
     {
         if (p->member[i].account_id == account_id
             && strcmp(p->member[i].name, nick) == 0)
@@ -201,7 +201,7 @@ static void party_check_conflict(party_t party_id, account_t account_id, const c
 
 
 /// inform the map server of whether the party was created
-static void mapif_party_created(int fd, account_t account_id, struct party *p)
+static void mapif_party_created(int32_t fd, account_t account_id, struct party *p)
 {
     WFIFOW(fd, 0) = 0x3820;
     WFIFOL(fd, 2) = account_id;
@@ -222,7 +222,7 @@ static void mapif_party_created(int fd, account_t account_id, struct party *p)
 }
 
 /// found no party info
-static void mapif_party_noinfo(int fd, party_t party_id)
+static void mapif_party_noinfo(int32_t fd, party_t party_id)
 {
     WFIFOW(fd, 0) = 0x3821;
     WFIFOW(fd, 2) = 8;
@@ -232,7 +232,7 @@ static void mapif_party_noinfo(int fd, party_t party_id)
 }
 
 /// Return existing party info to given or all map servers
-static void mapif_party_info(int fd, struct party *p)
+static void mapif_party_info(int32_t fd, struct party *p)
 {
     uint8_t buf[4 + sizeof(struct party)];
 
@@ -246,7 +246,7 @@ static void mapif_party_info(int fd, struct party *p)
 }
 
 /// Inform the map server of whether member got added to the party
-static void mapif_party_memberadded(int fd, party_t party_id, account_t account_id, bool failed)
+static void mapif_party_memberadded(int32_t fd, party_t party_id, account_t account_id, bool failed)
 {
     WFIFOW(fd, 0) = 0x3822;
     WFIFOL(fd, 2) = party_id;
@@ -257,7 +257,7 @@ static void mapif_party_memberadded(int fd, party_t party_id, account_t account_
 
 /// Inform map server that a party option changed
 // flag bits: 0x01 exp, 0x10 item
-static void mapif_party_optionchanged(int fd, struct party *p, account_t account_id,
+static void mapif_party_optionchanged(int32_t fd, struct party *p, account_t account_id,
                                 uint8_t flag)
 {
     uint8_t buf[15];
@@ -289,7 +289,7 @@ static void mapif_party_left(party_t party_id, account_t account_id, const char 
 }
 
 /// Inform all map servers that party member has changed map
-static void mapif_party_membermoved(struct party *p, int idx)
+static void mapif_party_membermoved(struct party *p, int32_t idx)
 {
     uint8_t buf[29];
     WBUFW(buf, 0) = 0x3825;
@@ -313,7 +313,7 @@ void mapif_party_broken(party_t party_id, uint8_t flag)
 }
 
 /// Forward party chat
-static void mapif_party_message(party_t party_id, account_t account_id, const char *mes, int len)
+static void mapif_party_message(party_t party_id, account_t account_id, const char *mes, int32_t len)
 {
     uint8_t buf[len + 12];
     WBUFW(buf, 0) = 0x3827;
@@ -327,10 +327,10 @@ static void mapif_party_message(party_t party_id, account_t account_id, const ch
 
 
 /// Create a party
-static void mapif_parse_CreateParty(int fd, account_t account_id, const char *name,
+static void mapif_parse_CreateParty(int32_t fd, account_t account_id, const char *name,
                               const char *nick, const char *map, level_t lv)
 {
-    for (int i = 0; i < 24 && name[i]; i++)
+    for (int32_t i = 0; i < 24 && name[i]; i++)
     {
         // no control characters
         if (!(name[i] & 0xe0) || name[i] == 0x7f)
@@ -367,7 +367,7 @@ static void mapif_parse_CreateParty(int fd, account_t account_id, const char *na
 }
 
 /// Request for party info
-static void mapif_parse_PartyInfo(int fd, party_t party_id)
+static void mapif_parse_PartyInfo(int32_t fd, party_t party_id)
 {
     struct party *p = reinterpret_cast<struct party *>(numdb_search(party_db, static_cast<numdb_key_t>(party_id)).p);
     if (p)
@@ -377,7 +377,7 @@ static void mapif_parse_PartyInfo(int fd, party_t party_id)
 }
 
 /// Add member to party
-static void mapif_parse_PartyAddMember(int fd, party_t party_id, account_t account_id,
+static void mapif_parse_PartyAddMember(int32_t fd, party_t party_id, account_t account_id,
                                  const char *nick, const char *map, level_t lv)
 {
     struct party *p = reinterpret_cast<struct party *>(numdb_search(party_db, static_cast<numdb_key_t>(party_id)).p);
@@ -387,7 +387,7 @@ static void mapif_parse_PartyAddMember(int fd, party_t party_id, account_t accou
         return;
     }
 
-    for (int i = 0; i < MAX_PARTY; i++)
+    for (int32_t i = 0; i < MAX_PARTY; i++)
     {
         if (p->member[i].account_id)
             continue;
@@ -416,7 +416,7 @@ static void mapif_parse_PartyAddMember(int fd, party_t party_id, account_t accou
 }
 
 /// Request to change a party option
-static void mapif_parse_PartyChangeOption(int fd, party_t party_id, account_t account_id,
+static void mapif_parse_PartyChangeOption(int32_t fd, party_t party_id, account_t account_id,
                                     bool exp, bool item)
 {
     struct party *p = reinterpret_cast<struct party *>(numdb_search(party_db, static_cast<numdb_key_t>(party_id)).p);
@@ -437,12 +437,12 @@ static void mapif_parse_PartyChangeOption(int fd, party_t party_id, account_t ac
 }
 
 /// Somebody leaves the party
-void mapif_parse_PartyLeave(int, party_t party_id, account_t account_id)
+void mapif_parse_PartyLeave(int32_t, party_t party_id, account_t account_id)
 {
     struct party *p = reinterpret_cast<struct party *>(numdb_search(party_db, static_cast<numdb_key_t>(party_id)).p);
     if (!p)
         return;
-    for (int i = 0; i < MAX_PARTY; i++)
+    for (int32_t i = 0; i < MAX_PARTY; i++)
     {
         if (p->member[i].account_id != account_id)
             continue;
@@ -457,14 +457,14 @@ void mapif_parse_PartyLeave(int, party_t party_id, account_t account_id)
 }
 
 /// A party member changed map (possibly logging off?)
-static void mapif_parse_PartyChangeMap(int fd, party_t party_id, account_t account_id,
+static void mapif_parse_PartyChangeMap(int32_t fd, party_t party_id, account_t account_id,
                                  const char *map, bool online, level_t lv)
 {
     struct party *p = reinterpret_cast<struct party *>(numdb_search(party_db, static_cast<numdb_key_t>(party_id)).p);
     if (!p)
         return;
 
-    for (int i = 0; i < MAX_PARTY; i++)
+    for (int32_t i = 0; i < MAX_PARTY; i++)
     {
         if (p->member[i].account_id != account_id)
             continue;
@@ -487,7 +487,7 @@ static void mapif_parse_PartyChangeMap(int fd, party_t party_id, account_t accou
 }
 
 /// Request to delete a party
-static void mapif_parse_BreakParty(int fd, party_t party_id)
+static void mapif_parse_BreakParty(int32_t fd, party_t party_id)
 {
     struct party *p = reinterpret_cast<struct party *>(numdb_search(party_db, static_cast<numdb_key_t>(party_id)).p);
     if (!p)
@@ -499,7 +499,7 @@ static void mapif_parse_BreakParty(int fd, party_t party_id)
 /// Parse party packets for the inter subserver
 // the caller has already made length checks and will RFIFOSKIP
 // return 1 if we understood it, 0 if we didn't
-bool inter_party_parse_frommap(int fd)
+bool inter_party_parse_frommap(int32_t fd)
 {
     switch (RFIFOW(fd, 0))
     {

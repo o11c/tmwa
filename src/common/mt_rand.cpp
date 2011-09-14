@@ -60,7 +60,7 @@
 
 static uint32_t state[N+1]; // state vector the +1 is needed due to the coding
 static uint32_t *next;      // next random value is computed from here
-static int left = -1;       // can *next++ this many times before reloading
+static int32_t left = -1;       // can *next++ this many times before reloading
 
 void mt_seed(uint32_t seed)
 {
@@ -68,7 +68,7 @@ void mt_seed(uint32_t seed)
     uint32_t *s = state;
     left = 0;
 
-    for (int j = N; *s++ = x, --j; x *= 69069U);
+    for (int32_t j = N; *s++ = x, --j; x *= 69069U);
 }
 
 static void mt_reload(void)
@@ -86,13 +86,13 @@ static void mt_reload(void)
     uint32_t s1 = state[1];
 
     // regenerate the lower N-M elements of the state
-    for (int j = N-M+1; --j != 0; s0 = s1, s1 = *p2++)
+    for (int32_t j = N-M+1; --j != 0; s0 = s1, s1 = *p2++)
         *p0++ = *pM++ ^ (mixBits(s0, s1) >> 1) ^ (loBit(s1) ? K : 0U);
 
     pM = state;
     // regenerate the next M-1 elements of the state
     // note that s1 is set to state[N] at the end, but discarded
-    for (int j = M; --j != 0; s0 = s1, s1 = *p2++)
+    for (int32_t j = M; --j != 0; s0 = s1, s1 = *p2++)
         *p0++ = *pM++ ^ (mixBits(s0, s1) >> 1) ^ (loBit(s1) ? K : 0U);
 
     // regenerate the last 1 element of the state

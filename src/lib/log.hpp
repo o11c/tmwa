@@ -23,19 +23,19 @@ enum class Level
 
 inline bool operator < (Level lhs, Level rhs)
 {
-    return static_cast<int>(lhs) < static_cast<int>(rhs);
+    return static_cast<int32_t>(lhs) < static_cast<int32_t>(rhs);
 }
 inline bool operator <= (Level lhs, Level rhs)
 {
-    return static_cast<int>(lhs) <= static_cast<int>(rhs);
+    return static_cast<int32_t>(lhs) <= static_cast<int32_t>(rhs);
 }
 inline bool operator > (Level lhs, Level rhs)
 {
-    return static_cast<int>(lhs) > static_cast<int>(rhs);
+    return static_cast<int32_t>(lhs) > static_cast<int32_t>(rhs);
 }
 inline bool operator >= (Level lhs, Level rhs)
 {
-    return static_cast<int>(lhs) >= static_cast<int>(rhs);
+    return static_cast<int32_t>(lhs) >= static_cast<int32_t>(rhs);
 }
 
 // TODO add (optional) automatic log rotation

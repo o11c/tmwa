@@ -337,9 +337,9 @@ void POD_string::replace(char *start, char *fin, const std::string& str)
 }
 
 /// Inspection (?) methods
-int POD_string::compare(POD_string rhs) const
+int32_t POD_string::compare(POD_string rhs) const
 {
-    int out = memcmp(_ptr, rhs._ptr, std::min(size(), rhs.size()));
+    int32_t out = memcmp(_ptr, rhs._ptr, std::min(size(), rhs.size()));
     if (out != 0)
         return out;
     return size() - rhs.size();

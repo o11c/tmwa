@@ -15,7 +15,7 @@ typedef struct
     char fn[128 - 4 - 2];       // file name
 } FILELIST;
 
-#define FILELIST_LIMIT  32768   // limit to number of filelists - if you increase this, change all shorts to int
+#define FILELIST_LIMIT  32768   // limit to number of filelists - if you increase this, change all shorts to int32_t
 #define FILELIST_ADDS   1024    // amount to increment when reallocing
 
 static FILELIST *filelist = NULL;

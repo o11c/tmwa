@@ -22,7 +22,7 @@
 # define nullpo_retv(t) nullpo_retr(, t)
 
 /// Used by macros in this header
-bool nullpo_chk(const char *file, int line, const char *func,
+bool nullpo_chk(const char *file, int32_t line, const char *func,
                 const void *target);
 
 #endif // NULLPO_HPP

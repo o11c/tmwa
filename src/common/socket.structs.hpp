@@ -38,13 +38,13 @@ struct socket_data
     /// Only called when select() indicates the socket is ready
     /// If, after that, nothing is read, it sets eof
     // These could probably be hard-coded with a little work
-    void (*func_recv)(int);
-    void (*func_send)(int);
+    void (*func_recv)(int32_t);
+    void (*func_send)(int32_t);
     /// This is the important one
     /// Set to different functions depending on whether the connection
     /// is a player or a server/ladmin
     /// Can be set explicitly or via set_defaultparse
-    void (*func_parse)(int);
+    void (*func_parse)(int32_t);
     /// Server-specific data type
     SessionData *session_data;
 

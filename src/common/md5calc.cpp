@@ -37,7 +37,7 @@ static const uint32_t T[64] =
 
 // auxilary functions
 // note - the RFC defines these by non-CS conventions: or=v, and=(empty)
-static inline uint32_t rotate_left(uint32_t val, unsigned shift)
+static inline uint32_t rotate_left(uint32_t val, uint32_t shift)
 {
     return val << shift | val >> (32-shift);
 }
@@ -115,7 +115,7 @@ void MD5_do_block(MD5_state* state, MD5_block block)
     // save the values
     const MD5_state saved = *state;
     // round 1
-    for (int i=0; i<16; i++)
+    for (int32_t i=0; i<16; i++)
     {
 #define k MD5_round1[i].k
 #define s MD5_round1[i].s
@@ -124,7 +124,7 @@ void MD5_do_block(MD5_state* state, MD5_block block)
 #undef s
     }
     // round 2
-    for (int i=0; i<16; i++)
+    for (int32_t i=0; i<16; i++)
     {
 #define k MD5_round2[i].k
 #define s MD5_round2[i].s
@@ -133,7 +133,7 @@ void MD5_do_block(MD5_state* state, MD5_block block)
 #undef s
     }
     // round 3
-    for (int i=0; i<16; i++)
+    for (int32_t i=0; i<16; i++)
     {
 #define k MD5_round3[i].k
 #define s MD5_round3[i].s
@@ -142,7 +142,7 @@ void MD5_do_block(MD5_state* state, MD5_block block)
 #undef s
     }
     // round 4
-    for (int i=0; i<16; i++)
+    for (int32_t i=0; i<16; i++)
     {
 #define k MD5_round4[i].k
 #define s MD5_round4[i].s
@@ -163,7 +163,7 @@ void MD5_do_block(MD5_state* state, MD5_block block)
 
 void MD5_to_bin(MD5_state state, uint8_t out[0x10])
 {
-    for (int i=0; i<0x10; i++)
+    for (int32_t i=0; i<0x10; i++)
         out[i] = state.val[i/4] >> 8*(i%4);
 }
 
@@ -173,7 +173,7 @@ void MD5_to_str(MD5_state state, char out[0x21])
 {
     uint8_t bin[16];
     MD5_to_bin(state, bin);
-    for (int i=0; i<0x10; i++)
+    for (int32_t i=0; i<0x10; i++)
         out[2*i] = hex[bin[i] >> 4],
         out[2*i+1] = hex[bin[i] & 0xf];
     out[0x20] = '\0';
@@ -187,7 +187,7 @@ MD5_state MD5_from_string(const char* msg, const size_t msglen)
     size_t rem = msglen;
     while (rem >= 64)
     {
-        for (int i=0; i<0x10; i++)
+        for (int32_t i=0; i<0x10; i++)
             X[i] = msg[4*i+0] | msg[4*i+1]<<8 | msg[4*i+2]<<16 | msg[4*i+3]<<24;
         MD5_do_block(&state, block);
         msg += 64;
@@ -199,18 +199,18 @@ MD5_state MD5_from_string(const char* msg, const size_t msglen)
     buf[rem] = 0x80; // a single one bit
     if (64 - rem > 8)
     {
-        for (int i=0; i<8; i++)
+        for (int32_t i=0; i<8; i++)
             buf[0x38+i] = (static_cast<uint64_t>(msglen)*8) >> (i*8);
     }
-    for (int i=0; i<0x10; i++)
+    for (int32_t i=0; i<0x10; i++)
         X[i] = buf[4*i+0] | buf[4*i+1]<<8 | buf[4*i+2]<<16 | buf[4*i+3]<<24;
     MD5_do_block(&state, block);
     if (64 - rem <= 8)
     {
         memset(buf,'\0', 0x38);
-        for (int i=0; i<8; i++)
+        for (int32_t i=0; i<8; i++)
             buf[0x38+i] = (static_cast<uint64_t>(msglen)*8) >> (i*8);
-        for (int i=0; i<0x10; i++)
+        for (int32_t i=0; i<0x10; i++)
             X[i] = buf[4*i+0] | buf[4*i+1]<<8 | buf[4*i+2]<<16 | buf[4*i+3]<<24;
         MD5_do_block(&state, block);
     }
@@ -243,7 +243,7 @@ MD5_state MD5_from_FILE(FILE* in) {
         block_len += rv;
         if (block_len != 0x40)
             continue;
-        for (int i=0; i<0x10; i++)
+        for (int32_t i=0; i<0x10; i++)
             X[i] = buf[4*i+0] | buf[4*i+1]<<8 | buf[4*i+2]<<16 | buf[4*i+3]<<24;
         MD5_do_block(&state, block);
         block_len = 0;
@@ -253,18 +253,18 @@ MD5_state MD5_from_FILE(FILE* in) {
     memset(buf + block_len + 1, '\0', 0x40 - block_len - 1);
     if (block_len < 0x38)
     {
-        for (int i=0; i<8; i++)
+        for (int32_t i=0; i<8; i++)
             buf[0x38+i] = total_len >> i*8;
     }
-    for (int i=0; i<0x10; i++)
+    for (int32_t i=0; i<0x10; i++)
         X[i] = buf[4*i+0] | buf[4*i+1]<<8 | buf[4*i+2]<<16 | buf[4*i+3]<<24;
     MD5_do_block(&state, block);
     if (0x38 <= block_len)
     {
         memset(buf, '\0', 0x38);
-        for (int i=0; i<8; i++)
+        for (int32_t i=0; i<8; i++)
             buf[0x38+i] = total_len >> i*8;
-        for (int i=0; i<0x10; i++)
+        for (int32_t i=0; i<0x10; i++)
             X[i] = buf[4*i+0] | buf[4*i+1]<<8 | buf[4*i+2]<<16 | buf[4*i+3]<<24;
         MD5_do_block(&state, block);
     }
@@ -295,7 +295,7 @@ const char *MD5_saltcrypt(const char *key, const char *salt)
 
 const char *make_salt(void) {
     static char salt[6];
-    for (int i=0; i<5; i++)
+    for (int32_t i=0; i<5; i++)
         salt[i] = MPRAND(48, 78);
     return salt;
 }
@@ -326,7 +326,7 @@ in_addr_t MD5_ip(const char *secret, in_addr_t ip)
     } conv;
 
     // MD5sum a secret + the IP address
-    snprintf(ipbuf, sizeof(ipbuf), "%lu%s", static_cast<unsigned long>(ip), secret);
+    snprintf(ipbuf, sizeof(ipbuf), "%u%s", ip, secret);
     /// TODO stop it from being a cstring
     MD5_to_bin(MD5_from_cstring(ipbuf), obuf);
 

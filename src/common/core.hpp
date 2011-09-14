@@ -10,7 +10,7 @@ extern bool runflag;
 
 /// This is an external function defined by each server
 /// This function must register stuff for the parse loop
-extern void do_init(int, char **);
+extern void do_init(int32_t, char **);
 
 /// Cleanup function called whenever a signal kills us
 /// also called when exit() is called

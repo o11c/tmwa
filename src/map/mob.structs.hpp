@@ -4,21 +4,21 @@
 struct mob_db
 {
     char name[24], jname[24];
-    int lv;
-    int max_hp, max_sp;
-    int base_exp, job_exp;
-    int atk1, atk2;
-    int def, mdef;
-    int str, agi, vit, int_, dex, luk;
-    int range, range2, range3;
-    int size, race, element, mode;
-    int speed, adelay, amotion, dmotion;
-    int mutations_nr, mutation_power;
+    int32_t lv;
+    int32_t max_hp, max_sp;
+    int32_t base_exp, job_exp;
+    int32_t atk1, atk2;
+    int32_t def, mdef;
+    int32_t str, agi, vit, int_, dex, luk;
+    int32_t range, range2, range3;
+    int32_t size, race, element, mode;
+    int32_t speed, adelay, amotion, dmotion;
+    int32_t mutations_nr, mutation_power;
     struct
     {
-        int nameid, p;
+        int32_t nameid, p;
     } dropitem[8];
-    int equip;                 // [Valaris]
+    int32_t equip;                 // [Valaris]
 };
 
 #endif //MOB_STRUCTS

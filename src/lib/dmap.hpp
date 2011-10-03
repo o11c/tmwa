@@ -9,7 +9,7 @@ class DMap
 {
     std::map<K, V> impl;
 public:
-    V get(const K& key)
+    V get(const K& key) __attribute__((pure))
     {
         auto it = impl.find(key);
         if (it == impl.end())

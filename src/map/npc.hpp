@@ -39,7 +39,6 @@ struct npc_data *npc_spawn_text(location_t loc, int32_t npc_class, const char *n
 void npc_addsrcfile(char *);
 int32_t do_init_npc(void);
 int32_t npc_event_do_oninit(void);
-int32_t npc_do_ontimer(int32_t, MapSessionData *, bool);
 
 int32_t npc_event_doall_l(const char *name, int32_t rid, int32_t argc, ArgRec *argv);
 int32_t npc_event_do_l(const char *name, int32_t rid, int32_t argc, ArgRec *argv);

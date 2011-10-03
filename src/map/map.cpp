@@ -780,8 +780,6 @@ void map_quit(MapSessionData *sd)
     else if (sd->state.storage_flag == 1)
         storage_storage_quit(sd);
 
-    free(sd->npc_stackbuf);
-
     map_delblock(sd);
 
     numdb_erase(id_db, sd->id);
@@ -789,9 +787,7 @@ void map_quit(MapSessionData *sd)
     numdb_erase(charid_db, static_cast<numdb_key_t>(sd->status.char_id));
 }
 
-// return the session of the given id
-// TODO figure out what kind of ID it is and use a typedef
-// I think it might be a charid_t but I'm not sure
+// return the session data of the given account ID
 MapSessionData *map_id2sd(uint32_t id)
 {
     for (MapSessionData *sd : all_sessions)
@@ -1305,11 +1301,6 @@ static void map_config_read(const char *cfgName)
                 strcpy(motd_txt, w2);
                 continue;
             }
-            if (strcasecmp(w1, "mapreg_txt") == 0)
-            {
-                strcpy(mapreg_txt, w2);
-                continue;
-            }
             if (strcasecmp(w1, "gm_log") == 0)
             {
                 gm_logfile_name = strdup(w2);
@@ -1362,7 +1353,6 @@ void do_init(int32_t argc, char *argv[])
     const char *MAP_CONF_NAME = "conf/map_athena.conf";
     const char *BATTLE_CONF_FILENAME = "conf/battle_athena.conf";
     const char *ATCOMMAND_CONF_FILENAME = "conf/atcommand_athena.conf";
-    const char *SCRIPT_CONF_NAME = "conf/script_athena.conf";
 
     for (int32_t i = 1; i < argc; i++)
     {
@@ -1376,14 +1366,11 @@ void do_init(int32_t argc, char *argv[])
             BATTLE_CONF_FILENAME = argv[i + 1];
         else if (strcmp(argv[i], "--atcommand_config") == 0)
             ATCOMMAND_CONF_FILENAME = argv[i + 1];
-        else if (strcmp(argv[i], "--script_config") == 0)
-            SCRIPT_CONF_NAME = argv[i + 1];
     }
 
     map_config_read(MAP_CONF_NAME);
     battle_config_read(BATTLE_CONF_FILENAME);
     atcommand_config_read(ATCOMMAND_CONF_FILENAME);
-    script_config_read(SCRIPT_CONF_NAME);
 
     id_db = numdb_init();
     map_db = strdb_init();
@@ -1394,6 +1381,7 @@ void do_init(int32_t argc, char *argv[])
 
     do_init_chrif();
     do_init_clif();
+    pre_init_script();
     do_init_itemdb();
     do_init_mob();
     do_init_script();

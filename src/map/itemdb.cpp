@@ -56,7 +56,7 @@ struct item_data *itemdb_search(int32_t nameid)
     if (id)
         return id;
 
-    CREATE(id, struct item_data, 1);
+    id = new item_data();
     numdb_insert(item_db, nameid, static_cast<void *>(id));
 
     id->nameid = nameid;
@@ -211,16 +211,13 @@ static void itemdb_readdb(void)
             id->look = atoi(str[16]);
             id->flag.available = 1;
 
-            id->use_script = NULL;
-            id->equip_script = NULL;
-
             if ((p = strchr(np, '{')) == NULL)
                 continue;
-            id->use_script = parse_script(p, lines);
+            id->use_script = parse_script(std::string(filename), p, lines);
 
             if ((p = strchr(p + 1, '{')) == NULL)
                 continue;
-            id->equip_script = parse_script(p, lines);
+            id->equip_script = parse_script(std::string(filename), p, lines);
         }
         fclose_(fp);
         printf("read %s done (count=%d)\n", filename, ln);

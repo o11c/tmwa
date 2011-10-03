@@ -4,7 +4,9 @@
 # include "battle.structs.hpp"
 # include "itemdb.structs.hpp"
 # include "path.structs.hpp"
+# include "script.structs.hpp"
 
+# include "../lib/dmap.hpp"
 # include "../lib/earray.hpp"
 
 # include "../common/socket.structs.hpp"
@@ -81,16 +83,6 @@ public:
 // catch bugs
 void free(BlockList *) = delete;
 
-struct script_reg
-{
-    int32_t index;
-    int32_t data;
-};
-struct script_regstr
-{
-    int32_t index;
-    char data[256];
-};
 struct status_change
 {
     timer_id timer;
@@ -161,9 +153,8 @@ public:
     int32_t npc_pos;
     int32_t npc_menu;
     int32_t npc_amount;
-    int32_t npc_stack, npc_stackmax;
-    const char *npc_script, *npc_scriptroot;
-    struct script_data *npc_stackbuf;
+    const Script *npc_script, *npc_scriptroot;
+    std::vector<script_data> npc_stackbuf;
     char npc_str[256];
     struct
     {
@@ -248,10 +239,8 @@ public:
     int32_t die_counter;
     int16_t doridori_counter;
 
-    int32_t reg_num;
-    struct script_reg *reg;
-    int32_t regstr_num;
-    struct script_regstr *regstr;
+    DMap<int32_t, int32_t> reg;
+    DMap<int32_t, std::string> regstr;
 
     struct status_change sc_data[MAX_STATUSCHANGE];
     int16_t sc_count;
@@ -329,14 +318,14 @@ struct npc_data : public BlockList
 
 protected:
     npc_data(NPC_Subtype sub) : BlockList(BL_NPC), subtype(sub) {}
-    ~npc_data();
+    virtual ~npc_data();
 };
 
 struct npc_data_script : npc_data
 {
     struct
     {
-        const char *script;
+        const std::vector<Script> script;
         int16_t xs, ys;
         timer_id timerid;
         int32_t timer, timeramount, nexttimer;
@@ -346,7 +335,7 @@ struct npc_data_script : npc_data
         struct npc_label_list *label_list;
         int32_t src_id;
     } scr;
-    npc_data_script() : npc_data(SCRIPT) {}
+    npc_data_script(std::vector<Script>&& s) : npc_data(SCRIPT), scr({script : s}) {}
     ~npc_data_script();
 };
 struct npc_data_shop : npc_data

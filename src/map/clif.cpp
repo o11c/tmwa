@@ -2332,7 +2332,7 @@ void clif_displaymessage(int32_t fd, const char *mes)
  * 天の声を送信する
  *------------------------------------------
  */
-void clif_GMmessage(BlockList *bl, const char *mes, int32_t len, int32_t flag)
+void clif_GMmessage(BlockList *bl, const char *mes, size_t len, int32_t flag)
 {
     uint8_t buf[len + 16];
     WBUFW(buf, 0) = 0x9a;
@@ -3564,7 +3564,7 @@ static void clif_parse_UnequipItem(int32_t fd, MapSessionData *sd)
 
     if (sd->npc_id != 0 || sd->opt1 > 0)
         return;
-    pc_unequipitem(sd, idx, 0);
+    pc_unequipitem(sd, idx, CalcStatus::NOW);
 }
 
 /*==========================================

@@ -679,7 +679,7 @@ static bool op_set_script_variable(env_t *, val_t *args)
     if (!c)
         return 1;
 
-    pc_setglobalreg(c, ARG_STR(1).c_str(), ARG_INT(2));
+    pc_setglobalreg(c, std::string(ARG_STR(1).c_str()), ARG_INT(2));
 
     return 0;
 }
@@ -1169,9 +1169,9 @@ static int32_t spell_run(invocation_t *invocation, bool allow_delete)
                 clif_spawn_fake_npc_for_player(recipient, invocation->id);
 
             // Returns the new script position, or -1 once the script is finished
-            int32_t newpos = run_script_l(e->e_script, invocation->script_pos,
-                                      message_recipient, invocation->id,
-                                      ARRAY_SIZEOF(arg), arg);
+            int32_t newpos = run_script_l(*e->e_script, invocation->script_pos,
+                                          message_recipient, invocation->id,
+                                          ARRAY_SIZEOF(arg), arg);
             if (newpos != -1)
             {
                 // Must set up for continuation

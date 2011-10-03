@@ -180,7 +180,7 @@ void trade_tradeadditem(MapSessionData *sd, int32_t idx, int32_t amount)
                                 return;
                             }
                         }
-                        pc_unequipinvyitem(sd, idx - 2, 0);
+                        pc_unequipinvyitem(sd, idx - 2, CalcStatus::NOW);
                         sd->deal_item_index[trade_i] = idx;
                         sd->deal_item_amount[trade_i] += amount;
                         clif_tradeitemok(sd, idx, amount, 0);    //success to add item

@@ -856,7 +856,14 @@ effect:
 | SCRIPT_DATA
     {
         $$ = new_effect(EffectType::SCRIPT);
-        $$->e_script = parse_script($1.c_str(), @1.first_line);
+        $$->e_script = NULL;
+        std::vector<Script> script =
+                parse_script(
+                    std::string("<magic.conf>"),
+                    $1.c_str(),
+                    @1.first_line);
+        if (!script.empty())
+            $$->e_script = new std::vector<Script>(std::move(script));
         $1.free();
         if ($$->e_script == NULL)
             fail(@1.first_line, @1.first_column, "Failed to compile script\n");

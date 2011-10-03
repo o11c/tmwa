@@ -229,8 +229,8 @@ struct effect_t
             expr_t *cond;
             effect_t *true_branch, *false_branch;
         } e_if;
-        expr_t *e_sleep;        /* sleep time */
-        const char *e_script;
+        expr_t *e_sleep;
+        const std::vector<Script> *e_script;
         struct
         {
             const std::pair<const std::string, op_t> *op;

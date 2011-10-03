@@ -848,7 +848,7 @@ static bool fun_script_int(val_t& result, val_t args[])
     if (ARG_ENTITY(0)->type != BL_PC)
         return 1;
 
-    RESULT_INT = pc_readglobalreg(ARG_PC(0), ARG_STR(1).c_str());
+    RESULT_INT = pc_readglobalreg(ARG_PC(0), std::string(ARG_STR(1).c_str()));
     return 0;
 }
 

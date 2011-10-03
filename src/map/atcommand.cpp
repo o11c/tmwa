@@ -3035,8 +3035,8 @@ int32_t atcommand_charreset(int32_t fd, MapSessionData *sd,
     // I'm not convince this should be hard-coded, maybe there should be a script?
     // TODO should anything else be reset?
     // NOTE: also done in charwipe
-    pc_setglobalreg(pl_sd, "MAGIC_FLAGS", 0);
-    pc_setglobalreg(pl_sd, "MAGIC_EXP", 0);
+    pc_setglobalreg(pl_sd, std::string("MAGIC_FLAGS"), 0);
+    pc_setglobalreg(pl_sd, std::string("MAGIC_EXP"), 0);
     char output[200];
     sprintf(output, "'%s' skill and stats points reset!", character);
     clif_displaymessage(fd, output);
@@ -3091,7 +3091,7 @@ int32_t atcommand_char_wipe(int32_t fd, MapSessionData *sd,
         if (sd->status.inventory[i].amount)
         {
             if (sd->status.inventory[i].equip != EPOS::NONE)
-                pc_unequipitem(pl_sd, i, false);
+                pc_unequipitem(pl_sd, i, CalcStatus::NOW);
             pc_delitem(pl_sd, i, sd->status.inventory[i].amount, 0);
         }
     }
@@ -3100,8 +3100,8 @@ int32_t atcommand_char_wipe(int32_t fd, MapSessionData *sd,
     pc_calcstatus(pl_sd, 0);
     pc_resetstate(pl_sd);
     pc_resetskill(pl_sd);
-    pc_setglobalreg(pl_sd, "MAGIC_FLAGS", 0);  // [Fate] Reset magic quest variables
-    pc_setglobalreg(pl_sd, "MAGIC_EXP", 0);    // [Fate] Reset magic experience
+    pc_setglobalreg(pl_sd, std::string("MAGIC_FLAGS"), 0);  // [Fate] Reset magic quest variables
+    pc_setglobalreg(pl_sd, std::string("MAGIC_EXP"), 0);    // [Fate] Reset magic experience
 
     char output[200];
     sprintf(output, "%s:  wiped.", character); // '%s' skill and stats points reseted!
@@ -3989,7 +3989,7 @@ int32_t atcommand_storeall(int32_t fd, MapSessionData *sd,
         if (sd->status.inventory[i].amount)
         {
             if (sd->status.inventory[i].equip != EPOS::NONE)
-                pc_unequipitem(sd, i, false);
+                pc_unequipitem(sd, i, CalcStatus::NOW);
             storage_storageadd(sd, i, sd->status.inventory[i].amount);
         }
     }

@@ -22,6 +22,7 @@ obj/map/map: obj/map/map.o \
  obj/map/path.o \
  obj/map/pc.o \
  obj/map/script.o \
+ obj/map/script-builtins.o \
  obj/map/storage.o \
  obj/map/skill.o \
  obj/map/tmw.o \

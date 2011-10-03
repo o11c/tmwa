@@ -61,7 +61,7 @@ int32_t pc_remove_items(MapSessionData *player, int32_t item_id,
 int32_t pc_takeitem(MapSessionData *, struct flooritem_data *);
 int32_t pc_dropitem(MapSessionData *, int32_t, int32_t);
 
-int32_t pc_calcstatus(MapSessionData *, int32_t);
+int32_t pc_calcstatus(MapSessionData *, bool);
 int32_t pc_bonus(MapSessionData *, SP, int32_t);
 int32_t pc_skill(MapSessionData *, int32_t, int32_t, int32_t);
 
@@ -89,8 +89,13 @@ int32_t pc_resetlvl(MapSessionData *, int32_t type);
 int32_t pc_resetstate(MapSessionData *);
 int32_t pc_resetskill(MapSessionData *);
 int32_t pc_equipitem(MapSessionData *, int32_t);
-int32_t pc_unequipitem(MapSessionData *, int32_t, bool);
-int32_t pc_unequipinvyitem(MapSessionData *, int32_t, bool);
+enum class CalcStatus
+{
+    NOW,
+    LATER
+};
+int32_t pc_unequipitem(MapSessionData *, int32_t, CalcStatus);
+int32_t pc_unequipinvyitem(MapSessionData *, int32_t, CalcStatus);
 int32_t pc_useitem(MapSessionData *, int32_t);
 
 int32_t pc_damage(BlockList *, MapSessionData *, int32_t);
@@ -102,16 +107,18 @@ int32_t pc_changelook(MapSessionData *, LOOK, int32_t);
 
 int32_t pc_readparam(MapSessionData *, SP);
 int32_t pc_setparam(MapSessionData *, SP, int32_t);
-int32_t pc_readreg(MapSessionData *, int32_t) __attribute__((pure));
-int32_t pc_setreg(MapSessionData *, int32_t, int32_t);
-char *pc_readregstr(MapSessionData *sd, int32_t reg);
-int32_t pc_setregstr(MapSessionData *sd, int32_t reg, const char *str);
-int32_t pc_readglobalreg(MapSessionData *, const char *) __attribute__((pure));
-int32_t pc_setglobalreg(MapSessionData *, const char *, int32_t);
-int32_t pc_readaccountreg(MapSessionData *, const char *) __attribute__((pure));
-int32_t pc_setaccountreg(MapSessionData *, const char *, int32_t);
-int32_t pc_readaccountreg2(MapSessionData *, const char *) __attribute__((pure));
-int32_t pc_setaccountreg2(MapSessionData *, const char *, int32_t);
+int32_t pc_readglobalreg(MapSessionData *, const char *) = delete;
+int32_t pc_readglobalreg(MapSessionData *, const std::string&);
+int32_t pc_setglobalreg(MapSessionData *, const char *, int32_t) = delete;
+int32_t pc_setglobalreg(MapSessionData *, const std::string&, int32_t);
+int32_t pc_readaccountreg(MapSessionData *, const char *) = delete;
+int32_t pc_readaccountreg(MapSessionData *, const std::string&);
+int32_t pc_setaccountreg(MapSessionData *, const char *, int32_t) = delete;
+int32_t pc_setaccountreg(MapSessionData *, const std::string&, int32_t);
+int32_t pc_readaccountreg2(MapSessionData *, const char *) = delete;
+int32_t pc_readaccountreg2(MapSessionData *, const std::string&);
+int32_t pc_setaccountreg2(MapSessionData *, const char *, int32_t) = delete;
+int32_t pc_setaccountreg2(MapSessionData *, const std::string&, int32_t);
 
 int32_t pc_addeventtimer(MapSessionData *sd, int32_t tick, const char *name);
 int32_t pc_deleventtimer(MapSessionData *sd, const char *name);
@@ -119,8 +126,8 @@ int32_t pc_cleareventtimer(MapSessionData *sd);
 
 void pc_calc_pvprank_timer(timer_id, tick_t, uint32_t);
 
-int32_t pc_marriage(MapSessionData *sd, MapSessionData *dstsd);
-int32_t pc_divorce(MapSessionData *sd);
+bool pc_marriage(MapSessionData *sd, MapSessionData *dstsd);
+bool pc_divorce(MapSessionData *sd);
 MapSessionData *pc_get_partner(MapSessionData *sd) __attribute__((pure));
 int32_t pc_set_gm_level(int32_t account_id, int32_t level);
 void pc_setstand(MapSessionData *sd);

@@ -374,7 +374,7 @@ static void chrif_changedsex(int32_t fd)
     {
         if (sd->status.inventory[i].nameid
                 && sd->status.inventory[i].equip != EPOS::NONE)
-            pc_unequipitem(sd, i, 0);
+            pc_unequipitem(sd, i, CalcStatus::NOW);
     }
     // save character
     chrif_save(sd);
@@ -600,7 +600,7 @@ static void ladmin_itemfrob_c(BlockList *bl, int32_t source_id,
             {
                 item->nameid = dest_id;
                 if (item->equip != EPOS::NONE)
-                    pc_unequipitem(pc, j, 0);
+                    pc_unequipitem(pc, j, CalcStatus::NOW);
                 item->nameid = dest_id;
             }
         }

@@ -130,7 +130,7 @@ void clif_party_hp(struct party *p, MapSessionData *sd);
 // atcommand
 void clif_displaymessage(int32_t fd, const char *mes);
 void clif_disp_onlyself(MapSessionData *sd, char *mes, int32_t len);
-void clif_GMmessage(BlockList *bl, const char *mes, int32_t len, int32_t flag);
+void clif_GMmessage(BlockList *bl, const char *mes, size_t len, int32_t flag);
 void clif_resurrection(BlockList *bl, int32_t type);
 
 // special effects

@@ -14,7 +14,6 @@
 #include "pc.hpp"
 #include "script.hpp"
 
-static void npc_event_timer(timer_id, tick_t, uint32_t, char *);
 static int32_t npc_checknear(MapSessionData *, int32_t);
 static int32_t npc_parse_mob(char *w1, char *w2, char *w3, char *w4);
 
@@ -146,20 +145,6 @@ int32_t npc_event_dequeue(MapSessionData *sd)
 }
 
 /*==========================================
- * イベントの遅延実行
- *------------------------------------------
- */
-void npc_event_timer(timer_id, tick_t, uint32_t id, char *data)
-{
-    MapSessionData *sd = map_id2sd(id);
-    if (sd == NULL)
-        return;
-
-    npc_event(sd, data, 0);
-    free(data);
-}
-
-/*==========================================
  * 全てのNPCのOn*イベント実行
  *------------------------------------------
  */
@@ -262,79 +247,6 @@ int32_t npc_event_do_oninit(void)
 
     add_timer_interval(gettick() + 100, 1000, npc_event_do_clock);
 
-    return 0;
-}
-
-/*==========================================
- * OnTimer NPC event - by RoVeRT
- *------------------------------------------
- */
-static int32_t npc_addeventtimer(struct npc_data *nd, int32_t tick, const char *name)
-{
-    int32_t i;
-    for (i = 0; i < MAX_EVENTTIMER; i++)
-        if (nd->eventtimer[i].tid == NULL)
-            break;
-    if (i < MAX_EVENTTIMER)
-    {
-        char *evname;
-        CREATE(evname, char, 24);
-        memcpy(evname, name, 24);
-        nd->eventtimer[i].tid = add_timer(gettick() + tick, npc_event_timer,
-                                          nd->id, evname);
-        nd->eventtimer[i].name = evname;
-    }
-    else
-        printf("npc_addtimer: event timer is full !\n");
-
-    return 0;
-}
-
-static int32_t npc_deleventtimer(struct npc_data *nd, const char *name)
-{
-    int32_t i;
-    for (i = 0; i < MAX_EVENTTIMER; i++)
-        if (nd->eventtimer[i].tid && strcmp(nd->eventtimer[i].name, name) == 0)
-        {
-            delete_timer(nd->eventtimer[i].tid);
-            nd->eventtimer[i].tid = NULL;
-            break;
-        }
-
-    return 0;
-}
-
-static void npc_do_ontimer_sub(db_key_t key, db_val_t data, int32_t *c, MapSessionData *, bool option)
-{
-    const char *p = key.s;
-    struct event_data *ev = static_cast<struct event_data *>(data.p);
-    int32_t tick = 0;
-    char temp[10];
-    char event[50];
-
-    if (ev->nd->id == *c && (p = strchr(p, ':')) && p
-        && strncasecmp("::OnTimer", p, 8) == 0)
-    {
-        sscanf(&p[9], "%s", temp);
-        tick = atoi(temp);
-
-        strcpy(event, ev->nd->name);
-        strcat(event, p);
-
-        if (option != 0)
-        {
-            npc_addeventtimer(ev->nd, tick, event);
-        }
-        else
-        {
-            npc_deleventtimer(ev->nd, event);
-        }
-    }
-}
-
-int32_t npc_do_ontimer(int32_t npc_id, MapSessionData *sd, bool option)
-{
-    strdb_foreach(ev_db, npc_do_ontimer_sub, &npc_id, sd, option);
     return 0;
 }
 
@@ -1144,12 +1056,13 @@ static void npc_convertlabel_db(db_key_t key, db_val_t data, struct npc_data_scr
  *------------------------------------------
  */
 static int32_t npc_parse_script(char *w1, char *w2, char *w3, char *w4,
-                             char *first_line, FILE * fp, int32_t *lines)
+                                char *first_line, FILE *fp, int32_t *lines,
+                                const char *filename)
 {
     int32_t x, y, dir = 0, m, xs = 0, ys = 0, npc_class = 0;   // [Valaris] thanks to fov
     fixed_string<16> mapname;
     char *srcbuf = NULL;
-    const char *script;
+    std::vector<Script> script;
     int32_t srcsize = 65536;
     int32_t startline = 0;
     char line[1024];
@@ -1218,8 +1131,8 @@ static int32_t npc_parse_script(char *w1, char *w2, char *w3, char *w4,
             else
                 strcat(srcbuf, line);
         }
-        script = parse_script(srcbuf, startline);
-        if (script == NULL)
+        script = parse_script(std::string(filename), srcbuf, startline);
+        if (script.empty())
         {
             // script parse error?
             free(srcbuf);
@@ -1229,30 +1142,11 @@ static int32_t npc_parse_script(char *w1, char *w2, char *w3, char *w4,
     }
     else
     {
-        // duplicateする
+        map_log("Not \"script\": %s", w2);
+        return 1;
+    }
 
-        char srcname[128];
-        struct npc_data_script *nd2;
-        if (sscanf(w2, "duplicate(%[^)])", srcname) != 1)
-        {
-            printf("bad duplicate name! : %s", w2);
-            return 0;
-        }
-        if ((nd2 = static_cast<npc_data_script *>(npc_name2id(srcname))) == NULL
-            || nd2->subtype != SCRIPT
-        )
-        {
-            printf("bad duplicate name! (not exist) : %s\n", srcname);
-            return 0;
-        }
-        script = nd2->scr.script;
-        label_dup = nd2->scr.label_list;
-        label_dupnum = nd2->scr.label_list_num;
-        src_id = nd2->id;
-
-    }                           // end of スクリプト解析
-
-    nd = new npc_data_script;
+    nd = new npc_data_script(std::move(script));
 
     if (m == -1)
     {
@@ -1326,7 +1220,8 @@ static int32_t npc_parse_script(char *w1, char *w2, char *w3, char *w4,
     nd->flag = 0;
     nd->npc_class = npc_class;
     nd->speed = 200;
-    nd->scr.script = script;
+    // moved to constructor due to const
+    //nd->scr.script = script;
     nd->scr.src_id = src_id;
     nd->option = 0;
     nd->opt1 = 0;
@@ -1455,10 +1350,11 @@ static int32_t npc_parse_script(char *w1, char *w2, char *w3, char *w4,
  *------------------------------------------
  */
 static int32_t npc_parse_function(char *, char *, char *w3, char *,
-                               char *first_line, FILE * fp, int32_t *lines)
+                                  char *first_line, FILE *fp, int32_t *lines,
+                                  const char *filename)
 {
     char *srcbuf = NULL;
-    const char *script;
+    std::vector<Script> script;
     int32_t srcsize = 65536;
     int32_t startline = 0;
     char line[1024];
@@ -1502,8 +1398,8 @@ static int32_t npc_parse_function(char *, char *, char *w3, char *,
         else
             strcat(srcbuf, line);
     }
-    script = parse_script(srcbuf, startline);
-    if (script == NULL)
+    script = parse_script(std::string(filename), srcbuf, startline);
+    if (script.empty())
     {
         // script parse error?
         free(srcbuf);
@@ -1513,7 +1409,7 @@ static int32_t npc_parse_function(char *, char *, char *w3, char *,
     CREATE(p, char, 50);
 
     strncpy(p, w3, 49);
-    strdb_insert(script_get_userfunc_db(), p, const_cast<char *>(script));
+    strdb_insert(script_get_userfunc_db(), p, new std::vector<Script>(std::move(script)));
 
 //  label_db=script_get_label_db();
 
@@ -1798,7 +1694,8 @@ npc_data_script::~npc_data_script()
     free(scr.timer_event);
     if (scr.src_id == 0)
     {
-        free(const_cast<char *>(scr.script));
+        // TODO propagate the vector thingy
+        // free(const_cast<char *>(scr.script));
         free(scr.label_list);
     }
     npc_propagate_update(this);
@@ -1900,20 +1797,13 @@ int32_t do_init_npc(void)
                 if (strcasecmp(w1, "function") == 0)
                 {
                     npc_parse_function(w1, w2, w3, w4, line + w4pos, fp,
-                                        &lines);
+                                       &lines, nsl_name);
                 }
                 else
                 {
                     npc_parse_script(w1, w2, w3, w4, line + w4pos, fp,
-                                      &lines);
+                                     &lines, nsl_name);
                 }
-            }
-            else if ((i =
-                      0, sscanf(w2, "duplicate%n", &i), (i > 0
-                                                          && w2[i] == '('))
-                     && count > 3)
-            {
-                npc_parse_script(w1, w2, w3, w4, line + w4pos, fp, &lines);
             }
             else if (strcasecmp(w2, "monster") == 0 && count > 3)
             {

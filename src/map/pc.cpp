@@ -36,7 +36,7 @@
 
 #define MAP_LOG_XP(sd, suffix)  \
         MAP_LOG_PC(sd, "XP %d %d JOB %d %d %d ZENY %d + %d " suffix,            \
-                   sd->status.base_level, sd->status.base_exp, sd->status.job_level, sd->status.job_exp, sd->status.skill_point,  sd->status.zeny, pc_readaccountreg(sd, "BankAccount"))
+                   sd->status.base_level, sd->status.base_exp, sd->status.job_level, sd->status.job_exp, sd->status.skill_point,  sd->status.zeny, pc_readaccountreg(sd, std::string("BankAccount")))
 
 #define MAP_LOG_MAGIC(sd, suffix)       \
         MAP_LOG_PC(sd, "MAGIC %d %d %d %d %d %d EXP %d %d " suffix,     \
@@ -46,8 +46,8 @@
                    sd->status.skill[TMW_MAGIC_TRANSMUTE].lv,            \
                    sd->status.skill[TMW_MAGIC_NATURE].lv,               \
                    sd->status.skill[TMW_MAGIC_ETHER].lv,                \
-                   pc_readglobalreg(sd, "MAGIC_EXPERIENCE") & 0xffff,   \
-                   (pc_readglobalreg(sd, "MAGIC_EXPERIENCE") >> 24) & 0xff)
+                   pc_readglobalreg(sd, std::string("MAGIC_EXPERIENCE")) & 0xffff,   \
+                   (pc_readglobalreg(sd, std::string("MAGIC_EXPERIENCE")) >> 24) & 0xff)
 
 static int32_t pc_isequip(MapSessionData *sd, int32_t n);
 static int32_t pc_checkoverhp(MapSessionData *);
@@ -504,7 +504,7 @@ int32_t pc_authok(int32_t id, int32_t login_id2, time_t connect_until_time,
     sd->canmove_tick = tick;
     sd->attackabletime = tick;
     /* We don't want players bypassing spell restrictions. [remoitnane] */
-    sd->cast_tick = tick + pc_readglobalreg(sd, "MAGIC_CAST_TICK");
+    sd->cast_tick = tick + pc_readglobalreg(sd, std::string("MAGIC_CAST_TICK"));
 
     sd->doridori_counter = 0;
 
@@ -558,7 +558,7 @@ int32_t pc_authok(int32_t id, int32_t login_id2, time_t connect_until_time,
         map_addchariddb(sd->status.char_id, sd->status.name);
 
     //スパノビ用死にカウンターのスクリプト変数からの読み出しとsdへのセット
-    sd->die_counter = pc_readglobalreg(sd, "PC_DIE_COUNTER");
+    sd->die_counter = pc_readglobalreg(sd, std::string("PC_DIE_COUNTER"));
 
     // ステータス初期計算など
     pc_calcstatus(sd, 1);
@@ -667,7 +667,7 @@ static void pc_set_weapon_look(MapSessionData *sd)
  * 能動的に変化させたパラメータは自前でsendするように
  *------------------------------------------
  */
-int32_t pc_calcstatus(MapSessionData *sd, int32_t first)
+int32_t pc_calcstatus(MapSessionData *sd, bool first)
 {
     int32_t b_speed, b_max_hp, b_max_sp, b_hp, b_sp, b_weight, b_max_weight,
         b_hit, b_flee;
@@ -1842,7 +1842,7 @@ int32_t pc_delitem(MapSessionData *sd, int32_t n, int32_t amount, int32_t type)
     if (sd->status.inventory[n].amount <= 0)
     {
         if (sd->status.inventory[n].equip != EPOS::NONE)
-            pc_unequipitem(sd, n, 0);
+            pc_unequipitem(sd, n, CalcStatus::NOW);
         memset(&sd->status.inventory[n], 0,
                 sizeof(sd->status.inventory[0]));
         sd->inventory_data[n] = NULL;
@@ -1872,7 +1872,7 @@ int32_t pc_dropitem(MapSessionData *sd, int32_t n, int32_t amount)
     if (amount <= 0)
         return 0;
 
-    pc_unequipinvyitem(sd, n, 0);
+    pc_unequipinvyitem(sd, n, CalcStatus::NOW);
 
     if (sd->status.inventory[n].nameid <= 0 ||
         sd->status.inventory[n].amount < amount ||
@@ -3135,7 +3135,7 @@ int32_t pc_resetlvl(MapSessionData *sd, int32_t type)
         if (sd->equip_index[i] >= 0)
             if (!pc_isequip(sd, sd->equip_index[i]))
             {
-                pc_unequipitem(sd, sd->equip_index[i], 1);
+                pc_unequipitem(sd, sd->equip_index[i], CalcStatus::LATER);
                 sd->equip_index[i] = -1;
             }
     }
@@ -3297,7 +3297,7 @@ int32_t pc_damage(BlockList *src, MapSessionData *sd,
     pc_stop_walking(sd, 0);
     skill_castcancel(sd);  // 詠唱の中止
     clif_being_remove(sd, BeingRemoveType::DEAD);
-    pc_setglobalreg(sd, "PC_DIE_COUNTER", ++sd->die_counter);  //死にカウンター書き込み
+    pc_setglobalreg(sd, std::string("PC_DIE_COUNTER"), ++sd->die_counter);  //死にカウンター書き込み
     skill_status_change_clear(sd, 0); // ステータス異常を解除する
     clif_updatestatus(sd, SP::HP);
     pc_calcstatus(sd, 0);
@@ -3400,7 +3400,7 @@ int32_t pc_damage(BlockList *src, MapSessionData *sd,
                     if (MRAND(10000) < per)
                     {
                         if (sd->status.inventory[n].equip != EPOS::NONE)
-                            pc_unequipitem(sd, n, 0);
+                            pc_unequipitem(sd, n, CalcStatus::NOW);
                         pc_dropitem(sd, n, 1);
                     }
                 }
@@ -3416,7 +3416,7 @@ int32_t pc_damage(BlockList *src, MapSessionData *sd,
                             || type == 3))
                     {
                         if (sd->status.inventory[i].equip != EPOS::NONE)
-                            pc_unequipitem(sd, i, false);
+                            pc_unequipitem(sd, i, CalcStatus::NOW);
                         pc_dropitem(sd, i, 1);
                         break;
                     }
@@ -3982,110 +3982,16 @@ int32_t pc_setoption(MapSessionData *sd, int32_t type)
 }
 
 /*==========================================
- * script用変数の値を読む
- *------------------------------------------
- */
-int32_t pc_readreg(MapSessionData *sd, int32_t reg)
-{
-    int32_t i;
-
-    nullpo_ret(sd);
-
-    for (i = 0; i < sd->reg_num; i++)
-        if (sd->reg[i].index == reg)
-            return sd->reg[i].data;
-
-    return 0;
-}
-
-/*==========================================
- * script用変数の値を設定
- *------------------------------------------
- */
-int32_t pc_setreg(MapSessionData *sd, int32_t reg, int32_t val)
-{
-    int32_t i;
-
-    nullpo_ret(sd);
-
-    for (i = 0; i < sd->reg_num; i++)
-    {
-        if (sd->reg[i].index == reg)
-        {
-            sd->reg[i].data = val;
-            return 0;
-        }
-    }
-    sd->reg_num++;
-    RECREATE(sd->reg, struct script_reg, sd->reg_num);
-    sd->reg[i].index = reg;
-    sd->reg[i].data = val;
-
-    return 0;
-}
-
-/*==========================================
- * script用文字列変数の値を読む
- *------------------------------------------
- */
-char *pc_readregstr(MapSessionData *sd, int32_t reg)
-{
-    int32_t i;
-
-    nullpo_ret(sd);
-
-    for (i = 0; i < sd->regstr_num; i++)
-        if (sd->regstr[i].index == reg)
-            return sd->regstr[i].data;
-
-    return NULL;
-}
-
-/*==========================================
- * script用文字列変数の値を設定
- *------------------------------------------
- */
-int32_t pc_setregstr(MapSessionData *sd, int32_t reg, const char *str)
-{
-    int32_t i;
-
-    nullpo_ret(sd);
-
-    if (strlen(str) + 1 > sizeof(sd->regstr[0].data))
-    {
-        printf("pc_setregstr(): String too long!\n");
-        return 0;
-    }
-
-    for (i = 0; i < sd->regstr_num; i++)
-        if (sd->regstr[i].index == reg)
-        {
-            strcpy(sd->regstr[i].data, str);
-            return 0;
-        }
-    sd->regstr_num++;
-    RECREATE(sd->regstr, struct script_regstr, sd->regstr_num);
-    sd->regstr[i].index = reg;
-    strcpy(sd->regstr[i].data, str);
-
-    return 0;
-}
-
-/*==========================================
  * script用グローバル変数の値を読む
  *------------------------------------------
  */
-int32_t pc_readglobalreg(MapSessionData *sd, const char *reg)
+int32_t pc_readglobalreg(MapSessionData *sd, const std::string& reg)
 {
-    int32_t i;
-
     nullpo_ret(sd);
 
-    for (i = 0; i < sd->status.global_reg_num; i++)
-    {
-        if (strcmp(sd->status.global_reg[i].str, reg) == 0)
+    for (int32_t i = 0; i < sd->status.global_reg_num; i++)
+        if (sd->status.global_reg[i].str == reg)
             return sd->status.global_reg[i].value;
-    }
 
     return 0;
 }
@@ -4094,35 +4000,31 @@ int32_t pc_readglobalreg(MapSessionData *sd, const char *reg)
  * script用グローバル変数の値を設定
  *------------------------------------------
  */
-int32_t pc_setglobalreg(MapSessionData *sd, const char *reg, int32_t val)
+int32_t pc_setglobalreg(MapSessionData *sd, const std::string& reg, int32_t val)
 {
-    int32_t i;
-
     nullpo_ret(sd);
 
     //PC_DIE_COUNTERがスクリプトなどで変更された時の処理
-    if (strcmp(reg, "PC_DIE_COUNTER") == 0 && sd->die_counter != val)
+    if (reg == "PC_DIE_COUNTER" && sd->die_counter != val)
     {
         sd->die_counter = val;
         pc_calcstatus(sd, 0);
     }
     if (val == 0)
     {
-        for (i = 0; i < sd->status.global_reg_num; i++)
+        for (int32_t i = 0; i < sd->status.global_reg_num; i++)
         {
-            if (strcmp(sd->status.global_reg[i].str, reg) == 0)
+            if (sd->status.global_reg[i].str == reg)
             {
-                sd->status.global_reg[i] =
-                    sd->status.global_reg[sd->status.global_reg_num - 1];
-                sd->status.global_reg_num--;
+                sd->status.global_reg[i] = sd->status.global_reg[--sd->status.global_reg_num];
                 break;
             }
         }
         return 0;
     }
-    for (i = 0; i < sd->status.global_reg_num; i++)
+    for (int32_t i = 0; i < sd->status.global_reg_num; i++)
     {
-        if (strcmp(sd->status.global_reg[i].str, reg) == 0)
+        if (sd->status.global_reg[i].str == reg)
         {
             sd->status.global_reg[i].value = val;
             return 0;
@@ -4130,13 +4032,12 @@ int32_t pc_setglobalreg(MapSessionData *sd, const char *reg, int32_t val)
     }
     if (sd->status.global_reg_num < GLOBAL_REG_NUM)
     {
-        strcpy(sd->status.global_reg[i].str, reg);
-        sd->status.global_reg[i].value = val;
-        sd->status.global_reg_num++;
+        STRZCPY(sd->status.global_reg[sd->status.global_reg_num].str, reg.c_str());
+        sd->status.global_reg[sd->status.global_reg_num++].value = val;
         return 0;
     }
-    map_log("pcmap_log_setglobalreg : couldn't set %s (GLOBAL_REG_NUM = %d)\n",
-            reg, GLOBAL_REG_NUM);
+    map_log("%s: couldn't set %s (GLOBAL_REG_NUM = %d)\n", __func__,
+            reg.c_str(), GLOBAL_REG_NUM);
 
     return 1;
 }
@@ -4145,15 +4046,13 @@ int32_t pc_setglobalreg(MapSessionData *sd, const char *reg, int32_t val)
  * script用アカウント変数の値を読む
  *------------------------------------------
  */
-int32_t pc_readaccountreg(MapSessionData *sd, const char *reg)
+int32_t pc_readaccountreg(MapSessionData *sd, const std::string& reg)
 {
-    int32_t i;
-
     nullpo_ret(sd);
 
-    for (i = 0; i < sd->status.account_reg_num; i++)
+    for (int32_t i = 0; i < sd->status.account_reg_num; i++)
     {
-        if (strcmp(sd->status.account_reg[i].str, reg) == 0)
+        if (sd->status.account_reg[i].str == reg)
             return sd->status.account_reg[i].value;
     }
 
@@ -4164,30 +4063,26 @@ int32_t pc_readaccountreg(MapSessionData *sd, const char *reg)
  * script用アカウント変数の値を設定
  *------------------------------------------
  */
-int32_t pc_setaccountreg(MapSessionData *sd, const char *reg, int32_t val)
+int32_t pc_setaccountreg(MapSessionData *sd, const std::string& reg, int32_t val)
 {
-    int32_t i;
-
     nullpo_ret(sd);
 
     if (val == 0)
     {
-        for (i = 0; i < sd->status.account_reg_num; i++)
+        for (int32_t i = 0; i < sd->status.account_reg_num; i++)
         {
-            if (strcmp(sd->status.account_reg[i].str, reg) == 0)
+            if (sd->status.account_reg[i].str == reg)
             {
-                sd->status.account_reg[i] =
-                    sd->status.account_reg[sd->status.account_reg_num - 1];
-                sd->status.account_reg_num--;
+                sd->status.account_reg[i] = sd->status.account_reg[--sd->status.account_reg_num];
                 break;
             }
         }
         intif_saveaccountreg(sd);
         return 0;
     }
-    for (i = 0; i < sd->status.account_reg_num; i++)
+    for (int32_t i = 0; i < sd->status.account_reg_num; i++)
     {
-        if (strcmp(sd->status.account_reg[i].str, reg) == 0)
+        if (sd->status.account_reg[i].str == reg)
         {
             sd->status.account_reg[i].value = val;
             intif_saveaccountreg(sd);
@@ -4196,14 +4091,13 @@ int32_t pc_setaccountreg(MapSessionData *sd, const char *reg, int32_t val)
     }
     if (sd->status.account_reg_num < ACCOUNT_REG_NUM)
     {
-        strcpy(sd->status.account_reg[i].str, reg);
-        sd->status.account_reg[i].value = val;
-        sd->status.account_reg_num++;
+        STRZCPY(sd->status.account_reg[sd->status.account_reg_num].str, reg.c_str());
+        sd->status.account_reg[sd->status.account_reg_num++].value = val;
         intif_saveaccountreg(sd);
         return 0;
     }
-    map_log("pcmap_log_setaccountreg : couldn't set %s (ACCOUNT_REG_NUM = %d)\n",
-            reg, ACCOUNT_REG_NUM);
+    map_log("%s: couldn't set %s (ACCOUNT_REG_NUM = %d)\n", __func__,
+            reg.c_str(), ACCOUNT_REG_NUM);
 
     return 1;
 }
@@ -4212,15 +4106,13 @@ int32_t pc_setaccountreg(MapSessionData *sd, const char *reg, int32_t val)
  * script用アカウント変数2の値を読む
  *------------------------------------------
  */
-int32_t pc_readaccountreg2(MapSessionData *sd, const char *reg)
+int32_t pc_readaccountreg2(MapSessionData *sd, const std::string& reg)
 {
-    int32_t i;
-
     nullpo_ret(sd);
 
-    for (i = 0; i < sd->status.account_reg2_num; i++)
+    for (int32_t i = 0; i < sd->status.account_reg2_num; i++)
     {
-        if (strcmp(sd->status.account_reg2[i].str, reg) == 0)
+        if (sd->status.account_reg2[i].str == reg)
             return sd->status.account_reg2[i].value;
     }
 
@@ -4231,30 +4123,26 @@ int32_t pc_readaccountreg2(MapSessionData *sd, const char *reg)
  * script用アカウント変数2の値を設定
  *------------------------------------------
  */
-int32_t pc_setaccountreg2(MapSessionData *sd, const char *reg, int32_t val)
+int32_t pc_setaccountreg2(MapSessionData *sd, const std::string& reg, int32_t val)
 {
-    int32_t i;
-
     nullpo_retr(1, sd);
 
     if (val == 0)
     {
-        for (i = 0; i < sd->status.account_reg2_num; i++)
+        for (int32_t i = 0; i < sd->status.account_reg2_num; i++)
         {
-            if (strcmp(sd->status.account_reg2[i].str, reg) == 0)
+            if (sd->status.account_reg2[i].str == reg)
             {
-                sd->status.account_reg2[i] =
-                    sd->status.account_reg2[sd->status.account_reg2_num - 1];
-                sd->status.account_reg2_num--;
+                sd->status.account_reg2[i] = sd->status.account_reg2[--sd->status.account_reg2_num];
                 break;
             }
         }
         chrif_saveaccountreg2(sd);
         return 0;
     }
-    for (i = 0; i < sd->status.account_reg2_num; i++)
+    for (int32_t i = 0; i < sd->status.account_reg2_num; i++)
     {
-        if (strcmp(sd->status.account_reg2[i].str, reg) == 0)
+        if (sd->status.account_reg2[i].str == reg)
         {
             sd->status.account_reg2[i].value = val;
             chrif_saveaccountreg2(sd);
@@ -4263,14 +4151,13 @@ int32_t pc_setaccountreg2(MapSessionData *sd, const char *reg, int32_t val)
     }
     if (sd->status.account_reg2_num < ACCOUNT_REG2_NUM)
     {
-        strcpy(sd->status.account_reg2[i].str, reg);
-        sd->status.account_reg2[i].value = val;
-        sd->status.account_reg2_num++;
+        STRZCPY(sd->status.account_reg2[sd->status.account_reg2_num].str, reg.c_str());
+        sd->status.account_reg2[sd->status.account_reg2_num++].value = val;
         chrif_saveaccountreg2(sd);
         return 0;
     }
-    map_log("pc_setaccountreg2 : couldn't set %s (ACCOUNT_REG2_NUM = %d)\n",
-            reg, ACCOUNT_REG2_NUM);
+    map_log("%s: couldn't set %s (ACCOUNT_REG2_NUM = %d)\n", __func__,
+            reg.c_str(), ACCOUNT_REG2_NUM);
 
     return 1;
 }
@@ -4435,7 +4322,7 @@ int32_t pc_equipitem(MapSessionData *sd, int32_t n)
         if (pos & equip_pos[i])
         {
             if (sd->equip_index[i] >= 0)    //Slot taken, remove item from there.
-                pc_unequipitem(sd, sd->equip_index[i], 1);
+                pc_unequipitem(sd, sd->equip_index[i], CalcStatus::LATER);
             sd->equip_index[i] = n;
         }
     }
@@ -4524,7 +4411,7 @@ int32_t pc_equipitem(MapSessionData *sd, int32_t n)
  * 装 備した物を外す
  *------------------------------------------
  */
-int32_t pc_unequipitem(MapSessionData *sd, int32_t n, bool type)
+int32_t pc_unequipitem(MapSessionData *sd, int32_t n, CalcStatus type)
 {
     nullpo_ret(sd);
 
@@ -4576,15 +4463,13 @@ int32_t pc_unequipitem(MapSessionData *sd, int32_t n, bool type)
     {
         clif_unequipitemack(sd, n, EPOS::NONE, false);
     }
-    if (!type)
-    {
+    if (type == CalcStatus::NOW)
         pc_calcstatus(sd, 0);
-    }
 
     return 0;
 }
 
-int32_t pc_unequipinvyitem(MapSessionData *sd, int32_t n, bool type)
+int32_t pc_unequipinvyitem(MapSessionData *sd, int32_t n, CalcStatus type)
 {
     nullpo_retr(1, sd);
 
@@ -4771,25 +4656,25 @@ int32_t pc_ismarried(MapSessionData *sd)
  * sdがdstsdと結婚(dstsd→sdの結婚処理も同時に行う)
  *------------------------------------------
  */
-int32_t pc_marriage(MapSessionData *sd, MapSessionData *dstsd)
+bool pc_marriage(MapSessionData *sd, MapSessionData *dstsd)
 {
     if (sd == NULL || dstsd == NULL || sd->status.partner_id > 0
         || dstsd->status.partner_id > 0)
-        return -1;
+        return false;
     sd->status.partner_id = dstsd->status.char_id;
     dstsd->status.partner_id = sd->status.char_id;
-    return 0;
+    return true;
 }
 
 /*==========================================
  * sdが離婚(相手はsd->status.partner_idに依る)(相手も同時に離婚・結婚指輪自動剥奪)
  *------------------------------------------
  */
-int32_t pc_divorce(MapSessionData *sd)
+bool pc_divorce(MapSessionData *sd)
 {
     MapSessionData *p_sd = NULL;
     if (sd == NULL || !pc_ismarried(sd))
-        return -1;
+        return false;
 
     // If both are on map server we don't need to bother the char server
     if ((p_sd =
@@ -4800,7 +4685,7 @@ int32_t pc_divorce(MapSessionData *sd)
         {
             printf("pc_divorce: Illegal partner_id sd=%d p_sd=%d\n",
                     sd->status.partner_id, p_sd->status.partner_id);
-            return -1;
+            return false;
         }
         p_sd->status.partner_id = 0;
         sd->status.partner_id = 0;
@@ -4814,7 +4699,7 @@ int32_t pc_divorce(MapSessionData *sd)
     else
         chrif_send_divorce(sd->status.char_id);
 
-    return 0;
+    return true;
 }
 
 /*==========================================
@@ -5526,11 +5411,11 @@ int32_t pc_logout(MapSessionData *sd) // [fate] Player logs out
      */
     if (sd->cast_tick > tick)
     {
-        if (pc_setglobalreg(sd, "MAGIC_CAST_TICK", sd->cast_tick - tick))
+        if (pc_setglobalreg(sd, std::string("MAGIC_CAST_TICK"), sd->cast_tick - tick))
             sd->status.sp = 1;
     }
     else
-        pc_setglobalreg(sd, "MAGIC_CAST_TICK", 0);
+        pc_setglobalreg(sd, std::string("MAGIC_CAST_TICK"), 0);
 
     MAP_LOG_STATS(sd, "LOGOUT");
     return 0;

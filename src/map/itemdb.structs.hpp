@@ -5,6 +5,8 @@
 
 # include "../common/mmo.hpp"
 
+# include "script.structs.hpp"
+
 enum class EQUIP
 {
     NONE    = -1,
@@ -65,8 +67,8 @@ struct item_data
     int32_t elv;
     /// "Weapon level", used in damage calculations
     int32_t wlv;
-    const char *use_script;
-    const char *equip_script;
+    std::vector<Script> use_script;
+    std::vector<Script> equip_script;
     struct
     {
         bool available:1;

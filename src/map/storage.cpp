@@ -210,7 +210,7 @@ int32_t storage_storageadd(MapSessionData *sd, int32_t idx, int32_t amount)
     if (storage_additem(sd, stor, &sd->status.inventory[idx], amount) == 0)
     {
         // remove item from inventory
-        pc_unequipinvyitem(sd, idx, 0);
+        pc_unequipinvyitem(sd, idx, CalcStatus::NOW);
         pc_delitem(sd, idx, amount, 0);
     }
 

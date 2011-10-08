@@ -23,6 +23,8 @@
 #include "tmw.hpp"
 #include "trade.hpp"
 
+template class std::vector<std::string>;
+
 #define STATE_BLIND 0x10
 #define EMOTE_IGNORED 0x0e
 
@@ -31,190 +33,192 @@ static void clif_sitting(int32_t fd, MapSessionData *sd);
 static void clif_itemlist(MapSessionData *sd);
 static void clif_GM_kickack(MapSessionData *sd, int32_t id);
 
+typedef int32_t packet_len_t;
+constexpr packet_len_t VAR = -1;
 /// I would really like to delete this table
 // most of them are not used and such
-static const int32_t packet_len_table[0x220] =
+static const packet_len_t packet_len_table[0x220] =
 {
 //#0x0000
-    10, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
+     10,  0,  0,  0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
 //#0x0010
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
 //#0x0020
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
 //#0x0030
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
 
 //#0x0040
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
 //#0x0050
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
 //#0x0060
-    0, 0, 0, -1,
-    55, 17, 3, 37,
-    46, -1, 23, -1,
-    3, 108, 3, 2,
+      0,  0,  0,VAR,
+     55, 17,  3, 37,
+     46,VAR, 23,VAR,
+      3,108,  3,  2,
 //#0x0070
-    3, 28, 19, 11,
-    3, -1, 9, 5,
-    54, 53, 58, 60,
-    41, 2, 6, 6,
+      3, 28, 19, 11,
+      3,VAR,  9,  5,
+     54, 53, 58, 60,
+     41,  2,  6,  6,
 
 //#0x0080
     // 0x8b unknown... size 2 or 23?
-    7, 3, 2, 2,
-    2, 5, 16, 12,
-    10, 7, 29, 23,
-    -1, -1, -1, 0,
+      7,  3,  2,  2,
+      2,  5, 16, 12,
+     10,  7, 29, 23,
+    VAR,VAR,VAR,  0,
 //#0x0090
-    7, 22, 28, 2,
-    6, 30, -1, -1,
-    3, -1, -1, 5,
-    9, 17, 17, 6,
+      7, 22, 28,  2,
+      6, 30,VAR,VAR,
+      3,VAR,VAR,  5,
+      9, 17, 17,  6,
 //#0x00A0
-    23, 6, 6, -1,
-    -1, -1, -1, 8,
-    7, 6, 7, 4,
-    7, 0, -1, 6,
+     23,  6,  6,VAR,
+    VAR,VAR,VAR,  8,
+      7,  6,  7,  4,
+      7,  0,VAR,  6,
 //#0x00B0
-    8, 8, 3, 3,
-    -1, 6, 6, -1,
-    7, 6, 2, 5,
-    6, 44, 5, 3,
+      8,  8,  3,  3,
+    VAR,  6,  6,VAR,
+      7,  6,  2,  5,
+      6, 44,  5,  3,
 
 //#0x00C0
-    7, 2, 6, 8,
-    6, 7, -1, -1,
-    -1, -1, 3, 3,
-    6, 6, 2, 27,
+      7,  2,  6,  8,
+      6,  7,VAR,VAR,
+    VAR,VAR,  3,  3,
+      6,  6,  2, 27,
 //#0x00D0
-    3, 4, 4, 2,
-    -1, -1, 3, -1,
-    6, 14, 3, -1,
-    28, 29, -1, -1,
+      3,  4,  4,  2,
+    VAR,VAR,  3,VAR,
+      6, 14,  3,VAR,
+     28, 29,VAR,VAR,
 //#0x00E0
-    30, 30, 26, 2,
-    6, 26, 3, 3,
-    8, 19, 5, 2,
-    3, 2, 2, 2,
+     30, 30, 26,  2,
+      6, 26,  3,  3,
+      8, 19,  5,  2,
+      3,  2,  2,  2,
 //#0x00F0
-    3, 2, 6, 8,
-    21, 8, 8, 2,
-    2, 26, 3, -1,
-    6, 27, 30, 10,
+      3,  2,  6,  8,
+     21,  8,  8,  2,
+      2, 26,  3,VAR,
+      6, 27, 30, 10,
 
 //#0x0100
-    2, 6, 6, 30,
-    79, 31, 10, 10,
-    -1, -1, 4, 6,
-    6, 2, 11, -1,
+      2,  6,  6, 30,
+     79, 31, 10, 10,
+    VAR,VAR,  4,  6,
+      6,  2, 11,VAR,
 //#0x0110
-    10, 39, 4, 10,
-    31, 35, 10, 18,
-    2, 13, 15, 20,
-    68, 2, 3, 16,
+     10, 39,  4, 10,
+     31, 35, 10, 18,
+      2, 13, 15, 20,
+     68,  2,  3, 16,
 //#0x0120
-    6, 14, -1, -1,
-    21, 8, 8, 8,
-    8, 8, 2, 2,
-    3, 4, 2, -1,
+      6, 14,VAR,VAR,
+     21,  8,  8,  8,
+      8,  8,  2,  2,
+      3,  4,  2,VAR,
 //#0x0130
-    6, 86, 6, -1,
-    -1, 7, -1, 6,
-    3, 16, 4, 4,
-    4, 6, 24, 26,
+      6, 86,  6,VAR,
+    VAR,  7,VAR,  6,
+      3, 16,  4,  4,
+      4,  6, 24, 26,
 
 //#0x0140
-    22, 14, 6, 10,
-    23, 19, 6, 39,
-    8, 9, 6, 27,
-    -1, 2, 6, 6,
+     22, 14,  6, 10,
+     23, 19,  6, 39,
+      8,  9,  6, 27,
+    VAR,  2,  6,  6,
 //#0x0150
-    110, 6, -1, -1,
-    -1, -1, -1, 6,
-    -1, 54, 66, 54,
-    90, 42, 6, 42,
+    110,  6,VAR,VAR,
+    VAR,VAR,VAR,  6,
+    VAR, 54, 66, 54,
+     90, 42,  6, 42,
 //#0x0160
-    -1, -1, -1, -1,
-    -1, 30, -1, 3,
-    14, 3, 30, 10,
-    43, 14, 186, 182,
+    VAR,VAR,VAR,VAR,
+    VAR, 30,VAR,  3,
+     14,  3, 30, 10,
+     43, 14,186,182,
 //#0x0170
-    14, 30, 10, 3,
-    -1, 6, 106, -1,
-    4, 5, 4, -1,
-    6, 7, -1, -1,
+     14, 30, 10,  3,
+    VAR,  6,106,VAR,
+      4,  5,  4,VAR,
+      6,  7,VAR,VAR,
 
 //#0x0180
-    6, 3, 106, 10,
-    10, 34, 0, 6,
-    8, 4, 4, 4,
-    29, -1, 10, 6,
+      6,  3,106, 10,
+     10, 34,  0,  6,
+      8,  4,  4,  4,
+     29,VAR, 10,  6,
 //#0x0190
-    90, 86, 24, 6,
-    30, 102, 9, 4,
-    8, 4, 14, 10,
-    -1, 6, 2, 6,
+     90, 86, 24,  6,
+     30,102,  9,  4,
+      8,  4, 14, 10,
+    VAR,  6,  2,  6,
 //#0x01A0
-    3, 3, 35, 5,
-    11, 26, -1, 4,
-    4, 6, 10, 12,
-    6, -1, 4, 4,
+      3,  3, 35,  5,
+     11, 26,VAR,  4,
+      4,  6, 10, 12,
+      6,VAR,  4,  4,
 //#0x01B0
-    11, 7, -1, 67,
-    12, 18, 114, 6,
-    3, 6, 26, 26,
-    26, 26, 2, 3,
+     11,  7,VAR, 67,
+     12, 18,114,  6,
+      3,  6, 26, 26,
+     26, 26,  2,  3,
 
 //#0x01C0
-    2, 14, 10, -1,
-    22, 22, 4, 2,
-    13, 97, 0, 9,
-    9, 30, 6, 28,
+      2, 14, 10,VAR,
+     22, 22,  4,  2,
+     13, 97,  0,  9,
+      9, 30,  6, 28,
 //#0x01D0
     // Set 0x1d5=-1
-    8, 14, 10, 35,
-    6, -1, 4, 11,
-    54, 53, 60, 2,
-    -1, 47, 33, 6,
+      8, 14, 10, 35,
+      6,VAR,  4, 11,
+     54, 53, 60,  2,
+    VAR, 47, 33,  6,
 //#0x01E0
-    30, 8, 34, 14,
-    2, 6, 26, 2,
-    28, 81, 6, 10,
-    26, 2, -1, -1,
+     30,  8, 34, 14,
+      2,  6, 26,  2,
+     28, 81,  6, 10,
+     26,  2,VAR,VAR,
 //#0x01F0
-    -1, -1, 20, 10,
-    32, 9, 34, 14,
-    2, 6, 48, 56,
-    -1, 4, 5, 10,
+    VAR,VAR, 20, 10,
+     32,  9, 34, 14,
+      2,  6, 48, 56,
+    VAR,  4,  5, 10,
 
 //#0x0200
-    26, -1, 26, 10,
-    18, 26, 11, 34,
-    14, 36, 10, 19,
-    10, -1, 24, 0,
+     26,VAR, 26, 10,
+     18, 26, 11, 34,
+     14, 36, 10, 19,
+     10,VAR, 24,  0,
 //#0x0210
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
+      0,  0,  0,  0,
 };
 
 // local define
@@ -256,7 +260,7 @@ static void WBUFPOS2(uint8_t *p, size_t pos, uint16_t x_0, uint16_t y_0, uint16_
     // y_1 = gggg gggg hhhh hhhh
     p += pos;
     // aabb bbbb
-    p[0] =  x_0 >>2;
+    p[0] =  x_0 >> 2;
     // bb00 0000 | (cccc dddd & 0011 1111)
     p[1] = (x_0 << 6) | ((y_0 >> 4) & 0x3f);
     // dddd 0000 | (eeee eeff & 0000 1111)
@@ -361,8 +365,8 @@ static void clif_send(uint8_t *buf, uint16_t len, BlockList *bl, Whom type)
         abort();
     if (len < 2)
         abort();
-    int32_t packet_len = packet_len_table[RBUFW(buf, 0)];
-    if (packet_len == -1)
+    packet_len_t packet_len = packet_len_table[RBUFW(buf, 0)];
+    if (packet_len == VAR)
     {
         if (len < 4)
             abort();
@@ -543,7 +547,7 @@ void clif_dropflooritem(struct flooritem_data *fitem)
     WBUFW(buf, 0) = 0x9e;
     WBUFL(buf, 2) = fitem->id;
     WBUFW(buf, 6) = fitem->item_data.nameid;
-    WBUFB(buf, 8) = 0;//identify;
+    WBUFB(buf, 8) = 0; //identify;
     WBUFW(buf, 9) = fitem->x;
     WBUFW(buf, 11) = fitem->y;
     WBUFB(buf, 13) = fitem->subx;
@@ -622,7 +626,7 @@ static uint16_t clif_player_update(MapSessionData *sd, uint8_t *buf)
     WBUFW(buf, 8) = sd->opt1;
     WBUFW(buf, 10) = sd->opt2;
     WBUFW(buf, 12) = sd->status.option;
-    WBUFW(buf, 14) = 0;// = sd->view_class;
+    WBUFW(buf, 14) = 0; // = sd->view_class;
     WBUFW(buf, 16) = sd->status.hair;
     if (sd->attack_spell_override)
         WBUFB(buf, 18) = sd->attack_spell_look_override;
@@ -642,12 +646,12 @@ static uint16_t clif_player_update(MapSessionData *sd, uint8_t *buf)
     WBUFW(buf, 24) = sd->status.head;
     WBUFW(buf, 26) = sd->status.chest;
     WBUFW(buf, 28) = sd->status.hair_color;
-    WBUFW(buf, 30) = 0;//sd->status.clothes_color;
+    WBUFW(buf, 30) = 0; //sd->status.clothes_color;
     WBUFW(buf, 32) = static_cast<int32_t>(sd->head_dir);
 
-    WBUFW(buf, 40) = 0;//sd->status.manner;
+    WBUFW(buf, 40) = 0; //sd->status.manner;
     WBUFW(buf, 42) = sd->opt3;
-    WBUFB(buf, 44) = 0;//sd->status.karma;
+    WBUFB(buf, 44) = 0; //sd->status.karma;
     WBUFB(buf, 45) = sd->sex;
     WBUFPOS(buf, 46, sd->x, sd->y, sd->dir);
     WBUFW(buf, 49) = (pc_isGM(sd) == 60 || pc_isGM(sd) == 99) ? 0x80 : 0;
@@ -685,12 +689,12 @@ static uint16_t clif_player_move(MapSessionData *sd, uint8_t *buf)
     WBUFW(buf, 28) = sd->status.head;
     WBUFW(buf, 30) = sd->status.chest;
     WBUFW(buf, 32) = sd->status.hair_color;
-    WBUFW(buf, 34) = 0;//sd->status.clothes_color;
+    WBUFW(buf, 34) = 0; //sd->status.clothes_color;
     WBUFW(buf, 36) = static_cast<int32_t>(sd->head_dir);
 
-    WBUFW(buf, 44) = 0;//sd->status.manner;
+    WBUFW(buf, 44) = 0; //sd->status.manner;
     WBUFW(buf, 46) = sd->opt3;
-    WBUFB(buf, 48) = 0;//sd->status.karma;
+    WBUFB(buf, 48) = 0; //sd->status.karma;
     WBUFB(buf, 49) = sd->sex;
     WBUFPOS2(buf, 50, sd->x, sd->y, sd->to_x, sd->to_y);
     // this isn't needed, as players GM status is set in the other packet
@@ -871,7 +875,7 @@ void clif_walkok(MapSessionData *sd)
 
     int32_t fd = sd->fd;
     WFIFOW(fd, 0) = 0x87;
-    WFIFOL(fd, 2) = gettick();;
+    WFIFOL(fd, 2) = gettick();
     WFIFOPOS2(fd, 6, sd->x, sd->y, sd->to_x, sd->to_y);
     WFIFOB(fd, 11) = 0;
     WFIFOSET(fd, packet_len_table[0x87]);
@@ -1120,13 +1124,13 @@ void clif_additem(MapSessionData *sd, int32_t n, int32_t amount, PickupFail fail
         WFIFOW(fd, 2) = n + 2;
         WFIFOW(fd, 4) = amount;
         WFIFOW(fd, 6) = sd->status.inventory[n].nameid;
-        WFIFOB(fd, 8) = 0;//identify;
-        WFIFOB(fd, 9) = 0;//broken or attribute;
-        WFIFOB(fd, 10) = 0;//refine;
-        WFIFOW(fd, 11) = 0;//card[0];
-        WFIFOW(fd, 13) = 0;//card[1];
-        WFIFOW(fd, 15) = 0;//card[2];
-        WFIFOW(fd, 17) = 0;//card[3];
+        WFIFOB(fd, 8) = 0; //identify;
+        WFIFOB(fd, 9) = 0; //broken or attribute;
+        WFIFOB(fd, 10) = 0; //refine;
+        WFIFOW(fd, 11) = 0; //card[0];
+        WFIFOW(fd, 13) = 0; //card[1];
+        WFIFOW(fd, 15) = 0; //card[2];
+        WFIFOW(fd, 17) = 0; //card[3];
         WFIFOW(fd, 19) = static_cast<uint16_t>(pc_equippoint(sd, n));
         WFIFOB(fd, 21) = (sd->inventory_data[n]->type == 7) ? 4 : sd->inventory_data[n]->type;
         WFIFOB(fd, 22) = static_cast<uint8_t>(fail);
@@ -1167,7 +1171,7 @@ void clif_itemlist(MapSessionData *sd)
         WFIFOW(fd, n * 18 + 4) = i + 2;
         WFIFOW(fd, n * 18 + 6) = sd->status.inventory[i].nameid;
         WFIFOB(fd, n * 18 + 8) = sd->inventory_data[i]->type;
-        WFIFOB(fd, n * 18 + 9) = 0;//identify;
+        WFIFOB(fd, n * 18 + 9) = 0; //identify;
         WFIFOW(fd, n * 18 + 10) = sd->status.inventory[i].amount;
         if (sd->inventory_data[i]->equip == EPOS::ARROW)
         {
@@ -1177,10 +1181,10 @@ void clif_itemlist(MapSessionData *sd)
         }
         else
             WFIFOW(fd, n * 18 + 12) = static_cast<uint16_t>(EPOS::NONE);
-        WFIFOW(fd, n * 18 + 14) = 0;//card[0]
-        WFIFOW(fd, n * 18 + 16) = 0;//card[1]
-        WFIFOW(fd, n * 18 + 18) = 0;//card[2]
-        WFIFOW(fd, n * 18 + 20) = 0;//card[3]
+        WFIFOW(fd, n * 18 + 14) = 0; //card[0]
+        WFIFOW(fd, n * 18 + 16) = 0; //card[1]
+        WFIFOW(fd, n * 18 + 18) = 0; //card[2]
+        WFIFOW(fd, n * 18 + 20) = 0; //card[3]
         n++;
     }
 
@@ -1214,15 +1218,15 @@ void clif_equiplist(MapSessionData *sd)
         WFIFOW(fd, n * 20 + 4) = i + 2;
         WFIFOW(fd, n * 20 + 6) = sd->status.inventory[i].nameid;
         WFIFOB(fd, n * 20 + 8) = (sd->inventory_data[i]->type == 7) ? 4 : sd->inventory_data[i]->type;
-        WFIFOB(fd, n * 20 + 9) = 0;//identify;
+        WFIFOB(fd, n * 20 + 9) = 0; //identify;
         WFIFOW(fd, n * 20 + 10) = static_cast<uint16_t>(pc_equippoint(sd, i));
         WFIFOW(fd, n * 20 + 12) = static_cast<uint16_t>(sd->status.inventory[i].equip);
-        WFIFOB(fd, n * 20 + 14) = 0;//broken or attribute;
-        WFIFOB(fd, n * 20 + 15) = 0;//refine;
-        WFIFOW(fd, n * 20 + 16) = 0;//card[0];
-        WFIFOW(fd, n * 20 + 18) = 0;//card[1];
-        WFIFOW(fd, n * 20 + 20) = 0;//card[2];
-        WFIFOW(fd, n * 20 + 22) = 0;//card[3];
+        WFIFOB(fd, n * 20 + 14) = 0; //broken or attribute;
+        WFIFOB(fd, n * 20 + 15) = 0; //refine;
+        WFIFOW(fd, n * 20 + 16) = 0; //card[0];
+        WFIFOW(fd, n * 20 + 18) = 0; //card[1];
+        WFIFOW(fd, n * 20 + 20) = 0; //card[2];
+        WFIFOW(fd, n * 20 + 22) = 0; //card[3];
         n++;
     }
 
@@ -1256,13 +1260,13 @@ void clif_storageitemlist(MapSessionData *sd, struct storage *stor)
         WFIFOW(fd, n * 18 + 4) = i + 1;
         WFIFOW(fd, n * 18 + 6) = stor->storage_[i].nameid;
         WFIFOB(fd, n * 18 + 8) = id->type;
-        WFIFOB(fd, n * 18 + 9) = 0;//identify;
+        WFIFOB(fd, n * 18 + 9) = 0; //identify;
         WFIFOW(fd, n * 18 + 10) = stor->storage_[i].amount;
         WFIFOW(fd, n * 18 + 12) = 0;
-        WFIFOW(fd, n * 18 + 14) = 0;//card[0];
-        WFIFOW(fd, n * 18 + 16) = 0;//card[1];
-        WFIFOW(fd, n * 18 + 18) = 0;//card[2];
-        WFIFOW(fd, n * 18 + 20) = 0;//card[3];
+        WFIFOW(fd, n * 18 + 14) = 0; //card[0];
+        WFIFOW(fd, n * 18 + 16) = 0; //card[1];
+        WFIFOW(fd, n * 18 + 18) = 0; //card[2];
+        WFIFOW(fd, n * 18 + 20) = 0; //card[3];
         n++;
     }
 
@@ -1297,12 +1301,12 @@ void clif_storageequiplist(MapSessionData *sd, struct storage *stor)
         WFIFOB(fd, n * 20 + 9) = //identify;
         WFIFOW(fd, n * 20 + 10) = static_cast<uint16_t>(id->equip);
         WFIFOW(fd, n * 20 + 12) = static_cast<uint16_t>(stor->storage_[i].equip);
-        WFIFOB(fd, n * 20 + 14) = 0;//broken or attribute;
-        WFIFOB(fd, n * 20 + 15) = 0;//refine;
-        WFIFOW(fd, n * 20 + 16) = 0;//card[0];
-        WFIFOW(fd, n * 20 + 18) = 0;//card[1];
-        WFIFOW(fd, n * 20 + 20) = 0;//card[2];
-        WFIFOW(fd, n * 20 + 22) = 0;//card[3];
+        WFIFOB(fd, n * 20 + 14) = 0; //broken or attribute;
+        WFIFOB(fd, n * 20 + 15) = 0; //refine;
+        WFIFOW(fd, n * 20 + 16) = 0; //card[0];
+        WFIFOW(fd, n * 20 + 18) = 0; //card[1];
+        WFIFOW(fd, n * 20 + 20) = 0; //card[2];
+        WFIFOW(fd, n * 20 + 22) = 0; //card[3];
         n++;
     }
     if (n)
@@ -1577,8 +1581,8 @@ static void clif_initialstatus(MapSessionData *sd)
     WFIFOW(fd, 34) = sd->flee;
     WFIFOW(fd, 36) = sd->flee2 / 10;
     WFIFOW(fd, 38) = sd->critical / 10;
-    WFIFOW(fd, 40) = 0;//sd->status.karma;
-    WFIFOW(fd, 42) = 0;//sd->status.manner;
+    WFIFOW(fd, 40) = 0; //sd->status.karma;
+    WFIFOW(fd, 42) = 0; //sd->status.manner;
 
     WFIFOSET(fd, packet_len_table[0xbd]);
 
@@ -1788,13 +1792,13 @@ void clif_tradeadditem(MapSessionData *sd,
     {
         idx -= 2;
         WFIFOW(fd, 6) = sd->status.inventory[idx].nameid;    // type id
-        WFIFOB(fd, 8) = 0;//identify;
-        WFIFOB(fd, 9) = 0;//broken or attribute;
-        WFIFOB(fd, 10) = 0;//refine;
-        WFIFOW(fd, 11) = 0;//card[0];
-        WFIFOW(fd, 13) = 0;//card[1];
-        WFIFOW(fd, 15) = 0;//card[2];
-        WFIFOW(fd, 17) = 0;//card[3];
+        WFIFOB(fd, 8) = 0; //identify;
+        WFIFOB(fd, 9) = 0; //broken or attribute;
+        WFIFOB(fd, 10) = 0; //refine;
+        WFIFOW(fd, 11) = 0; //card[0];
+        WFIFOW(fd, 13) = 0; //card[1];
+        WFIFOW(fd, 15) = 0; //card[2];
+        WFIFOW(fd, 17) = 0; //card[3];
     }
     WFIFOSET(fd, packet_len_table[0xe9]);
 }
@@ -1888,13 +1892,13 @@ void clif_storageitemadded(MapSessionData *sd, struct storage *stor,
     WFIFOW(fd, 2) = idx + 1; // index
     WFIFOL(fd, 4) = amount;    // amount
     WFIFOW(fd, 8) = stor->storage_[idx].nameid;
-    WFIFOB(fd, 10) = 0;//identify;
-    WFIFOB(fd, 11) = 0;//broken or attribute;
-    WFIFOB(fd, 12) = 0;//refine;
-    WFIFOW(fd, 13) = 0;//card[0];
-    WFIFOW(fd, 15) = 0;//card[1];
-    WFIFOW(fd, 17) = 0;//card[2];
-    WFIFOW(fd, 19) = 0;//card[3];
+    WFIFOB(fd, 10) = 0; //identify;
+    WFIFOB(fd, 11) = 0; //broken or attribute;
+    WFIFOB(fd, 12) = 0; //refine;
+    WFIFOW(fd, 13) = 0; //card[0];
+    WFIFOW(fd, 15) = 0; //card[1];
+    WFIFOW(fd, 17) = 0; //card[2];
+    WFIFOW(fd, 19) = 0; //card[3];
     WFIFOSET(fd, packet_len_table[0xf4]);
 }
 
@@ -2107,7 +2111,7 @@ static void clif_getareachar_item(MapSessionData *sd,
     WFIFOW(fd, 0) = 0x9d;
     WFIFOL(fd, 2) = fitem->id;
     WFIFOW(fd, 6) = fitem->item_data.nameid;
-    WFIFOB(fd, 8) = 0;//identify;
+    WFIFOB(fd, 8) = 0; //identify;
     WFIFOW(fd, 9) = fitem->x;
     WFIFOW(fd, 11) = fitem->y;
     WFIFOW(fd, 13) = fitem->item_data.amount;
@@ -4787,7 +4791,7 @@ static void clif_parse(int32_t fd)
     }
     // パケット長を計算
     packet_len = packet_len_table[cmd];
-    if (packet_len == -1)
+    if (packet_len == VAR)
     {
         if (RFIFOREST(fd) < 4)
         {

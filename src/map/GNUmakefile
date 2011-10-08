@@ -1,6 +1,5 @@
 .SUFFIXES:
-all:
-	${MAKE} -C ../.. tmwa-map
+.DEFAULT_GOAL=map
 clean:
 	rm -r ../../obj/map/
 %::

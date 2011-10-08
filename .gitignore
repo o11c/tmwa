@@ -2,9 +2,4 @@
 /warnings
 /tags
 /obj/
-# Copied executables
-/tmwa-char
-/tmwa-admin
-/tmwa-login
-/tmwa-map
-/eathena-monitor
+precompiled.hpp.gch

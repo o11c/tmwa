@@ -1,5 +1,6 @@
 #ifndef GRFIO_HPP
 #define GRFIO_HPP
+
 /// Accessor to the .gat map virtual files
 // Note .gat files are mapped to .wlk files by data/resnametable.txt
 // Note that there currently is a 1-1 correlation between them,

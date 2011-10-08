@@ -26,73 +26,73 @@
 "NE"                    HEADING(NE);
 "E"                     HEADING(E);
 "SE"                    HEADING(SE);
-"="                     {FIXLOC; return '=';}
-"=="                    {FIXLOC; return EQ;}
-"<>"                    {FIXLOC; return NEQ;}
-"!="                    {FIXLOC; return NEQ;}
-">"                     {FIXLOC; return '>';}
-"<"                     {FIXLOC; return '<';}
-">="                    {FIXLOC; return GTE;}
-"<="                    {FIXLOC; return LTE;}
-"("                     {FIXLOC; return '(';}
-")"                     {FIXLOC; return ')';}
-"+"                     {FIXLOC; return '+';}
-"-"                     {FIXLOC; return '-';}
-"*"                     {FIXLOC; return '*';}
-"/"                     {FIXLOC; return '/';}
-"%"                     {FIXLOC; return '%';}
-"&&"                    {FIXLOC; return ANDAND;}
-"||"                    {FIXLOC; return OROR;}
-";"                     {FIXLOC; return ';';}
-":"                     {FIXLOC; return ':';}
-","                     {FIXLOC; return ',';}
-"@"                     {FIXLOC; return '@';}
-"|"                     {FIXLOC; return '|';}
-"["                     {FIXLOC; return '[';}
-"]"                     {FIXLOC; return ']';}
-"&"                     {FIXLOC; return '&';}
-"^"                     {FIXLOC; return '^';}
-"."                     {FIXLOC; return '.';}
-"<<"                    {FIXLOC; return SHL;}
-">>"                    {FIXLOC; return SHR;}
-"PROCEDURE"             {FIXLOC; return PROCEDURE;}
-"CALL"                  {FIXLOC; return CALL;}
-"OR"                    {FIXLOC; return OR;}
-"TO"                    {FIXLOC; return TO;}
-"TELEPORT-ANCHOR"       {FIXLOC; return TELEPORT_ANCHOR;}
-"SILENT"                {FIXLOC; return SILENT;}
-"LOCAL"                 {FIXLOC; return LOCAL;}
-"NONMAGIC"              {FIXLOC; return NONMAGIC;}
-"SPELL"                 {FIXLOC; return SPELL;}
-"LET"                   {FIXLOC; return LET;}
-"IN"                    {FIXLOC; return IN;}
-"END"                   {FIXLOC; return END;}
-"=>"                    {FIXLOC; return DARROW;}
-"STRING"                {FIXLOC; return STRING_TY;}
-"REQUIRE"               {FIXLOC; return REQUIRE;}
-"CATALYSTS"             {FIXLOC; return CATALYSTS;}
-"COMPONENTS"            {FIXLOC; return COMPONENTS;}
-"MANA"                  {FIXLOC; return MANA;}
-"CASTTIME"              {FIXLOC; return CASTTIME;}
-"SKIP"                  {FIXLOC; return SKIP;}
-"ABORT"                 {FIXLOC; return ABORT;}
-"BREAK"                 {FIXLOC; return BREAK;}
-"EFFECT"                {FIXLOC; return EFFECT;}
-"ATEND"                 {FIXLOC; return ATEND;}
-"ATTRIGGER"             {FIXLOC; return ATTRIGGER;}
-"CONST"                 {FIXLOC; return CONST;}
-"PC"                    {FIXLOC; return PC_F;}
-"NPC"                   {FIXLOC; return NPC_F;}
-"MOB"                   {FIXLOC; return MOB_F;}
-"ENTITY"                {FIXLOC; return ENTITY_F;}
-"TARGET"                {FIXLOC; return TARGET_F;}
-"IF"                    {FIXLOC; return IF;}
-"THEN"                  {FIXLOC; return THEN;}
-"ELSE"                  {FIXLOC; return ELSE;}
-"FOREACH"               {FIXLOC; return FOREACH;}
-"FOR"                   {FIXLOC; return FOR;}
-"DO"                    {FIXLOC; return DO;}
-"WAIT"                  {FIXLOC; return SLEEP;}
+"="                     {FIXLOC; return '='; }
+"=="                    {FIXLOC; return EQ; }
+"<>"                    {FIXLOC; return NEQ; }
+"!="                    {FIXLOC; return NEQ; }
+">"                     {FIXLOC; return '>'; }
+"<"                     {FIXLOC; return '<'; }
+">="                    {FIXLOC; return GTE; }
+"<="                    {FIXLOC; return LTE; }
+"("                     {FIXLOC; return '('; }
+")"                     {FIXLOC; return ')'; }
+"+"                     {FIXLOC; return '+'; }
+"-"                     {FIXLOC; return '-'; }
+"*"                     {FIXLOC; return '*'; }
+"/"                     {FIXLOC; return '/'; }
+"%"                     {FIXLOC; return '%'; }
+"&&"                    {FIXLOC; return ANDAND; }
+"||"                    {FIXLOC; return OROR; }
+";"                     {FIXLOC; return ';'; }
+":"                     {FIXLOC; return ':'; }
+","                     {FIXLOC; return ','; }
+"@"                     {FIXLOC; return '@'; }
+"|"                     {FIXLOC; return '|'; }
+"["                     {FIXLOC; return '['; }
+"]"                     {FIXLOC; return ']'; }
+"&"                     {FIXLOC; return '&'; }
+"^"                     {FIXLOC; return '^'; }
+"."                     {FIXLOC; return '.'; }
+"<<"                    {FIXLOC; return SHL; }
+">>"                    {FIXLOC; return SHR; }
+"PROCEDURE"             {FIXLOC; return PROCEDURE; }
+"CALL"                  {FIXLOC; return CALL; }
+"OR"                    {FIXLOC; return OR; }
+"TO"                    {FIXLOC; return TO; }
+"TELEPORT-ANCHOR"       {FIXLOC; return TELEPORT_ANCHOR; }
+"SILENT"                {FIXLOC; return SILENT; }
+"LOCAL"                 {FIXLOC; return LOCAL; }
+"NONMAGIC"              {FIXLOC; return NONMAGIC; }
+"SPELL"                 {FIXLOC; return SPELL; }
+"LET"                   {FIXLOC; return LET; }
+"IN"                    {FIXLOC; return IN; }
+"END"                   {FIXLOC; return END; }
+"=>"                    {FIXLOC; return DARROW; }
+"STRING"                {FIXLOC; return STRING_TY; }
+"REQUIRE"               {FIXLOC; return REQUIRE; }
+"CATALYSTS"             {FIXLOC; return CATALYSTS; }
+"COMPONENTS"            {FIXLOC; return COMPONENTS; }
+"MANA"                  {FIXLOC; return MANA; }
+"CASTTIME"              {FIXLOC; return CASTTIME; }
+"SKIP"                  {FIXLOC; return SKIP; }
+"ABORT"                 {FIXLOC; return ABORT; }
+"BREAK"                 {FIXLOC; return BREAK; }
+"EFFECT"                {FIXLOC; return EFFECT; }
+"ATEND"                 {FIXLOC; return ATEND; }
+"ATTRIGGER"             {FIXLOC; return ATTRIGGER; }
+"CONST"                 {FIXLOC; return CONST; }
+"PC"                    {FIXLOC; return PC_F; }
+"NPC"                   {FIXLOC; return NPC_F; }
+"MOB"                   {FIXLOC; return MOB_F; }
+"ENTITY"                {FIXLOC; return ENTITY_F; }
+"TARGET"                {FIXLOC; return TARGET_F; }
+"IF"                    {FIXLOC; return IF; }
+"THEN"                  {FIXLOC; return THEN; }
+"ELSE"                  {FIXLOC; return ELSE; }
+"FOREACH"               {FIXLOC; return FOREACH; }
+"FOR"                   {FIXLOC; return FOR; }
+"DO"                    {FIXLOC; return DO; }
+"WAIT"                  {FIXLOC; return SLEEP; }
 
 \{([^\}]|\\.)*\} {
     magic_frontend_lval.s.init();

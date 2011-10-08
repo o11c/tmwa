@@ -9,6 +9,12 @@
 #include "magic.hpp"
 #include "magic-expr.hpp"
 
+template class std::set<invocation_t *>;
+template class std::map<POD_string, POD_string>;
+template class std::map<POD_string, spell_t *>;
+template class std::map<POD_string, area_t *>;
+template class std::vector<std::pair<POD_string, val_t>>;
+
 static void set_int(val_t& v, int32_t i)
 {
     v.ty = TY::INT;
@@ -386,7 +392,7 @@ invocation_t::invocation_t(invocation_t* rhs) : BlockList(*rhs),
     status_change_refs()
 {
     // unset some parent fields first
-    // (alternatively, we could have used the other constructor and set m,x,y)
+    // (alternatively, we could have used the other constructor and set m, x, y)
     id = 0;
     prev = NULL;
     next = NULL;

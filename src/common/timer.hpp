@@ -6,7 +6,7 @@
 /// This is needed to produce a signed result when 2 ticks are subtracted
 inline int32_t DIFF_TICK(tick_t a, tick_t b)
 {
-    return static_cast<int32_t>(a-b);
+    return static_cast<int32_t>(a - b);
 }
 
 inline bool operator <(const TimerData& lhs, const TimerData& rhs)

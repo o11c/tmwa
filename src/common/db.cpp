@@ -4,7 +4,7 @@
 
 #include "utils.hpp"
 
-static int32_t strdb_cmp(const char *a, const char* b)
+static int32_t strdb_cmp(const char *a, const char *b)
 {
     return strcmp(a, b);
 }
@@ -13,7 +13,7 @@ static hash_t strdb_hash(const char *a) __attribute__((pure));
 static hash_t strdb_hash(const char *a)
 {
     hash_t h = 0;
-    const uint8_t *p = reinterpret_cast<const uint8_t*>(a);
+    const uint8_t *p = reinterpret_cast<const uint8_t *>(a);
     while (*p)
     {
         h = (h * 33 + *p++) ^ (h >> 24);
@@ -262,7 +262,7 @@ static void db_rebalance_erase(struct dbn *z, struct dbn **root)
                 }
                 else
                 {
-                    if (!w->right|| w->right->color == BLACK)
+                    if (!w->right || w->right->color == BLACK)
                     {
                         if (w->left)
                             w->left->color = BLACK;
@@ -390,7 +390,7 @@ db_val_t db_erase(struct dbt *table, db_key_t key)
     return data;
 }
 #ifdef SMART_WALK_TREE
-static inline void db_walk_tree(bool dealloc, struct dbn* p, db_func_t func, va_list ap)
+static inline void db_walk_tree(bool dealloc, struct dbn *p, db_func_t func, va_list ap)
 {
     if (!p)
         return;

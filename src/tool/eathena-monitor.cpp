@@ -27,7 +27,7 @@
 
 
 #define SKIP_BLANK(ptr) ptr += skip_blank(ptr)
-static inline size_t skip_blank(const char* ptr) {
+static inline size_t skip_blank(const char *ptr) {
     size_t i = 0;
     while (
         (ptr[i] == ' ') ||
@@ -39,7 +39,7 @@ static inline size_t skip_blank(const char* ptr) {
 }
 
 #define GOTO_EQL(ptr) ptr += goto_eql(ptr)
-static inline size_t goto_eql(const char* ptr) {
+static inline size_t goto_eql(const char *ptr) {
     size_t i = 0;
     while (
         (ptr[i] != '\0') &&
@@ -51,7 +51,7 @@ static inline size_t goto_eql(const char* ptr) {
 }
 
 #define GOTO_EOL(ptr) ptr += goto_newline(ptr)
-static inline size_t goto_newline(const char* ptr) {
+static inline size_t goto_newline(const char *ptr) {
     size_t i = 0;
     while (
         (ptr[i] != '\0') &&
@@ -73,10 +73,10 @@ const char *config = CONFIG;
 
 pid_t pid_login, pid_map, pid_char;
 
-static const char* make_path(const char* base, const char* path) {
+static const char *make_path(const char* base, const char* path) {
     size_t base_len = strlen(base);
     size_t path_len = strlen(path);
-    char* out = static_cast<char *>(malloc(base_len + 1 + path_len + 1));
+    char *out = static_cast<char *>(malloc(base_len + 1 + path_len + 1));
     memcpy(out, base, base_len);
     out[base_len] = '/';
     memcpy(out + base_len + 1, path, path_len);
@@ -104,7 +104,7 @@ static void read_config(const char *filename) {
     FILE *input;
     char string[1000];
 
-    if (!(input = fopen(filename,"r")) && !(input = fopen(config, "r"))) {
+    if (!(input = fopen(filename, "r")) && !(input = fopen(config, "r"))) {
         perror("Unable to load config file");
         return;
     }
@@ -147,7 +147,7 @@ static pid_t start_process(const char *exec) {
     }
     if (pid == 0) {
         // this is a bug in the standard
-        execv(exec, const_cast<char**>(args));
+        execv(exec, const_cast<char **>(args));
         perror("Failed to exec");
         kill(getppid(), SIGABRT);
         exit(1);
@@ -174,7 +174,7 @@ int main(int argc, char *argv[]) {
 
     workdir = make_path(HOME, "tmwserver");
 
-    read_config(argc>1 ? argv[1] : NULL);
+    read_config(argc > 1 ? argv[1] : NULL);
 
     if (chdir(workdir) < 0) perror("Failed to change directory"), exit(1);
 

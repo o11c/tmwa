@@ -14,6 +14,8 @@
 #include "pc.hpp"
 #include "script.hpp"
 
+template class std::vector<npc_item_list>;
+
 static int32_t npc_checknear(MapSessionData *, int32_t);
 static int32_t npc_parse_mob(char *w1, char *w2, char *w3, char *w4);
 
@@ -168,8 +170,7 @@ int32_t npc_event_doall_l(const char *name, int32_t rid, int32_t argc, ArgRec *a
     int32_t c = 0;
     char buf[64] = "::";
 
-    strncpy(buf + 2, name, sizeof(buf)-3);
-    buf[sizeof(buf)-1] = '\0';
+    strzcpy(buf + 2, name, sizeof(buf) - 2);
     strdb_foreach(ev_db, npc_event_doall_sub, &c, static_cast<const char *>(buf), rid, argc, args);
     return c;
 }
@@ -918,7 +919,7 @@ int32_t npc_parse_warp(char *w1, const char *, char *w3, char *w4)
         }
     }
 
-//  printf("warp npc %s %d read done\n",mapname,nd->id);
+//  printf("warp npc %s %d read done\n", mapname, nd->id);
     npc_warp++;
     map_addblock(nd);
     clif_spawnnpc(nd);
@@ -1009,7 +1010,7 @@ static int32_t npc_parse_shop(char *w1, char *, char *w3, char *w4)
     nd->opt2 = 0;
     nd->opt3 = 0;
 
-    //printf("shop npc %s %d read done\n",mapname,nd->id);
+    //printf("shop npc %s %d read done\n", mapname, nd->id);
     npc_shop++;
     nd->n = map_addnpc(m, nd);
     map_addblock(nd);
@@ -1044,7 +1045,7 @@ static void npc_convertlabel_db(db_key_t key, db_val_t data, struct npc_data_scr
     {
         RECREATE(lst, struct npc_label_list, num + 1);
     }
-    strzcpy(lst[num].name, lname, min(static_cast<size_t>(p - lname), sizeof(lst[num].name)-1));
+    strzcpy(lst[num].name, lname, min(static_cast<size_t>(p - lname), sizeof(lst[num].name) - 1));
 
     lst[num].pos = pos;
     nd->scr.label_list = lst;
@@ -1228,7 +1229,7 @@ static int32_t npc_parse_script(char *w1, char *w2, char *w3, char *w4,
     nd->opt2 = 0;
     nd->opt3 = 0;
 
-    //printf("script npc %s %d %d read done\n",mapname,nd->id,nd->class);
+    //printf("script npc %s %d %d read done\n", mapname, nd->id, nd->class);
     npc_script++;
     if (m >= 0)
     {
@@ -1268,7 +1269,7 @@ static int32_t npc_parse_script(char *w1, char *w2, char *w3, char *w4,
         // duplicate
 
 //      nd->label_list=malloc(sizeof(struct npc_label_list)*label_dupnum);
-//      memcpy(nd->label_list,label_dup,sizeof(struct npc_label_list)*label_dupnum);
+//      memcpy(nd->label_list, label_dup, sizeof(struct npc_label_list)*label_dupnum);
 
         nd->scr.label_list = label_dup;   // ラベルデータ共有
         nd->scr.label_list_num = label_dupnum;
@@ -1416,7 +1417,7 @@ static int32_t npc_parse_function(char *, char *, char *w3, char *,
     // もう使わないのでバッファ解放
     free(srcbuf);
 
-//  printf("function %s => %p\n",p,script);
+//  printf("function %s => %p\n", p, script);
 
     return 0;
 }
@@ -1503,7 +1504,7 @@ int32_t npc_parse_mob(char *w1, char *, char *w3, char *w4)
 
         npc_mob++;
     }
-    //printf("warp npc %s %d read done\n",mapname,nd->id);
+    //printf("warp npc %s %d read done\n", mapname, nd->id);
 
     return 0;
 }
@@ -1521,7 +1522,7 @@ static int32_t npc_parse_mapflag(char *w1, char *, char *w3, char *w4)
     int32_t drop_id = 0, drop_type = 0, drop_per = 0;
 
     // 引数の個数チェック
-//  if (    sscanf(w1,"%[^,],%d,%d,%d",mapname,&x,&y,&dir) != 4 )
+//  if (    sscanf(w1, "%[^,],%d,%d,%d", mapname, &x, &y, &dir) != 4 )
     if (sscanf(w1, "%[^,]", &mapname) != 1)
         return 1;
 

@@ -18,6 +18,9 @@
 #include "magic-base.hpp"
 #include "magic-expr.hpp"
 
+template class std::vector<status_change_ref_t>;
+template class std::vector<int32_t>;
+
 /// Used for local spell effects
 #define INVISIBLE_NPC 127
 

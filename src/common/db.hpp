@@ -74,7 +74,7 @@ inline struct dbn *numdb_insert(struct dbt *t, numdb_key_t k, db_val_t d)
     return db_insert(t, k, d);
 }
 
-inline db_val_t numdb_erase(struct dbt* t, numdb_key_t k)
+inline db_val_t numdb_erase(struct dbt *t, numdb_key_t k)
 {
     return db_erase(t, k);
 }

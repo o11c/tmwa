@@ -22,7 +22,7 @@ int32_t magic_eval_int(env_t *env, expr_t *expr);
  */
 POD_string magic_eval_str(env_t *env, expr_t *expr);
 
-int32_t map_is_solid(int32_t m, int32_t x, int32_t y) __attribute__((pure));;
+int32_t map_is_solid(int32_t m, int32_t x, int32_t y) __attribute__((pure));
 
 expr_t *magic_new_expr(ExprType ty);
 

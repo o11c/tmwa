@@ -13,3 +13,5 @@
 obj/%.o: src/%.cpp warnings
 	@+mkdir -p $(@D)
 	$(COMPILE.cpp) -o $@ $<
+%.hpp.gch: %.hpp
+	$(COMPILE.cpp) -o $@ $<

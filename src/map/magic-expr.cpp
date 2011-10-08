@@ -1,6 +1,5 @@
 #include "magic-expr.hpp"
 
-#include <cmath>
 #include <climits>
 
 #include "../lib/int.hpp"

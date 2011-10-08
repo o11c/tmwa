@@ -1,12 +1,9 @@
 #ifndef SCRIPT_STRUCTS
 #define SCRIPT_STRUCTS
 
+# include "precompiled.hpp"
+
 # include "../lib/placed.hpp"
-
-# include <cstring>
-
-# include <vector>
-# include <string>
 
 // WARNING: most of this header is basically internal information.
 
@@ -284,5 +281,9 @@ struct str_data_t
 };
 
 extern std::vector<str_data_t> str_data;
+
+extern template class std::vector<Script>;
+extern template class std::vector<str_data_t>;
+extern template class std::vector<script_data>;
 
 #endif //SCRIPT_STRUCTS

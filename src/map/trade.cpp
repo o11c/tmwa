@@ -1,8 +1,5 @@
 #include "trade.hpp"
 
-#include <cstdio>
-#include <cstring>
-
 #include "../common/nullpo.hpp"
 
 #include "battle.hpp"

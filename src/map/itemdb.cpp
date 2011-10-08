@@ -180,7 +180,7 @@ static void itemdb_readdb(void)
                 continue;
             ln++;
 
-            //ID,Name,Jname,Type,Price,Sell,Weight,ATK,DEF,Range,Slot,Job,Gender,Loc,wLV,eLV,View
+            //ID, Name, Jname, Type, Price, Sell, Weight, ATK, DEF, Range, Slot, Job, Gender, Loc, wLV, eLV, View
             id = itemdb_search(nameid);
             memcpy(id->name, str[1], 24);
             memcpy(id->jname, str[2], 24);

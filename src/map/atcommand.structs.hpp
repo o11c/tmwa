@@ -23,8 +23,7 @@ struct AtCommandInfo
 {
     const char *command;
     gm_level_t level;
-    int32_t (*proc)(const int32_t, MapSessionData *,
-                const char *command, const char *message);
+    int32_t (*proc)(const int32_t, MapSessionData *, const char *args);
     AtCommandCategory cat;
     const char *arg_help;
     const char *long_help;

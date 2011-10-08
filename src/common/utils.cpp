@@ -13,42 +13,42 @@ void hexdump(Log& log, const uint8_t *data, size_t len)
     //         0         1         2         3         4         5         6
     //         012345678901234567890123456789012345678901234567890123456789
     log.debug("----  ?0 ?1 ?2 ?3  ?4 ?5 ?6 ?7  ?8 ?9 ?A ?B  ?C ?D ?E ?F\n");
-    for (uint16_t i = 0; i < len/16; i++, data += 16)
+    for (uint16_t i = 0; i < len / 16; i++, data += 16)
     {
-        char buf[56+1];
-        buf[0] = hex[(i>>8)%16];
-        buf[1] = hex[(i>>4)%16];
-        buf[2] = hex[i%16];
+        char buf[56 + 1];
+        buf[0] = hex[(i >> 8) % 16];
+        buf[1] = hex[(i >> 4) % 16];
+        buf[2] = hex[i % 16];
         buf[3] = '?';
 
-        for (uint8_t j=0; j<16; j++)
+        for (uint8_t j = 0; j < 16; j++)
         {
-            if (j%4 == 0)
-                buf[4 + (j/4) * 13] = ' ';
-            buf[5 + j*13/4] = ' ';
-            buf[6 + j*13/4] = hex[(data[j]>>4)%16];
-            buf[7 + j*13/4] = hex[data[j]%16];
+            if (j % 4 == 0)
+                buf[4 + (j / 4) * 13] = ' ';
+            buf[5 + j * 13 / 4] = ' ';
+            buf[6 + j * 13 / 4] = hex[(data[j] >> 4) % 16];
+            buf[7 + j * 13 / 4] = hex[data[j] % 16];
         }
         buf[56] = '\0';
         log.debug("%s", buf);
     }
-    if (len%16)
+    if (len % 16)
     {
-        char buf[56+1];
-        buf[0] = hex[((len/16)>>8)%16];
-        buf[1] = hex[((len/16)>>4)%16];
-        buf[2] = hex[(len/16)%16];
+        char buf[56 + 1];
+        buf[0] = hex[((len / 16) >> 8) % 16];
+        buf[1] = hex[((len / 16) >> 4) % 16];
+        buf[2] = hex[(len / 16) % 16];
         buf[3] = '?';
 
-        for (uint8_t j=0; j < len%16; j++)
+        for (uint8_t j = 0; j < len % 16; j++)
         {
-            if (j%4 == 0)
-                buf[4 + (j/4) * 13] = ' ';
-            buf[5 + j*13/4] = ' ';
-            buf[6 + j*13/4] = hex[(data[j]>>4)%16];
-            buf[7 + j*13/4] = hex[data[j]%16];
+            if (j % 4 == 0)
+                buf[4 + (j / 4) * 13] = ' ';
+            buf[5 + j * 13 / 4] = ' ';
+            buf[6 + j * 13 / 4] = hex[(data[j] >> 4) % 16];
+            buf[7 + j * 13 / 4] = hex[data[j] % 16];
         }
-        buf[8 + (len%16 - 1) * 13/4] = '\0';
+        buf[8 + (len % 16 - 1) * 13 / 4] = '\0';
         log.debug("%s\n", buf);
     }
 }
@@ -57,7 +57,7 @@ bool strzcpy(char *dst, const char *src, size_t n)
 {
     if (!n) abort();
     strncpy(dst, src, n);
-    dst[n-1] = '\0';
+    dst[n - 1] = '\0';
     return strnlen(src, n) != n;
 }
 

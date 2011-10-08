@@ -1,10 +1,5 @@
 #include "magic.hpp"
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <cmath>
-
 #include "magic.structs.hpp"
 #include "magic-stmt.hpp"
 #include "magic-base.hpp"

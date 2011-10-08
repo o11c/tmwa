@@ -1,13 +1,15 @@
 #! /usr/bin/make -f
 SHELL=/bin/bash
 .DELETE_ON_ERROR:
-.PHONY: default all clean common lib
+.PHONY: all easy clean common lib install
 
-PROGS = tmwa-login tmwa-char tmwa-map tmwa-admin
-all: ${PROGS}
+# The map server is slow to build and link.
+# Put it first for the illusion of better parallel builds.
+all: obj/map/map easy
 # Convenience target to rebuild stuff unlikely to break
 # after I change something in src/lib or src/common
-easy: tmwa-login tmwa-char tmwa-admin
+# (Note also that char server is slower to build than the others)
+easy: obj/char/char obj/login/login obj/admin/admin
 
 include make/suffixes.make
 include make/defaults.make
@@ -21,19 +23,13 @@ tags: src/*/
 	ctags -R src/
 
 clean:
-	rm -rf ${PROGS} obj/
+	rm -rf obj/
 
-tmwa-login: obj/login/login
-	cp -f $< $@
-tmwa-char: obj/char/char
-	cp -f $< $@
-tmwa-map: obj/map/map
-	cp -f $< $@
-tmwa-admin: obj/admin/admin
-	cp -f $< $@
-
-install: ${PROGS}
-	install -t ${PREFIX_BIN} ${PROGS}
+install:
+	install obj/login/login ${ROOT}/${PREFIX_BIN}/tmwa-login
+	install obj/char/char   ${ROOT}/${PREFIX_BIN}/tmwa-char
+	install obj/map/map     ${ROOT}/${PREFIX_BIN}/tmwa-map
+	install obj/admin/admin ${ROOT}/${PREFIX_BIN}/tmwa-admin
 
 warnings:: warnings.commented
 	grep -v '^#' $< > $@

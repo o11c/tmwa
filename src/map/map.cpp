@@ -1150,7 +1150,7 @@ static void map_close_logfile(void)
     if (map_logfile)
     {
         // TODO do this properly
-        char *filenameop_buf = static_cast<char*>(malloc(strlen(map_logfile_name) + 50));
+        char *filenameop_buf = static_cast<char *>(malloc(strlen(map_logfile_name) + 50));
         sprintf(filenameop_buf, "gzip -f %s.%d", map_logfile_name,
                  map_logfile_index);
 
@@ -1165,7 +1165,7 @@ static void map_close_logfile(void)
 
 static void map_start_logfile(int32_t suffix)
 {
-    char *filename_buf = static_cast<char*>(malloc(strlen(map_logfile_name) + 50));
+    char *filename_buf = static_cast<char *>(malloc(strlen(map_logfile_name) + 50));
     map_logfile_index = suffix >> LOGFILE_SECONDS_PER_CHUNK_SHIFT;
 
     sprintf(filename_buf, "%s.%d", map_logfile_name, map_logfile_index);

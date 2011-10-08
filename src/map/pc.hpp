@@ -13,12 +13,12 @@
 //# define pc_setstand(sd) ((sd)->state.dead_sit = 0)
 # define pc_isdead(sd) ((sd)->state.dead_sit == 1)
 # define pc_issit(sd) ((sd)->state.dead_sit == 2)
-# define pc_setdir(sd,b) ((sd)->dir = (b))
-# define pc_setchatid(sd,n) ((sd)->chatID = n)
-# define pc_ishiding(sd) ((sd)->status.option&0x4006)
-# define pc_isinvisible(sd) ((sd)->status.option&0x0040)
-# define pc_is50overweight(sd) (sd->weight*2 >= sd->max_weight)
-# define pc_is90overweight(sd) (sd->weight*10 >= sd->max_weight*9)
+# define pc_setdir(sd, b) ((sd)->dir = (b))
+# define pc_setchatid(sd, n) ((sd)->chatID = n)
+# define pc_ishiding(sd) ((sd)->status.option & 0x4006)
+# define pc_isinvisible(sd) ((sd)->status.option & 0x0040)
+# define pc_is50overweight(sd) (sd->weight * 2 >= sd->max_weight)
+# define pc_is90overweight(sd) (sd->weight * 10 >= sd->max_weight * 9)
 
 void pc_touch_all_relevant_npcs(MapSessionData *sd);  /* Checks all npcs/warps at the same location to see whether they
                                                                  ** should do something with the specified player. */

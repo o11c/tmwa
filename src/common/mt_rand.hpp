@@ -1,24 +1,29 @@
 #ifndef MT_RAND_HPP
 #define MT_RAND_HPP
 
-/// Initialize the generator (called automatically with time() if you don't)
-void mt_seed(uint32_t seed);
-/// Get a random number
-uint32_t mt_random(void);
+# include <random>
 
-/**
- * ModuloRand and ModuloPlusRand
- * These macros are used to replace the vast number of calls to rand()%mod
- * TODO eliminate the rest of the calls to rand()
- * MRAND(10)    returns 0..9
- * MPRAND(5,10) returns 5..14
- */
-inline uint32_t MRAND(uint32_t mod)
+extern std::mt19937 mt_random;
+
+template<class I>
+inline I rand2(I low, I high)
 {
-    return mt_random() % mod;
+    std::uniform_int_distribution<I> dist(low, high);
+    return dist(mt_random);
 }
-inline uint32_t MPRAND(uint32_t add, uint32_t mod)
+
+// these new versions are technically more correct,
+// because modulus skews slightly to lower numbers
+template<class I>
+inline I MPRAND(I add, I mod)
 {
-    return add + MRAND(mod);
+    std::uniform_int_distribution<I> dist(add, add + mod - 1);
+    return dist(mt_random);
+}
+
+template<class I>
+inline I MRAND(I mod)
+{
+    return MPRAND<I>(0, mod);
 }
 #endif // MT_RAND_HPP

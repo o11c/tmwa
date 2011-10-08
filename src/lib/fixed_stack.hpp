@@ -22,8 +22,8 @@ class fixed_stack
     char storage[sizeof(T) * n] __attribute__((aligned(alignof(T))));
     size_t stack_size;
 public:
-    typedef T* iterator;
-    typedef const T* const_iterator;
+    typedef T *iterator;
+    typedef const T *const_iterator;
 
     fixed_stack() : stack_size(0) {}
     fixed_stack(const fixed_stack& rhs) : stack_size(rhs.stack_size)
@@ -107,11 +107,11 @@ public:
 
     T& back()
     {
-        return reinterpret_cast<T *>(storage)[stack_size-1];
+        return reinterpret_cast<T *>(storage)[stack_size - 1];
     }
     const T& back() const
     {
-        return reinterpret_cast<const T *>(storage)[stack_size-1];
+        return reinterpret_cast<const T *>(storage)[stack_size - 1];
     }
 
     size_t size() const

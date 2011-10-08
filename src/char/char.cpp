@@ -1051,8 +1051,8 @@ static void mmo_char_send006b(int32_t fd, CharSessionData *sd)
         WFIFOW(fd, j + 26) = find_equip_view(p, EPOS::MISC1);
         WFIFOL(fd, j + 28) = p->option;
 
-        WFIFOL(fd, j + 32) = 0;//p->karma;
-        WFIFOL(fd, j + 36) = 0;//p->manner;
+        WFIFOL(fd, j + 32) = 0; //p->karma;
+        WFIFOL(fd, j + 36) = 0; //p->manner;
 
         WFIFOW(fd, j + 40) = p->status_point;
         WFIFOW(fd, j + 42) = min(p->hp, 0x7fff);
@@ -1071,7 +1071,7 @@ static void mmo_char_send006b(int32_t fd, CharSessionData *sd)
         WFIFOW(fd, j + 68) = p->chest;
         WFIFOW(fd, j + 70) = p->hair_color;
         WFIFOW(fd, j + 72) = find_equip_view(p, EPOS::MISC2);
-//      WFIFOW(fd,j+72) = p->clothes_color;
+//      WFIFOW(fd, j + 72) = p->clothes_color;
 
         memcpy(WFIFOP(fd, j + 74), p->name, 24);
 
@@ -1567,8 +1567,8 @@ static void parse_tologin(int32_t fd)
             CREATE(gm_accounts, struct gm_account, GM_num);
             for (int32_t i = 0; i < GM_num; i++)
             {
-                gm_accounts[i].account_id = RFIFOL(fd, 4 + 5*i);
-                gm_accounts[i].level = RFIFOB(fd, 4 + 5*i + 4);
+                gm_accounts[i].account_id = RFIFOL(fd, 4 + 5 * i);
+                gm_accounts[i].level = RFIFOB(fd, 4 + 5 * i + 4);
             }
             char_log.info("From login-server: receiving of %d GM accounts information.\n",
                           GM_num);
@@ -1595,7 +1595,7 @@ static void parse_tologin(int32_t fd)
             {
                 if (!session[i])
                     continue;
-                CharSessionData *sd = static_cast<CharSessionData*>(session[i]->session_data);
+                CharSessionData *sd = static_cast<CharSessionData *>(session[i]->session_data);
                 if (!sd || sd->account_id != acc)
                     continue;
                 WFIFOW(i, 0) = 0x62;
@@ -2131,7 +2131,7 @@ static void parse_char(int32_t fd)
         return;
     }
 
-    CharSessionData *sd = static_cast<CharSessionData*>(session[fd]->session_data);
+    CharSessionData *sd = static_cast<CharSessionData *>(session[fd]->session_data);
 
     while (RFIFOREST(fd) >= 2)
     {
@@ -2327,8 +2327,8 @@ static void parse_char(int32_t fd)
             WFIFOW(fd, 2 + 26) = find_equip_view(chardat, EPOS::MISC1);
 
             WFIFOL(fd, 2 + 28) = chardat->option;
-            WFIFOL(fd, 2 + 32) = 0;//chardat->karma;
-            WFIFOL(fd, 2 + 36) = 0;//chardat->manner;
+            WFIFOL(fd, 2 + 32) = 0; //chardat->karma;
+            WFIFOL(fd, 2 + 36) = 0; //chardat->manner;
             // This used to send 0x30, which is wrong
             WFIFOW(fd, 2 + 40) = chardat->status_point;
 
@@ -2398,7 +2398,7 @@ static void parse_char(int32_t fd)
                 {
                     if (!session[j])
                         continue;
-                    CharSessionData *sd2 = static_cast<CharSessionData*>(session[j]->session_data);
+                    CharSessionData *sd2 = static_cast<CharSessionData *>(session[j]->session_data);
                     if (!sd2 || sd2->account_id != char_dat[char_num].account_id)
                         continue;
                     for (int32_t k = 0; k < MAX_CHARS_PER_ACCOUNT; k++)
@@ -2786,7 +2786,7 @@ static void char_config_read(const char *cfgName)
             case 0: char_name_option = ALL; break;
             case 1: char_name_option = ONLY; break;
             case 2: char_name_option = EXCLUDE; break;
-            default: ;// TODO log something
+            default: ; // TODO log something
             }
             continue;
         }

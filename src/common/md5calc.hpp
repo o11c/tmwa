@@ -18,16 +18,16 @@ typedef struct
 } MD5_block;
 
 // Implementation
-void MD5_init(MD5_state* state);
-void MD5_do_block(MD5_state* state, MD5_block block);
+void MD5_init(MD5_state *state);
+void MD5_do_block(MD5_state *state, MD5_block block);
 
 // Output formatting
 void MD5_to_bin(MD5_state state, uint8_t out[0x10]);
 void MD5_to_str(MD5_state state, char out[0x21]);
 
 // Convenience
-MD5_state MD5_from_string(const char* msg, const size_t msglen);
-MD5_state MD5_from_cstring(const char* msg);
+MD5_state MD5_from_string(const char *msg, const size_t msglen);
+MD5_state MD5_from_cstring(const char *msg);
 MD5_state MD5_from_FILE(FILE* in);
 
 // statically-allocated output

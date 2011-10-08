@@ -18,23 +18,12 @@ future calls should either use this or depend on the coming segfault.
    if (!((result) = reinterpret_cast<type *>(calloc((number), sizeof(type)))))   \
       { perror("SYSERR: malloc failure"); abort(); } else(void)0
 
-# define RECREATE(result,type,number) \
+# define RECREATE(result, type, number) \
   if (!((result) = reinterpret_cast<type *>(realloc((result), sizeof(type) * (number)))))\
       { perror("SYSERR: realloc failure"); abort(); } else(void)0
 
 /// Dump data in hex (without ascii)
 void hexdump(Log& log, const uint8_t *data, size_t len);
-
-template<bool cond, class T, class F>
-struct static_if
-{
-    typedef F type;
-};
-template<class T, class F>
-struct static_if<true, T, F>
-{
-    typedef T type;
-};
 
 template<class A, class B>
 struct min_type
@@ -46,20 +35,20 @@ struct min_type
     static_assert(std::numeric_limits<A>::is_integer == std::numeric_limits<B>::is_integer,
                   "Can't (yet) mix integers and floats");
     // This can maybe be simplified, but this is clear
-    typedef typename static_if<std::numeric_limits<A>::is_signed,
-                               typename static_if<std::numeric_limits<B>::is_signed,
-                                                  // both signed, need the wider
-                                                  typename static_if<(sizeof(A) >/*=*/ sizeof(B)), A, B>::type,
-                                                  // only A is signed
-                                                  A
-                                                 >::type,
-                               typename static_if<std::numeric_limits<B>::is_signed,
-                                                  // only B is signed
-                                                  B,
-                                                  // both unsigned, can use the narrower
-                                                  typename static_if<(sizeof(A) </*=*/ sizeof(B)), A, B>::type
-                                                 >::type
-                              >::type type;
+    typedef typename std::conditional<std::numeric_limits<A>::is_signed,
+                                      typename std::conditional<std::numeric_limits<B>::is_signed,
+                                                                // both signed, need the wider
+                                                                typename std::conditional<(sizeof(A) >/*=*/ sizeof(B)), A, B>::type,
+                                                                // only A is signed
+                                                                A
+                                                               >::type,
+                                      typename std::conditional<std::numeric_limits<B>::is_signed,
+                                                                // only B is signed
+                                                                B,
+                                                                // both unsigned, can use the narrower
+                                                                typename std::conditional<(sizeof(A) </*=*/ sizeof(B)), A, B>::type
+                                                               >::type
+                                     >::type type;
 };
 template<class A>
 struct min_type<A, A>
@@ -77,20 +66,20 @@ struct max_type
     static_assert(std::numeric_limits<A>::is_integer == std::numeric_limits<B>::is_integer,
                   "Can't (yet) mix integers and floats");
     // This can definitely be simplified, but this is the most clear
-    typedef typename static_if<std::numeric_limits<A>::is_signed,
-                               typename static_if<std::numeric_limits<B>::is_signed,
-                                                  // both signed, need the wider
-                                                  typename static_if<(sizeof(A) >/*=*/ sizeof(B)), A, B>::type,
-                                                  // only A is signed, use B if possible
-                                                  typename static_if<(sizeof(A) > sizeof(B)), A, B>::type
-                                                 >::type,
-                               typename static_if<std::numeric_limits<B>::is_signed,
-                                                  // only B is signed, use A if possible
-                                                  typename static_if<sizeof(A) >= sizeof(B), A, B>::type,
-                                                  // both unsigned, need the wider
-                                                  typename static_if<(sizeof(A) >/*=*/ sizeof(B)), A, B>::type
-                                                 >::type
-                              >::type type;
+    typedef typename std::conditional<std::numeric_limits<A>::is_signed,
+                                      typename std::conditional<std::numeric_limits<B>::is_signed,
+                                                               // both signed, need the wider
+                                                               typename std::conditional<(sizeof(A) >/*=*/ sizeof(B)), A, B>::type,
+                                                               // only A is signed, use B if possible
+                                                               typename std::conditional<(sizeof(A) > sizeof(B)), A, B>::type
+                                                              >::type,
+                                      typename std::conditional<std::numeric_limits<B>::is_signed,
+                                                               // only B is signed, use A if possible
+                                                               typename std::conditional<sizeof(A) >= sizeof(B), A, B>::type,
+                                                               // both unsigned, need the wider
+                                                               typename std::conditional<(sizeof(A) >/*=*/ sizeof(B)), A, B>::type
+                                                              >::type
+                                     >::type type;
 };
 template<class A>
 struct max_type<A, A>
@@ -215,13 +204,13 @@ template<class R, class A>
 class sign_cast_impl;
 
 template<class R, class A>
-class sign_cast_impl<R*, A*>
+class sign_cast_impl<R *, A *>
 {
 public:
     static_assert(sizeof(R) == sizeof(A), "You can only use this on pointers to objects of the same size");
-    static R* do_cast(A* input)
+    static R *do_cast(A *input)
     {
-        return reinterpret_cast<R*>(input);
+        return reinterpret_cast<R *>(input);
     }
 };
 

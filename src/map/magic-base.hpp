@@ -67,4 +67,9 @@ inline val_t& env_t::VAR(int32_t i)
     return vars[i];
 }
 
+extern template class std::map<POD_string, POD_string>;
+extern template class std::map<POD_string, spell_t *>;
+extern template class std::map<POD_string, area_t *>;
+extern template class std::vector<std::pair<POD_string, val_t>>;
+
 #endif // MAGIC_BASE_HPP

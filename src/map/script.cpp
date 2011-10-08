@@ -1,7 +1,5 @@
 #include "script.hpp"
 
-#include <cmath>
-
 #include "../common/db.hpp"
 #include "../common/lock.hpp"
 #include "../common/utils.hpp"
@@ -11,6 +9,19 @@
 #include "map.hpp"
 #include "npc.hpp"
 #include "pc.hpp"
+
+template class std::vector<Script>;
+template class std::vector<str_data_t>;
+template class DMap<int32_t, int32_t>;
+template class DMap<int32_t, std::string>;
+// This one can't be fully instantiated, because it's not copyable.
+// Oh, the things we do for a couple seconds of compile time...
+//template class std::vector<script_data>;
+template std::vector<script_data>::~vector();
+template std::vector<script_data>::iterator std::vector<script_data>::erase(std::vector<script_data>::iterator, std::vector<script_data>::iterator);
+//template void std::vector<script_data>::resize(size_t);
+template void std::vector<script_data>::_M_default_append(size_t);
+
 
 // indices into str_data
 constexpr uint32_t LABEL_NEXTLINE = 1;
@@ -39,7 +50,8 @@ static DMap<int32_t, std::string> mapregstr_db;
 // true: needs saved
 static bool mapreg_dirty = false;
 const char mapreg_txt[] = "save/mapreg.txt";
-#define MAPREG_AUTOSAVE_INTERVAL        (10*1000)
+
+#define MAPREG_AUTOSAVE_INTERVAL        (10 * 1000)
 
 static struct dbt *scriptlabel_db = NULL;
 static struct dbt *userfunc_db = NULL;
@@ -211,7 +223,7 @@ static void set_label(int32_t l)
     size_t pos = script_buf.size();
     str_data[l].type = Script::POS;
     str_data[l].label = pos;
-    for (int32_t i = str_data[l].backpatch; i >= 0 && i != 0x00ffffff;)
+    for (int32_t i = str_data[l].backpatch; i >= 0 && i != 0x00ffffff; )
     {
         uint8_t next0 = static_cast<uint8_t>(script_buf[i]);
         uint8_t next1 = static_cast<uint8_t>(script_buf[i + 1]);
@@ -421,7 +433,7 @@ static const char *parse_simpleexpr(const char *p)
 
         if (str_data[l].type != Script::FUNC && *p == '[')
         {
-            // name[i] => getelementofarray(name,i)
+            // name[i] => getelementofarray(name, i)
             add_scriptl(search_str("getelementofarray"));
             add_scriptc(Script::ARG);
             add_scriptl(l);
@@ -797,7 +809,7 @@ std::vector<Script> parse_script(const std::string& file, const char *src, int32
         {
             str_data[i].type = Script::NAME;
             str_data[i].label = i;
-            for (int32_t j = str_data[i].backpatch; j >= 0 && j != 0x00ffffff;)
+            for (int32_t j = str_data[i].backpatch; j >= 0 && j != 0x00ffffff; )
             {
                 uint8_t next0 = static_cast<uint8_t>(script_buf[j]);
                 uint8_t next1 = static_cast<uint8_t>(script_buf[j + 1]);
@@ -1283,7 +1295,7 @@ void run_script_main(const Script *script, int32_t pos,
     st->script = script;
 
     int32_t rerun_pos = st->pos;
-    for (st->state = ScriptExecutionState::ZERO; st->state == ScriptExecutionState::ZERO;)
+    for (st->state = ScriptExecutionState::ZERO; st->state == ScriptExecutionState::ZERO; )
     {
         switch (Script c = get_com(script, st->pos))
         {
@@ -1336,29 +1348,29 @@ void run_script_main(const Script *script, int32_t pos,
             }
             break;
 
-        case Script::ADD:  st->op<Script::ADD>();break;
+        case Script::ADD:  st->op<Script::ADD>();   break;
 
-        case Script::SUB:  st->op<Script::SUB>();break;
-        case Script::MUL:  st->op<Script::MUL>();break;
-        case Script::DIV:  st->op<Script::DIV>();break;
-        case Script::MOD:  st->op<Script::MOD>();break;
-        case Script::EQ:   st->op<Script::EQ>();break;
-        case Script::NE:   st->op<Script::NE>();break;
-        case Script::GT:   st->op<Script::GT>();break;
-        case Script::GE:   st->op<Script::GE>();break;
-        case Script::LT:   st->op<Script::LT>();break;
-        case Script::LE:   st->op<Script::LE>();break;
-        case Script::AND:  st->op<Script::AND>();break;
-        case Script::OR:   st->op<Script::OR>();break;
-        case Script::XOR:  st->op<Script::XOR>();break;
-        case Script::LAND: st->op<Script::LAND>();break;
-        case Script::LOR:  st->op<Script::LOR>();break;
-        case Script::SH_R: st->op<Script::SH_R>();break;
-        case Script::SH_L: st->op<Script::SH_L>();break;
+        case Script::SUB:  st->op<Script::SUB>();   break;
+        case Script::MUL:  st->op<Script::MUL>();   break;
+        case Script::DIV:  st->op<Script::DIV>();   break;
+        case Script::MOD:  st->op<Script::MOD>();   break;
+        case Script::EQ:   st->op<Script::EQ>();    break;
+        case Script::NE:   st->op<Script::NE>();    break;
+        case Script::GT:   st->op<Script::GT>();    break;
+        case Script::GE:   st->op<Script::GE>();    break;
+        case Script::LT:   st->op<Script::LT>();    break;
+        case Script::LE:   st->op<Script::LE>();    break;
+        case Script::AND:  st->op<Script::AND>();   break;
+        case Script::OR:   st->op<Script::OR>();    break;
+        case Script::XOR:  st->op<Script::XOR>();   break;
+        case Script::LAND: st->op<Script::LAND>();  break;
+        case Script::LOR:  st->op<Script::LOR>();   break;
+        case Script::SH_R: st->op<Script::SH_R>();  break;
+        case Script::SH_L: st->op<Script::SH_L>();  break;
 
-        case Script::NEG:  st->op<Script::NEG>();break;
-        case Script::NOT:  st->op<Script::NOT>();break;
-        case Script::LNOT: st->op<Script::LNOT>();break;
+        case Script::NEG:  st->op<Script::NEG>();   break;
+        case Script::NOT:  st->op<Script::NOT>();   break;
+        case Script::LNOT: st->op<Script::LNOT>();  break;
 
         case Script::NOP:
             st->state = ScriptExecutionState::END;

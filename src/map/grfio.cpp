@@ -127,7 +127,7 @@ static void grfio_resnametable(const char *fname, char *lfname)
     {
         fprintf(stderr, "No resnametable, can't look for %s\n", fname);
         strcpy(lfname, fname);
-        char* ext = lfname + strlen(lfname) - 4;
+        char *ext = lfname + strlen(lfname) - 4;
         if (!strcmp(ext, ".gat"))
             strcpy(ext, ".wlk");
         return;
@@ -153,7 +153,7 @@ static void grfio_resnametable(const char *fname, char *lfname)
     fclose_(fp);
 
     strcpy(lfname, fname);
-    char* ext = lfname + strlen(lfname) - 4;
+    char *ext = lfname + strlen(lfname) - 4;
     if (!strcmp(ext, ".gat"))
         strcpy(ext, ".wlk");
     return;
@@ -164,7 +164,7 @@ void *grfio_reads(const char *fname, size_t *size)
     char lfname[256];
     grfio_resnametable(fname, lfname);
 
-    for (char *p = &lfname[0]; *p != 0; p++)
+    for (char *p = &lfname[0]; *p; p++)
         if (*p == '\\')
             *p = '/';       // * At the time of Unix
 

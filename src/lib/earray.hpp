@@ -24,8 +24,8 @@ public:
     earray(const earray&) = default;
     earray(earray&&) = default;
 
-    typedef E* iterator;
-    typedef const E* const_iterator;
+    typedef E *iterator;
+    typedef const E *const_iterator;
 
     E& operator [](I idx)
     {

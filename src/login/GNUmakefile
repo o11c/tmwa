@@ -1,6 +1,5 @@
 .SUFFIXES:
-all:
-	${MAKE} -C ../.. tmwa-login
+.DEFAULT_GOAL=login
 clean:
 	rm -r ../../obj/login/
 %::

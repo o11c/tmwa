@@ -34,9 +34,10 @@ static sigfunc compat_signal(int32_t signo, sigfunc func)
     sigemptyset(&sact.sa_mask);
     sact.sa_flags = 0;
 
+#pragma GCC diagnostic ignored "-Wold-style-cast"
     if (sigaction(signo, &sact, &oact) < 0)
         return SIG_ERR;
-
+#pragma GCC diagnostic pop
     return oact.sa_handler;
 }
 
@@ -44,12 +45,10 @@ bool runflag = true;
 
 int32_t main(int32_t argc, char **argv)
 {
-    /// Note that getpid() and getppid() may be very close
-    mt_seed(time(NULL) ^ (getpid() << 16) ^ (getppid() << 8));
-
     do_socket();
 
     atexit(term_func);
+#pragma GCC diagnostic ignored "-Wold-style-cast"
     compat_signal(SIGPIPE, SIG_IGN);
     compat_signal(SIGTERM, sig_proc);
     compat_signal(SIGINT, sig_proc);
@@ -60,6 +59,7 @@ int32_t main(int32_t argc, char **argv)
     compat_signal(SIGBUS, SIG_DFL);
     compat_signal(SIGTRAP, SIG_DFL);
     compat_signal(SIGILL, SIG_DFL);
+#pragma GCC diagnostic pop
 
     update_current_tick();
     do_init(argc, argv);

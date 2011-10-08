@@ -62,34 +62,34 @@ public:
         return DArray_base::capacity();
     }
 
-    typedef T* iterator;
-    typedef const T* const_iterator;
+    typedef T *iterator;
+    typedef const T *const_iterator;
 
     iterator begin()
     {
         unique();
-        return reinterpret_cast<T*>(at(0));
+        return reinterpret_cast<T *>(at(0));
     }
     iterator end()
     {
         unique();
-        return reinterpret_cast<T*>(at(size()));
+        return reinterpret_cast<T *>(at(size()));
     }
     const_iterator begin() const
     {
-        return reinterpret_cast<const T*>(at(0));
+        return reinterpret_cast<const T *>(at(0));
     }
     const_iterator end() const
     {
-        return reinterpret_cast<T*>(at(size()));
+        return reinterpret_cast<T *>(at(size()));
     }
     T operator [] (size_t i) const
     {
-        return *reinterpret_cast<T*>(at(i));
+        return *reinterpret_cast<T *>(at(i));
     }
     T& operator [] (size_t i)
     {
-        return *reinterpret_cast<T*>(at(i));
+        return *reinterpret_cast<T *>(at(i));
     }
 
     void nullify()

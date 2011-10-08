@@ -5,6 +5,9 @@
 
 #include "utils.hpp"
 
+// It's too ugly to surround EVERY call site
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+
 /// Internal - clean up by discarding handled bytes
 inline void RFIFOFLUSH(int32_t fd)
 {
@@ -86,7 +89,6 @@ static void null_parse(int32_t fd)
     printf("null_parse : %d\n", fd);
     RFIFOSKIP(fd, RFIFOREST(fd));
 }
-
 
 static void connect_client(int32_t listen_fd)
 {

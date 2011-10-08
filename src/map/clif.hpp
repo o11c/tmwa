@@ -9,8 +9,6 @@
 
 # include "../lib/ip.hpp"
 
-# include <iterator>
-
 /// What the client uses to connect to us
 void clif_setip(IP_Address);
 void clif_setport(in_port_t);
@@ -53,7 +51,7 @@ void clif_additem(MapSessionData *, int32_t, int32_t, PickupFail);   //self
 void clif_delitem(MapSessionData *, int32_t, int32_t);    //self
 void clif_updatestatus(MapSessionData *, SP);    //self
 void clif_damage(BlockList *, BlockList *, uint32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t);    // area
-#define clif_takeitem(src,dst) clif_damage(src,dst,0,0,0,0,0,1,0)
+#define clif_takeitem(src, dst) clif_damage(src, dst, 0, 0, 0, 0, 0, 1, 0)
 void clif_changelook(BlockList *, LOOK, int32_t);   // area
 void clif_changelook_accessories(BlockList *bl, MapSessionData *dst); // area or target; list gloves, boots etc.
 void clif_arrowequip(MapSessionData *sd, int32_t val);    //self
@@ -192,5 +190,7 @@ SessionIterator<auth_required> Sessions<auth_required>::end()
 
 extern Sessions<true> auth_sessions;
 extern Sessions<false> all_sessions;
+
+extern template class std::vector<std::string>;
 
 #endif // CLIF_HPP

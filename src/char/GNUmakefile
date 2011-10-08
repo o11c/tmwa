@@ -1,6 +1,5 @@
 .SUFFIXES:
-all:
-	${MAKE} -C ../.. tmwa-char
+.DEFAULT_GOAL=char
 clean:
 	rm -r ../../obj/char/
 %::

@@ -10,7 +10,7 @@ inline void socket_data::rfifo_change_packet(uint16_t newpacket)
     *reinterpret_cast<uint16_t *>(rdata + rdata_pos) = newpacket;
 }
 
-# define FIFOSIZE_SERVERLINK    256*1024
+# define FIFOSIZE_SERVERLINK    (256 * 1024)
 
 // save file descriptors for important stuff
 # define SOFT_LIMIT (FD_SETSIZE - 50)
@@ -59,7 +59,7 @@ bool free_fds(void) __attribute__((pure));
 /// Check how much can be read
 inline size_t RFIFOREST(int32_t fd)
 {
-    return session[fd]->rdata_size-session[fd]->rdata_pos;
+    return session[fd]->rdata_size - session[fd]->rdata_pos;
 }
 /// Read from the queue
 inline const uint8_t *RFIFOP(int32_t fd, size_t pos)
@@ -68,15 +68,15 @@ inline const uint8_t *RFIFOP(int32_t fd, size_t pos)
 }
 inline uint8_t RFIFOB(int32_t fd, size_t pos)
 {
-    return *reinterpret_cast<const uint8_t*>(RFIFOP(fd, pos));
+    return *reinterpret_cast<const uint8_t *>(RFIFOP(fd, pos));
 }
 inline uint16_t RFIFOW(int32_t fd, size_t pos)
 {
-    return *reinterpret_cast<const uint16_t*>(RFIFOP(fd, pos));
+    return *reinterpret_cast<const uint16_t *>(RFIFOP(fd, pos));
 }
 inline uint32_t RFIFOL(int32_t fd, size_t pos)
 {
-    return *reinterpret_cast<const uint32_t*>(RFIFOP(fd, pos));
+    return *reinterpret_cast<const uint32_t *>(RFIFOP(fd, pos));
 }
 
 /// Done reading
@@ -89,15 +89,15 @@ inline const uint8_t *RBUFP(uint8_t *p, size_t pos)
 }
 inline uint8_t RBUFB(uint8_t *p, size_t pos)
 {
-    return *reinterpret_cast<const uint8_t*>(RBUFP(p, pos));
+    return *reinterpret_cast<const uint8_t *>(RBUFP(p, pos));
 }
 inline uint16_t RBUFW(uint8_t *p, size_t pos)
 {
-    return *reinterpret_cast<const uint16_t*>(RBUFP(p, pos));
+    return *reinterpret_cast<const uint16_t *>(RBUFP(p, pos));
 }
 inline uint32_t RBUFL(uint8_t *p, size_t pos)
 {
-    return *reinterpret_cast<const uint32_t*>(RBUFP(p, pos));
+    return *reinterpret_cast<const uint32_t *>(RBUFP(p, pos));
 }
 
 
@@ -108,15 +108,15 @@ inline uint8_t *WFIFOP(int32_t fd, size_t pos)
 }
 inline uint8_t& WFIFOB(int32_t fd, size_t pos)
 {
-    return *reinterpret_cast<uint8_t*>(WFIFOP(fd, pos));
+    return *reinterpret_cast<uint8_t *>(WFIFOP(fd, pos));
 }
 inline uint16_t& WFIFOW(int32_t fd, size_t pos)
 {
-    return *reinterpret_cast<uint16_t*>(WFIFOP(fd, pos));
+    return *reinterpret_cast<uint16_t *>(WFIFOP(fd, pos));
 }
 inline uint32_t& WFIFOL(int32_t fd, size_t pos)
 {
-    return *reinterpret_cast<uint32_t*>(WFIFOP(fd, pos));
+    return *reinterpret_cast<uint32_t *>(WFIFOP(fd, pos));
 }
 /// Finish writing
 void WFIFOSET(int32_t fd, size_t len);
@@ -128,15 +128,15 @@ inline uint8_t *WBUFP(uint8_t *p, size_t pos)
 }
 inline uint8_t& WBUFB(uint8_t *p, size_t pos)
 {
-    return *reinterpret_cast<uint8_t*>(WBUFP(p, pos));
+    return *reinterpret_cast<uint8_t *>(WBUFP(p, pos));
 }
 inline uint16_t& WBUFW(uint8_t *p, size_t pos)
 {
-    return *reinterpret_cast<uint16_t*>(WBUFP(p, pos));
+    return *reinterpret_cast<uint16_t *>(WBUFP(p, pos));
 }
 inline uint32_t& WBUFL(uint8_t *p, size_t pos)
 {
-    return *reinterpret_cast<uint32_t*>(WBUFP(p,pos));
+    return *reinterpret_cast<uint32_t *>(WBUFP(p, pos));
 }
 
 #endif // SOCKET_HPP

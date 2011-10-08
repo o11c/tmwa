@@ -11,7 +11,7 @@
 #include "int_storage.hpp"
 
 // how long to hold whisper data, awaiting answers from map servers
-#define WHISPER_DATA_TTL (60*1000)
+#define WHISPER_DATA_TTL (60 * 1000)
 // Number of elements of Whisp/page data deletion list
 #define WHISPER_DELLIST_MAX 256
 
@@ -518,7 +518,7 @@ static void mapif_parse_WhisToGM(int32_t fd)
 static void mapif_parse_AccReg(int32_t fd)
 {
     account_t acc = RFIFOL(fd, 4);
-    struct accreg *reg = reinterpret_cast<struct accreg*>(numdb_search(accreg_db, static_cast<numdb_key_t>(acc)).p);
+    struct accreg *reg = reinterpret_cast<struct accreg *>(numdb_search(accreg_db, static_cast<numdb_key_t>(acc)).p);
 
     if (!reg)
     {

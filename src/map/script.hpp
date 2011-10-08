@@ -4,8 +4,6 @@
 # include "script.structs.hpp"
 # include "map.structs.hpp"
 
-# include <string>
-
 std::vector<Script> parse_script(const char *, const char *, int32_t) = delete;
 std::vector<Script> parse_script(const std::string&, const char *, int32_t);
 int32_t run_script_l(const std::vector<Script>&, int32_t, int32_t, int32_t, int32_t, ArgRec *args);

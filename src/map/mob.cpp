@@ -1,7 +1,5 @@
 #include "mob.hpp"
 
-#include <cmath>
-
 #include "../common/mt_rand.hpp"
 #include "../common/nullpo.hpp"
 #include "../common/timer.hpp"
@@ -890,7 +888,7 @@ static int32_t mob_setdelayspawn(int32_t id)
     spawntime1 = md->last_spawntime + md->spawndelay_1;
     spawntime2 = md->last_deadtime + md->spawndelay2;
     spawntime3 = gettick() + 5000;
-    // spawntime = max(spawntime1,spawntime2,spawntime3);
+    // spawntime = max(spawntime1, spawntime2, spawntime3);
     if (DIFF_TICK(spawntime1, spawntime2) > 0)
     {
         spawntime = spawntime1;
@@ -932,7 +930,7 @@ int32_t mob_spawn(int32_t id)
     md->last_spawntime = tick;
     if (md->prev != NULL)
     {
-//      clif_being_remove(md,3);
+//      clif_being_remove(md, 3);
         map_delblock(md);
     }
     else
@@ -948,8 +946,8 @@ int32_t mob_spawn(int32_t id)
         }
         else
         {
-            x = MPRAND(md->x_0, (md->xs + 1)) - md->xs / 2;
-            y = MPRAND(md->y_0, (md->ys + 1)) - md->ys / 2;
+            x = MPRAND(md->x_0 - md->xs / 2, (md->xs + 1));
+            y = MPRAND(md->y_0 - md->ys / 2, (md->ys + 1));
         }
         i++;
     }
@@ -1481,7 +1479,7 @@ static int32_t mob_ai_sub_hard_slavemob(struct mob_data *md, uint32_t tick)
 
                                 mmd->target_id=sd->id;
                                 mmd->state.target_attackable = true;
-                                mmd->min_chase=5+distance(mmd->x,mmd->y,sd->x,sd->y);
+                                mmd->min_chase=5 + distance(mmd->x, mmd->y, sd->x, sd->y);
                         }
                 }
         }*/
@@ -1745,7 +1743,7 @@ static void mob_ai_sub_hard(BlockList *bl, tick_t tick)
                                 dx = tbl->x - md->x + MRAND(3) - 1;
                                 dy = tbl->y - md->y + MRAND(3) - 1;
                             }
-                            /*                      if (path_search(&md->walkpath,md->m,md->x,md->y,md->x+dx,md->y+dy,0)){
+                            /*                      if (path_search(&md->walkpath, md->m, md->x, md->y, md->x+dx, md->y+dy, 0)){
                              * dx=tsd->x - md->x;
                              * dy=tsd->y - md->y;
                              * if (dx<0) dx--;
@@ -1784,10 +1782,10 @@ static void mob_ai_sub_hard(BlockList *bl, tick_t tick)
                     mob_changestate(md, MS::ATTACK, attack_type);
 
 /*                                      if (mode&0x08){ // リンクモンスター
-                                        map_foreachinarea(mob_ai_sub_hard_linksearch,md->m,
-                                                md->x-13,md->y-13,
-                                                md->x+13,md->y+13,
-                                                        BL_MOB,md,tsd);
+                                        map_foreachinarea(mob_ai_sub_hard_linksearch, md->m,
+                                                md->x - 13, md->y - 13,
+                                                md->x + 13, md->y + 13,
+                                                        BL_MOB, md, tsd);
                                 }*/
                 }
                 return;
@@ -1823,7 +1821,7 @@ static void mob_ai_sub_hard(BlockList *bl, tick_t tick)
                     md->next_walktime = tick + 500;
                     dx = tbl->x - md->x;
                     dy = tbl->y - md->y;
-/*                              if (path_search(&md->walkpath,md->m,md->x,md->y,md->x+dx,md->y+dy,0)){
+/*                              if (path_search(&md->walkpath, md->m, md->x, md->y, md->x+dx, md->y+dy, 0)){
                                                 dx=tbl->x - md->x;
                                                 dy=tbl->y - md->y;
                                 }*/
@@ -1876,7 +1874,7 @@ static void mob_ai_sub_hard(BlockList *bl, tick_t tick)
          || md->master_dist > 10))
     {                           //取り巻きMOBじゃない
 
-        if (DIFF_TICK(md->next_walktime, tick) > +7000 &&
+        if (DIFF_TICK(md->next_walktime, tick) > 7000 &&
             (md->walkpath.path_len == 0
              || md->walkpath.path_pos >= md->walkpath.path_len))
         {
@@ -2192,7 +2190,7 @@ int32_t mob_damage(BlockList *src, struct mob_data *md, int32_t damage,
     }
 
 //  if (battle_config.battle_log)
-//      printf("mob_damage %d %d %d\n",md->hp,max_hp,damage);
+//      printf("mob_damage %d %d %d\n", md->hp, max_hp, damage);
     if (md->prev == NULL)
     {
         map_log("mob_damap_logmage : BlockError!!\n");

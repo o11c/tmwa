@@ -1,7 +1,6 @@
 .SUFFIXES:
-all:
-	${MAKE} -C ../.. tmwa-admin
+.DEFAULT_GOAL=admin
 clean:
 	rm -r ../../obj/ladmin/
 %::
-	${MAKE} -C ../.. obj/ladmin/$@
+	${MAKE} -C ../.. obj/admin/$@

@@ -19,6 +19,8 @@
 #include "storage.hpp"
 #include "trade.hpp"
 
+constexpr auto MAX_PC_CLASS __attribute__((deprecated)) = 7+6+1+6+1+1+1+1+4023;
+
 #define PVP_CALCRANK_INTERVAL 1000  // PVP順位計算の間隔
 
 //define it here, since the ifdef only occurs in this file
@@ -65,7 +67,7 @@ static int32_t hp_coefficient[MAX_PC_CLASS]; // 0
 static int32_t hp_coefficient2[MAX_PC_CLASS]; // 500
 static int32_t hp_sigma_val[MAX_PC_CLASS][MAX_LEVEL]; // 0, because it's calculated from hp_coefficient
 static int32_t sp_coefficient[MAX_PC_CLASS]; // 100
-static int32_t aspd_base[MAX_PC_CLASS][20]; // 650, 700, 750,600,2000,2000, 800,2000, 700, 700, 650,900,2000,2000,2000,2000,2000
+static int32_t aspd_base[MAX_PC_CLASS][20]; // 650, 700, 750, 600, 2000, 2000, 800, 2000, 700, 700, 650, 900, 2000, 2000, 2000, 2000, 2000
 static char job_bonus[3][MAX_PC_CLASS][MAX_LEVEL];
 static int32_t exp_table[14][MAX_LEVEL];
 static char statp[255][7];
@@ -87,7 +89,7 @@ int32_t pc_isGM(MapSessionData *sd)
 /*      p = numdb_search(gm_account_db, sd->status.account_id);
         if (p == NULL)
                 return 0;
-        return p->level;*/
+        return p->level; */
 
     for (i = 0; i < GM_num; i++)
         if (gm_account[i].account_id == sd->status.account_id)
@@ -247,7 +249,7 @@ static void pc_counttargeted_sub(BlockList *bl, uint32_t id, int32_t *c,
             && md->state.state == MS::ATTACK && md->target_lv >= target_lv)
 
             (*c)++;
-        //printf("md->target_lv:%d, target_lv:%d\n",((struct mob_data *)bl)->target_lv,target_lv);
+        //printf("md->target_lv:%d, target_lv:%d\n", ((struct mob_data *)bl)->target_lv, target_lv);
     }
 }
 
@@ -968,7 +970,7 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
         int32_t bonus = sd->matk1 - MAGIC_SKILL_THRESHOLD;
         // Ok if you are above a certain threshold, you get only (1/8) of that matk1
         // if you have Astral soul skill you can get the whole power again (and additionally the 1/8 added)
-        sd->matk1 = MAGIC_SKILL_THRESHOLD + (bonus>>3) + ((3*bonus*skill_power(sd, TMW_ASTRAL_SOUL))>>9);
+        sd->matk1 = MAGIC_SKILL_THRESHOLD + (bonus >> 3) + ((3 * bonus * skill_power(sd, TMW_ASTRAL_SOUL)) >> 9);
     }
 #endif
     sd->matk2 = 0;
@@ -1205,7 +1207,7 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
 
 /*      if (before.cart_num != before.cart_num || before.cart_max_num != before.cart_max_num ||
                 before.cart_weight != before.cart_weight || before.cart_max_weight != before.cart_max_weight )
-                clif_updatestatus(sd,SP::CARTINFO);*/
+                clif_updatestatus(sd, SP::CARTINFO); */
 
     return 0;
 }
@@ -2192,8 +2194,7 @@ int32_t pc_can_reach(MapSessionData *sd, int32_t x, int32_t y)
     wpd.path_len = 0;
     wpd.path_pos = 0;
     wpd.path_half = 0;
-    return (path_search(&wpd, sd->m, sd->x, sd->y, x, y, 0) !=
-            -1) ? 1 : 0;
+    return path_search(&wpd, sd->m, sd->x, sd->y, x, y, 0) != -1;
 }
 
 //
@@ -2522,8 +2523,8 @@ static void pc_attack_timer(timer_id, tick_t tick, uint32_t id)
             range++;
         if (dist > range)
         {                       // 届 かないので移動
-            //if (pc_can_reach(sd,bl->x,bl->y))
-            //clif_movetoattack(sd,bl);
+            //if (pc_can_reach(sd, bl->x, bl->y))
+            //clif_movetoattack(sd, bl);
             return;
         }
 
@@ -2531,7 +2532,7 @@ static void pc_attack_timer(timer_id, tick_t tick, uint32_t id)
         {
             if (pc_can_reach(sd, bl->x, bl->y) && sd->canmove_tick < tick)
                 // TMW client doesn't support this
-                //pc_walktoxy(sd,bl->x,bl->y);
+                //pc_walktoxy(sd, bl->x, bl->y);
                 clif_movetoattack(sd, bl);
             sd->attackabletime = tick + (sd->aspd << 1);
         }
@@ -2653,6 +2654,11 @@ int32_t pc_checkbaselevelup(MapSessionData *sd)
     return 0;
 }
 
+static int raise_cost(int x)
+{
+    return (x * (x - 1)) >> 1;
+}
+
 /*========================================
  * Compute the maximum for sd->skill_point, i.e., the max. number of skill points that can still be filled in
  *----------------------------------------
@@ -2662,14 +2668,11 @@ static int32_t pc_skillpt_potential(MapSessionData *sd)
     int32_t skill_id;
     int32_t potential = 0;
 
-#define RAISE_COST(x) (((x)*((x)-1))>>1)
-
     for (skill_id = 0; skill_id < MAX_SKILL; skill_id++)
         if (sd->status.skill[skill_id].id != 0
             && sd->status.skill[skill_id].lv < skill_db[skill_id].max_raise)
-            potential += RAISE_COST(skill_db[skill_id].max_raise)
-                - RAISE_COST(sd->status.skill[skill_id].lv);
-#undef RAISE_COST
+            potential += raise_cost(skill_db[skill_id].max_raise)
+                - raise_cost(sd->status.skill[skill_id].lv);
 
     return potential;
 }
@@ -2686,7 +2689,7 @@ int32_t pc_checkjoblevelup(MapSessionData *sd)
         {                       // [Fate] Bah, this is is painful.
             // But the alternative is quite error-prone, and eAthena has far worse performance issues...
             sd->status.job_exp = next - 1;
-            pc_calcstatus(sd,0);
+            pc_calcstatus(sd, 0);
             return 0;
         }
 
@@ -3154,23 +3157,9 @@ int32_t pc_resetlvl(MapSessionData *sd, int32_t type)
  */
 int32_t pc_resetstate(MapSessionData *sd)
 {
-#define sumsp(a) ((a)*((a-2)/10+2) - 5*((a-2)/10)*((a-2)/10) - 6*((a-2)/10) -2)
-//  int32_t add=0; // Removed by Dexity
-
     nullpo_ret(sd);
 
-//  New statpoint table used here - Dexity
     sd->status.status_point = atoi(statp[sd->status.base_level - 1]);
-//  End addition
-
-//  Removed by Dexity - old count
-//  add += sumsp(sd->status.stats[ATTR::STR]);
-//  add += sumsp(sd->status.stats[ATTR::AGI]);
-//  add += sumsp(sd->status.stats[ATTR::VIT]);
-//  add += sumsp(sd->status.stats[ATTR::INT]);
-//  add += sumsp(sd->status.stats[ATTR::DEX]);
-//  add += sumsp(sd->status.stats[ATTR::LUK]);
-//  sd->status.status_point+=add;
 
     clif_updatestatus(sd, SP::STATUSPOINT);
 
@@ -3689,7 +3678,7 @@ int32_t pc_setparam(MapSessionData *sd, SP type, int32_t val)
 int32_t pc_heal(MapSessionData *sd, int32_t hp, int32_t sp)
 {
 //  if (battle_config.battle_log)
-//      printf("heal %d %d\n",hp,sp);
+//      printf("heal %d %d\n", hp, sp);
 
     nullpo_ret(sd);
 
@@ -3808,7 +3797,7 @@ static int32_t pc_itemheal_effect(MapSessionData *sd, int32_t hp, int32_t sp)
 {
     int32_t bonus;
 //  if (battle_config.battle_log)
-//      printf("heal %d %d\n",hp,sp);
+//      printf("heal %d %d\n", hp, sp);
 
     nullpo_ret(sd);
 
@@ -5273,9 +5262,9 @@ static int32_t pc_readdb(void)
         }
         lv = atoi(split[0]);
         n = atoi(split[1]);
-//      printf("%d %d\n",lv,n);
+//      printf("%d %d\n", lv, n);
 
-        for (i = 0; i < n;)
+        for (i = 0; i < n; )
         {
             if (!fgets(line, sizeof(line) - 1, fp))
                 break;

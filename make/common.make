@@ -1,3 +1,5 @@
+include make/common.deps
+
 common: \
 obj/common/core.o \
 obj/common/db.o \

@@ -34,9 +34,6 @@ struct skill_name_db skill_names[] =
     {0, 0, 0}
 };
 
-static const int32_t dirx[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
-static const int32_t diry[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
-
 /* スキルデータベース */
 struct skill_db skill_db[MAX_SKILL];
 

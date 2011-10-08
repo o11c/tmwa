@@ -3377,7 +3377,7 @@ static void parse_fromlogin(int32_t fd)
 
             case 0x7953:       // answer of a request about informations of an account (by account name/id)
                 if (RFIFOREST(fd) < 150
-                    || RFIFOREST(fd) <(150 + RFIFOW(fd, 148)))
+                    || RFIFOREST(fd) < (150 + RFIFOW(fd, 148)))
                     return;
                 {
                     char userid[24], error_message[20], lastlogin[24],

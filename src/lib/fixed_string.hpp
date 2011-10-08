@@ -71,14 +71,14 @@ public:
         strncpy(dst, data, sz);
     }
 
-    bool contains(const char* srch) const
+    bool contains(const char *srch) const
     {
         size_t len = strlen(srch);
         if (len >= sz)
              return false;
         for (int32_t i = 0; i < sz - len; i++)
         {
-            if (memcmp(data+i, srch, len) == 0)
+            if (memcmp(data + i, srch, len) == 0)
                 return true;
         }
         return false;

@@ -1576,7 +1576,7 @@ static void x7930(int32_t fd)
     remove_control_chars(email);
     int32_t new_id = mmo_auth_new(&ma, email);
     login_log.info("'ladmin': Account creation (account: %s (id: %d), sex: %c, email: %s, ip: %s)\n",
-                   ma.userid, new_id, sex_to_char(ma.sex), auth_dat[auth_num-1].email, ip_of(fd));
+                   ma.userid, new_id, sex_to_char(ma.sex), auth_dat[auth_num - 1].email, ip_of(fd));
     WFIFOL(fd, 2) = new_id;
 }
 
@@ -3038,7 +3038,7 @@ static void parse_login(int32_t fd)
 
             /// End connection
             case 0x7532:
-                x7532(fd,"");
+                x7532(fd, "");
                 return;
 
             /// Request for administation login

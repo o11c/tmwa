@@ -1,6 +1,10 @@
 #ifndef MAP_STRUCTS
 #define MAP_STRUCTS
 
+// TODO: improve this include location and contents
+// for now I'm putting it here because it's useful
+# include "precompiled.hpp"
+
 # include "battle.structs.hpp"
 # include "itemdb.structs.hpp"
 # include "path.structs.hpp"
@@ -12,16 +16,6 @@
 # include "../common/socket.structs.hpp"
 # include "../common/mmo.hpp"
 
-# include <cstring>
-# include <cstdlib>
-
-# include <vector>
-# include <set>
-
-# define MAX_PC_CLASS (1+6+6+1+6+1+1+1+1+4023)
-# define PC_CLASS_BASE 0
-# define PC_CLASS_BASE2 (PC_CLASS_BASE + 4001)
-# define PC_CLASS_BASE3 (PC_CLASS_BASE2 + 22)
 # define MAX_NPC_PER_MAP 512
 # define BLOCK_SIZE 8
 # define AREA_SIZE battle_config.area_size
@@ -507,8 +501,8 @@ public:
         int32_t drop_per;
     } drop_list[MAX_DROP_PER_MAP];
 };
-#define read_gat(m,x,y) (maps[m].gat[(x)+(y)*maps[m].xs])
-#define read_gatp(m,x,y) (m->gat[(x)+(y)*m->xs])
+#define read_gat(m, x, y)   (maps[m].gat[(x) + (y) * maps[m].xs])
+#define read_gatp(m, x, y)  (m->gat[(x) + (y) * m->xs])
 
 struct flooritem_data : public BlockList
 {
@@ -688,5 +682,10 @@ enum class LOOK : uint8_t
 
     COUNT = 14
 };
+
+extern template class DMap<int32_t, int32_t>;
+extern template class DMap<int32_t, std::string>;
+extern template class std::set<invocation_t *>;
+extern template class std::vector<npc_item_list>;
 
 #endif //MAP_STRUCTS

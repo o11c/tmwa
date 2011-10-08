@@ -12,9 +12,6 @@
 # include "../lib/fixed_stack.hpp"
 # include "../lib/placed.hpp"
 
-# include <vector>
-# include <map>
-
 # define MAGIC_CONFIG_FILE "conf/magic.conf"
 
 struct spell_t;
@@ -511,5 +508,8 @@ struct proc_t
     DArray<int32_t> args;
     effect_t *body;
 };
+
+extern template class std::vector<status_change_ref_t>;
+extern template class std::vector<int32_t>;
 
 #endif // MAGIC_STRUCTS

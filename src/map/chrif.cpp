@@ -30,7 +30,6 @@ void chrif_setuserid(const char *id)
 void chrif_setpasswd(const char *pwd)
 {
     STRZCPY(passwd, pwd);
-    passwd[sizeof(passwd)-1] = '\0';
 }
 
 /// Get the password used to connect to the char server

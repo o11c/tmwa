@@ -13,7 +13,7 @@ struct tmp_path
     char flag;
 };
 
-#define calc_index(x,y) (((x)+(y)*MAX_WALKPATH) & (MAX_WALKPATH*MAX_WALKPATH-1))
+#define calc_index(x, y) (((x) + (y) * MAX_WALKPATH) & (MAX_WALKPATH * MAX_WALKPATH - 1))
 
 /*==========================================
  * 経路探索補助heap push
@@ -278,7 +278,7 @@ int32_t path_search(struct walkpath_data *wpd, int32_t m, int32_t x_0, int32_t y
     // easy
     dx = (x_1 - x_0 < 0) ? -1 : 1;
     dy = (y_1 - y_0 < 0) ? -1 : 1;
-    for (x = x_0, y = y_0, i = 0; x != x_1 || y != y_1;)
+    for (x = x_0, y = y_0, i = 0; x != x_1 || y != y_1; )
     {
         if (i >= sizeof(wpd->path))
             return -1;

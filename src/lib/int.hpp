@@ -49,7 +49,7 @@ inline uint64_t next_power_of_2(uint64_t x)
 
 inline bool is_power_of_2(uint64_t v)
 {
-    return (v & (v-1)) == 0;
+    return (v & (v - 1)) == 0;
 }
 
 inline uint32_t highest_bit(uint64_t v)

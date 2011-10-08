@@ -4,7 +4,7 @@
 /// Number of tree roots
 // Somewhat arbitrary - larger wastes more space but is faster for large trees
 // num % HASH_SIZE minimize collisions even for similar num
-# define HASH_SIZE (256+27)
+# define HASH_SIZE (256 + 27)
 
 enum dbn_color
 {
@@ -17,7 +17,7 @@ struct db_key_t
 {
     union
     {
-        const char* s;
+        const char *s;
         numdb_key_t i;
     };
     db_key_t(const char *name) : s(name) {}
@@ -27,7 +27,7 @@ struct db_val_t
 {
     union
     {
-        void* p;
+        void *p;
         intptr_t i;
     };
     db_val_t(void *ptr) : p(ptr) {}

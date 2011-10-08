@@ -9,7 +9,7 @@
 # define LOGIN_LAN_CONF_NAME "conf/lan_support.conf"
 
 # define MAX_MAP_SERVERS 30
-# define DEFAULT_AUTOSAVE_INTERVAL 300*1000
+# define DEFAULT_AUTOSAVE_INTERVAL (300 * 1000)
 # define MAX_CHARS_PER_ACCOUNT 9
 
 struct mmo_charstatus *character_by_name(const char *character_name) __attribute__((pure));

@@ -5,8 +5,6 @@
 
 # include "../common/db.hpp"
 
-# include <functional>
-
 extern map_data_local maps[];
 extern int32_t map_num;
 extern int32_t autosave_interval;

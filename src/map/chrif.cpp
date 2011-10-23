@@ -7,18 +7,18 @@
 
 #include "battle.hpp"
 #include "clif.hpp"
-#include "map.hpp"
+#include "main.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "pc.hpp"
 #include "storage.hpp"
 
-int32_t char_fd = -1;
+sint32 char_fd = -1;
 
 static IP_Address char_ip;
 static in_port_t char_port = 6121;
 static char userid[24], passwd[24];
-static int32_t chrif_state;
+static sint32 chrif_state;
 
 /// Set the name of the account used to connect to the char server
 void chrif_setuserid(const char *id)
@@ -68,8 +68,8 @@ void chrif_save(MapSessionData *sd)
 
     WFIFOW(char_fd, 0) = 0x2b01;
     WFIFOW(char_fd, 2) = sizeof(sd->status) + 12;
-    WFIFOL(char_fd, 4) = sd->id;
-    WFIFOL(char_fd, 8) = sd->char_id;
+    WFIFOL(char_fd, 4) = uint32(sd->id);
+    WFIFOL(char_fd, 8) = uint32(sd->char_id);
     memcpy(WFIFOP(char_fd, 12), &sd->status, sizeof(sd->status));
     WFIFOSET(char_fd, WFIFOW(char_fd, 2));
 
@@ -78,7 +78,7 @@ void chrif_save(MapSessionData *sd)
 }
 
 /// Connect to the char server, telling it our stuff
-static void chrif_connect(int32_t fd)
+static void chrif_connect(sint32 fd)
 {
     WFIFOW(fd, 0) = 0x7530;
     WFIFOSET(fd, 2);
@@ -93,17 +93,17 @@ static void chrif_connect(int32_t fd)
 }
 
 /// Send our maps to the char server
-static void chrif_sendmap(int32_t fd)
+static void chrif_sendmap(sint32 fd)
 {
     WFIFOW(fd, 0) = 0x2afa;
-    for (int32_t i = 0; i < map_num; i++)
+    for (sint32 i = 0; i < map_num; i++)
         maps[i].name.write_to(sign_cast<char *>(WFIFOP(fd, 4 + i * 16)));
     WFIFOW(fd, 2) = 4 + map_num * 16;
     WFIFOSET(fd, WFIFOW(fd, 2));
 }
 
 /// Receive maps of other map servers
-static void chrif_recvmap(int32_t fd)
+static void chrif_recvmap(sint32 fd)
 {
     if (chrif_state < 2)
         return;
@@ -111,8 +111,8 @@ static void chrif_recvmap(int32_t fd)
     IP_Address ip;
     ip.from_n(RFIFOL(fd, 4));
     in_port_t port = RFIFOW(fd, 8);
-    int32_t j = 0;
-    for (int32_t i = 10; j < (RFIFOW(fd, 2) - 10) / 16; i += 16, j++)
+    sint32 j = 0;
+    for (sint32 i = 10; j < (RFIFOW(fd, 2) - 10) / 16; i += 16, j++)
     {
         fixed_string<16> mapname;
         mapname.copy_from(sign_cast<const char *>(RFIFOP(fd, i)));
@@ -126,13 +126,13 @@ void chrif_changemapserver(MapSessionData *sd, const Point& point, IP_Address ip
 {
     nullpo_retv(sd);
 
-    int32_t i = sd->fd;
+    sint32 i = sd->fd;
 
     WFIFOW(char_fd, 0) = 0x2b05;
-    WFIFOL(char_fd, 2) = sd->id;
+    WFIFOL(char_fd, 2) = uint32(sd->id);
     WFIFOL(char_fd, 6) = sd->login_id1;
     WFIFOL(char_fd, 10) = sd->login_id2;
-    WFIFOL(char_fd, 14) = sd->status.char_id;
+    WFIFOL(char_fd, 14) = uint32(sd->status.char_id);
     point.map.write_to(sign_cast<char *>(WFIFOP(char_fd, 18)));
     WFIFOW(char_fd, 34) = point.x;
     WFIFOW(char_fd, 36) = point.y;
@@ -145,17 +145,19 @@ void chrif_changemapserver(MapSessionData *sd, const Point& point, IP_Address ip
 
 /// The result of telling the char server we want to forward someone
 /// we then pass it on to the client
-static void chrif_changemapserverack(int32_t fd)
+static void chrif_changemapserverack(sint32 fd)
 {
-    MapSessionData *sd = map_id2sd(RFIFOL(fd, 2));
+    account_t acc = account_t(RFIFOL(fd, 2));
+    MapSessionData *sd = map_id2sd(acc);
 
-    if (!sd || sd->status.char_id != RFIFOL(fd, 14))
+    charid_t char_id = charid_t(RFIFOL(fd, 14));
+    if (!sd || sd->status.char_id != char_id)
         return;
 
     if (RFIFOL(fd, 6) == 1)
     {
         map_log("map server change failed.\n");
-        pc_authfail(sd->fd);
+        pc_authfail(sd->id);
         return;
     }
 
@@ -168,7 +170,7 @@ static void chrif_changemapserverack(int32_t fd)
 }
 
 /// Result of trying to connect to the char server
-static void chrif_connectack(int32_t fd)
+static void chrif_connectack(sint32 fd)
 {
     if (RFIFOB(fd, 2))
     {
@@ -188,7 +190,7 @@ static void chrif_connectack(int32_t fd)
 }
 
 /// Server got our maps
-static void chrif_sendmapack(int32_t fd)
+static void chrif_sendmapack(sint32 fd)
 {
     if (RFIFOB(fd, 2))
     {
@@ -209,10 +211,10 @@ void chrif_authreq(MapSessionData *sd)
     if (!sd || char_fd < 0 || !sd->id || !sd->login_id1)
         return;
 
-    int32_t i = sd->fd;
+    sint32 i = sd->fd;
     WFIFOW(char_fd, 0) = 0x2afc;
-    WFIFOL(char_fd, 2) = sd->id;
-    WFIFOL(char_fd, 6) = sd->char_id;
+    WFIFOL(char_fd, 2) = uint32(sd->id);
+    WFIFOL(char_fd, 6) = uint32(sd->char_id);
     WFIFOL(char_fd, 10) = sd->login_id1;
     WFIFOL(char_fd, 14) = sd->login_id2;
     WFIFOL(char_fd, 18) = session[i]->client_addr.to_n();
@@ -230,10 +232,10 @@ void chrif_charselectreq(MapSessionData *sd)
     if (!sd || char_fd < 0 || !sd->id || !sd->login_id1)
         return;
 
-    int32_t i = sd->fd;
+    sint32 i = sd->fd;
 
     WFIFOW(char_fd, 0) = 0x2b02;
-    WFIFOL(char_fd, 2) = sd->id;
+    WFIFOL(char_fd, 2) = uint32(sd->id);
     WFIFOL(char_fd, 6) = sd->login_id1;
     WFIFOL(char_fd, 10) = sd->login_id2;
     WFIFOL(char_fd, 14) = session[i]->client_addr.to_n();
@@ -241,39 +243,39 @@ void chrif_charselectreq(MapSessionData *sd)
 }
 
 /// Change GM level (@gm)
-void chrif_changegm(int32_t id, const char *pass, int32_t len)
+void chrif_changegm(account_t id, const char *pass, sint32 len)
 {
-    map_log("%s: account: %d, password: '%s'.\n", __func__, id, pass);
+    MAP_LOG("%s: account: %d, password: '%s'.\n", __func__, id, pass);
 
     WFIFOW(char_fd, 0) = 0x2b0a;
     WFIFOW(char_fd, 2) = len + 8;
-    WFIFOL(char_fd, 4) = id;
+    WFIFOL(char_fd, 4) = uint32(id);
     memcpy(WFIFOP(char_fd, 8), pass, len);
     WFIFOSET(char_fd, len + 8);
 }
 
 /// Change email
-void chrif_changeemail(int32_t id, const char *actual_email, const char *new_email)
+void chrif_changeemail(account_t id, const char *actual_email, const char *new_email)
 {
-    map_log("%s: account: %d, actual_email: '%s', new_email: '%s'.\n", __func__,
-            id, actual_email, new_email);
+    MAP_LOG("%s: account: %d, actual_email: '%s', new_email: '%s'.\n",
+            __func__, id, actual_email, new_email);
 
     WFIFOW(char_fd, 0) = 0x2b0c;
-    WFIFOL(char_fd, 2) = id;
+    WFIFOL(char_fd, 2) = uint32(id);
     strzcpy(sign_cast<char *>(WFIFOP(char_fd, 6)), actual_email, 40);
     strzcpy(sign_cast<char *>(WFIFOP(char_fd, 46)), new_email, 40);
     WFIFOSET(char_fd, 86);
 }
 
 /// Do miscellaneous operations on a character
-void chrif_char_ask_name(int32_t id, const char *character_name, CharOperation operation_type,
-                         int32_t year, int32_t month, int32_t day, int32_t hour, int32_t minute, int32_t second)
+void chrif_char_ask_name(account_t id, const char *character_name, CharOperation operation_type,
+                         sint32 year, sint32 month, sint32 day, sint32 hour, sint32 minute, sint32 second)
 {
     WFIFOW(char_fd, 0) = 0x2b0e;
-    // who asked, or -1 if server
-    WFIFOL(char_fd, 2) = id;
+    // who asked, or 0 if server
+    WFIFOL(char_fd, 2) = uint32(id);
     strzcpy(sign_cast<char *>(WFIFOP(char_fd, 6)), character_name, 24);
-    WFIFOW(char_fd, 30) = static_cast<uint16_t>(operation_type);
+    WFIFOW(char_fd, 30) = static_cast<uint16>(operation_type);
     if (operation_type == CharOperation::BAN)
     {
         WFIFOW(char_fd, 32) = year;
@@ -287,9 +289,9 @@ void chrif_char_ask_name(int32_t id, const char *character_name, CharOperation o
 }
 
 /// Reply (only sent when a human asked)
-static void chrif_char_ask_name_answer(int32_t fd)
+static void chrif_char_ask_name_answer(sint32 fd)
 {
-    account_t acc = RFIFOL(fd, 2);
+    account_t acc = account_t(RFIFOL(fd, 2));
     char player_name[24];
     STRZCPY(player_name, sign_cast<const char *>(RFIFOP(fd, 6)));
 
@@ -331,14 +333,14 @@ static void chrif_char_ask_name_answer(int32_t fd)
 }
 
 /// A GM level changed
-static void chrif_changedgm(int32_t fd)
+static void chrif_changedgm(sint32 fd)
 {
-    account_t acc = RFIFOL(fd, 2);
-    gm_level_t level = RFIFOL(fd, 6);
+    account_t acc = account_t(RFIFOL(fd, 2));
+    gm_level_t level = gm_level_t(uint8(RFIFOL(fd, 6)));
 
     MapSessionData *sd = map_id2sd(acc);
 
-    map_log("chrif_changedgm: account: %u, GM level 0 -> %hhu.\n", acc, level);
+    MAP_LOG("chrif_changedgm: account: %u, GM level 0 -> %hhu.\n", acc, level);
 
     if (!sd)
         return;
@@ -349,11 +351,11 @@ static void chrif_changedgm(int32_t fd)
 }
 
 /// Actually flip someone's sex
-static void chrif_changedsex(int32_t fd)
+static void chrif_changedsex(sint32 fd)
 {
-    account_t acc = RFIFOL(fd, 2);
-    uint32_t sex = RFIFOL(fd, 6);
-    map_log("chrif_changedsex %d.\n", acc);
+    account_t acc = account_t(RFIFOL(fd, 2));
+    uint32 sex = RFIFOL(fd, 6);
+    MAP_LOG("chrif_changedsex %d.\n", acc);
     MapSessionData *sd = map_id2sd(acc);
     if (!sd || sd->status.sex == sex)
         return;
@@ -369,7 +371,7 @@ static void chrif_changedsex(int32_t fd)
         sd->sex = 0;
     }
     // to avoid any problem with equipment and invalid sex, equipment is unequiped.
-    for (int32_t i = 0; i < MAX_INVENTORY; i++)
+    for (sint32 i = 0; i < MAX_INVENTORY; i++)
     {
         if (sd->status.inventory[i].nameid
                 && sd->status.inventory[i].equip != EPOS::NONE)
@@ -388,8 +390,8 @@ void chrif_saveaccountreg2(MapSessionData *sd)
 {
     nullpo_retv(sd);
 
-    int32_t p = 8;
-    for (int32_t j = 0; j < sd->status.account_reg2_num; j++)
+    sint32 p = 8;
+    for (sint32 j = 0; j < sd->status.account_reg2_num; j++)
     {
         struct global_reg *reg = &sd->status.account_reg2[j];
         if (reg->str[0] && reg->value)
@@ -402,20 +404,21 @@ void chrif_saveaccountreg2(MapSessionData *sd)
     }
     WFIFOW(char_fd, 0) = 0x2b10;
     WFIFOW(char_fd, 2) = p;
-    WFIFOL(char_fd, 4) = sd->id;
+    WFIFOL(char_fd, 4) = uint32(sd->id);
     WFIFOSET(char_fd, p);
 }
 
 /// Load variables
-static void chrif_accountreg2(int32_t fd)
+static void chrif_accountreg2(sint32 fd)
 {
-    MapSessionData *sd = map_id2sd(RFIFOL(fd, 4));
+    account_t acc = account_t(RFIFOL(fd, 4));
+    MapSessionData *sd = map_id2sd(acc);
 
     if (!sd)
         return;
 
-    int32_t p = 8;
-    int32_t j;
+    sint32 p = 8;
+    sint32 j;
     for (j = 0; p < RFIFOW(fd, 2) && j < ACCOUNT_REG2_NUM; j++)
     {
         STRZCPY(sd->status.account_reg2[j].str, sign_cast<const char *>(RFIFOP(fd, p)));
@@ -431,16 +434,16 @@ static void chrif_accountreg2(int32_t fd)
  * triggered on account deletion or as an
  * ack from a map-server divorce request
  */
-static void chrif_divorce(int32_t char_id, int32_t partner_id)
+static void chrif_divorce(charid_t char_id, charid_t partner_id)
 {
     if (!char_id || !partner_id)
         return;
 
-    MapSessionData *sd;
-    sd = map_nick2sd(map_charid2nick(char_id));
+    // stupid indirection
+    MapSessionData *sd = map_nick2sd(map_charid2nick(char_id));
     if (sd && sd->status.partner_id == partner_id)
     {
-        sd->status.partner_id = 0;
+        sd->status.partner_id = DEFAULT;
 
         if (sd->npc_flags.divorce)
         {
@@ -452,30 +455,30 @@ static void chrif_divorce(int32_t char_id, int32_t partner_id)
     sd = map_nick2sd(map_charid2nick(partner_id));
 
     if (sd && sd->status.partner_id == char_id)
-        sd->status.partner_id = 0;
+        sd->status.partner_id = DEFAULT;
 }
 
 /**
  * Tell character server someone is divorced
  * Needed to divorce when partner is not connected to map server
  */
-void chrif_send_divorce(int32_t char_id)
+void chrif_send_divorce(charid_t char_id)
 {
     if (char_fd < 0)
         return;
 
     WFIFOW(char_fd, 0) = 0x2b16;
-    WFIFOL(char_fd, 2) = char_id;
+    WFIFOL(char_fd, 2) = uint32(char_id);
     WFIFOSET(char_fd, 6);
 }
 
 /**
  * Disconnection of a player(account has been deleted in login-server) by [Yor]
  */
-static void chrif_accountdeletion(int32_t fd)
+static void chrif_accountdeletion(sint32 fd)
 {
-    account_t acc = RFIFOL(fd, 2);
-    map_log("chrif_accountdeletion %d.\n", acc);
+    account_t acc = account_t(RFIFOL(fd, 2));
+    MAP_LOG("chrif_accountdeletion %d.\n", acc);
     MapSessionData *sd = map_id2sd(acc);
     if (!sd)
         return;
@@ -487,10 +490,10 @@ static void chrif_accountdeletion(int32_t fd)
 /**
  * Disconnection of a player(account has been banned of has a status, from login-server) by [Yor]
  */
-static void chrif_accountban(int32_t fd)
+static void chrif_accountban(sint32 fd)
 {
-    account_t acc = RFIFOL(fd, 2);
-    map_log("chrif_accountban %d.\n", acc);
+    account_t acc = account_t(RFIFOL(fd, 2));
+    MAP_LOG("chrif_accountban %d.\n", acc);
     MapSessionData *sd = map_id2sd(acc);
     if (!sd)
         return;
@@ -544,7 +547,7 @@ static void chrif_accountban(int32_t fd)
 }
 
 /// Receive GM account list
-static void chrif_recvgmaccounts(int32_t fd)
+static void chrif_recvgmaccounts(sint32 fd)
 {
     printf("From login-server: receiving of %d GM accounts information.\n",
            pc_read_gm_account(fd));
@@ -555,7 +558,7 @@ static void chrif_recvgmaccounts(int32_t fd)
  *----------------------------------------
  */
 
-static void ladmin_itemfrob_fix_item(int32_t source, int32_t dest, struct item *item)
+static void ladmin_itemfrob_fix_item(sint32 source, sint32 dest, struct item *item)
 {
     if (item && item->nameid == source)
     {
@@ -564,8 +567,8 @@ static void ladmin_itemfrob_fix_item(int32_t source, int32_t dest, struct item *
     }
 }
 
-static void ladmin_itemfrob_c(BlockList *bl, int32_t source_id,
-                              int32_t dest_id)
+static void ladmin_itemfrob_c(BlockList *bl, sint32 source_id,
+                              sint32 dest_id)
 {
 #define IFIX(v) if (v == source_id) {v = dest_id; }
 #define FIX(item) ladmin_itemfrob_fix_item(source_id, dest_id, &item)
@@ -580,7 +583,7 @@ static void ladmin_itemfrob_c(BlockList *bl, int32_t source_id,
         MapSessionData *pc = static_cast<MapSessionData *>(bl);
         struct storage *stor = account2storage2(pc->status.account_id);
 
-        for (int32_t j = 0; j < MAX_INVENTORY; j++)
+        for (sint32 j = 0; j < MAX_INVENTORY; j++)
             IFIX(pc->status.inventory[j].nameid);
         IFIX(pc->status.weapon);
         IFIX(pc->status.shield);
@@ -589,10 +592,10 @@ static void ladmin_itemfrob_c(BlockList *bl, int32_t source_id,
         IFIX(pc->status.legs);
 
         if (stor)
-            for (int32_t j = 0; j < stor->storage_amount; j++)
+            for (sint32 j = 0; j < stor->storage_amount; j++)
                 FIX(stor->storage_[j]);
 
-        for (int32_t j = 0; j < MAX_INVENTORY; j++)
+        for (sint32 j = 0; j < MAX_INVENTORY; j++)
         {
             struct item_data *item = pc->inventory_data[j];
             if (item && item->nameid == source_id)
@@ -610,7 +613,7 @@ static void ladmin_itemfrob_c(BlockList *bl, int32_t source_id,
     case BL_MOB:
     {
         struct mob_data *mob = static_cast<struct mob_data *>(bl);
-        for (int32_t i = 0; i < mob->lootitem_count; i++)
+        for (sint32 i = 0; i < mob->lootitem_count; i++)
             FIX(mob->lootitem[i]);
         break;
     }
@@ -626,10 +629,10 @@ static void ladmin_itemfrob_c(BlockList *bl, int32_t source_id,
 #undef IFIX
 }
 
-static void ladmin_itemfrob(int32_t fd)
+static void ladmin_itemfrob(sint32 fd)
 {
-    int32_t source_id = RFIFOL(fd, 2);
-    int32_t dest_id = RFIFOL(fd, 6);
+    sint32 source_id = RFIFOL(fd, 2);
+    sint32 dest_id = RFIFOL(fd, 6);
     BlockList *bl = map_get_first_session();
 
     // flooritems
@@ -646,7 +649,7 @@ static void ladmin_itemfrob(int32_t fd)
 
 
 /// Message for all GMs on all map servers
-void intif_GMmessage(const char *mes, int32_t len)
+void intif_GMmessage(const char *mes, sint32 len)
 {
     WFIFOW(char_fd, 0) = 0x3000;
     WFIFOW(char_fd, 2) = 4 + len;
@@ -656,7 +659,7 @@ void intif_GMmessage(const char *mes, int32_t len)
 
 /// Whisper via inter-server (player not found on this server)
 void intif_whisper_message(MapSessionData *sd, const char *nick,
-                           const char *mes, int32_t mes_len)
+                           const char *mes, sint32 mes_len)
 {
     nullpo_retv(sd);
 
@@ -669,7 +672,7 @@ void intif_whisper_message(MapSessionData *sd, const char *nick,
 }
 
 /// Reply to a multicast whisper
-static void intif_whisper_reply(int32_t id, int32_t flag)
+static void intif_whisper_reply(sint32 id, sint32 flag)
 {
     WFIFOW(char_fd, 0) = 0x3002;
     WFIFOL(char_fd, 2) = id;
@@ -679,16 +682,16 @@ static void intif_whisper_reply(int32_t id, int32_t flag)
 
 /// @wgm for other map servers
 void intif_whisper_message_to_gm(const char *whisper_name, gm_level_t min_gm_level,
-                                 const char *mes, int32_t mes_len)
+                                 const char *mes, sint32 mes_len)
 {
     WFIFOW(char_fd, 0) = 0x3003;
     WFIFOW(char_fd, 2) = mes_len + 30;
     strzcpy(sign_cast<char *>(WFIFOP(char_fd, 4)), whisper_name, 24);
-    WFIFOW(char_fd, 28) = min_gm_level;
+    WFIFOW(char_fd, 28) = uint8(min_gm_level);
     memcpy(WFIFOP(char_fd, 30), mes, mes_len);
     WFIFOSET(char_fd, WFIFOW(char_fd, 2));
 
-    map_log("intif_whisper_message_to_gm: from: '%s', min level: %d, message: '%s'.\n",
+    MAP_LOG("intif_whisper_message_to_gm: from: '%s', min level: %d, message: '%s'.\n",
             whisper_name, min_gm_level, mes);
 }
 
@@ -698,9 +701,9 @@ void intif_saveaccountreg(MapSessionData *sd)
     nullpo_retv(sd);
 
     WFIFOW(char_fd, 0) = 0x3004;
-    WFIFOL(char_fd, 4) = sd->id;
-    int32_t p = 8;
-    for (int32_t j = 0; j < sd->status.account_reg_num; j++)
+    WFIFOL(char_fd, 4) = uint32(sd->id);
+    sint32 p = 8;
+    for (sint32 j = 0; j < sd->status.account_reg_num; j++)
     {
         memcpy(WFIFOP(char_fd, p), sd->status.account_reg[j].str, 32);
         p += 32;
@@ -717,7 +720,7 @@ void intif_request_accountreg(MapSessionData *sd)
     nullpo_retv(sd);
 
     WFIFOW(char_fd, 0) = 0x3005;
-    WFIFOL(char_fd, 2) = sd->id;
+    WFIFOL(char_fd, 2) = uint32(sd->id);
     WFIFOSET(char_fd, 6);
 }
 
@@ -725,7 +728,7 @@ void intif_request_accountreg(MapSessionData *sd)
 void intif_request_storage(account_t account_id)
 {
     WFIFOW(char_fd, 0) = 0x3010;
-    WFIFOL(char_fd, 2) = account_id;
+    WFIFOL(char_fd, 2) = uint32(account_id);
     WFIFOSET(char_fd, 6);
 }
 
@@ -735,7 +738,7 @@ void intif_send_storage(struct storage *stor)
     nullpo_retv(stor);
     WFIFOW(char_fd, 0) = 0x3011;
     WFIFOW(char_fd, 2) = sizeof(struct storage) + 8;
-    WFIFOL(char_fd, 4) = stor->account_id;
+    WFIFOL(char_fd, 4) = uint32(stor->account_id);
     memcpy(WFIFOP(char_fd, 8), stor, sizeof(struct storage));
     WFIFOSET(char_fd, WFIFOW(char_fd, 2));
 }
@@ -746,11 +749,11 @@ void intif_create_party(MapSessionData *sd, const char *name)
     nullpo_retv(sd);
 
     WFIFOW(char_fd, 0) = 0x3020;
-    WFIFOL(char_fd, 2) = sd->status.account_id;
+    WFIFOL(char_fd, 2) = uint32(sd->status.account_id);
     strzcpy(sign_cast<char *>(WFIFOP(char_fd, 6)), name, 24);
     STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 30)), sd->status.name);
     maps[sd->m].name.write_to(sign_cast<char *>(WFIFOP(char_fd, 54)));
-    WFIFOW(char_fd, 70) = sd->status.base_level;
+    WFIFOW(char_fd, 70) = uint8(sd->status.base_level);
     WFIFOSET(char_fd, 72);
 }
 
@@ -758,7 +761,7 @@ void intif_create_party(MapSessionData *sd, const char *name)
 void intif_request_partyinfo(party_t party_id)
 {
     WFIFOW(char_fd, 0) = 0x3021;
-    WFIFOL(char_fd, 2) = party_id;
+    WFIFOL(char_fd, 2) = uint32(party_id);
     WFIFOSET(char_fd, 6);
 }
 
@@ -769,11 +772,11 @@ void intif_party_addmember(party_t party_id, account_t account_id)
     if (!sd)
         return;
     WFIFOW(char_fd, 0) = 0x3022;
-    WFIFOL(char_fd, 2) = party_id;
-    WFIFOL(char_fd, 6) = account_id;
+    WFIFOL(char_fd, 2) = uint32(party_id);
+    WFIFOL(char_fd, 6) = uint32(account_id);
     STRZCPY2(sign_cast<char *>(WFIFOP(char_fd, 10)), sd->status.name);
     maps[sd->m].name.write_to(sign_cast<char *>(WFIFOP(char_fd, 34)));
-    WFIFOW(char_fd, 50) = sd->status.base_level;
+    WFIFOW(char_fd, 50) = uint8(sd->status.base_level);
     WFIFOSET(char_fd, 52);
 }
 
@@ -781,8 +784,8 @@ void intif_party_addmember(party_t party_id, account_t account_id)
 void intif_party_changeoption(party_t party_id, account_t account_id, bool exp, bool item)
 {
     WFIFOW(char_fd, 0) = 0x3023;
-    WFIFOL(char_fd, 2) = party_id;
-    WFIFOL(char_fd, 6) = account_id;
+    WFIFOL(char_fd, 2) = uint32(party_id);
+    WFIFOL(char_fd, 6) = uint32(account_id);
     WFIFOW(char_fd, 10) = exp;
     WFIFOW(char_fd, 12) = item;
     WFIFOSET(char_fd, 14);
@@ -792,8 +795,8 @@ void intif_party_changeoption(party_t party_id, account_t account_id, bool exp, 
 void intif_party_leave(party_t party_id, account_t account_id)
 {
     WFIFOW(char_fd, 0) = 0x3024;
-    WFIFOL(char_fd, 2) = party_id;
-    WFIFOL(char_fd, 6) = account_id;
+    WFIFOL(char_fd, 2) = uint32(party_id);
+    WFIFOL(char_fd, 6) = uint32(account_id);
     WFIFOSET(char_fd, 10);
 }
 
@@ -804,21 +807,21 @@ void intif_party_changemap(MapSessionData *sd, bool online)
         return;
 
     WFIFOW(char_fd, 0) = 0x3025;
-    WFIFOL(char_fd, 2) = sd->status.party_id;
-    WFIFOL(char_fd, 6) = sd->status.account_id;
+    WFIFOL(char_fd, 2) = uint32(sd->status.party_id);
+    WFIFOL(char_fd, 6) = uint32(sd->status.account_id);
     maps[sd->m].name.write_to(sign_cast<char *>(WFIFOP(char_fd, 10)));
     WFIFOB(char_fd, 26) = online;
-    WFIFOW(char_fd, 27) = sd->status.base_level;
+    WFIFOW(char_fd, 27) = uint8(sd->status.base_level);
     WFIFOSET(char_fd, 29);
 }
 
 /// Party chat
-void intif_party_message(party_t party_id, account_t account_id, const char *mes, int32_t len)
+void intif_party_message(party_t party_id, account_t account_id, const char *mes, sint32 len)
 {
     WFIFOW(char_fd, 0) = 0x3027;
     WFIFOW(char_fd, 2) = len + 12;
-    WFIFOL(char_fd, 4) = party_id;
-    WFIFOL(char_fd, 8) = account_id;
+    WFIFOL(char_fd, 4) = uint32(party_id);
+    WFIFOL(char_fd, 8) = uint32(account_id);
     memcpy(WFIFOP(char_fd, 12), mes, len);
     WFIFOSET(char_fd, len + 12);
 }
@@ -827,8 +830,8 @@ void intif_party_message(party_t party_id, account_t account_id, const char *mes
 void intif_party_checkconflict(party_t party_id, account_t account_id, const char *nick)
 {
     WFIFOW(char_fd, 0) = 0x3028;
-    WFIFOL(char_fd, 2) = party_id;
-    WFIFOL(char_fd, 6) = account_id;
+    WFIFOL(char_fd, 2) = uint32(party_id);
+    WFIFOL(char_fd, 6) = uint32(account_id);
     memcpy(WFIFOP(char_fd, 10), nick, 24);
     WFIFOSET(char_fd, 34);
 }
@@ -836,7 +839,7 @@ void intif_party_checkconflict(party_t party_id, account_t account_id, const cha
 
 
 /// Whisper
-static void intif_parse_whisper(int32_t fd)
+static void intif_parse_whisper(sint32 fd)
 {
     MapSessionData *sd = map_nick2sd(sign_cast<const char *>(RFIFOP(fd, 32)));
     if (!sd)
@@ -854,7 +857,7 @@ static void intif_parse_whisper(int32_t fd)
 }
 
 /// We sent a whisper to the inter server and get this result
-static void intif_parse_whisper_end(int32_t fd)
+static void intif_parse_whisper_end(sint32 fd)
 {
     MapSessionData *sd = map_nick2sd(sign_cast<const char *>(RFIFOP(fd, 2)));
 
@@ -865,14 +868,14 @@ static void intif_parse_whisper_end(int32_t fd)
 }
 
 /// forwarded @wgm
-static void mapif_parse_WhisperToGM(int32_t fd)
+static void mapif_parse_WhisperToGM(sint32 fd)
 {
-    int32_t len = RFIFOW(fd, 2) - 30;
+    sint32 len = RFIFOW(fd, 2) - 30;
 
     if (len <= 0)
         return;
 
-    gm_level_t min_gm_level = RFIFOW(fd, 28);
+    gm_level_t min_gm_level = gm_level_t(uint8(RFIFOW(fd, 28)));
 
     char whisper_name[24];
     STRZCPY(whisper_name, sign_cast<const char *>(RFIFOP(fd, 4)));
@@ -889,15 +892,16 @@ static void mapif_parse_WhisperToGM(int32_t fd)
 }
 
 /// Load somebody's variables
-static void intif_parse_AccountReg(int32_t fd)
+static void intif_parse_AccountReg(sint32 fd)
 {
-    MapSessionData *sd = map_id2sd(RFIFOL(fd, 4));
+    account_t acc = account_t(RFIFOL(fd, 4));
+    MapSessionData *sd = map_id2sd(acc);
 
     if (!sd)
         return;
 
-    int32_t p = 8;
-    int32_t j;
+    sint32 p = 8;
+    sint32 j;
     for (j = 0; p < RFIFOW(fd, 2) && j < ACCOUNT_REG_NUM; j++)
     {
         STRZCPY(sd->status.account_reg[j].str, sign_cast<const char *>(RFIFOP(fd, p)));
@@ -909,24 +913,25 @@ static void intif_parse_AccountReg(int32_t fd)
 }
 
 /// Load somebody's storage
-static void intif_parse_LoadStorage(int32_t fd)
+static void intif_parse_LoadStorage(sint32 fd)
 {
-    MapSessionData *sd = map_id2sd(RFIFOL(fd, 4));
+    account_t acc = account_t(RFIFOL(fd, 4));
+    MapSessionData *sd = map_id2sd(acc);
     if (!sd)
     {
-        map_log("%s: user not found %d\n", __func__, RFIFOL(fd, 4));
+        MAP_LOG("%s: user not found %d\n", __func__, acc);
         return;
     }
-    struct storage *stor = account2storage(RFIFOL(fd, 4));
+    struct storage *stor = account2storage(acc);
     if (stor->storage_status == 1)
     {                           // Already open.. lets ignore this update
-        map_log("%s: storage received for a client already open (User %d:%d)\n",
+        MAP_LOG("%s: storage received for a client already open (User %d:%d)\n",
                 __func__, sd->status.account_id, sd->status.char_id);
         return;
     }
     if (stor->dirty)
     {                           // Already have storage, and it has been modified and not saved yet! Exploit! [Skotlex]
-        map_log("%s: received storage for an already modified non-saved storage! (User %d:%d)\n",
+        MAP_LOG("%s: received storage for an already modified non-saved storage! (User %d:%d)\n",
                 __func__, sd->status.account_id, sd->status.char_id);
         return;
     }
@@ -948,86 +953,107 @@ static void intif_parse_LoadStorage(int32_t fd)
 }
 
 /// Somebody's storage has been saved
-static void intif_parse_SaveStorage(int32_t fd)
+static void intif_parse_SaveStorage(sint32 fd)
 {
-    map_log("%s: done %d %d\n", __func__, RFIFOL(fd, 2), RFIFOB(fd, 6));
-    storage_storage_saved(RFIFOL(fd, 2));
+    account_t acc = account_t(RFIFOL(fd, 2));
+    MAP_LOG("%s: done %d %d\n", __func__, acc, RFIFOB(fd, 6));
+    storage_storage_saved(acc);
 }
 
 /// A party was created
-static void intif_parse_PartyCreated(int32_t fd)
+static void intif_parse_PartyCreated(sint32 fd)
 {
     map_log("%s: party created\n", __func__);
-    party_created(RFIFOL(fd, 2), RFIFOB(fd, 6), RFIFOL(fd, 7),
-                   sign_cast<const char *>(RFIFOP(fd, 11)));
+    account_t acc = account_t(RFIFOL(fd, 2));
+    bool fail = RFIFOB(fd, 6);
+    party_t party_id = party_t(RFIFOL(fd, 7));
+    const char *name = sign_cast<const char *>(RFIFOP(fd, 11));
+    party_created(acc, fail, party_id, name);
 }
 
 /// Parse party info
-static void intif_parse_PartyInfo(int32_t fd)
+static void intif_parse_PartyInfo(sint32 fd)
 {
-    if (RFIFOW(fd, 2) == 8)
+    uint16 len = RFIFOW(fd, 2);
+    if (len == 8)
     {
-        map_log("intif: party noinfo %d\n", RFIFOL(fd, 4));
-        party_recv_noinfo(RFIFOL(fd, 4));
+        party_t party_id = party_t(RFIFOL(fd, 4));
+        MAP_LOG("intif: party noinfo %d\n", party_id);
+        party_recv_noinfo(party_id);
         return;
     }
 
-    if (RFIFOW(fd, 2) != sizeof(struct party) + 4)
-    {
-        map_log("intif: party info : data size error %d %d %d\n",
-                RFIFOL(fd, 4), RFIFOW(fd, 2), sizeof(struct party) + 4);
-        return;
-    }
-
-    party_recv_info(reinterpret_cast<const struct party *>(RFIFOP(fd, 4)));
+    if (len != sizeof(struct party) + 4)
+        abort();
+    const struct party *p = reinterpret_cast<const struct party *>(RFIFOP(fd, 4));
+    party_recv_info(p);
 }
 
 /// Notification of party member added
-static void intif_parse_PartyMemberAdded(int32_t fd)
+static void intif_parse_PartyMemberAdded(sint32 fd)
 {
-    map_log("intif: party member added %d %d %d\n", RFIFOL(fd, 2),
-            RFIFOL(fd, 6), RFIFOB(fd, 10));
-    party_member_added(RFIFOL(fd, 2), RFIFOL(fd, 6), RFIFOB(fd, 10));
+    party_t party_id = party_t(RFIFOL(fd, 2));
+    account_t acc = account_t(RFIFOL(fd, 6));
+    bool flag = RFIFOB(fd, 10);
+    MAP_LOG("intif: party member added %d %d %d\n", party_id, acc, flag);
+    party_member_added(party_id, acc, flag);
 }
 
 /// Notification of party exp/item sharing changed
-static void intif_parse_PartyOptionChanged(int32_t fd)
+static void intif_parse_PartyOptionChanged(sint32 fd)
 {
-    party_optionchanged(RFIFOL(fd, 2), RFIFOL(fd, 6), RFIFOW(fd, 10),
-                        RFIFOW(fd, 12), RFIFOB(fd, 14));
+    party_t party_id = party_t(RFIFOL(fd, 2));
+    account_t acc = account_t(RFIFOL(fd, 6));
+    bool exp = RFIFOW(fd, 10);
+    bool item = RFIFOW(fd, 12);
+    uint8 flag = RFIFOB(fd, 14);
+    party_optionchanged(party_id, acc, exp, item, flag);
 }
 
 /// Someone has left the party
-static void intif_parse_PartyMemberLeft(int32_t fd)
+static void intif_parse_PartyMemberLeft(sint32 fd)
 {
-    map_log("intif: party member left %d %d %s\n", RFIFOL(fd, 2),
-            RFIFOL(fd, 6), RFIFOP(fd, 10));
-    party_member_left(RFIFOL(fd, 2), RFIFOL(fd, 6), sign_cast<const char *>(RFIFOP(fd, 10)));
+    party_t party_id = party_t(RFIFOL(fd, 2));
+    account_t acc = account_t(RFIFOL(fd, 6));
+    const char *name = sign_cast<const char *>(RFIFOP(fd, 10));
+    MAP_LOG("intif: party member left %d %d %s\n", party_id, acc, name);
+    party_member_left(party_id, acc, name);
 }
 
 /// A party no longer exists
-static void intif_parse_PartyBroken(int32_t fd)
+static void intif_parse_PartyBroken(sint32 fd)
 {
-    party_broken(RFIFOL(fd, 2));
+    party_t party_id = party_t(RFIFOL(fd, 2));
+    party_broken(party_id);
 }
 
 /// Notification that somebody in the party has changed maps
-static void intif_parse_PartyMove(int32_t fd)
+static void intif_parse_PartyMove(sint32 fd)
 {
-    party_recv_movemap(RFIFOL(fd, 2), RFIFOL(fd, 6), sign_cast<const char *>(RFIFOP(fd, 10)),
-                       RFIFOB(fd, 26), RFIFOW(fd, 27));
+    party_t party_id = party_t(RFIFOL(fd, 2));
+    account_t acc = account_t(RFIFOL(fd, 6));
+    const char *map = sign_cast<const char *>(RFIFOP(fd, 10));
+    bool online = RFIFOB(fd, 26);
+    level_t lv = level_t(uint8(RFIFOW(fd, 27)));
+    party_recv_movemap(party_id, acc, map, online, lv);
 }
 
 /// Receive party chat
-static void intif_parse_PartyMessage(int32_t fd)
+static void intif_parse_PartyMessage(sint32 fd)
 {
-    party_recv_message(RFIFOL(fd, 4), RFIFOL(fd, 8), sign_cast<const char *>(RFIFOP(fd, 12)),
-                       RFIFOW(fd, 2) - 12);
+    party_t party_id = party_t(RFIFOL(fd, 4));
+    account_t acc = account_t(RFIFOL(fd, 8));
+    const char *mes = sign_cast<const char *>(RFIFOP(fd, 12));
+    uint16 len = RFIFOW(fd, 2);
+    if (len < 12)
+        abort();
+    len -= 12;
+    party_recv_message(party_id, acc, mes, len);
 }
 
 
 /// Parse packets from the char server
-static void chrif_parse(int32_t fd)
+static void chrif_parse(sint32 fd)
 {
     if (fd != char_fd)
         abort();
@@ -1093,17 +1119,25 @@ static void chrif_parse(int32_t fd)
                 return;
             if (RFIFOREST(fd) < RFIFOW(fd, 2))
                 return;
-            pc_authok(RFIFOL(fd, 4), RFIFOL(fd, 8),
-                      RFIFOL(fd, 12), RFIFOW(fd, 16),
-                      reinterpret_cast<const struct mmo_charstatus *>(RFIFOP(fd, 18)));
+            {
+                const struct mmo_charstatus *cs = reinterpret_cast<const struct mmo_charstatus *>(RFIFOP(fd, 18));
+                account_t acc = account_t(RFIFOL(fd, 4));
+                uint32 magic = RFIFOL(fd, 8);
+                time_t until = RFIFOL(fd, 12);
+                sint16 version = RFIFOW(fd, 16);
+                pc_authok(acc, magic, until, version, cs);
+            }
             RFIFOSKIP(fd, RFIFOW(fd, 2));
             break;
         case 0x2afe:
             if (RFIFOREST(fd) < 6)
                 return;
-            pc_authfail(RFIFOL(fd, 2));
-            RFIFOSKIP(fd, 6);
-            break;
+            {
+                account_t acc = account_t(RFIFOL(fd, 2));
+                pc_authfail(acc);
+                RFIFOSKIP(fd, 6);
+                break;
+            }
         case 0x2b00:
             if (RFIFOREST(fd) < 6)
                 return;
@@ -1113,7 +1147,7 @@ static void chrif_parse(int32_t fd)
         case 0x2b03:
             if (RFIFOREST(fd) < 7)
                 return;
-            clif_charselectok(RFIFOL(fd, 2));
+            clif_charselectok(account_t(RFIFOL(fd, 2)));
             RFIFOSKIP(fd, 7);
             break;
         case 0x2b04:
@@ -1133,7 +1167,7 @@ static void chrif_parse(int32_t fd)
         case 0x2b09:
             if (RFIFOREST(fd) < 30)
                 return;
-            map_addchariddb(RFIFOL(fd, 2), sign_cast<const char *>(RFIFOP(fd, 6)));
+            map_addchariddb(charid_t(RFIFOL(fd, 2)), sign_cast<const char *>(RFIFOP(fd, 6)));
             RFIFOSKIP(fd, 30);
             break;
         case 0x2b0b:
@@ -1165,7 +1199,7 @@ static void chrif_parse(int32_t fd)
         case 0x2b12:
             if (RFIFOREST(fd) < 10)
                 return;
-            chrif_divorce(RFIFOL(fd, 2), RFIFOL(fd, 6));
+            chrif_divorce(charid_t(RFIFOL(fd, 2)), charid_t(RFIFOL(fd, 6)));
             RFIFOSKIP(fd, 10);
             break;
         case 0x2b13:
@@ -1294,16 +1328,16 @@ static void send_users_tochar(timer_id, tick_t)
 
     WFIFOW(char_fd, 0) = 0x2aff;
 
-    int32_t users = 0;
+    sint32 users = 0;
     for (MapSessionData *sd : auth_sessions)
     {
         if ((battle_config.hide_GM_session
                 || sd->state.shroud_active
-                || (sd->status.option & OPTION_HIDE)
+                || (sd->status.option & OPTION::HIDE)
                 ) && pc_isGM(sd))
             continue;
 
-        WFIFOL(char_fd, 6 + 4 * users) = sd->status.char_id;
+        WFIFOL(char_fd, 6 + 4 * users) = uint32(sd->status.char_id);
         users++;
     }
     WFIFOW(char_fd, 2) = 6 + 4 * users;
@@ -1330,6 +1364,6 @@ static void check_connect_char_server(timer_id, tick_t)
 
 void do_init_chrif(void)
 {
-    add_timer_interval(gettick() + 1000, 10 * 1000, check_connect_char_server);
-    add_timer_interval(gettick() + 1000, 5 * 1000, send_users_tochar);
+    add_timer_interval(gettick() + std::chrono::seconds(1), std::chrono::seconds(10), check_connect_char_server);
+    add_timer_interval(gettick() + std::chrono::seconds(1), std::chrono::seconds(5), send_users_tochar);
 }

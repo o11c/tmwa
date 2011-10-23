@@ -1,6 +1,6 @@
 include make/lib.deps
 
-lib: \
+tmwa-lib: \
 obj/lib/ip.o \
 obj/lib/log.o \
 obj/lib/string.o \

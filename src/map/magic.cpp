@@ -3,7 +3,7 @@
 #include "magic.structs.hpp"
 #include "magic-stmt.hpp"
 #include "magic-base.hpp"
-#include "map.hpp"
+#include "main.hpp"
 #include "pc.hpp"
 
 static char *magic_preprocess_message(MapSessionData *character, char *start, char *end)
@@ -53,12 +53,12 @@ static char *magic_tokenise(char *src, char *& parameter)
     return retval;
 }
 
-int32_t magic_message(MapSessionData *caster, char *spell_, size_t)
+sint32 magic_message(MapSessionData *caster, char *spell_, size_t)
 {
     if (pc_isdead(caster))
         return 0;
 
-    int32_t power = caster->matk1;
+    sint32 power = caster->matk1;
     char *invocation_base = spell_;
     char *source_invocation = 1 + invocation_base + strlen(caster->status.name);
 
@@ -91,7 +91,7 @@ int32_t magic_message(MapSessionData *caster, char *spell_, size_t)
     else
         effects = NULL;
 
-    if (caster->status.option & OPTION_HIDE)
+    if (caster->status.option & OPTION::HIDE)
         // No spellcasting while hidden
         return 0;
 

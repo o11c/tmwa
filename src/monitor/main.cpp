@@ -27,6 +27,7 @@
 
 
 #define SKIP_BLANK(ptr) ptr += skip_blank(ptr)
+__attribute__((pure))
 static inline size_t skip_blank(const char *ptr) {
     size_t i = 0;
     while (
@@ -39,6 +40,7 @@ static inline size_t skip_blank(const char *ptr) {
 }
 
 #define GOTO_EQL(ptr) ptr += goto_eql(ptr)
+__attribute__((pure))
 static inline size_t goto_eql(const char *ptr) {
     size_t i = 0;
     while (
@@ -51,6 +53,7 @@ static inline size_t goto_eql(const char *ptr) {
 }
 
 #define GOTO_EOL(ptr) ptr += goto_newline(ptr)
+__attribute__((pure))
 static inline size_t goto_newline(const char *ptr) {
     size_t i = 0;
     while (
@@ -160,7 +163,9 @@ static void stop_process(int sig) {
     if (pid_map) kill(pid_map, sig);
     if (pid_login) kill(pid_login, sig);
     if (pid_char) kill(pid_char, sig);
+#pragma GCC diagnostic ignored "-Wold-style-cast"
     signal(sig, SIG_DFL);
+#pragma GCC diagnostic pop
     raise(sig);
 }
 

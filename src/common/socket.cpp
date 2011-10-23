@@ -9,40 +9,40 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 
 /// Internal - clean up by discarding handled bytes
-inline void RFIFOFLUSH(int32_t fd)
+inline void RFIFOFLUSH(sint32 fd)
 {
     memmove(session[fd]->rdata, RFIFOP(fd, 0), RFIFOREST(fd));
     session[fd]->rdata_size = RFIFOREST(fd);
     session[fd]->rdata_pos = 0;
 }
 /// Used internally - how much room there is to read more data
-inline size_t RFIFOSPACE(int32_t fd)
+inline size_t RFIFOSPACE(sint32 fd)
 {
     return session[fd]->max_rdata - session[fd]->rdata_size;
 }
 
 
 fd_set readfds;
-int32_t fd_max;
-int32_t currentuse;
+sint32 fd_max;
+sint32 currentuse;
 
-const uint32_t RFIFO_SIZE = 65536;
-const uint32_t WFIFO_SIZE = 65536;
+const uint32 RFIFO_SIZE = 65536;
+const uint32 WFIFO_SIZE = 65536;
 
 struct socket_data *session[FD_SETSIZE];
 
 /// Discard all input
-static void null_parse(int32_t fd);
+static void null_parse(sint32 fd);
 /// Default parser for new connections
-static void (*default_func_parse)(int32_t) = null_parse;
+static void (*default_func_parse)(sint32) = null_parse;
 
-void set_defaultparse(void (*defaultparse)(int32_t))
+void set_defaultparse(void (*defaultparse)(sint32))
 {
     default_func_parse = defaultparse;
 }
 
 /// Read from socket to the queue
-static void recv_to_fifo(int32_t fd)
+static void recv_to_fifo(sint32 fd)
 {
     if (session[fd]->eof)
         return;
@@ -61,7 +61,7 @@ static void recv_to_fifo(int32_t fd)
     }
 }
 
-static void send_from_fifo(int32_t fd)
+static void send_from_fifo(sint32 fd)
 {
     if (session[fd]->eof)
         return;
@@ -84,18 +84,18 @@ static void send_from_fifo(int32_t fd)
     }
 }
 
-static void null_parse(int32_t fd)
+static void null_parse(sint32 fd)
 {
     printf("null_parse : %d\n", fd);
     RFIFOSKIP(fd, RFIFOREST(fd));
 }
 
-static void connect_client(int32_t listen_fd)
+static void connect_client(sint32 listen_fd)
 {
     struct sockaddr_in client_address;
     socklen_t len = sizeof(client_address);
 
-    int32_t fd = accept(listen_fd, reinterpret_cast<struct sockaddr *>(&client_address), &len);
+    sint32 fd = accept(listen_fd, reinterpret_cast<struct sockaddr *>(&client_address), &len);
     if (fd == -1)
     {
         perror("accept");
@@ -112,7 +112,7 @@ static void connect_client(int32_t listen_fd)
         return;
     }
 
-    const int32_t yes = 1;
+    const sint32 yes = 1;
     /// Allow to bind() again after the server restarts.
     // Since the socket is still in the TIME_WAIT, there's a possibility
     // that formerly lost packets might be delivered and confuse the server.
@@ -128,8 +128,8 @@ static void connect_client(int32_t listen_fd)
     fcntl(fd, F_SETFL, O_NONBLOCK);
 
     CREATE(session[fd], struct socket_data, 1);
-    CREATE(session[fd]->rdata, uint8_t, RFIFO_SIZE);
-    CREATE(session[fd]->wdata, uint8_t, WFIFO_SIZE);
+    CREATE(session[fd]->rdata, uint8, RFIFO_SIZE);
+    CREATE(session[fd]->wdata, uint8, WFIFO_SIZE);
 
     session[fd]->max_rdata = RFIFO_SIZE;
     session[fd]->max_wdata = WFIFO_SIZE;
@@ -143,10 +143,10 @@ static void connect_client(int32_t listen_fd)
     currentuse++;
 }
 
-int32_t make_listen_port(uint16_t port)
+sint32 make_listen_port(uint16 port)
 {
     struct sockaddr_in server_address;
-    int32_t fd = socket(AF_INET, SOCK_STREAM, 0);
+    sint32 fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd == -1)
     {
         perror("socket");
@@ -157,7 +157,7 @@ int32_t make_listen_port(uint16_t port)
 
     fcntl(fd, F_SETFL, O_NONBLOCK);
 
-    const int32_t yes = 1;
+    const sint32 yes = 1;
     /// Allow to bind() again after the server restarts.
     // Since the socket is still in the TIME_WAIT, there's a possibility
     // that formerly lost packets might be delivered and confuse the server.
@@ -196,10 +196,10 @@ int32_t make_listen_port(uint16_t port)
     return fd;
 }
 
-int32_t make_connection(IP_Address ip, uint16_t port)
+sint32 make_connection(IP_Address ip, uint16 port)
 {
     struct sockaddr_in server_address;
-    int32_t fd = socket(AF_INET, SOCK_STREAM, 0);
+    sint32 fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd == -1)
     {
         perror("socket");
@@ -208,7 +208,7 @@ int32_t make_connection(IP_Address ip, uint16_t port)
     if (fd_max <= fd)
         fd_max = fd + 1;
 
-    const int32_t yes = 1;
+    const sint32 yes = 1;
     /// Allow to bind() again after the server restarts.
     // Since the socket is still in the TIME_WAIT, there's a possibility
     // that formerly lost packets might be delivered and confuse the server.
@@ -233,8 +233,8 @@ int32_t make_connection(IP_Address ip, uint16_t port)
     FD_SET(fd, &readfds);
 
     CREATE(session[fd], struct socket_data, 1);
-    CREATE(session[fd]->rdata, uint8_t, RFIFO_SIZE);
-    CREATE(session[fd]->wdata, uint8_t, WFIFO_SIZE);
+    CREATE(session[fd]->rdata, uint8, RFIFO_SIZE);
+    CREATE(session[fd]->wdata, uint8, WFIFO_SIZE);
 
     session[fd]->max_rdata = RFIFO_SIZE;
     session[fd]->max_wdata = WFIFO_SIZE;
@@ -248,7 +248,7 @@ int32_t make_connection(IP_Address ip, uint16_t port)
     return fd;
 }
 
-void delete_session(int32_t fd)
+void delete_session(sint32 fd)
 {
     if (fd < 0 || fd >= FD_SETSIZE)
         return;
@@ -279,22 +279,22 @@ void delete_session(int32_t fd)
     return;
 }
 
-void realloc_fifo(int32_t fd, size_t rfifo_size, size_t wfifo_size)
+void realloc_fifo(sint32 fd, size_t rfifo_size, size_t wfifo_size)
 {
     struct socket_data *s = session[fd];
     if (s->max_rdata != rfifo_size && s->rdata_size < rfifo_size)
     {
-        RECREATE(s->rdata, uint8_t, rfifo_size);
+        RECREATE(s->rdata, uint8, rfifo_size);
         s->max_rdata = rfifo_size;
     }
     if (s->max_wdata != wfifo_size && s->wdata_size < wfifo_size)
     {
-        RECREATE(s->wdata, uint8_t, wfifo_size);
+        RECREATE(s->wdata, uint8, wfifo_size);
         s->max_wdata = wfifo_size;
     }
 }
 
-void WFIFOSET(int32_t fd, size_t len)
+void WFIFOSET(sint32 fd, size_t len)
 {
     struct socket_data *s = session[fd];
     if (s->wdata_size + len + 16384 > s->max_wdata)
@@ -308,21 +308,21 @@ void WFIFOSET(int32_t fd, size_t len)
         fprintf(stderr, "socket: %d wdata lost !!\n", fd), abort();
 }
 
-void do_sendrecv(uint32_t next)
+void do_sendrecv(interval_t next)
 {
     fd_set rfd = readfds, wfd;
     FD_ZERO(&wfd);
-    for (int32_t i = 0; i < fd_max; i++)
+    for (sint32 i = 0; i < fd_max; i++)
     {
         if (session[i] && session[i]->wdata_size)
             FD_SET(i, &wfd);
     }
     struct timeval timeout;
-    timeout.tv_sec = next / 1000;
-    timeout.tv_usec = next % 1000 * 1000;
+    timeout.tv_sec = std::chrono::duration_cast<std::chrono::seconds>(next).count();
+    timeout.tv_usec = std::chrono::duration_cast<std::chrono::nanoseconds>(next).count() % (1000 * 1000 * 1000);
     if (select(fd_max, &rfd, &wfd, NULL, &timeout) <= 0)
         return;
-    for (int32_t i = 0; i < fd_max; i++)
+    for (sint32 i = 0; i < fd_max; i++)
     {
         if (!session[i])
             continue;
@@ -344,7 +344,7 @@ void do_sendrecv(uint32_t next)
 
 void do_parsepacket(void)
 {
-    for (int32_t i = 0; i < fd_max; i++)
+    for (sint32 i = 0; i < fd_max; i++)
     {
         if (!session[i])
             continue;
@@ -374,7 +374,7 @@ void do_socket(void)
     currentuse = 3;
 }
 
-void RFIFOSKIP(int32_t fd, size_t len)
+void RFIFOSKIP(sint32 fd, size_t len)
 {
     struct socket_data *s = session[fd];
     s->rdata_pos += len;

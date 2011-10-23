@@ -5,9 +5,9 @@
 #  error "Please compile as C++"
 # endif
 
-# if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 5)
+# if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 6)
 // Requires decent C++0x support
-#  error "Please upgrade your compiler to at least GCC 4.5"
+#  error "Please upgrade your compiler to at least GCC 4.6"
 # endif
 
 # ifndef __i386__
@@ -22,10 +22,5 @@
 #  error "Sorry, this code is believed not to be 64-bit safe"
 #  error "please compile with -m32"
 # endif
-
-/// Convert type assumptions to use the standard types here
-# include <cstdint>
-/// size_t, NULL
-# include <cstddef>
 
 #endif // SANITY_HPP

@@ -1,7 +1,7 @@
 #ifndef MAGIC_STRUCTS
 #define MAGIC_STRUCTS
 
-# include "map.structs.hpp"
+# include "main.structs.hpp"
 
 # include "../common/timer.structs.hpp"
 # include "../common/socket.structs.hpp"
@@ -26,7 +26,7 @@ enum class SpellArgType
     STRING,
 };
 
-enum class TY : uint8_t
+enum class TY : uint8
 {
     UNDEF,
     INT,
@@ -42,11 +42,11 @@ enum class TY : uint8_t
 
 struct location_t
 {
-    int32_t m;
-    uint16_t x, y;
+    sint32 m;
+    uint16 x, y;
 };
 
-enum class AreaType : uint8_t
+enum class AreaType : uint8
 {
     LOCATION,
     UNION,
@@ -61,13 +61,13 @@ struct area_t
         struct
         {
             location_t loc;
-            uint32_t width, height;
+            uint32 width, height;
         } a_rect;
         area_t *a_union[2];
     };
     /// number of cells in the area
     // used (only) to "pick a random location in the area"
-    int32_t size;
+    sint32 size;
     AreaType ty;
 
     // defined in magic-expr.cpp
@@ -79,12 +79,12 @@ struct area_t
     // union
     area_t(area_t *, area_t *);
     // rectangle
-    area_t(const location_t&, int32_t, int32_t);
+    area_t(const location_t&, sint32, sint32);
     // bar (whatever that is)
-    area_t(const location_t&, int32_t, int32_t, Direction);
+    area_t(const location_t&, sint32, sint32, Direction);
 
     // in magic-expr.cpp
-    location_t rect(uint32_t& w, uint32_t& h);
+    location_t rect(uint32& w, uint32& h);
     location_t random_location();
     bool contains(location_t);
 };
@@ -93,7 +93,7 @@ struct val_t
 {
     union
     {
-        int32_t v_int;
+        sint32 v_int;
         POD_string v_string;
         // Used ONLY during operation/function invocation; otherwise we use v_int
         BlockList *v_entity;
@@ -157,15 +157,15 @@ struct expr_t
         {
             // *grumble* why does it need to know the name?
             const std::pair<const std::string, fun_t> *fun;
-            int32_t line_nr, column;
-            int32_t args_nr;
+            sint32 line_nr, column;
+            sint32 args_nr;
             expr_t *args[MAX_ARGS];
         } e_funapp;
-        int32_t e_id;
+        sint32 e_id;
         struct
         {
             expr_t *expr;
-            int32_t id;
+            sint32 id;
         } e_field;
     };
     ExprType ty;
@@ -205,19 +205,19 @@ struct effect_t
     {
         struct
         {
-            int32_t id;
+            sint32 id;
             expr_t *expr;
         } e_assign;
         struct
         {
-            int32_t var_id;
+            sint32 var_id;
             expr_t *area;
             effect_t *body;
             ForEach_FilterType filter;
         } e_foreach;
         struct
         {
-            int32_t var_id;
+            sint32 var_id;
             expr_t *start, *stop;
             effect_t *body;
         } e_for;
@@ -231,14 +231,14 @@ struct effect_t
         struct
         {
             const std::pair<const std::string, op_t> *op;
-            int32_t args_nr;
-            int32_t line_nr, column;
+            sint32 args_nr;
+            sint32 line_nr, column;
             expr_t *args[MAX_ARGS];
         } e_op;
         struct
         {
-            int32_t args_nr;
-            DArray<int32_t> formals;
+            sint32 args_nr;
+            DArray<sint32> formals;
             expr_t **actuals;
             effect_t *body;
         } e_call;
@@ -250,8 +250,8 @@ struct effect_t
 struct component_t
 {
     component_t *next;
-    int32_t item_id;
-    int32_t count;
+    sint32 item_id;
+    sint32 count;
 };
 
 
@@ -293,7 +293,7 @@ struct spellguard_t
 
 struct letdef_t
 {
-    int32_t id;
+    sint32 id;
     expr_t *expr;
 };
 
@@ -312,17 +312,17 @@ struct spell_t
 {
     POD_string name;
 private:
-    static int32_t spell_counter;
+    static sint32 spell_counter;
 public:
     // implemented in magic-parser.ypp
     spell_t(spellguard_t *spellguard);
     // Relative location in the definitions file
-    int32_t idx;
+    sint32 idx;
     SpellFlag flags;
-    int32_t arg;
+    sint32 arg;
     SpellArgType spellarg_ty;
 
-    int32_t letdefs_nr;
+    sint32 letdefs_nr;
     letdef_t *letdefs;
 
     spellguard_t *spellguard;
@@ -360,7 +360,7 @@ struct env_t
     // in magic-expr.cpp
     val_t magic_eval(expr_t *expr);
     // implemented inline in magic-base.hpp
-    val_t& VAR(int32_t i);
+    val_t& VAR(sint32 i);
 };
 
 # define MAX_STACK_SIZE 32
@@ -379,22 +379,22 @@ struct cont_activation_record_t
     {
         struct
         {
-            int32_t var_id;
+            sint32 var_id;
             TY ty;
             effect_t *body;
-            std::vector<int32_t> entities;
+            std::vector<BlockID> entities;
         } c_foreach;
         struct
         {
-            int32_t var_id;
+            sint32 var_id;
             effect_t *body;
-            int32_t current;
-            int32_t stop;
+            sint32 current;
+            sint32 stop;
         } c_for;
         struct
         {
-            int32_t args_nr;
-            DArray<int32_t> formals;
+            sint32 args_nr;
+            DArray<sint32> formals;
             DArray<val_t> old_actuals;
         } c_proc;
     };
@@ -437,8 +437,8 @@ struct cont_activation_record_t
 
 struct status_change_ref_t
 {
-    int32_t sc_type;
-    int32_t bl_id;
+    sint32 sc_type;
+    BlockID bl_id;
 };
 
 inline bool operator ==(const status_change_ref_t& lhs, const status_change_ref_t& rhs)
@@ -465,9 +465,9 @@ struct invocation_t : public BlockList
     env_t *env;
     spell_t *spell;
     // this is the person who originally invoked the spell
-    int32_t caster;
+    BlockID caster;
     // when this person dies, the spell dies with it
-    int32_t subject;
+    BlockID subject;
 
     // spell timer, if any
     timer_id timer;
@@ -475,7 +475,7 @@ struct invocation_t : public BlockList
     fixed_stack<cont_activation_record_t, MAX_STACK_SIZE> stack;
 
     // Script position; if nonzero, resume the script we were running.
-    int32_t script_pos;
+    sint32 script_pos;
     effect_t *current_effect;
     // If non-NULL, this is used to spawn a cloned effect based on the same environment
     effect_t *trigger_effect;
@@ -485,7 +485,7 @@ struct invocation_t : public BlockList
     // Status change references:  for status change updates, keep track of whom we updated where
     std::vector<status_change_ref_t> status_change_refs;
 
-    invocation_t() : BlockList(BL_SPELL) {}
+    invocation_t() : BlockList(BL_SPELL, map_addobject(this)) {}
     invocation_t(const invocation_t&) = delete;
     // in magic-base.cpp
     invocation_t(invocation_t* rhs);
@@ -498,18 +498,18 @@ extern env_t magic_default_env;
 // it cannot become a vector because it is used in a union
 struct args_rec_t
 {
-    int32_t args_nr;
+    sint32 args_nr;
     expr_t *args[MAX_ARGS];
 };
 
 struct proc_t
 {
     POD_string name;
-    DArray<int32_t> args;
+    DArray<sint32> args;
     effect_t *body;
 };
 
 extern template class std::vector<status_change_ref_t>;
-extern template class std::vector<int32_t>;
+extern template class std::vector<sint32>;
 
 #endif // MAGIC_STRUCTS

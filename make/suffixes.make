@@ -2,8 +2,7 @@
 .SUFFIXES:
 
 # Allow linking C++ code
-%: %.o
-	@+mkdir -p $(@D)
+tmwa-%: obj/%/main.o
 	$(CXX) $(LDFLAGS) $(TARGET_ARCH) $^ $(LDLIBS) -o $@
 %.cpp:: %.lpp
 	$(LEX) -o $@ $<

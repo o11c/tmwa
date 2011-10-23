@@ -19,6 +19,8 @@
 # Really annoying - needed for = {} zero initialization
 -Wno-missing-field-initializers
 
+# If there's a preprocessor #warning, it's not supposed to be an #error
+-Wno-error=cpp
 
 # Unavoidable, but it's still nice to know
 -Wno-error=vla
@@ -47,6 +49,10 @@
 -Wsuggest-attribute=pure
 -Wsuggest-attribute=const
 -Wsuggest-attribute=noreturn
+# But sometimes they're inaccurate.
+-Wno-error=suggest-attribute=pure
+-Wno-error=suggest-attribute=const
+-Wno-error=suggest-attribute=noreturn
 # Don't use these
 -Wtrampolines
 # I'm trying to remove all floats, actually

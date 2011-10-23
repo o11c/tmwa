@@ -1,10 +1,14 @@
 # defaults for compilation
+#CXX=g++
 BISON = bison
+
 WARNINGS= @warnings
 DEBUG=-g3
-OPTIMIZATION=-O2 -pipe -flto
-CXXFLAGS = ${DEBUG} ${WARNINGS}
-LDFLAGS = -Wl,--as-needed
+# the combination of -flto and --as-needed makes the link stage fail
+FLTO=-flto -Wl,--no-as-needed
+OPTIMIZATION=-O2 -pipe ${FLTO}
+CXXFLAGS = ${WARNINGS}
+#LDFLAGS=
 
 # defaults for installation
 PREFIX=/usr/local

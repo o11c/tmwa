@@ -4,7 +4,7 @@
 
 #include "battle.hpp"
 #include "clif.hpp"
-#include "map.hpp"
+#include "main.hpp"
 #include "npc.hpp"
 #include "pc.hpp"
 #include "storage.hpp"
@@ -13,7 +13,7 @@
  * 取引要請を相手に送る
  *------------------------------------------
  */
-void trade_traderequest(MapSessionData *sd, int32_t target_id)
+void trade_traderequest(MapSessionData *sd, BlockID target_id)
 {
     MapSessionData *target_sd;
 
@@ -23,7 +23,7 @@ void trade_traderequest(MapSessionData *sd, int32_t target_id)
     {
         if (!battle_config.invite_request_check)
         {
-            if (target_sd->party_invite > 0)
+            if (target_sd->party_invite)
             {
                 clif_tradestart(sd, 2);    // 相手はPT要請中かGuild要請中
                 return;
@@ -35,7 +35,7 @@ void trade_traderequest(MapSessionData *sd, int32_t target_id)
             clif_tradestart(sd, 2);
             return;
         }
-        if ((target_sd->trade_partner != 0) || (sd->trade_partner != 0))
+        if (target_sd->trade_partner || sd->trade_partner)
         {
             trade_tradecancel(sd); //person is in another trade
         }
@@ -67,7 +67,7 @@ void trade_traderequest(MapSessionData *sd, int32_t target_id)
  * 取引要請
  *------------------------------------------
  */
-void trade_tradeack(MapSessionData *sd, int32_t type)
+void trade_tradeack(MapSessionData *sd, sint32 type)
 {
     MapSessionData *target_sd;
     nullpo_retv(sd);
@@ -79,13 +79,13 @@ void trade_tradeack(MapSessionData *sd, int32_t type)
         if (type == 4)
         {                       // Cancel
             sd->deal_locked = 0;
-            sd->trade_partner = 0;
+            sd->trade_partner = DEFAULT;
             target_sd->deal_locked = 0;
-            target_sd->trade_partner = 0;
+            target_sd->trade_partner = DEFAULT;
         }
-        if (sd->npc_id != 0)
+        if (sd->npc_id)
             npc_event_dequeue(sd);
-        if (target_sd->npc_id != 0)
+        if (target_sd->npc_id)
             npc_event_dequeue(target_sd);
 
         //close STORAGE window if it's open. It protects from spooffing packets [Lupus]
@@ -98,15 +98,15 @@ void trade_tradeack(MapSessionData *sd, int32_t type)
  * アイテム追加
  *------------------------------------------
  */
-void trade_tradeadditem(MapSessionData *sd, int32_t idx, int32_t amount)
+void trade_tradeadditem(MapSessionData *sd, sint32 idx, sint32 amount)
 {
     MapSessionData *target_sd;
     struct item_data *id;
-    int32_t trade_i;
-    int32_t trade_weight = 0;
-    int32_t free_ = 0;
-    int32_t c;
-    int32_t i;
+    sint32 trade_i;
+    sint32 trade_weight = 0;
+    sint32 free_ = 0;
+    sint32 c;
+    sint32 i;
 
     nullpo_retv(sd);
 
@@ -224,7 +224,7 @@ void trade_tradeadditem(MapSessionData *sd, int32_t idx, int32_t amount)
 void trade_tradeok(MapSessionData *sd)
 {
     MapSessionData *target_sd;
-    int32_t trade_i;
+    sint32 trade_i;
 
     nullpo_retv(sd);
 
@@ -256,7 +256,7 @@ void trade_tradeok(MapSessionData *sd)
 void trade_tradecancel(MapSessionData *sd)
 {
     MapSessionData *target_sd;
-    int32_t trade_i;
+    sint32 trade_i;
 
     nullpo_retv(sd);
 
@@ -290,15 +290,13 @@ void trade_tradecancel(MapSessionData *sd)
             target_sd->deal_zeny = 0;
         }
         sd->deal_locked = 0;
-        sd->trade_partner = 0;
+        sd->trade_partner = DEFAULT;
         target_sd->deal_locked = 0;
-        target_sd->trade_partner = 0;
+        target_sd->trade_partner = DEFAULT;
         clif_tradecancelled(sd);
         clif_tradecancelled(target_sd);
     }
 }
-
-#define MAP_LOG_PC(sd, fmt, args...) map_log("PC%d %d:%d,%d " fmt, sd->status.char_id, sd->m, sd->x, sd->y, ## args)
 
 /*==========================================
  * 取引許諾(trade押し)
@@ -307,7 +305,7 @@ void trade_tradecancel(MapSessionData *sd)
 void trade_tradecommit(MapSessionData *sd)
 {
     MapSessionData *target_sd;
-    int32_t trade_i;
+    sint32 trade_i;
 
     nullpo_retv(sd);
 
@@ -338,13 +336,13 @@ void trade_tradecommit(MapSessionData *sd)
                     MAP_LOG_PC(sd, " TRADECANCEL");
                     return;
                 }
-                sd->trade_partner = 0;
-                target_sd->trade_partner = 0;
+                sd->trade_partner = DEFAULT;
+                target_sd->trade_partner = DEFAULT;
                 for (trade_i = 0; trade_i < 10; trade_i++)
                 {
                     if (sd->deal_item_amount[trade_i] != 0)
                     {
-                        int32_t n = sd->deal_item_index[trade_i] - 2;
+                        sint32 n = sd->deal_item_index[trade_i] - 2;
                         PickupFail flag = pc_additem(target_sd,
                                                      &sd->status.inventory[n],
                                                      sd->deal_item_amount[trade_i]);
@@ -357,7 +355,7 @@ void trade_tradecommit(MapSessionData *sd)
                     }
                     if (target_sd->deal_item_amount[trade_i] != 0)
                     {
-                        int32_t n = target_sd->deal_item_index[trade_i] - 2;
+                        sint32 n = target_sd->deal_item_index[trade_i] - 2;
                         PickupFail flag = pc_additem(sd,
                                                      &target_sd->status.inventory[n],
                                                      target_sd->deal_item_amount[trade_i]);
@@ -371,7 +369,7 @@ void trade_tradecommit(MapSessionData *sd)
                 }
                 if (sd->deal_zeny)
                 {
-                    int32_t deal = sd->deal_zeny;
+                    sint32 deal = sd->deal_zeny;
                     sd->deal_zeny = 0;
                     sd->status.zeny -= deal;
                     clif_updatestatus(sd, SP::ZENY);
@@ -380,7 +378,7 @@ void trade_tradecommit(MapSessionData *sd)
                 }
                 if (target_sd->deal_zeny)
                 {
-                    int32_t deal = target_sd->deal_zeny;
+                    sint32 deal = target_sd->deal_zeny;
                     target_sd->deal_zeny = 0;
                     target_sd->status.zeny -= deal;
                     clif_updatestatus(target_sd, SP::ZENY);

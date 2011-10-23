@@ -3,7 +3,7 @@
 
 #include "path.structs.hpp"
 
-int32_t path_search(struct walkpath_data *, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t);
-int32_t path_blownpos(int32_t m, int32_t x_0, int32_t y_0, int32_t dx, int32_t dy, int32_t count);
+sint32 path_search(struct walkpath_data *, sint32, sint32, sint32, sint32, sint32, sint32);
+sint32 path_blownpos(sint32 m, sint32 x_0, sint32 y_0, sint32 dx, sint32 dy, sint32 count);
 
 #endif // PATH_HPP

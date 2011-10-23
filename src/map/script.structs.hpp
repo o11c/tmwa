@@ -5,6 +5,8 @@
 
 # include "../lib/placed.hpp"
 
+# include "../common/mmo.hpp"
+
 // WARNING: most of this header is basically internal information.
 
 // this is the only truly public class
@@ -13,16 +15,16 @@ struct ArgRec
     const char *name;
     union
     {
-        int32_t i;
+        sint32 i;
         const char *s;
     };
 
-    ArgRec(const char *n, int32_t v) : name(n), i(v) {}
+    ArgRec(const char *n, sint32 v) : name(n), i(v) {}
     ArgRec(const char *n, const char *v) : name(n), s(v) {}
 };
 
 // enum used for both code and value types
-enum class Script : uint8_t
+enum class Script : uint8
 {
     NOP = 0,
 
@@ -101,10 +103,10 @@ struct ScriptStorageType<Script::TYPE>  \
 
 // these are the only types that ever occur on the stack
 // Script::PARAM is always a constant, and appears on the stack as Script::NAME
-SCRIPT_TYPE(INT, int32_t);
-SCRIPT_TYPE(POS, int32_t);
-SCRIPT_TYPE(NAME, int32_t);
-SCRIPT_TYPE(ARG, int32_t);
+SCRIPT_TYPE(INT, sint32);
+SCRIPT_TYPE(POS, sint32);
+SCRIPT_TYPE(NAME, sint32);
+SCRIPT_TYPE(ARG, sint32);
 SCRIPT_TYPE(RETINFO, const Script *);
 SCRIPT_TYPE(STR, std::string);
 #undef SCRIPT_TYPE
@@ -114,7 +116,7 @@ struct script_data
 {
 private:
     Script type;
-    AnyPlaced<int32_t, std::string, const Script *> impl;
+    AnyPlaced<sint32, std::string, const Script *> impl;
     script_data& operator =(const script_data&) = delete;
 public:
     Script get_type() { return type; }
@@ -181,7 +183,7 @@ public:
 };
 
 /// Run state
-enum class ScriptExecutionState : uint8_t
+enum class ScriptExecutionState : uint8
 {
     ZERO,
     STOP,
@@ -197,7 +199,7 @@ class ScriptState
     // in the old struct, sp was size(), sp_max was capacity()
     std::vector<script_data> stack;
 public:
-    void pop(int32_t start, int32_t end);
+    void pop(sint32 start, sint32 end);
     template<Script Type>
     void push(typename ScriptStorageType<Type>::type value);
     template<Script Type>
@@ -208,28 +210,30 @@ public:
     script_data& raw_at(size_t idx) __attribute__((pure, deprecated("Use what you need, or become a friend")));
     bool has_at(size_t idx) __attribute__((pure));
     std::string to_string(size_t idx);
-    int32_t to_int(size_t idx);
+    sint32 to_int(size_t idx);
     template<Script Op>
     void op();
     void run_func();
-    friend void run_script_main(const Script *script, int32_t pos,
+    friend void run_script_main(const Script *script, sint32 pos,
                                 ScriptState *st, const Script *rootscript);
-    friend int32_t run_script_l(const std::vector<Script>& script, int32_t pos,
-                                int32_t rid, int32_t oid,
-                                int32_t args_nr, ArgRec *args);
+    // TODO: change the second account_t to BlockID after splitting the headers
+    friend sint32 run_script_l(const std::vector<Script>& script, sint32 pos,
+                               account_t rid, account_t oid,
+                               sint32 args_nr, ArgRec *args);
 
     // arguments
-    int32_t start, end;
+    sint32 start, end;
     // script offset
-    int32_t pos;
+    sint32 pos;
     // used for stuff like GOTO and END
     ScriptExecutionState state;
     // beings
-    int32_t rid, oid;
+    // TODO: change the second (or both) to BlockID after splitting the headers
+    account_t rid, oid;
     // what is actually executed
     const Script *script;
     // something to do with function calls
-    int32_t defsp, new_pos, new_defsp;
+    sint32 defsp, new_pos, new_defsp;
 };
 
 #define INSTANTIATE_LATER(Type) \
@@ -250,16 +254,16 @@ struct builtin_function_t
     const char *arg;
 };
 
-enum class SP : uint16_t;
+enum class SP : uint16;
 /// Data about a word
 // fields used, by type:
-// all: int32_t next
+// all: sint32 next
 // all: std::string str;
-// Script::INT: int32_t val
+// Script::INT: sint32 val
 // Script::PARAM: SP val;
-// Script::NOP: int32_t backpatch
-// Script::POS: int32_t label, unset int32_t backpatch
-// Script::FUNC: int32_t val is the index, deprecated but needed for the args
+// Script::NOP: sint32 backpatch
+// Script::POS: sint32 label, unset sint32 backpatch
+// Script::FUNC: sint32 val is the index, deprecated but needed for the args
 // Script::FUNC: fptr func is the actually implementation
 // cleanup: Script::{POS,NAME->NOP} clears backpatch, label
 // Script::NAME uses label (why?), unsets backpatch
@@ -268,16 +272,16 @@ struct str_data_t
     Script type;
     std::string str;
     // this acts as a linked list of uses of a label
-    int32_t backpatch;
+    sint32 backpatch;
     // this is the offset within the script where the label points
     // (only if type == Script::POS)
-    int32_t label;
+    sint32 label;
     // command or function to invoke (only if type == Script::FUNC)
     void (*func)(ScriptState *);
-    int32_t val;
+    sint32 val;
     SP param;
     // linked list of words in str_data with the same hash
-    uint32_t next;
+    uint32 next;
 };
 
 extern std::vector<str_data_t> str_data;

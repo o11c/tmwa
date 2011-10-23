@@ -6,14 +6,14 @@
 #include "../common/socket.hpp"
 #include "../common/timer.hpp"
 
-#include "map.hpp"
+#include "main.hpp"
 #include "npc.hpp"
 #include "pc.hpp"
 
 template class std::vector<Script>;
 template class std::vector<str_data_t>;
-template class DMap<int32_t, int32_t>;
-template class DMap<int32_t, std::string>;
+template class DMap<sint32, sint32>;
+template class DMap<sint32, std::string>;
 // This one can't be fully instantiated, because it's not copyable.
 // Oh, the things we do for a couple seconds of compile time...
 //template class std::vector<script_data>;
@@ -24,8 +24,8 @@ template void std::vector<script_data>::_M_default_append(size_t);
 
 
 // indices into str_data
-constexpr uint32_t LABEL_NEXTLINE = 1;
-constexpr uint32_t WORD_START = 2;
+constexpr uint32 LABEL_NEXTLINE = 1;
+constexpr uint32 WORD_START = 2;
 
 std::vector<Script> script_buf;
 
@@ -35,10 +35,10 @@ std::vector<Script> script_buf;
 std::vector<str_data_t> str_data(WORD_START);
 
 // indices into str_data of the first word of the appropriate hash value
-int32_t str_hash[256];
+sint32 str_hash[256];
 
-static DMap<int32_t, int32_t> mapreg_db;
-static DMap<int32_t, std::string> mapregstr_db;
+static DMap<sint32, sint32> mapreg_db;
+static DMap<sint32, std::string> mapregstr_db;
 // The OLD way was:
 // -1: not initialized
 // 0: saved
@@ -51,7 +51,7 @@ static DMap<int32_t, std::string> mapregstr_db;
 static bool mapreg_dirty = false;
 const char mapreg_txt[] = "save/mapreg.txt";
 
-#define MAPREG_AUTOSAVE_INTERVAL        (10 * 1000)
+constexpr std::chrono::seconds MAPREG_AUTOSAVE_INTERVAL(10);
 
 static struct dbt *scriptlabel_db = NULL;
 static struct dbt *userfunc_db = NULL;
@@ -68,12 +68,12 @@ struct dbt *script_get_userfunc_db(void)
     return userfunc_db;
 }
 
-static int32_t parse_cmd_if = 0;
-static int32_t parse_cmd;
+static sint32 parse_cmd_if = 0;
+static sint32 parse_cmd;
 
-static uint8_t calc_hash2(const uint8_t *p, const uint8_t *e)
+static uint8 calc_hash2(const uint8 *p, const uint8 *e)
 {
-    int32_t h = 0;
+    sint32 h = 0;
     while (p != e)
     {
         h = (h << 1) + (h >> 3) + (h >> 5) + (h >> 8);
@@ -81,10 +81,10 @@ static uint8_t calc_hash2(const uint8_t *p, const uint8_t *e)
     }
     return h & 0xFF;
 }
-static uint8_t calc_hash(const uint8_t *p) __attribute__((pure));
-static uint8_t calc_hash(const uint8_t *p)
+static uint8 calc_hash(const uint8 *p) __attribute__((pure));
+static uint8 calc_hash(const uint8 *p)
 {
-    int32_t h = 0;
+    sint32 h = 0;
     while (*p)
     {
         h = (h << 1) + (h >> 3) + (h >> 5) + (h >> 8);
@@ -94,10 +94,10 @@ static uint8_t calc_hash(const uint8_t *p)
 }
 
 // Search for the index within str_data, or -1
-static int32_t search_str(const char *p) __attribute__((pure));
-static int32_t search_str(const char *p)
+static sint32 search_str(const char *p) __attribute__((pure));
+static sint32 search_str(const char *p)
 {
-    int32_t i = str_hash[calc_hash(sign_cast<const uint8_t *>(p))];
+    sint32 i = str_hash[calc_hash(sign_cast<const uint8 *>(p))];
     while (i)
     {
         if (str_data[i].str == p)
@@ -110,10 +110,10 @@ static int32_t search_str(const char *p)
 }
 
 // Register a name in str_data
-int32_t add_str(const char *p, size_t len)
+sint32 add_str(const char *p, size_t len)
 {
-    int32_t i = calc_hash2(sign_cast<const uint8_t *>(p),
-                           sign_cast<const uint8_t *>(p + len));
+    sint32 i = calc_hash2(sign_cast<const uint8 *>(p),
+                           sign_cast<const uint8 *>(p + len));
     if (str_hash[i] == 0)
     {
         // if there was previously no index for the hash,
@@ -150,7 +150,7 @@ int32_t add_str(const char *p, size_t len)
 }
 
 /// write a byte directly into the script buffer
-static void add_scriptb(uint8_t a)
+static void add_scriptb(uint8 a)
 {
     script_buf.push_back(static_cast<Script>(a));
 }
@@ -162,12 +162,12 @@ static void add_scriptc(Script a)
         // there used to be a strange loop similar to add_scripti while >= 0x40
         // but all callers are only in range
         abort();
-    add_scriptb(static_cast<uint8_t>(a));
+    add_scriptb(static_cast<uint8>(a));
 }
 
 /// encode an integer
 // just *try* to figure out how get_num does the opposite of this
-static void add_scripti(uint32_t a)
+static void add_scripti(uint32 a)
 {
     while (a >= 0x40)
     {
@@ -180,9 +180,9 @@ static void add_scripti(uint32_t a)
 }
 
 /// append a function or variable name or a label
-static void add_scriptl(int32_t l)
+static void add_scriptl(sint32 l)
 {
-    int32_t backpatch = str_data[l].backpatch;
+    sint32 backpatch = str_data[l].backpatch;
 
     switch (str_data[l].type)
     {
@@ -218,17 +218,17 @@ static void add_scriptl(int32_t l)
 /// Resolve ("backpatch") labels
 // this is called as a label is encountered
 // it is also called every time a line ends, for the special '-' label
-static void set_label(int32_t l)
+static void set_label(sint32 l)
 {
     size_t pos = script_buf.size();
     str_data[l].type = Script::POS;
     str_data[l].label = pos;
-    for (int32_t i = str_data[l].backpatch; i >= 0 && i != 0x00ffffff; )
+    for (sint32 i = str_data[l].backpatch; i >= 0 && i != 0x00ffffff; )
     {
-        uint8_t next0 = static_cast<uint8_t>(script_buf[i]);
-        uint8_t next1 = static_cast<uint8_t>(script_buf[i + 1]);
-        uint8_t next2 = static_cast<uint8_t>(script_buf[i + 2]);
-        int32_t next = (next2 << 16) | (next1 << 8) | (next0);
+        uint8 next0 = static_cast<uint8>(script_buf[i]);
+        uint8 next1 = static_cast<uint8>(script_buf[i + 1]);
+        uint8 next2 = static_cast<uint8>(script_buf[i + 2]);
+        sint32 next = (next2 << 16) | (next1 << 8) | (next0);
         script_buf[i - 1] = Script::POS;
         script_buf[i] = static_cast<Script>(pos);
         script_buf[i + 1] = static_cast<Script>(pos >> 8);
@@ -299,7 +299,7 @@ static struct
     /// The beginning of this script
     const char *ptr;
     /// The line within the file that this script begins
-    int32_t line;
+    sint32 line;
     /// Source file
     std::string file;
 } start;
@@ -308,7 +308,7 @@ static struct
 // starts with: file:line: message: and 'h'ighlights the exact error character
 static void disp_error_message(const char *mes, const char *pos)
 {
-    int32_t line;
+    sint32 line;
     const char *p;
 
     for (line = start.line, p = start.ptr; p && *p; line++)
@@ -337,7 +337,7 @@ static void disp_error_message(const char *mes, const char *pos)
 // A "sub" expression may contain weighted operators
 // the argument of the function is the highest weight you want to reject
 // in order to do it from left to right, it can't be equal
-enum class ExprWeight : uint8_t
+enum class ExprWeight : uint8
 {
     ALL,
 
@@ -360,7 +360,7 @@ enum class ExprWeight : uint8_t
 static const char *parse_subexpr(const char *, ExprWeight);
 static const char *parse_simpleexpr(const char *p)
 {
-    int32_t i;
+    sint32 i;
     p = skip_space(p);
 
     if (*p == ';' || *p == ',')
@@ -422,7 +422,7 @@ static const char *parse_simpleexpr(const char *p)
             disp_error_message("unexpected character", p);
             exit(1);
         }
-        int32_t l = add_str(p, p2 - p);
+        sint32 l = add_str(p, p2 - p);
 
         // needed for some sort of warning
         parse_cmd = l;
@@ -478,7 +478,7 @@ const char *parse_subexpr(const char *p, ExprWeight limit)
     {
         // push the expression following, which MUST be a simple expression
         // or a function call, no higher operators allowed
-        p = parse_subexpr(p + 1, static_cast<ExprWeight>(static_cast<uint8_t>(ExprWeight::FUNC) - 1));
+        p = parse_subexpr(p + 1, static_cast<ExprWeight>(static_cast<uint8>(ExprWeight::FUNC) - 1));
         if (op != Script::NOP)
             // insert the unary op
             add_scriptc(op);
@@ -489,7 +489,7 @@ const char *parse_subexpr(const char *p, ExprWeight limit)
     p = skip_space(p);
 
     ExprWeight opl;
-    int32_t len;
+    sint32 len;
     while ((
             // I considered sorting this table, but it's complicated
             // because >> (5) must precede > (2)
@@ -518,7 +518,7 @@ const char *parse_subexpr(const char *p, ExprWeight limit)
         p += len;
         if (op == Script::FUNC)
         {
-            int32_t func = parse_cmd;
+            sint32 func = parse_cmd;
             // the parameter list is solely to enable argument checking
             const char *plist[128];
 
@@ -529,7 +529,7 @@ const char *parse_subexpr(const char *p, ExprWeight limit)
             }
 
             add_scriptc(Script::ARG);
-            int32_t i = 0;
+            sint32 i = 0;
             while (*p && *p != ')' && i < 128)
             {
                 plist[i] = p;
@@ -550,7 +550,7 @@ const char *parse_subexpr(const char *p, ExprWeight limit)
             }
 
             const char *arg = builtin_functions[str_data[func].val].arg;
-            int32_t j = 0;
+            sint32 j = 0;
             for (j = 0; arg[j]; j++)
                 if (arg[j] == '*')
                     break;
@@ -608,7 +608,7 @@ static const char *parse_line(const char *p)
     p = parse_simpleexpr(p);
     p = skip_space(p);
 
-    int32_t cmd = parse_cmd;
+    sint32 cmd = parse_cmd;
     if (str_data[cmd].type != Script::FUNC)
     {
         disp_error_message("expect command", p2);
@@ -616,7 +616,7 @@ static const char *parse_line(const char *p)
     }
 
     add_scriptc(Script::ARG);
-    int32_t i = 0;
+    sint32 i = 0;
     // plist is merely to make nice error messages
     const char *plist[128];
     while (p && *p && *p != ';' && i < 128)
@@ -644,7 +644,7 @@ static const char *parse_line(const char *p)
     add_scriptc(Script::FUNC);
 
     const char *arg = builtin_functions[str_data[cmd].val].arg;
-    int32_t j = 0;
+    sint32 j = 0;
     for (j = 0; arg[j]; j++)
         if (arg[j] == '*')
             break;
@@ -660,9 +660,9 @@ static const char *parse_line(const char *p)
 /// add builtin functions to the token list
 static void add_builtin_functions(void)
 {
-    for (int32_t i = 0; builtin_functions[i].func; i++)
+    for (sint32 i = 0; builtin_functions[i].func; i++)
     {
-        int32_t n = add_str(builtin_functions[i].name);
+        sint32 n = add_str(builtin_functions[i].name);
         str_data[n].type = Script::FUNC;
         str_data[n].val = i;
         str_data[n].func = builtin_functions[i].func;
@@ -688,12 +688,12 @@ static void read_constdb(void)
         if (line[0] == '/' && line[1] == '/')
             continue;
         char name[1024];
-        int32_t val;
-        int32_t type = 0;
+        sint32 val;
+        sint32 type = 0;
         if (sscanf(line, "%[A-Za-z0-9_],%d,%d", name, &val, &type) >= 2 ||
             sscanf(line, "%[A-Za-z0-9_] %d %d", name, &val, &type) >= 2)
         {
-            int32_t n = add_str(name);
+            sint32 n = add_str(name);
             switch (type)
             {
             case 0:
@@ -722,7 +722,7 @@ void pre_init_script()
 
 /// Parse script src
 // file and line are merely for prettification
-std::vector<Script> parse_script(const std::string& file, const char *src, int32_t line)
+std::vector<Script> parse_script(const std::string& file, const char *src, sint32 line)
 {
     // it gets clear()ed because of the std::move at the end
     //script_buf.clear();
@@ -731,7 +731,7 @@ std::vector<Script> parse_script(const std::string& file, const char *src, int32
     str_data[LABEL_NEXTLINE].type = Script::NOP;
     str_data[LABEL_NEXTLINE].backpatch = -1;
     str_data[LABEL_NEXTLINE].label = -1;
-    for (int32_t i = WORD_START; i < str_data.size(); i++)
+    for (sint32 i = WORD_START; i < str_data.size(); i++)
     {
         // clear labels and variables from previous scripts
         if (str_data[i].type == Script::POS || str_data[i].type == Script::NAME)
@@ -770,7 +770,7 @@ std::vector<Script> parse_script(const std::string& file, const char *src, int32
         const char *tmpp = skip_space(p_skipw);
         if (*tmpp == ':')
         {
-            int32_t l = add_str(p, p_skipw - p);
+            sint32 l = add_str(p, p_skipw - p);
             if (str_data[l].label != -1)
             {
                 disp_error_message("dup label ", p);
@@ -803,18 +803,18 @@ std::vector<Script> parse_script(const std::string& file, const char *src, int32
 
     // resolve remaining names ("backpatch"ing)
     // these are the words *NOT* found to be labels, i.e. variables
-    for (int32_t i = WORD_START; i < str_data.size(); i++)
+    for (sint32 i = WORD_START; i < str_data.size(); i++)
     {
         if (str_data[i].type == Script::NOP)
         {
             str_data[i].type = Script::NAME;
             str_data[i].label = i;
-            for (int32_t j = str_data[i].backpatch; j >= 0 && j != 0x00ffffff; )
+            for (sint32 j = str_data[i].backpatch; j >= 0 && j != 0x00ffffff; )
             {
-                uint8_t next0 = static_cast<uint8_t>(script_buf[j]);
-                uint8_t next1 = static_cast<uint8_t>(script_buf[j + 1]);
-                uint8_t next2 = static_cast<uint8_t>(script_buf[j + 2]);
-                int32_t next = (next2 << 16) | (next1 << 8) | (next0);
+                uint8 next0 = static_cast<uint8>(script_buf[j]);
+                uint8 next1 = static_cast<uint8>(script_buf[j + 1]);
+                uint8 next2 = static_cast<uint8>(script_buf[j + 2]);
+                sint32 next = (next2 << 16) | (next1 << 8) | (next0);
                 // script_buf[j - 1] == Script::NAME by default
                 script_buf[j] = static_cast<Script>(i);
                 script_buf[j + 1] = static_cast<Script>(i >> 8);
@@ -834,7 +834,7 @@ void ScriptState::resolve(size_t i)
     if (data.get_type() != Script::NAME)
         return;
 
-    const int32_t num = data.get<Script::NAME>();
+    const sint32 num = data.get<Script::NAME>();
 
     // look up variables
     const std::string& name = str_data[num & 0x00ffffff].str;
@@ -851,7 +851,7 @@ void ScriptState::resolve(size_t i)
         data.set<Script::INT>(get_reg_i(sd, num, name));
 }
 
-void set_reg_s(MapSessionData *sd, int32_t num, const std::string& name, const std::string& str)
+void set_reg_s(MapSessionData *sd, sint32 num, const std::string& name, const std::string& str)
 {
     char prefix = name.front();
     if (prefix == '@')
@@ -862,7 +862,7 @@ void set_reg_s(MapSessionData *sd, int32_t num, const std::string& name, const s
         map_log("script: %s: illegal scope string variable !", __func__);
 }
 
-void set_reg_i(MapSessionData *sd, int32_t num, const std::string& name, int32_t val)
+void set_reg_i(MapSessionData *sd, sint32 num, const std::string& name, sint32 val)
 {
     const char prefix = name.front();
 
@@ -883,7 +883,7 @@ void set_reg_i(MapSessionData *sd, int32_t num, const std::string& name, int32_t
         pc_setglobalreg(sd, name, val);
 }
 
-std::string get_reg_s(MapSessionData *sd, int32_t num, const std::string& name)
+std::string get_reg_s(MapSessionData *sd, sint32 num, const std::string& name)
 {
     char prefix = name.front();
     if (prefix == '@')
@@ -894,7 +894,7 @@ std::string get_reg_s(MapSessionData *sd, int32_t num, const std::string& name)
     abort();
 }
 
-int32_t get_reg_i(MapSessionData *sd, int32_t num, const std::string& name)
+sint32 get_reg_i(MapSessionData *sd, sint32 num, const std::string& name)
 {
     const char prefix = name.front();
 
@@ -943,7 +943,7 @@ std::string ScriptState::to_string(size_t i)
     if (data.get_type() != Script::INT)
     {
         map_log("Panic: expected Script::STR or Script::INT, got (Script)%d",
-                static_cast<uint8_t>(data.get_type()));
+                static_cast<uint8>(data.get_type()));
         abort();
     }
     char buf[16];
@@ -954,7 +954,7 @@ std::string ScriptState::to_string(size_t i)
 }
 
 /// convert a stack element to an integer
-int32_t ScriptState::to_int(size_t i)
+sint32 ScriptState::to_int(size_t i)
 {
     resolve(i);
     script_data& data = stack[i];
@@ -963,11 +963,11 @@ int32_t ScriptState::to_int(size_t i)
     if (data.get_type() != Script::STR)
     {
         map_log("Panic: expected Script::INT or Script::INT, got (Script)%d",
-                static_cast<uint8_t>(data.get_type()));
+                static_cast<uint8>(data.get_type()));
         abort();
     }
     std::string str = data.get<Script::STR>();
-    int32_t num = atoi(str.c_str());
+    sint32 num = atoi(str.c_str());
     data.set<Script::INT>(num);
     return num;
 }
@@ -978,8 +978,8 @@ typename ScriptStorageType<Type>::type ScriptState::get_as(size_t idx)
     if (stack[idx].get_type() != Type)
     {
         map_log("Panic: wrong type: expect (Script)%d, got (Script)%d",
-                static_cast<uint8_t>(Type),
-                static_cast<uint8_t>(stack[idx].get_type()));
+                static_cast<uint8>(Type),
+                static_cast<uint8>(stack[idx].get_type()));
         abort();
     }
     return stack[idx].get<Type>();
@@ -1021,20 +1021,20 @@ void ScriptState::push_copy_of(size_t i)
 #undef CASE
     }
     map_log("Panic: copying an unexpected type, (Script)%d",
-            static_cast<uint8_t>(data.get_type()));
+            static_cast<uint8>(data.get_type()));
     abort();
 }
 
-void ScriptState::pop(int32_t st, int32_t en)
+void ScriptState::pop(sint32 st, sint32 en)
 {
     stack.erase(stack.begin() + st, stack.begin() + en);
 }
 
 // builtin functions were implemented here
 
-static Script get_com(const Script *script, int32_t& pos)
+static Script get_com(const Script *script, sint32& pos)
 {
-    if (static_cast<uint8_t>(script[pos]) >= 0x80)
+    if (static_cast<uint8>(script[pos]) >= 0x80)
         return Script::INT;
     if (script[pos] >= Script::COUNT)
     {
@@ -1046,17 +1046,17 @@ static Script get_com(const Script *script, int32_t& pos)
 
 /// Decode an integer
 // just *try* to figure out how this does the opposite of add_scripti
-static int32_t get_num(const Script *script, int32_t& pos)
+static sint32 get_num(const Script *script, sint32& pos)
 {
-    int32_t i = 0;
-    int32_t j = 0;
-    while (static_cast<uint8_t>(script[pos]) >= 0xc0)
+    sint32 i = 0;
+    sint32 j = 0;
+    while (static_cast<uint8>(script[pos]) >= 0xc0)
     {
         // why is this mask 0x7f instead of 0x3f?
-        i += (static_cast<uint8_t>(script[pos++]) & 0x7f) << j;
+        i += (static_cast<uint8>(script[pos++]) & 0x7f) << j;
         j += 6;
     }
-    return i + ((static_cast<uint8_t>(script[pos++]) & 0x7f) << j);
+    return i + ((static_cast<uint8>(script[pos++]) & 0x7f) << j);
 }
 
 template<>
@@ -1077,8 +1077,8 @@ void ScriptState::op<Script::ADD>()
     if (d2.get_type() != Script::INT || d1.get_type() != Script::INT)
     {
         map_log("Fatal: expected strings or ints, got (Script)%d + (Script)%d",
-                static_cast<uint8_t>(d2.get_type()),
-                static_cast<uint8_t>(d1.get_type()));
+                static_cast<uint8>(d2.get_type()),
+                static_cast<uint8>(d1.get_type()));
         abort();
     }
     d2.set<Script::INT>(d2.get<Script::INT>() + d1.get<Script::INT>());
@@ -1086,26 +1086,26 @@ void ScriptState::op<Script::ADD>()
 }
 
 template<Script Type, Script Op>
-static int32_t op2(typename ScriptStorageType<Type>::type,
+static sint32 op2(typename ScriptStorageType<Type>::type,
                    typename ScriptStorageType<Type>::type)
 {
     map_log("Unimplemented binary operation: op %d applied to (Script)%d",
-            static_cast<uint8_t>(Op), static_cast<uint8_t>(Type));
+            static_cast<uint8>(Op), static_cast<uint8>(Type));
     abort();
     return 0;
 }
 
 #define OP_IMPL_STR(Op, op)                         \
 template<>                                          \
-int32_t op2<Script::STR, Script::Op>(std::string a, \
+sint32 op2<Script::STR, Script::Op>(std::string a, \
                                      std::string b) \
 {                                                   \
     return a op b;                                  \
 }
 #define OP_IMPL_INT(Op, op)                     \
 template<>                                      \
-int32_t op2<Script::INT, Script::Op>(int32_t a, \
-                                     int32_t b) \
+sint32 op2<Script::INT, Script::Op>(sint32 a, \
+                                     sint32 b) \
 {                                               \
     return a op b;                              \
 }
@@ -1148,7 +1148,7 @@ void ScriptState::op()
     script_data& d1 = stack[sz - 1];
     if (d2.get_type() == Script::INT && d1.get_type() == Script::INT)
     {
-        int32_t ret = op2<Script::INT, Op>(d2.get<Script::INT>(),
+        sint32 ret = op2<Script::INT, Op>(d2.get<Script::INT>(),
                                            d1.get<Script::INT>());
         d2.set<Script::INT>(ret);
         stack.pop_back();
@@ -1156,7 +1156,7 @@ void ScriptState::op()
     }
     if (d2.get_type() == Script::STR && d1.get_type() == Script::STR)
     {
-        int32_t ret = op2<Script::STR, Op>(d2.get<Script::STR>(),
+        sint32 ret = op2<Script::STR, Op>(d2.get<Script::STR>(),
                                            d1.get<Script::STR>());
         d2.set<Script::INT>(ret);
         stack.pop_back();
@@ -1164,8 +1164,8 @@ void ScriptState::op()
     }
 
     map_log("script: %s: mixed parameters: (Script)%d, (Script)%d", __func__,
-            static_cast<uint8_t>(d2.get_type()),
-            static_cast<uint8_t>(d2.get_type()));
+            static_cast<uint8>(d2.get_type()),
+            static_cast<uint8>(d2.get_type()));
     abort();
     d2.set<Script::INT>(0);
     stack.pop_back();
@@ -1179,7 +1179,7 @@ void ScriptState::op<Script::NEG>()
     if (data.get_type() != Script::INT)
     {
         map_log("Panic: apply unary op - to noninteger type (Script)%d",
-                static_cast<uint8_t>(data.get_type()));
+                static_cast<uint8>(data.get_type()));
     }
     data.set<Script::INT>(-data.get<Script::INT>());
 }
@@ -1192,7 +1192,7 @@ void ScriptState::op<Script::LNOT>()
     if (data.get_type() != Script::INT)
     {
         map_log("Panic: apply unary ! to noninteger type (Script)%d",
-                static_cast<uint8_t>(data.get_type()));
+                static_cast<uint8>(data.get_type()));
     }
     data.set<Script::INT>(!data.get<Script::INT>());
 }
@@ -1205,7 +1205,7 @@ void ScriptState::op<Script::NOT>()
     if (data.get_type() != Script::INT)
     {
         map_log("Panic: apply unary ~ to noninteger type (Script)%d",
-                static_cast<uint8_t>(data.get_type()));
+                static_cast<uint8>(data.get_type()));
     }
     data.set<Script::INT>(~data.get<Script::INT>());
 }
@@ -1237,7 +1237,7 @@ void ScriptState::run_func()
     start = start_sp;
     end = end_sp;
 
-    int32_t func = stack[start_sp].get<Script::NAME>();
+    sint32 func = stack[start_sp].get<Script::NAME>();
 
     // only 0 offset use of "start" ...
     // there is no 1 offset, that's the bogus Script::ARG
@@ -1270,12 +1270,12 @@ void ScriptState::run_func()
         }
 
         // number of arguments this function originally got called with
-        int32_t ii = stack[defsp - 4].get<Script::INT>();
+        sint32 ii = stack[defsp - 4].get<Script::INT>();
         // position in the old script
         pos = stack[defsp - 2].get<Script::INT>();
 
         script = stack[defsp - 1].get<Script::RETINFO>();
-        int32_t olddefsp = defsp;
+        sint32 olddefsp = defsp;
         defsp = stack[defsp - 3].get<Script::INT>();
         pop(olddefsp - 4 - ii, olddefsp);
 
@@ -1284,17 +1284,17 @@ void ScriptState::run_func()
 }
 
 /// Main script execution
-void run_script_main(const Script *script, int32_t pos,
+void run_script_main(const Script *script, sint32 pos,
                      ScriptState *st, const Script *rootscript)
 {
     // these decrement as it executes
-    int32_t cmdcount = 8192;
-    int32_t gotocount = 512;
+    sint32 cmdcount = 8192;
+    sint32 gotocount = 512;
 
     st->defsp = st->stack.size();
     st->script = script;
 
-    int32_t rerun_pos = st->pos;
+    sint32 rerun_pos = st->pos;
     for (st->state = ScriptExecutionState::ZERO; st->state == ScriptExecutionState::ZERO; )
     {
         switch (Script c = get_com(script, st->pos))
@@ -1311,15 +1311,15 @@ void run_script_main(const Script *script, int32_t pos,
             st->push<Script::INT>(get_num(script, st->pos));
             break;
         case Script::POS:
-            st->push<Script::POS>(static_cast<uint8_t>(script[st->pos])
-                                  | (static_cast<uint8_t>(script[st->pos + 1]) << 8)
-                                  | (static_cast<uint8_t>(script[st->pos + 2]) << 16));
+            st->push<Script::POS>(static_cast<uint8>(script[st->pos])
+                                  | (static_cast<uint8>(script[st->pos + 1]) << 8)
+                                  | (static_cast<uint8>(script[st->pos + 2]) << 16));
             st->pos += 3;
             break;
         case Script::NAME:
-            st->push<Script::NAME>(static_cast<uint8_t>(script[st->pos])
-                                   | (static_cast<uint8_t>(script[st->pos + 1]) << 8)
-                                   | (static_cast<uint8_t>(script[st->pos + 2]) << 16));
+            st->push<Script::NAME>(static_cast<uint8>(script[st->pos])
+                                   | (static_cast<uint8>(script[st->pos + 1]) << 8)
+                                   | (static_cast<uint8>(script[st->pos + 2]) << 16));
             st->pos += 3;
             break;
         case Script::ARG:
@@ -1377,7 +1377,7 @@ void run_script_main(const Script *script, int32_t pos,
             break;
 
         default:
-            map_log("unknown command : %d @ %d\n", static_cast<uint8_t>(c), pos);
+            map_log("unknown command : %d @ %d\n", static_cast<uint8>(c), pos);
             abort();
             st->state = ScriptExecutionState::END;
             break;
@@ -1414,12 +1414,12 @@ void run_script_main(const Script *script, int32_t pos,
 }
 
 /// Run a script without any special variables
-int32_t run_script(const std::vector<Script>& script, int32_t pos, int32_t rid, int32_t oid)
+sint32 run_script(const std::vector<Script>& script, sint32 pos, account_t rid, BlockID oid)
 {
     return run_script_l(script, pos, rid, oid, 0, NULL);
 }
 
-int32_t run_script_l(const std::vector<Script>& rscript, int32_t pos, int32_t rid, int32_t oid, int32_t args_nr, ArgRec *args)
+sint32 run_script_l(const std::vector<Script>& rscript, sint32 pos, account_t rid, BlockID oid, sint32 args_nr, ArgRec *args)
 {
     if (rscript.empty() || pos < 0)
         return -1;
@@ -1437,7 +1437,7 @@ int32_t run_script_l(const std::vector<Script>& rscript, int32_t pos, int32_t ri
     st.pos = pos;
     st.rid = rid;
     st.oid = oid;
-    for (int32_t i = 0; i < args_nr; i++)
+    for (sint32 i = 0; i < args_nr; i++)
     {
         if (args[i].name[strlen(args[i].name) - 1] == '$')
             sd->regstr.set(add_str(args[i].name), args[i].s);
@@ -1449,21 +1449,21 @@ int32_t run_script_l(const std::vector<Script>& rscript, int32_t pos, int32_t ri
 }
 
 /// Sets a global integer variable (temporary or permanent)
-void mapreg_setreg(int32_t num, int32_t val)
+void mapreg_setreg(sint32 num, sint32 val)
 {
     mapreg_db.set(num, val);
     mapreg_dirty = 1;
 }
 
 /// Sets a global string variable (temporary or permanent)
-void mapreg_setregstr(int32_t num, const std::string& str)
+void mapreg_setregstr(sint32 num, const std::string& str)
 {
     mapregstr_db.set(num, str);
     mapreg_dirty = 1;
 }
 
 /// Load the saved values
-static int32_t script_load_mapreg(void)
+static sint32 script_load_mapreg(void)
 {
     FILE *fp = fopen_(mapreg_txt, "r");
 
@@ -1475,7 +1475,7 @@ static int32_t script_load_mapreg(void)
     while (fgets(line, sizeof(line), fp))
     {
         char buf1[256], buf2[1024];
-        int32_t n, i;
+        sint32 n, i;
         if (sscanf(line, "%255[^,],%d\t%n", buf1, &i, &n) != 2 &&
             (i = 0, sscanf(line, "%[^\t]\t%n", buf1, &n) != 1))
             continue;
@@ -1487,18 +1487,18 @@ static int32_t script_load_mapreg(void)
                 continue;
             }
             std::string p = buf2;
-            int32_t s = add_str(buf1);
+            sint32 s = add_str(buf1);
             mapregstr_db.set((i << 24) + s, p);
         }
         else
         {
-            int32_t v;
+            sint32 v;
             if (sscanf(line + n, "%d", &v) != 1)
             {
                 map_log("%s: %s broken data !\n", mapreg_txt, buf1);
                 continue;
             }
-            int32_t s = add_str(buf1);
+            sint32 s = add_str(buf1);
             mapreg_db.set((i << 24) + s, v);
         }
     }
@@ -1507,9 +1507,9 @@ static int32_t script_load_mapreg(void)
 }
 
 /// Maybe save an integer
-static void script_save_mapreg_intsub(int32_t keyi, int32_t datai, FILE *fp)
+static void script_save_mapreg_intsub(sint32 keyi, sint32 datai, FILE *fp)
 {
-    int32_t num = keyi & 0x00ffffff, i = keyi >> 24;
+    sint32 num = keyi & 0x00ffffff, i = keyi >> 24;
     const std::string& name = str_data[num].str;
     if (name[1] != '@')
     {
@@ -1521,9 +1521,9 @@ static void script_save_mapreg_intsub(int32_t keyi, int32_t datai, FILE *fp)
 }
 
 /// Maybe save a string
-static void script_save_mapreg_strsub(int32_t keyi, const std::string& datap, FILE *fp)
+static void script_save_mapreg_strsub(sint32 keyi, const std::string& datap, FILE *fp)
 {
-    int32_t num = keyi & 0x00ffffff, i = keyi >> 24;
+    sint32 num = keyi & 0x00ffffff, i = keyi >> 24;
     const std::string& name = str_data[num].str;
     if (name[1] != '@')
     {
@@ -1534,9 +1534,9 @@ static void script_save_mapreg_strsub(int32_t keyi, const std::string& datap, FI
     }
 }
 
-static int32_t script_save_mapreg(void)
+static sint32 script_save_mapreg(void)
 {
-    int32_t lock;
+    sint32 lock;
     FILE *fp = lock_fopen(mapreg_txt, &lock);
 
     if (!fp)

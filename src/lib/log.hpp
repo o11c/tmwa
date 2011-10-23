@@ -52,6 +52,13 @@ public:
     void warn(const char *format, ...) __attribute__((format(printf, 2, 3)));
     void error(const char *format, ...) __attribute__((format(printf, 2, 3)));
     void fatal(const char *format, ...) __attribute__((format(printf, 2, 3)));
+    // primarily for use with STR_PRINTF
+    void debug(const std::string& str)  { debug("%s", str.c_str()); }
+    void conf(const std::string& str)   { conf("%s", str.c_str()); }
+    void info(const std::string& str)   { info("%s", str.c_str()); }
+    void warn(const std::string& str)   { warn("%s", str.c_str()); }
+    void error(const std::string& str)  { error("%s", str.c_str()); }
+    void fatal(const std::string& str)  { fatal("%s", str.c_str()); }
     /// adds a destination for messages sent to this logger or any of its children
     /// the special filenames "stdout" and "stderr" can be used
     void add(const std::string& filename, bool timestamp,

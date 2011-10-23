@@ -15,11 +15,11 @@ template<class T>
 class Placed
 {
     char memory[sizeof(T)] __attribute__((aligned(alignof(T))));
+public:
     T& ref()
     {
         return *reinterpret_cast<T *>(memory);
     }
-public:
     void construct_default()
     {
         new(memory) T();

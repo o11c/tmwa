@@ -4,7 +4,7 @@
 # include "magic.structs.hpp"
 
 # include "battle.structs.hpp"
-# include "map.structs.hpp"
+# include "main.structs.hpp"
 
 // actually in magic-parser.ypp
 void magic_init(const char *conffile);   // must be called after itemdb initialisation
@@ -20,7 +20,7 @@ void magic_init(const char *conffile);   // must be called after itemdb initiali
  * \return 1 or -1 if the input message was magic and was handled by this function, 0 otherwise.  -1 is returned when the
  *         message should not be repeated.
  */
-int32_t magic_message(MapSessionData *caster, char *spell, size_t spell_len);
+sint32 magic_message(MapSessionData *caster, char *spell, size_t spell_len);
 
 /**
  * Initialise all spells, read config data

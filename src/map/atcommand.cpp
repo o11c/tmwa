@@ -10,7 +10,7 @@
 #include "chrif.hpp"
 #include "clif.hpp"
 #include "itemdb.hpp"
-#include "map.hpp"
+#include "main.hpp"
 #include "mob.hpp"
 #include "npc.hpp"
 #include "party.hpp"
@@ -20,7 +20,7 @@
 #include "tmw.hpp"
 #include "trade.hpp"
 
-#define ATCOMMAND_FUNC(x) static int32_t atcommand_##x(int32_t fd, MapSessionData *sd, const char *args)
+#define ATCOMMAND_FUNC(x) static sint32 atcommand_##x(sint32 fd, MapSessionData *sd, const char *args)
 ATCOMMAND_FUNC(setup);
 ATCOMMAND_FUNC(broadcast);
 ATCOMMAND_FUNC(localbroadcast);
@@ -218,7 +218,7 @@ static AtCommandInfo atcommand_info[] = {
     "count",            "Increase your agility"},
     {"@vit", 60,        atcommand_param<ATTR::VIT>, ATCC::SELF,
     "count",            "Increase your vitality"},
-    {"@int32_t", 60,        atcommand_param<ATTR::INT>, ATCC::SELF,
+    {"@sint32", 60,        atcommand_param<ATTR::INT>, ATCC::SELF,
     "count",            "Increase your intelligence"},
     {"@dex", 60,        atcommand_param<ATTR::DEX>, ATCC::SELF,
     "count",            "Increase your dexterity"},
@@ -407,8 +407,9 @@ static AtCommandInfo atcommand_info[] = {
 /// Log an atcommand
 static void log_atcommand(MapSessionData *sd, const char *cmd, const char *arg)
 {
-    gm_log("%s(%d,%d) %s(%d) : %s %s", &maps[sd->m].name, sd->x,
-                sd->y, sd->status.name, sd->status.account_id, cmd, arg);
+    GM_LOG("%s(%d,%d) %s(%d) : %s %s",
+           &maps[sd->m].name, sd->x, sd->y, sd->status.name,
+           sd->status.account_id, cmd, arg);
 }
 
 char *gm_logfile_name = NULL;
@@ -417,7 +418,7 @@ char *gm_logfile_name = NULL;
 // the log is automatically rotated monthly
 void gm_log(const char *fmt, ...)
 {
-    static int32_t last_logfile_nr = 0;
+    static sint32 last_logfile_nr = 0;
     static FILE *gm_logfile = NULL;
 
     if (!gm_logfile_name)
@@ -426,9 +427,9 @@ void gm_log(const char *fmt, ...)
     time_t time_v = time(NULL);
     struct tm *time_bits = gmtime(&time_v);
 
-    int32_t year = time_bits->tm_year + 1900;
-    int32_t month = time_bits->tm_mon + 1;
-    int32_t logfile_nr = (year * 12) + month;
+    sint32 year = time_bits->tm_year + 1900;
+    sint32 month = time_bits->tm_mon + 1;
+    sint32 logfile_nr = (year * 12) + month;
 
     if (logfile_nr != last_logfile_nr)
     {
@@ -461,10 +462,10 @@ void gm_log(const char *fmt, ...)
     fputc('\n', gm_logfile);
 }
 
-static void atcommand_help_long(int32_t fd, const AtCommandInfo& info);
+static void atcommand_help_long(sint32 fd, const AtCommandInfo& info);
 static AtCommandInfo *atcommand(gm_level_t level, const char *message);
 
-bool is_atcommand(int32_t fd, MapSessionData *sd, const char *message, gm_level_t gmlvl)
+bool is_atcommand(sint32 fd, MapSessionData *sd, const char *message, gm_level_t gmlvl)
 {
     nullpo_ret(sd);
 
@@ -516,7 +517,7 @@ AtCommandInfo *atcommand(gm_level_t level, const char *message)
     sscanf(message, "%100s", command);
     command[sizeof(command) - 1] = '\0';
 
-    for (int32_t i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
+    for (sint32 i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
     {
         if (strcasecmp(command, atcommand_info[i].command) == 0
             && level >= atcommand_info[i].level)
@@ -540,7 +541,7 @@ static void atkillmonster_sub(BlockList *bl, bool flag)
 /// Find the @command by name
 static AtCommandInfo *get_atcommandinfo_byname(const char *name)
 {
-    for (int32_t i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
+    for (sint32 i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
         if (strcasecmp(atcommand_info[i].command + 1, name) == 0)
             return &atcommand_info[i];
 
@@ -569,11 +570,7 @@ void atcommand_config_read(const char *cfgName)
             continue;
         AtCommandInfo *p = get_atcommandinfo_byname(w1);
         if (p)
-        {
-            p->level = atoi(w2);
-            if (p->level > 100)
-                p->level = 100;
-        }
+            p->level = gm_level_t(atoi(w2));
 
         if (strcasecmp(w1, "import") == 0)
             atcommand_config_read(w2);
@@ -585,10 +582,10 @@ void atcommand_config_read(const char *cfgName)
 
 /// @setup - Safely set a chars levels and warp them to a special place
 // from TAW, unused by TMW
-int32_t atcommand_setup(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_setup(sint32 fd, MapSessionData *sd, const char *args)
 {
     char character[100];
-    int32_t level = 1;
+    sint32 level = 1;
 
     if (!args|| !*args
         || sscanf(args, "%d %99[^\n]", &level, character) < 2)
@@ -622,10 +619,10 @@ int32_t atcommand_setup(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Warp player to another map
-int32_t atcommand_charwarp(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_charwarp(sint32 fd, MapSessionData *sd, const char *args)
 {
     char character[100];
-    int16_t x, y;
+    sint16 x, y;
 
     fixed_string<16> map_name;
     if (!args || !*args
@@ -654,15 +651,15 @@ int32_t atcommand_charwarp(int32_t fd, MapSessionData *sd, const char *args)
     if (y <= 0)
         y = MRAND(399) + 1;
 
-    int32_t m = map_mapname2mapid(map_name);
+    sint32 m = map_mapname2mapid(map_name);
     if (m >= 0 && maps[m].flag.nowarpto
-        && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+        && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
     {
         clif_displaymessage(fd, "You are not authorised to warp someone to this map.");
         return -1;
     }
     if (maps[pl_sd->m].flag.nowarp
-        && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+        && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
     {
         clif_displaymessage(fd, "You are not authorised to warp this player from its current map.");
         return -1;
@@ -682,10 +679,10 @@ int32_t atcommand_charwarp(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Warp yourself to another map
-int32_t atcommand_warp(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_warp(sint32 fd, MapSessionData *sd, const char *args)
 {
     fixed_string<16> map_name;
-    int16_t x = 0, y = 0;
+    sint16 x = 0, y = 0;
 
     if (!args || !*args
         || sscanf(args, "%15s %hd %hd", &map_name, &x, &y) < 1)
@@ -699,15 +696,15 @@ int32_t atcommand_warp(int32_t fd, MapSessionData *sd, const char *args)
     if (!map_name.contains(".gat") && map_name.length() < 13)   // 16 - 4 (.gat)
         strcat(&map_name, ".gat");
 
-    int32_t m = map_mapname2mapid(map_name);
+    sint32 m = map_mapname2mapid(map_name);
     if (m >= 0 && maps[m].flag.nowarpto
-        && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+        && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
     {
         clif_displaymessage(fd, "You are not authorised to warp you to this map.");
         return -1;
     }
     if (maps[sd->m].flag.nowarp
-        && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+        && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
     {
         clif_displaymessage(fd, "You are not authorised to warp you from your actual map.");
         return -1;
@@ -725,7 +722,7 @@ int32_t atcommand_warp(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Find location of a character (or yourself)
-int32_t atcommand_where(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_where(sint32 fd, MapSessionData *sd, const char *args)
 {
     char character[100];
     char output[200];
@@ -735,7 +732,7 @@ int32_t atcommand_where(int32_t fd, MapSessionData *sd, const char *args)
 
     MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd || (
-            (battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE))
+            (battle_config.hide_GM_session || (pl_sd->status.option & OPTION::HIDE))
             && pc_isGM(pl_sd) > pc_isGM(sd) ) )
     {
         clif_displaymessage(fd, "Character not found.");
@@ -749,7 +746,7 @@ int32_t atcommand_where(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// warp to a player
-int32_t atcommand_goto(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_goto(sint32 fd, MapSessionData *sd, const char *args)
 {
     char character[100];
 
@@ -764,13 +761,13 @@ int32_t atcommand_goto(int32_t fd, MapSessionData *sd, const char *args)
     }
 
     if (maps[pl_sd->m].flag.nowarpto
-        && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+        && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
     {
         clif_displaymessage(fd, "You are not authorised to warp to the map of this player.");
         return -1;
     }
     if (maps[sd->m].flag.nowarp
-        && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+        && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
     {
         clif_displaymessage(fd, "You are not authorised to warp from your current map.");
         return -1;
@@ -784,9 +781,9 @@ int32_t atcommand_goto(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// warp, but within a map
-int32_t atcommand_jump(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_jump(sint32 fd, MapSessionData *sd, const char *args)
 {
-    int16_t x = 0, y = 0;
+    sint16 x = 0, y = 0;
 
     // parameters optional
     sscanf(args, "%hd %hd", &x, &y);
@@ -797,7 +794,7 @@ int32_t atcommand_jump(int32_t fd, MapSessionData *sd, const char *args)
         y = MRAND(maps[sd->m].xs - 1) + 1;
 
     if ((maps[sd->m].flag.nowarpto || maps[sd->m].flag.nowarp)
-        && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+        && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
     {
         clif_displaymessage(fd, "You are not authorised to warp within your current map.");
         return -1;
@@ -813,34 +810,34 @@ int32_t atcommand_jump(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// List online players with location
-int32_t atcommand_who(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_who(sint32 fd, MapSessionData *sd, const char *args)
 {
     char match_text[100];
 
     if (sscanf(args, "%99[^\n]", match_text) < 1)
         strcpy(match_text, "");
 
-    int32_t count = 0;
+    sint32 count = 0;
     gm_level_t gm_level = pc_isGM(sd);
     for (MapSessionData *pl_sd : auth_sessions)
     {
         gm_level_t pl_gm_level = pc_isGM(pl_sd);
-        if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE))
+        if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION::HIDE))
                 && pl_gm_level > gm_level)
             continue;
         if (!strcasestr(pl_sd->status.name, match_text))
             continue;
 
-        char output[200];
+        std::string output;
         if (pl_gm_level)
-        sprintf(output, "Name: %s (GM:%d) | Location: %s %d %d",
-                     pl_sd->status.name, pl_gm_level,
-                     &pl_sd->mapname, pl_sd->x, pl_sd->y);
+            output = STR_PRINTF("Name: %s (GM:%d) | Location: %s %d %d",
+                                pl_sd->status.name, pl_gm_level,
+                                &pl_sd->mapname, pl_sd->x, pl_sd->y);
         else
-            sprintf(output, "Name: %s | Location: %s %d %d",
-                     pl_sd->status.name, &pl_sd->mapname,
-                     pl_sd->x, pl_sd->y);
-        clif_displaymessage(fd, output);
+            output = STR_PRINTF("Name: %s | Location: %s %d %d",
+                                pl_sd->status.name, &pl_sd->mapname,
+                                pl_sd->x, pl_sd->y);
+        clif_displaymessage(fd, output.c_str());
         count++;
     }
 
@@ -859,18 +856,18 @@ int32_t atcommand_who(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// List online players with party name
-int32_t atcommand_whogroup(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_whogroup(sint32 fd, MapSessionData *sd, const char *args)
 {
     char match_text[100];
     if (sscanf(args, "%99[^\n]", match_text) < 1)
         strcpy(match_text, "");
 
-    int32_t count = 0;
+    sint32 count = 0;
     gm_level_t gm_level = pc_isGM(sd);
     for (MapSessionData *pl_sd : auth_sessions)
     {
         gm_level_t pl_gm_level = pc_isGM(pl_sd);
-        if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE))
+        if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION::HIDE))
                 && (pl_gm_level > gm_level))
             continue;
 
@@ -882,14 +879,14 @@ int32_t atcommand_whogroup(int32_t fd, MapSessionData *sd, const char *args)
         if (p)
             temp0 = p->name;
 
-        char output[200];
+        std::string output;
         if (pl_gm_level)
-                sprintf(output, "Name: %s (GM:%d) | Party: '%s'",
-                     pl_sd->status.name, pl_gm_level, temp0);
+            output = STR_PRINTF("Name: %s (GM:%d) | Party: '%s'",
+                                pl_sd->status.name, pl_gm_level, temp0);
         else
-            sprintf(output, "Name: %s | Party: '%s'",
-                     pl_sd->status.name, temp0);
-        clif_displaymessage(fd, output);
+            output = STR_PRINTF("Name: %s | Party: '%s'",
+                                pl_sd->status.name, temp0);
+        clif_displaymessage(fd, output.c_str());
         count++;
     }
 
@@ -908,21 +905,21 @@ int32_t atcommand_whogroup(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// List online players on map, with location
-int32_t atcommand_whomap(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_whomap(sint32 fd, MapSessionData *sd, const char *args)
 {
-    int32_t map_id = sd->m;
+    sint32 map_id = sd->m;
     if (args && *args)
     {
         fixed_string<16> map_name;
         sscanf(args, "%15s", &map_name);
         if (!map_name.contains(".gat") && map_name.length() < 13)   // 16 - 4 (.gat)
         strcat(&map_name, ".gat");
-        int32_t m = map_mapname2mapid(map_name);
+        sint32 m = map_mapname2mapid(map_name);
         if (m >= 0)
             map_id = m;
     }
 
-    int32_t count = 0;
+    sint32 count = 0;
     gm_level_t gm_level = pc_isGM(sd);
     for (MapSessionData *pl_sd : auth_sessions)
     {
@@ -930,20 +927,20 @@ int32_t atcommand_whomap(int32_t fd, MapSessionData *sd, const char *args)
             continue;
 
         gm_level_t pl_gm_level = pc_isGM(pl_sd);
-        if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE))
+        if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION::HIDE))
                 && pl_gm_level > gm_level)
             continue;
 
-        char output[200];
+        std::string output;
         if (pl_gm_level)
-        sprintf(output, "Name: %s (GM:%d) | Location: %s %d %d",
-                     pl_sd->status.name, pl_gm_level,
-                     &pl_sd->mapname, pl_sd->x, pl_sd->y);
+            output = STR_PRINTF("Name: %s (GM:%d) | Location: %s %d %d",
+                                pl_sd->status.name, pl_gm_level,
+                                &pl_sd->mapname, pl_sd->x, pl_sd->y);
         else
-            sprintf(output, "Name: %s | Location: %s %d %d",
-                     pl_sd->status.name, &pl_sd->mapname,
-                     pl_sd->x, pl_sd->y);
-        clif_displaymessage(fd, output);
+            output = STR_PRINTF("Name: %s | Location: %s %d %d",
+                                pl_sd->status.name,
+                                &pl_sd->mapname, pl_sd->x, pl_sd->y);
+        clif_displaymessage(fd, output.c_str());
         count++;
     }
 
@@ -962,26 +959,26 @@ int32_t atcommand_whomap(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// List online players on map, with party
-int32_t atcommand_whomapgroup(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_whomapgroup(sint32 fd, MapSessionData *sd, const char *args)
 {
-    int32_t map_id = sd->m;
+    sint32 map_id = sd->m;
     if (args && *args)
     {
         fixed_string<16> map_name;
         sscanf(args, "%15s", &map_name);
         if (!map_name.contains(".gat") && map_name.length() < 13)   // 16 - 4 (.gat)
             strcat(&map_name, ".gat");
-        int32_t m = map_mapname2mapid(map_name);
+        sint32 m = map_mapname2mapid(map_name);
         if (m >= 0)
             map_id = m;
     }
 
-    int32_t count = 0;
+    sint32 count = 0;
     gm_level_t gm_level = pc_isGM(sd);
     for (MapSessionData *pl_sd : auth_sessions)
     {
         gm_level_t pl_gm_level = pc_isGM(pl_sd);
-        if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE))
+        if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION::HIDE))
                 && pl_gm_level > gm_level)
             continue;
         if (pl_sd->m == map_id)
@@ -990,14 +987,14 @@ int32_t atcommand_whomapgroup(int32_t fd, MapSessionData *sd, const char *args)
             const char *temp0 = "None";
             if (p)
                 temp0 = p->name;
-            char output[200];
+            std::string output;
             if (pl_gm_level)
-                sprintf(output, "Name: %s (GM:%d) | Party: '%s'",
-                         pl_sd->status.name, pl_gm_level, temp0);
+                output = STR_PRINTF("Name: %s (GM:%d) | Party: '%s'",
+                                    pl_sd->status.name, pl_gm_level, temp0);
             else
-                sprintf(output, "Name: %s | Party: '%s'",
-                         pl_sd->status.name, temp0);
-            clif_displaymessage(fd, output);
+                output = STR_PRINTF("Name: %s | Party: '%s'",
+                                    pl_sd->status.name, temp0);
+            clif_displaymessage(fd, output.c_str());
             count++;
         }
     }
@@ -1017,39 +1014,39 @@ int32_t atcommand_whomapgroup(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// List online GMs, with various info
-int32_t atcommand_whogm(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_whogm(sint32 fd, MapSessionData *sd, const char *args)
 {
     char match_text[100];
 
     if (sscanf(args, "%99[^\n]", match_text) < 1)
         strcpy(match_text, "");
 
-    int32_t count = 0;
+    sint32 count = 0;
     gm_level_t gm_level = pc_isGM(sd);
     for (MapSessionData *pl_sd : auth_sessions)
     {
         gm_level_t pl_gm_level = pc_isGM(pl_sd);
         if (!pl_gm_level)
             continue;
-        if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION_HIDE))
+        if ((battle_config.hide_GM_session || (pl_sd->status.option & OPTION::HIDE))
                 && pl_gm_level > gm_level)
             continue;
         if (!strcasestr(pl_sd->status.name, match_text))
             continue;
 
-        char output[200];
-        sprintf(output, "Name: %s (GM:%d) | Location: %s %d %d",
-                 pl_sd->status.name, pl_gm_level,
-                 &pl_sd->mapname, pl_sd->x, pl_sd->y);
-        clif_displaymessage(fd, output);
+        std::string output;
+        output = STR_PRINTF("Name: %s (GM:%d) | Location: %s %d %d",
+                            pl_sd->status.name, pl_gm_level,
+                            &pl_sd->mapname, pl_sd->x, pl_sd->y);
+        clif_displaymessage(fd, output.c_str());
 
         struct party *p = party_search(pl_sd->status.party_id);
         const char *temp0 = "None";
         if (p)
             temp0 = p->name;
-        sprintf(output, "       BLvl: %d | Party: %s",
-                 pl_sd->status.base_level, temp0);
-        clif_displaymessage(fd, output);
+        output = STR_PRINTF("       BLvl: %d | Party: %s",
+                            pl_sd->status.base_level, temp0);
+        clif_displaymessage(fd, output.c_str());
 
         count++;
     }
@@ -1069,7 +1066,7 @@ int32_t atcommand_whogm(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Set savepoint at your current location
-int32_t atcommand_save(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_save(sint32 fd, MapSessionData *sd, const char *)
 {
     nullpo_retr(-1, sd);
 
@@ -1082,17 +1079,17 @@ int32_t atcommand_save(int32_t fd, MapSessionData *sd, const char *)
 }
 
 /// Warp to your savepoint
-int32_t atcommand_load(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_load(sint32 fd, MapSessionData *sd, const char *)
 {
-    int32_t m = map_mapname2mapid(sd->status.save_point.map);
+    sint32 m = map_mapname2mapid(sd->status.save_point.map);
     if (m >= 0 && maps[m].flag.nowarpto
-        && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+        && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
     {
         clif_displaymessage(fd, "You are not authorised to warp you to your save map.");
         return -1;
     }
     if (maps[sd->m].flag.nowarp
-        && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+        && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
     {
         clif_displaymessage(fd, "You are not authorised to warp you from your actual map.");
         return -1;
@@ -1105,13 +1102,13 @@ int32_t atcommand_load(int32_t fd, MapSessionData *sd, const char *)
 }
 
 /// Set your walk delay
-int32_t atcommand_speed(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_speed(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
 
-    int32_t speed = atoi(args);
-    if (speed < MIN_WALK_SPEED || speed > MAX_WALK_SPEED)
+    std::chrono::milliseconds speed(atoi(args));
+    if (speed < std::chrono::milliseconds::zero())
         return -1;
     sd->speed = speed;
 
@@ -1122,7 +1119,7 @@ int32_t atcommand_speed(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Open your storage from anywhere
-int32_t atcommand_storage(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_storage(sint32 fd, MapSessionData *sd, const char *)
 {
     nullpo_retr(-1, sd);
 
@@ -1145,9 +1142,9 @@ int32_t atcommand_storage(int32_t fd, MapSessionData *sd, const char *)
 }
 
 /// Set display options (mostly unused)
-int32_t atcommand_option(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_option(sint32 fd, MapSessionData *sd, const char *args)
 {
-    int32_t param1 = 0, param2 = 0, param3 = 0;
+    sint32 param1 = 0, param2 = 0, param3 = 0;
     nullpo_retr(-1, sd);
 
     if (!args || !*args)
@@ -1159,7 +1156,7 @@ int32_t atcommand_option(int32_t fd, MapSessionData *sd, const char *args)
 
     sd->opt1 = param1;
     sd->opt2 = param2;
-    sd->status.option = param3;
+    sd->status.option = OPTION(param3);
 
     clif_changeoption(sd);
     pc_calcstatus(sd, 0);
@@ -1169,16 +1166,16 @@ int32_t atcommand_option(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Hide from monsters and scripts
-int32_t atcommand_hide(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_hide(sint32 fd, MapSessionData *sd, const char *)
 {
-    if (sd->status.option & OPTION_HIDE)
+    if (sd->status.option & OPTION::HIDE)
     {
-        sd->status.option &= ~OPTION_HIDE;
+        sd->status.option &= ~OPTION::HIDE;
         clif_displaymessage(fd, "Invisible: Off");
     }
     else
     {
-        sd->status.option |= OPTION_HIDE;
+        sd->status.option |= OPTION::HIDE;
         clif_displaymessage(fd, "Invisible: On");
     }
     clif_changeoption(sd);
@@ -1187,7 +1184,7 @@ int32_t atcommand_hide(int32_t fd, MapSessionData *sd, const char *)
 }
 
 /// Suicide so you can respawn
-int32_t atcommand_die(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_die(sint32 fd, MapSessionData *sd, const char *)
 {
     pc_damage(NULL, sd, sd->status.hp);
     clif_displaymessage(fd, "A pity! You've died.");
@@ -1196,7 +1193,7 @@ int32_t atcommand_die(int32_t fd, MapSessionData *sd, const char *)
 }
 
 /// Kill another player
-int32_t atcommand_kill(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_kill(sint32 fd, MapSessionData *sd, const char *args)
 {
     char character[100];
 
@@ -1223,13 +1220,13 @@ int32_t atcommand_kill(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// revive yourself from being dead
-int32_t atcommand_alive(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_alive(sint32 fd, MapSessionData *sd, const char *)
 {
     sd->status.hp = sd->status.max_hp;
     sd->status.sp = sd->status.max_sp;
     pc_setstand(sd);
     if (battle_config.pc_invincible_time > 0)
-        pc_setinvincibletimer(sd, battle_config.pc_invincible_time);
+        pc_setinvincibletimer(sd, std::chrono::milliseconds(battle_config.pc_invincible_time));
     clif_updatestatus(sd, SP::HP);
     clif_updatestatus(sd, SP::SP);
     clif_resurrection(sd, 1);
@@ -1239,7 +1236,7 @@ int32_t atcommand_alive(int32_t fd, MapSessionData *sd, const char *)
 }
 
 /// Do a global announcement
-int32_t atcommand_kami(int32_t, MapSessionData *, const char *args)
+sint32 atcommand_kami(sint32, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -1252,9 +1249,9 @@ int32_t atcommand_kami(int32_t, MapSessionData *, const char *args)
 }
 
 /// Recover HP and SP
-int32_t atcommand_heal(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_heal(sint32 fd, MapSessionData *sd, const char *args)
 {
-    int32_t hp = 0, sp = 0;
+    sint32 hp = 0, sp = 0;
 
     sscanf(args, "%d %d", &hp, &sp);
 
@@ -1277,7 +1274,7 @@ int32_t atcommand_heal(int32_t fd, MapSessionData *sd, const char *args)
     }
 
     if (hp < 0)            // display like damage
-        clif_damage(sd, sd, gettick(), 0, 0, -hp, 0, 4, 0);
+        clif_damage(sd, sd, gettick(), DEFAULT, DEFAULT, -hp, 0, 4, 0);
 
     // happens unless you already had full hp and sp
     if (hp || sp)
@@ -1298,10 +1295,10 @@ int32_t atcommand_heal(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Spawn items in your inventory
-int32_t atcommand_item(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_item(sint32 fd, MapSessionData *sd, const char *args)
 {
     char item_name[100];
-    int32_t number = 0;
+    sint32 number = 0;
 
     if (!args || !*args)
         return -1;
@@ -1319,17 +1316,17 @@ int32_t atcommand_item(int32_t fd, MapSessionData *sd, const char *args)
         clif_displaymessage(fd, "Invalid item ID or name.");
         return -1;
     }
-    int32_t item_id = item_data->nameid;
+    sint32 item_id = item_data->nameid;
 
     // number of items to spawn at once
-    int32_t get_count = number;
+    sint32 get_count = number;
     if (item_data->type == 4 || item_data->type == 5 ||
         item_data->type == 7 || item_data->type == 8)
     {
         // nonstackable items
         get_count = 1;
     }
-    for (int32_t i = 0; i < number; i += get_count)
+    for (sint32 i = 0; i < number; i += get_count)
     {
         struct item item_tmp = {};
         item_tmp.nameid = item_id;
@@ -1343,10 +1340,10 @@ int32_t atcommand_item(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Remove all of your items, except your equipment
-int32_t atcommand_itemreset(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_itemreset(sint32 fd, MapSessionData *sd, const char *)
 {
 
-    for (int32_t i = 0; i < MAX_INVENTORY; i++)
+    for (sint32 i = 0; i < MAX_INVENTORY; i++)
     {
         if (sd->status.inventory[i].amount && ! sd->status.inventory[i].equip)
             pc_delitem(sd, i, sd->status.inventory[i].amount, 0);
@@ -1357,7 +1354,7 @@ int32_t atcommand_itemreset(int32_t fd, MapSessionData *sd, const char *)
 }
 
 /// Check whether your items are valid
-int32_t atcommand_itemcheck(int32_t, MapSessionData *sd, const char *)
+sint32 atcommand_itemcheck(sint32, MapSessionData *sd, const char *)
 {
     pc_checkitem(sd);
 
@@ -1365,29 +1362,28 @@ int32_t atcommand_itemcheck(int32_t, MapSessionData *sd, const char *)
 }
 
 /// Gain levels
-int32_t atcommand_baselevelup(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_baselevelup(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
-    int32_t level = atoi(args);
-    if (level == 0)
-        return -1;
+    sint32 delta = atoi(args);
 
-    if (sd->status.base_level + level > battle_config.maximum_level)
-        level = battle_config.maximum_level - sd->status.base_level;
-    else if (sd->status.base_level + level < 1 )
-        level = 1 - sd->status.base_level;
+    if (uint8(sd->status.base_level) + delta > battle_config.maximum_level)
+        delta = battle_config.maximum_level - uint8(sd->status.base_level);
+    else if (uint8(sd->status.base_level) + delta < 1 )
+        delta = 1 - uint8(sd->status.base_level);
 
-    if (level > 0)
+    if (!delta)
     {
-        if (sd->status.base_level == battle_config.maximum_level)
-        {                       // check for max level by Valaris
-            clif_displaymessage(fd, "Base level can't go any higher.");
-            return -1;
-        }                       // End Addition
-        for (int32_t i = 1; i <= level; i++)
-            sd->status.status_point += (sd->status.base_level + i + 14) / 4;
-        sd->status.base_level += level;
+        clif_displaymessage(fd, "Level not changed");
+        return -1;
+    }
+    if (delta > 0)
+    {
+        // TODO: remove status point duplication
+        for (sint32 i = 1; i <= delta; i++)
+            sd->status.status_point += (uint8(sd->status.base_level) + i + 14) / 4;
+        sd->status.base_level = level_t(uint8(sd->status.base_level) + delta);
         clif_updatestatus(sd, SP::BASELEVEL);
         clif_updatestatus(sd, SP::NEXTBASEEXP);
         clif_updatestatus(sd, SP::STATUSPOINT);
@@ -1396,24 +1392,19 @@ int32_t atcommand_baselevelup(int32_t fd, MapSessionData *sd, const char *args)
         clif_misceffect(sd, 0);
         clif_displaymessage(fd, "Base level raised.");
     }
-    else // level < 0
+    else // delta < 0
     {
-        if (sd->status.base_level == 1)
-        {
-            clif_displaymessage(fd, "Base level can't go any lower.");
-            return -1;
-        }
         if (sd->status.status_point > 0)
         {
-            for (int32_t i = 0; i > level; i--)
-                sd->status.status_point -=
-                    (sd->status.base_level + i + 14) / 4;
+            // TODO: remove status point duplication
+            for (sint32 i = 0; i > delta; i--)
+                sd->status.status_point -= (uint8(sd->status.base_level) + i + 14) / 4;
             if (sd->status.status_point < 0)
                 sd->status.status_point = 0;
             // TODO: remove status points from stats
             clif_updatestatus(sd, SP::STATUSPOINT);
         }
-        sd->status.base_level += level;
+        sd->status.base_level = level_t(uint8(sd->status.base_level) + delta);
         clif_updatestatus(sd, SP::BASELEVEL);
         clif_updatestatus(sd, SP::NEXTBASEEXP);
         pc_calcstatus(sd, 0);
@@ -1424,34 +1415,32 @@ int32_t atcommand_baselevelup(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Increase job level
-int32_t atcommand_joblevelup(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_joblevelup(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
-    int32_t level = atoi(args);
-    if (level == 0)
-        return -1;
+    sint32 delta = atoi(args);
 
     // FIXME: This is a horrible remnant of the eA "Novice" class
     // it should be replaced by whatever the real max is
-    int32_t up_level = 10;
+    sint32 up_level = 10;
 
-    if (sd->status.job_level + level > up_level)
-        level = up_level - sd->status.job_level;
-    if (level + sd->status.job_level < 1 )
-        level = 1 - sd->status.job_level;
+    if (uint8(sd->status.job_level) + delta > up_level)
+        delta = up_level - uint8(sd->status.job_level);
+    if (delta + uint8(sd->status.job_level) < 1 )
+        delta = 1 - uint8(sd->status.job_level);
 
-    if (level > 0)
+    if (!delta)
     {
-        if (sd->status.job_level == up_level)
-        {
-            clif_displaymessage(fd, "Job level can't go any higher.");
-            return -1;
-        }
-        sd->status.job_level += level;
+        clif_displaymessage(fd, "Job level not changed");
+        return -1;
+    }
+    if (delta > 0)
+    {
+        sd->status.job_level = level_t(uint8(sd->status.job_level) + delta);
         clif_updatestatus(sd, SP::JOBLEVEL);
         clif_updatestatus(sd, SP::NEXTJOBEXP);
-        sd->status.skill_point += level;
+        sd->status.skill_point = uint8(sd->status.job_level) + delta;
         clif_updatestatus(sd, SP::SKILLPOINT);
         pc_calcstatus(sd, 0);
         clif_misceffect(sd, 1);
@@ -1459,18 +1448,13 @@ int32_t atcommand_joblevelup(int32_t fd, MapSessionData *sd, const char *args)
     }
     else
     {
-        if (sd->status.job_level == 1)
-        {
-            clif_displaymessage(fd, "Job level can't go any lower.");
-            return -1;
-        }
-        sd->status.job_level += level;
+        sd->status.job_level = level_t(uint8(sd->status.job_level) + delta);
         clif_updatestatus(sd, SP::JOBLEVEL);
         clif_updatestatus(sd, SP::NEXTJOBEXP);
         if (sd->status.skill_point > 0)
         {
             // is this even how TMW does skill points?
-            sd->status.skill_point += level;
+            sd->status.skill_point += delta;
             if (sd->status.skill_point < 0)
                 sd->status.skill_point = 0;
             // TODO: remove status points from skills
@@ -1485,7 +1469,7 @@ int32_t atcommand_joblevelup(int32_t fd, MapSessionData *sd, const char *args)
 
 
 /// Show a header for a help category
-static void atcommand_help_cat_name(int32_t fd, AtCommandCategory cat)
+static void atcommand_help_cat_name(sint32 fd, AtCommandCategory cat)
 {
     switch (cat)
     {
@@ -1505,7 +1489,7 @@ static void atcommand_help_cat_name(int32_t fd, AtCommandCategory cat)
 }
 
 /// Show usage for a command
-static void atcommand_help_brief(int32_t fd, const AtCommandInfo& info)
+static void atcommand_help_brief(sint32 fd, const AtCommandInfo& info)
 {
     size_t command_len = strlen(info.command);
     size_t arg_help_len = strlen(info.arg_help);
@@ -1518,18 +1502,18 @@ static void atcommand_help_brief(int32_t fd, const AtCommandInfo& info)
 }
 
 /// Show usage and description of a command
-static void atcommand_help_long(int32_t fd, const AtCommandInfo& info)
+static void atcommand_help_long(sint32 fd, const AtCommandInfo& info)
 {
     atcommand_help_brief(fd, info);
     clif_displaymessage(fd, info.long_help);
 }
 
 /// Show help for all @commands accessible at the given level
-static void atcommand_help_all(int32_t fd, gm_level_t gm_level)
+static void atcommand_help_all(sint32 fd, gm_level_t gm_level)
 {
     AtCommandCategory cat = atcommand_info[0].cat;
     atcommand_help_cat_name(fd, cat);
-    for (int32_t i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
+    for (sint32 i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
         if (gm_level >= atcommand_info[i].level)
         {
             if (cat != atcommand_info[i].cat)
@@ -1542,21 +1526,21 @@ static void atcommand_help_all(int32_t fd, gm_level_t gm_level)
 }
 
 /// Show usage for all commands in category
-static void atcommand_help_cat(int32_t fd, gm_level_t gm_level, AtCommandCategory cat)
+static void atcommand_help_cat(sint32 fd, gm_level_t gm_level, AtCommandCategory cat)
 {
     atcommand_help_cat_name(fd, cat);
-    for (int32_t i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
+    for (sint32 i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
         if (gm_level >= atcommand_info[i].level && atcommand_info[i].cat == cat)
             atcommand_help_brief(fd, atcommand_info[i]);
 }
 
 /// Show help for a command or a category
-int32_t atcommand_help(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_help(sint32 fd, MapSessionData *sd, const char *args)
 {
     gm_level_t gm_level = pc_isGM(sd);
     if (args[0] == '@')
     {
-        for (int32_t i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
+        for (sint32 i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
         {
             if (strcasecmp(args, atcommand_info[i].command) == 0)
             {
@@ -1642,7 +1626,7 @@ int32_t atcommand_help(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Become a GM (not usable by GMs), level controlled by level_new_gm in login_athena.conf
-int32_t atcommand_gm(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_gm(sint32 fd, MapSessionData *sd, const char *args)
 {
     char password[100];
 
@@ -1663,7 +1647,7 @@ int32_t atcommand_gm(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// disable PvP on the current map
-int32_t atcommand_pvpoff(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_pvpoff(sint32 fd, MapSessionData *sd, const char *)
 {
     if (battle_config.pk_mode)
     {                           //disable command if server is in PK mode [Valaris]
@@ -1692,7 +1676,7 @@ int32_t atcommand_pvpoff(int32_t fd, MapSessionData *sd, const char *)
 }
 
 /// Enable PvP on the current map
-int32_t atcommand_pvpon(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_pvpon(sint32 fd, MapSessionData *sd, const char *)
 {
     if (battle_config.pk_mode)
     {
@@ -1715,7 +1699,7 @@ int32_t atcommand_pvpon(int32_t fd, MapSessionData *sd, const char *)
     {
         if (sd->m != pl_sd->m || pl_sd->pvp_timer)
             continue;
-        pl_sd->pvp_timer = add_timer(gettick() + 200, pc_calc_pvprank_timer, pl_sd->id);
+        pl_sd->pvp_timer = add_timer(gettick() + std::chrono::milliseconds(200), pc_calc_pvprank_timer, pl_sd->id);
         pl_sd->pvp_rank = 0;
         pl_sd->pvp_lastusers = 0;
         pl_sd->pvp_point = 5;
@@ -1726,11 +1710,11 @@ int32_t atcommand_pvpon(int32_t fd, MapSessionData *sd, const char *)
 }
 
 /// Change your appearance (hairstyle, hair color, clothes color (unused))
-int32_t atcommand_model(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_model(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
-    uint32_t hair_style, hair_color;
+    uint32 hair_style, hair_color;
     if (sscanf(args, "%u %u", &hair_style, &hair_color) < 2)
         return -1;
 
@@ -1747,11 +1731,11 @@ int32_t atcommand_model(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Change hair style
-int32_t atcommand_hair_style(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_hair_style(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
-    uint32_t hair_style = 0;
+    uint32 hair_style = 0;
     if (sscanf(args, "%u", &hair_style) < 1)
         return -1;
 
@@ -1768,11 +1752,11 @@ int32_t atcommand_hair_style(int32_t fd, MapSessionData *sd, const char *args)
 
 
 /// Change hair color
-int32_t atcommand_hair_color(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_hair_color(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
-    uint32_t hair_color;
+    uint32 hair_color;
     if (sscanf(args, "%d", &hair_color) < 1)
         return -1;
 
@@ -1789,20 +1773,20 @@ int32_t atcommand_hair_color(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Create monsters
-int32_t atcommand_spawn(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_spawn(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
 
     char monster[100];
-    uint32_t number = 0;
-    uint16_t x = 0, y = 0;
+    uint32 number = 0;
+    uint16 x = 0, y = 0;
     if (sscanf(args, "%99s %u %hu %hu", monster, &number, &x, &y) < 1)
         return -1;
 
     // If monster identifier/name argument is a name
     // check name first (to avoid possible name begining by a number)
-    int32_t mob_id = mobdb_searchname(monster);
+    sint32 mob_id = mobdb_searchname(monster);
     if (!mob_id)
         mob_id = mobdb_checkid(atoi(monster));
 
@@ -1822,15 +1806,17 @@ int32_t atcommand_spawn(int32_t fd, MapSessionData *sd, const char *args)
     map_log("%s monster='%s' id=%d count=%d at (%d,%d)\n", "@spawn", monster,
              mob_id, number, x, y);
 
-    int32_t count = 0;
-    int32_t range = sqrt(number) + 5;
-    for (int32_t i = 0; i < number; i++)
+    sint32 count = 0;
+    sint32 range = sqrt(number) + 5;
+    for (sint32 i = 0; i < number; i++)
     {
-        int32_t j = 0;
+        sint32 j = 0;
         bool k = 0;
         while (j++ < 8 && k == 0)
-        {                       // try 8 times to spawn the monster (needed for close area)
-            uint16_t mx, my;
+        {
+            // try 8 times to spawn the monster (needed for close area)
+            // this is stupid
+            uint16 mx, my;
             if (x <= 0)
                 mx = sd->x + (MRAND(range) - (range / 2));
             else
@@ -1841,7 +1827,7 @@ int32_t atcommand_spawn(int32_t fd, MapSessionData *sd, const char *args)
                 my = y;
             fixed_string<16> ths;
             ths.copy_from("this");
-            k = mob_once_spawn(sd, {ths, mx, my}, "", mob_id, 1, "");
+            k = bool(mob_once_spawn(sd, {ths, mx, my}, "", mob_id, 1, ""));
         }
         count += k;
     }
@@ -1864,17 +1850,17 @@ int32_t atcommand_spawn(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Kill a monster, optionally dropping loot
-static void atcommand_killmonster_sub(int32_t fd, MapSessionData *sd,
+static void atcommand_killmonster_sub(sint32 fd, MapSessionData *sd,
                                        const char *args, bool drop)
 {
-    int32_t map_id = sd->m;
+    sint32 map_id = sd->m;
     if (args && *args)
     {
         fixed_string<16> map_name;
         sscanf(args, "%15s", &map_name);
         if (!map_name.contains(".gat") && map_name.length() < 13)   // 16 - 4 (.gat)
             strcat(&map_name, ".gat");
-        int32_t m = map_mapname2mapid(map_name);
+        sint32 m = map_mapname2mapid(map_name);
         if (m >= 0)
             map_id = m;
     }
@@ -1886,14 +1872,14 @@ static void atcommand_killmonster_sub(int32_t fd, MapSessionData *sd,
 }
 
 /// Kill monsters, with loot
-int32_t atcommand_killmonster(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_killmonster(sint32 fd, MapSessionData *sd, const char *args)
 {
     atcommand_killmonster_sub(fd, sd, args, 1);
     return 0;
 }
 
 /// Print a nearby player
-static void atlist_nearby_sub(BlockList *bl, int32_t fd)
+static void atlist_nearby_sub(BlockList *bl, sint32 fd)
 {
     nullpo_retv(bl);
 
@@ -1904,7 +1890,7 @@ static void atlist_nearby_sub(BlockList *bl, int32_t fd)
 }
 
 /// Print all nearby players
-int32_t atcommand_list_nearby(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_list_nearby(sint32 fd, MapSessionData *sd, const char *)
 {
     clif_displaymessage(fd, "Nearby players:");
     map_foreachinarea(atlist_nearby_sub, sd->m, sd->x - 1,
@@ -1913,7 +1899,7 @@ int32_t atcommand_list_nearby(int32_t fd, MapSessionData *sd, const char *)
 }
 
 /// Kill monsters, without loot
-int32_t atcommand_killmonster2(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_killmonster2(sint32 fd, MapSessionData *sd, const char *args)
 {
     atcommand_killmonster_sub(fd, sd, args, 0);
     return 0;
@@ -1923,7 +1909,7 @@ int32_t atcommand_killmonster2(int32_t fd, MapSessionData *sd, const char *args)
 static void atcommand_memo_sub(MapSessionData *sd)
 {
     clif_displaymessage(sd->fd, "Your actual memo positions are:");
-    for (int32_t i = 0; i <= 2; i++)
+    for (sint32 i = 0; i <= 2; i++)
     {
         char output[200];
         if (sd->status.memo_point[i].map[0])
@@ -1937,9 +1923,9 @@ static void atcommand_memo_sub(MapSessionData *sd)
 }
 
 /// Set a memo point
-int32_t atcommand_memo(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_memo(sint32 fd, MapSessionData *sd, const char *args)
 {
-    int32_t position;
+    sint32 position;
 
     if (!args || !*args || sscanf(args, "%d", &position) < 1)
     {
@@ -1952,7 +1938,7 @@ int32_t atcommand_memo(int32_t fd, MapSessionData *sd, const char *args)
         return -1;
     }
 
-    if (maps[sd->m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+    if (maps[sd->m].flag.nowarpto && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
     {
         clif_displaymessage(fd, "You are not authorised to set a memo point on this map.");
         return -1;
@@ -1974,38 +1960,33 @@ int32_t atcommand_memo(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// print the collision of the map around you
-int32_t atcommand_gat(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_gat(sint32 fd, MapSessionData *sd, const char *)
 {
-    char output[200];
-    int32_t y;
-
-    memset(output, '\0', sizeof(output));
-
-    for (y = -2; y <= 2; y++)
+    for (sint32 y = -2; y <= 2; y++)
     {
-        sprintf(output, "%s (x= %d, y= %d) %02X %02X %02X %02X %02X",
-                 &maps[sd->m].name, sd->x - 2, sd->y + y,
-                 map_getcell(sd->m, sd->x - 2, sd->y + y),
-                 map_getcell(sd->m, sd->x - 1, sd->y + y),
-                 map_getcell(sd->m, sd->x, sd->y + y),
-                 map_getcell(sd->m, sd->x + 1, sd->y + y),
-                 map_getcell(sd->m, sd->x + 2, sd->y + y));
-        clif_displaymessage(fd, output);
+        std::string output = STR_PRINTF("%s (x= %d, y= %d) %02X %02X %02X %02X %02X",
+                                        &maps[sd->m].name, sd->x - 2, sd->y + y,
+                                        map_getcell(sd->m, sd->x - 2, sd->y + y),
+                                        map_getcell(sd->m, sd->x - 1, sd->y + y),
+                                        map_getcell(sd->m, sd->x, sd->y + y),
+                                        map_getcell(sd->m, sd->x + 1, sd->y + y),
+                                        map_getcell(sd->m, sd->x + 2, sd->y + y));
+        clif_displaymessage(fd, output.c_str());
     }
 
     return 0;
 }
 
 /// modify number of status points
-int32_t atcommand_statuspoint(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_statuspoint(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
-    int32_t points = atoi(args);
+    sint32 points = atoi(args);
     if (!points)
         return -1;
 
-    int32_t new_status_points = sd->status.status_point + points;
+    sint32 new_status_points = sd->status.status_point + points;
     if (new_status_points > 0x7FFF)
         new_status_points = 0x7FFF;
     if (new_status_points < 0)
@@ -2019,7 +2000,7 @@ int32_t atcommand_statuspoint(int32_t fd, MapSessionData *sd, const char *args)
             clif_displaymessage(fd, "Impossible to increase the number/value.");
         return -1;
     }
-    sd->status.status_point = static_cast<int16_t>(new_status_points);
+    sd->status.status_point = static_cast<sint16>(new_status_points);
     clif_updatestatus(sd, SP::STATUSPOINT);
     clif_displaymessage(fd, "Number of status points changed!");
 
@@ -2027,15 +2008,15 @@ int32_t atcommand_statuspoint(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Modify number of skill points
-int32_t atcommand_skillpoint(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_skillpoint(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
-    int32_t points = atoi(args);
+    sint32 points = atoi(args);
     if (!points)
         return -1;
 
-    int32_t new_skill_points = sd->status.skill_point + points;
+    sint32 new_skill_points = sd->status.skill_point + points;
     if (new_skill_points > 0x7FFF)
         new_skill_points = 0x7FFF;
     if (new_skill_points < 0)
@@ -2049,7 +2030,7 @@ int32_t atcommand_skillpoint(int32_t fd, MapSessionData *sd, const char *args)
             clif_displaymessage(fd, "Impossible to increase the number/value.");
         return -1;
     }
-    sd->status.skill_point = static_cast<int16_t>(new_skill_points);
+    sd->status.skill_point = static_cast<sint16>(new_skill_points);
     clif_updatestatus(sd, SP::SKILLPOINT);
     clif_displaymessage(fd, "Number of skill points changed!");
 
@@ -2057,15 +2038,15 @@ int32_t atcommand_skillpoint(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Change your amount of gold
-int32_t atcommand_zeny(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_zeny(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
-    int32_t zeny = atoi(args);
+    sint32 zeny = atoi(args);
     if (!zeny)
         return -1;
 
-    int32_t new_zeny = sd->status.zeny + zeny;
+    sint32 new_zeny = sd->status.zeny + zeny;
     if (new_zeny > MAX_ZENY)
         new_zeny = MAX_ZENY;
     if (new_zeny < 0)
@@ -2088,15 +2069,15 @@ int32_t atcommand_zeny(int32_t fd, MapSessionData *sd, const char *args)
 
 /// Set a stat (str, agi, vit ...)
 template<ATTR attr>
-int32_t atcommand_param(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_param(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
-    int32_t value;
+    sint32 value;
     if (sscanf(args, "%d", &value) < 1 || value == 0)
         return -1;
 
-    int32_t new_value = sd->status.stats[attr] + value;
+    sint32 new_value = sd->status.stats[attr] + value;
     if (new_value > battle_config.max_parameter)
         new_value = battle_config.max_parameter;
     if (new_value < 1)
@@ -2110,7 +2091,7 @@ int32_t atcommand_param(int32_t fd, MapSessionData *sd, const char *args)
             clif_displaymessage(fd, "Impossible to increase the number/value.");
         return -1;
     }
-    sd->status.stats[attr] = static_cast<int16_t>(new_value);
+    sd->status.stats[attr] = static_cast<sint16>(new_value);
     clif_updatestatus(sd, ATTR_TO_SP_BASE(attr));
     clif_updatestatus(sd, ATTR_TO_SP_UP(attr));
     pc_calcstatus(sd, 0);
@@ -2120,16 +2101,16 @@ int32_t atcommand_param(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Add points to *all* status
-int32_t atcommand_all_stats(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_all_stats(sint32 fd, MapSessionData *sd, const char *args)
 {
-    int32_t value;
+    sint32 value;
     if (!args || !*args || sscanf(args, "%d", &value) < 1 || value == 0)
         value = battle_config.max_parameter;
 
-    int32_t count = 0;
+    sint32 count = 0;
     for (ATTR idx : ATTRs)
     {
-        int32_t new_value = static_cast<int32_t>(sd->status.stats[idx]) + value;
+        sint32 new_value = static_cast<sint32>(sd->status.stats[idx]) + value;
         if (new_value > battle_config.max_parameter)
             new_value = battle_config.max_parameter;
         if (new_value < 1)
@@ -2162,7 +2143,7 @@ int32_t atcommand_all_stats(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Summon a player to you
-int32_t atcommand_recall(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_recall(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -2182,12 +2163,12 @@ int32_t atcommand_recall(int32_t fd, MapSessionData *sd, const char *args)
         clif_displaymessage(fd, "Your GM level doesn't authorise you to do this action on this player.");
         return -1;
     }
-    if (maps[sd->m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+    if (maps[sd->m].flag.nowarpto && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
     {
         clif_displaymessage(fd, "You are not authorised to warp anyone to your current map.");
         return -1;
     }
-    if (maps[pl_sd->m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+    if (maps[pl_sd->m].flag.nowarp && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
     {
         clif_displaymessage(fd, "You are not authorised to warp from this player's current map.");
         return -1;
@@ -2201,7 +2182,7 @@ int32_t atcommand_recall(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Resurrect someone else
-int32_t atcommand_revive(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_revive(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -2218,7 +2199,7 @@ int32_t atcommand_revive(int32_t fd, MapSessionData *sd, const char *args)
     pl_sd->status.hp = pl_sd->status.max_hp;
     pc_setstand(pl_sd);
     if (battle_config.pc_invincible_time > 0)
-        pc_setinvincibletimer(sd, battle_config.pc_invincible_time);
+        pc_setinvincibletimer(sd, std::chrono::milliseconds(battle_config.pc_invincible_time));
     clif_updatestatus(pl_sd, SP::HP);
     clif_updatestatus(pl_sd, SP::SP);
     clif_resurrection(pl_sd, 1);
@@ -2228,7 +2209,7 @@ int32_t atcommand_revive(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Show stats of another character
-int32_t atcommand_character_stats(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_character_stats(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -2246,11 +2227,11 @@ int32_t atcommand_character_stats(int32_t fd, MapSessionData *, const char *args
     struct
     {
         const char *name;
-        int32_t value;
+        sint32 value;
     } output_table[] =
     {
-        {"Base Level", pl_sd->status.base_level},
-        {"Job level", pl_sd->status.job_level},
+        {"Base Level", uint8(pl_sd->status.base_level)},
+        {"Job level", uint8(pl_sd->status.job_level)},
         {"Hp", pl_sd->status.hp},
         {"MaxHp", pl_sd->status.max_hp},
         {"Sp", pl_sd->status.sp},
@@ -2266,7 +2247,7 @@ int32_t atcommand_character_stats(int32_t fd, MapSessionData *, const char *args
     char output[200];
     sprintf(output, "'%s' stats:", pl_sd->status.name);
     clif_displaymessage(fd, output);
-    for (int32_t i = 0; i < ARRAY_SIZEOF(output_table); i++)
+    for (sint32 i = 0; i < ARRAY_SIZEOF(output_table); i++)
     {
         sprintf(output, "%s - %d", output_table[i].name, output_table[i].value);
         clif_displaymessage(fd, output);
@@ -2276,32 +2257,31 @@ int32_t atcommand_character_stats(int32_t fd, MapSessionData *, const char *args
 }
 
 /// All stats of characters
-int32_t atcommand_character_stats_all(int32_t fd, MapSessionData *, const char *)
+sint32 atcommand_character_stats_all(sint32 fd, MapSessionData *, const char *)
 {
-    int32_t count = 0;
+    sint32 count = 0;
     for (MapSessionData *pl_sd : auth_sessions)
     {
-        char gmlevel[1024] = "";
+        std::string output;
+        output = STR_PRINTF("Name: %s | BLvl: %d | Job: %s (Lvl: %d) | HP: %d/%d | SP: %d/%d",
+                            pl_sd->status.name, pl_sd->status.base_level,
+                            "N/A", pl_sd->status.job_level,
+                            pl_sd->status.hp, pl_sd->status.max_hp, pl_sd->status.sp,
+                            pl_sd->status.max_sp);
+        clif_displaymessage(fd, output.c_str());
+
+        output = STR_PRINTF("STR: %d | AGI: %d | VIT: %d | INT: %d | DEX: %d | LUK: %d | Zeny: %d",
+                            pl_sd->status.stats[ATTR::STR],
+                            pl_sd->status.stats[ATTR::AGI],
+                            pl_sd->status.stats[ATTR::VIT],
+                            pl_sd->status.stats[ATTR::INT],
+                            pl_sd->status.stats[ATTR::DEX],
+                            pl_sd->status.stats[ATTR::LUK],
+                            pl_sd->status.zeny);
         if (pc_isGM(pl_sd))
-            sprintf(gmlevel, "| GM Lvl: %d", pc_isGM(pl_sd));
-        else
-            sprintf(gmlevel, " ");
+            output += STR_PRINTF(" | GM Lvl: %d", pc_isGM(pl_sd));
 
-        char output[1024];
-        sprintf(output,
-                 "Name: %s | BLvl: %d | Job: %s (Lvl: %d) | HP: %d/%d | SP: %d/%d",
-                 pl_sd->status.name, pl_sd->status.base_level,
-                 "N/A", pl_sd->status.job_level,
-                 pl_sd->status.hp, pl_sd->status.max_hp, pl_sd->status.sp,
-                 pl_sd->status.max_sp);
-        clif_displaymessage(fd, output);
-
-        sprintf(output,
-                 "STR: %d | AGI: %d | VIT: %d | INT: %d | DEX: %d | LUK: %d | Zeny: %d %s",
-                 pl_sd->status.stats[ATTR::STR], pl_sd->status.stats[ATTR::AGI], pl_sd->status.stats[ATTR::VIT],
-                 pl_sd->status.stats[ATTR::INT], pl_sd->status.stats[ATTR::DEX], pl_sd->status.stats[ATTR::LUK],
-                 pl_sd->status.zeny, gmlevel);
-        clif_displaymessage(fd, output);
+        clif_displaymessage(fd, output.c_str());
         clif_displaymessage(fd, "--------");
 
         count++;
@@ -2322,12 +2302,12 @@ int32_t atcommand_character_stats_all(int32_t fd, MapSessionData *, const char *
 }
 
 /// Change display options of a character
-int32_t atcommand_character_option(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_character_option(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
     char character[100];
-    int32_t opt1 = 0, opt2 = 0, opt3 = 0;
+    sint32 opt1 = 0, opt2 = 0, opt3 = 0;
     if (sscanf(args, "%d %d %d %99[^\n]", &opt1, &opt2, &opt3, character) < 4
             || opt1 < 0 || opt2 < 0 || opt3 < 0)
         return -1;
@@ -2346,7 +2326,7 @@ int32_t atcommand_character_option(int32_t fd, MapSessionData *sd, const char *a
     }
     pl_sd->opt1 = opt1;
     pl_sd->opt2 = opt2;
-    pl_sd->status.option = opt3;
+    pl_sd->status.option = OPTION(opt3);
     clif_changeoption(pl_sd);
     pc_calcstatus(pl_sd, 0);
     clif_displaymessage(fd, "Character's options changed.");
@@ -2355,7 +2335,7 @@ int32_t atcommand_character_option(int32_t fd, MapSessionData *sd, const char *a
 }
 
 /// Toggle a character's sex
-int32_t atcommand_char_change_sex(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_char_change_sex(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -2379,7 +2359,7 @@ int32_t atcommand_char_change_sex(int32_t fd, MapSessionData *sd, const char *ar
 }
 
 /// Block the account a character indefinitely
-int32_t atcommand_char_block(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_char_block(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -2416,7 +2396,7 @@ int32_t atcommand_char_block(int32_t fd, MapSessionData *sd, const char *args)
  * <example> @ban +1m-2mn1s-6y test_player
  *           this example adds 1 month and 1 second, and substracts 2 minutes and 6 years at the same time.
  */
-int32_t atcommand_char_ban(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_char_ban(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -2425,10 +2405,10 @@ int32_t atcommand_char_ban(int32_t fd, MapSessionData *sd, const char *args)
         return -1;
 
     const char *modif_p = modif;
-    int32_t year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
+    sint32 year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
     while (*modif_p)
     {
-        int32_t value = atoi(modif_p);
+        sint32 value = atoi(modif_p);
         if (value == 0)
         {
             modif_p++;
@@ -2494,7 +2474,7 @@ int32_t atcommand_char_ban(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Remove an indefinite block
-int32_t atcommand_char_unblock(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_char_unblock(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -2518,7 +2498,7 @@ int32_t atcommand_char_unblock(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Remove a temporary ban
-int32_t atcommand_char_unban(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_char_unban(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -2542,11 +2522,11 @@ int32_t atcommand_char_unban(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Set save point for a character
-int32_t atcommand_character_save(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_character_save(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
-    int16_t x, y;
+    sint16 x, y;
     char character[100];
     fixed_string<16> map_name;
     if (sscanf(args, "%15s %hd %hd %99[^\n]", &map_name, &x, &y, character) < 4
@@ -2568,13 +2548,13 @@ int32_t atcommand_character_save(int32_t fd, MapSessionData *sd, const char *arg
         clif_displaymessage(fd, "Your GM level don't authorise you to do this action on this player.");
         return -1;
     }
-    int32_t m = map_mapname2mapid(map_name);
+    sint32 m = map_mapname2mapid(map_name);
     if (m < 0)
     {
         clif_displaymessage(fd, "Map not found.");
         return -1;
     }
-    if (maps[m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+    if (maps[m].flag.nowarpto && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
     {
         clif_displaymessage(fd, "You are not authorised to set this map as a save map.");
         return -1;
@@ -2586,7 +2566,7 @@ int32_t atcommand_character_save(int32_t fd, MapSessionData *sd, const char *arg
 }
 
 /// Kill everybody
-int32_t atcommand_doom(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_doom(sint32 fd, MapSessionData *sd, const char *)
 {
     for (MapSessionData *pl_sd : auth_sessions)
     {
@@ -2604,7 +2584,7 @@ int32_t atcommand_doom(int32_t fd, MapSessionData *sd, const char *)
 }
 
 /// Kill everybody on the current map
-int32_t atcommand_doommap(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_doommap(sint32 fd, MapSessionData *sd, const char *)
 {
     for (MapSessionData *pl_sd : auth_sessions)
     {
@@ -2638,7 +2618,7 @@ static void atcommand_raise_sub(MapSessionData *sd)
 }
 
 /// Resurrect all characters
-int32_t atcommand_raise(int32_t fd, MapSessionData *, const char *)
+sint32 atcommand_raise(sint32 fd, MapSessionData *, const char *)
 {
     for (MapSessionData *pl_sd : auth_sessions)
     {
@@ -2650,7 +2630,7 @@ int32_t atcommand_raise(int32_t fd, MapSessionData *, const char *)
 }
 
 /// Raise all characters on a map
-int32_t atcommand_raisemap(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_raisemap(sint32 fd, MapSessionData *sd, const char *)
 {
     for (MapSessionData *pl_sd : auth_sessions)
     {
@@ -2664,13 +2644,13 @@ int32_t atcommand_raisemap(int32_t fd, MapSessionData *sd, const char *)
 }
 
 /// Give a character levels
-int32_t atcommand_character_baselevel(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_character_baselevel(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
     char character[100];
-    int32_t level;
-    if (sscanf(args, "%d %99[^\n]", &level, character) < 2 || level == 0)
+    sint32 delta;
+    if (sscanf(args, "%d %99[^\n]", &delta, character) < 2)
         return -1;
 
     MapSessionData *pl_sd = map_nick2sd(character);
@@ -2685,16 +2665,23 @@ int32_t atcommand_character_baselevel(int32_t fd, MapSessionData *sd, const char
         return -1;
     }
 
-    if (pl_sd->status.base_level + level > battle_config.maximum_level)
-        level = battle_config.maximum_level - sd->status.base_level;
-    if (pl_sd->status.base_level + level < 1 )
-        level = 1 - pl_sd->status.base_level;
+    if (uint8(pl_sd->status.base_level) + delta > battle_config.maximum_level)
+        delta = battle_config.maximum_level - uint8(sd->status.base_level);
+    if (uint8(pl_sd->status.base_level) + delta < 1 )
+        delta = 1 - uint8(pl_sd->status.base_level);
 
-    if (level > 0)
+    if (!delta)
     {
-        for (int32_t i = 1; i <= level; i++)
-            pl_sd->status.status_point += (pl_sd->status.base_level + i + 14) / 4;
-        pl_sd->status.base_level += level;
+        clif_displaymessage(fd, "no change");
+        return -1;
+    }
+
+    if (delta > 0)
+    {
+        // TODO: remove stat point duplication
+        for (sint32 i = 1; i <= delta; i++)
+            pl_sd->status.status_point += (uint8(pl_sd->status.base_level) + i + 14) / 4;
+        pl_sd->status.base_level = level_t(uint8(pl_sd->status.base_level) + delta);
         clif_updatestatus(pl_sd, SP::BASELEVEL);
         clif_updatestatus(pl_sd, SP::NEXTBASEEXP);
         clif_updatestatus(pl_sd, SP::STATUSPOINT);
@@ -2707,13 +2694,13 @@ int32_t atcommand_character_baselevel(int32_t fd, MapSessionData *sd, const char
     {
         if (pl_sd->status.status_point > 0)
         {
-            for (int32_t i = 0; i > level; i--)
-                pl_sd->status.status_point -= (pl_sd->status.base_level + i + 14) / 4;
+            for (sint32 i = 0; i > delta; i--)
+                pl_sd->status.status_point -= (uint8(pl_sd->status.base_level) + i + 14) / 4;
             if (pl_sd->status.status_point < 0)
                 pl_sd->status.status_point = 0;
             clif_updatestatus(pl_sd, SP::STATUSPOINT);
         }
-        pl_sd->status.base_level += level;
+        pl_sd->status.base_level = level_t(uint8(pl_sd->status.base_level) + delta);
         pl_sd->status.base_exp = 0;
         clif_updatestatus(pl_sd, SP::BASELEVEL);
         clif_updatestatus(pl_sd, SP::NEXTBASEEXP);
@@ -2728,13 +2715,13 @@ int32_t atcommand_character_baselevel(int32_t fd, MapSessionData *sd, const char
 }
 
 /// Raise a character's job level
-int32_t atcommand_character_joblevel(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_character_joblevel(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
     char character[100];
-    int32_t level = 0;
-    if (sscanf(args, "%d %99[^\n]", &level, character) < 2 || level == 0)
+    sint32 delta = 0;
+    if (sscanf(args, "%d %99[^\n]", &delta, character) < 2)
         return -1;
 
     MapSessionData *pl_sd = map_nick2sd(character);
@@ -2748,19 +2735,25 @@ int32_t atcommand_character_joblevel(int32_t fd, MapSessionData *sd, const char 
         clif_displaymessage(fd, "Your GM level doesn't authorise you to do this action on this player.");
         return -1;
     }
-    int32_t max_level = 10;
-    if (pl_sd->status.job_level + level > max_level)
-        level = max_level - pl_sd->status.job_level;
-    if (level + pl_sd->status.job_level < 1 )
-        level = 1 - pl_sd->status.job_level;
+    sint32 max_level = 10;
+    if (uint8(pl_sd->status.job_level) + delta > max_level)
+        delta = max_level - uint8(pl_sd->status.job_level);
+    if (delta + uint8(pl_sd->status.job_level) < 1 )
+        delta = 1 - uint8(pl_sd->status.job_level);
 
-    pl_sd->status.job_level += level;
+    pl_sd->status.job_level = level_t(uint8(pl_sd->status.job_level) + delta);
     clif_updatestatus(pl_sd, SP::JOBLEVEL);
     clif_updatestatus(pl_sd, SP::NEXTJOBEXP);
 
-    if (level > 0)
+    if (!delta)
     {
-        pl_sd->status.skill_point += level;
+        clif_displaymessage(fd, "no change");
+        return -1;
+    }
+
+    if (delta > 0)
+    {
+        pl_sd->status.skill_point += delta;
         clif_updatestatus(pl_sd, SP::SKILLPOINT);
         pc_calcstatus(pl_sd, 0);
         clif_misceffect(pl_sd, 1);
@@ -2770,7 +2763,7 @@ int32_t atcommand_character_joblevel(int32_t fd, MapSessionData *sd, const char 
     {
         if (pl_sd->status.skill_point > 0)
         {
-            pl_sd->status.skill_point += level;
+            pl_sd->status.skill_point += delta;
             if (pl_sd->status.skill_point < 0)
                 pl_sd->status.skill_point = 0;
             clif_updatestatus(pl_sd, SP::SKILLPOINT);
@@ -2784,7 +2777,7 @@ int32_t atcommand_character_joblevel(int32_t fd, MapSessionData *sd, const char 
 }
 
 /// Disconnect a player
-int32_t atcommand_kick(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_kick(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -2809,7 +2802,7 @@ int32_t atcommand_kick(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Disconnect all players
-int32_t atcommand_kickall(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_kickall(sint32 fd, MapSessionData *sd, const char *)
 {
     for (MapSessionData *pl_sd : auth_sessions)
     {
@@ -2826,7 +2819,7 @@ int32_t atcommand_kickall(int32_t fd, MapSessionData *sd, const char *)
 }
 
 /// Create a new party, even if you don't have the party skill
-int32_t atcommand_party(int32_t, MapSessionData *sd, const char *args)
+sint32 atcommand_party(sint32, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -2839,7 +2832,7 @@ int32_t atcommand_party(int32_t, MapSessionData *sd, const char *args)
 }
 
 /// Kick all players, then shutdown the map server
-int32_t atcommand_mapexit(int32_t, MapSessionData *sd, const char *)
+sint32 atcommand_mapexit(sint32, MapSessionData *sd, const char *)
 {
     atcommand_kickall(-1, sd, NULL);
     clif_GM_kick(sd, sd, 0);
@@ -2848,7 +2841,7 @@ int32_t atcommand_mapexit(int32_t, MapSessionData *sd, const char *)
 }
 
 /// Search for items including the name
-int32_t atcommand_idsearch(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_idsearch(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -2860,9 +2853,9 @@ int32_t atcommand_idsearch(int32_t fd, MapSessionData *, const char *args)
     sprintf(output, "The reference result of '%s' (name: id):", item_name);
     clif_displaymessage(fd, output);
 
-    int32_t match = 0;
+    sint32 match = 0;
     /// FIXME remove hard limit
-    for (int32_t i = 0; i < 20000; i++)
+    for (sint32 i = 0; i < 20000; i++)
     {
         struct item_data *item = itemdb_exists(i);
         if (!item)
@@ -2880,7 +2873,7 @@ int32_t atcommand_idsearch(int32_t fd, MapSessionData *, const char *args)
 }
 
 /// Reset a characters's skills
-int32_t atcommand_charskreset(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_charskreset(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -2908,7 +2901,7 @@ int32_t atcommand_charskreset(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Reset someone's stats
-int32_t atcommand_charstreset(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_charstreset(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -2936,7 +2929,7 @@ int32_t atcommand_charstreset(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// More-or-less completely reset character
-int32_t atcommand_charreset(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_charreset(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -2972,7 +2965,7 @@ int32_t atcommand_charreset(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// (Try to) completely reset a character
-int32_t atcommand_char_wipe(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_char_wipe(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -2994,14 +2987,14 @@ int32_t atcommand_char_wipe(int32_t fd, MapSessionData *sd, const char *args)
     }
 
     // Reset base level
-    pl_sd->status.base_level = 1;
+    pl_sd->status.base_level = level_t(1);
     pl_sd->status.base_exp = 0;
     clif_updatestatus(pl_sd, SP::BASELEVEL);
     clif_updatestatus(pl_sd, SP::NEXTBASEEXP);
     clif_updatestatus(pl_sd, SP::BASEEXP);
 
     // Reset job level
-    pl_sd->status.job_level = 1;
+    pl_sd->status.job_level = level_t(1);
     pl_sd->status.job_exp = 0;
     clif_updatestatus(pl_sd, SP::JOBLEVEL);
     clif_updatestatus(pl_sd, SP::NEXTJOBEXP);
@@ -3012,7 +3005,7 @@ int32_t atcommand_char_wipe(int32_t fd, MapSessionData *sd, const char *args)
     clif_updatestatus(pl_sd, SP::ZENY);
 
     // Clear inventory
-    for (int32_t i = 0; i < MAX_INVENTORY; i++)
+    for (sint32 i = 0; i < MAX_INVENTORY; i++)
     {
         if (sd->status.inventory[i].amount)
         {
@@ -3037,11 +3030,11 @@ int32_t atcommand_char_wipe(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Change another player's appearance
-int32_t atcommand_charmodel(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_charmodel(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
-    uint32_t hair_style, hair_color;
+    uint32 hair_style, hair_color;
     char character[100];
     if (sscanf(args, "%u %u %99[^\n]", &hair_style, &hair_color, character) < 3)
         return -1;
@@ -3065,11 +3058,11 @@ int32_t atcommand_charmodel(int32_t fd, MapSessionData *, const char *args)
 }
 
 /// Adjust someone's skill points
-int32_t atcommand_charskpoint(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_charskpoint(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
-    int32_t points;
+    sint32 points;
     char character[100];
     if (sscanf(args, "%d %99[^\n]", &points, character) < 2 || points == 0)
         return -1;
@@ -3081,7 +3074,7 @@ int32_t atcommand_charskpoint(int32_t fd, MapSessionData *, const char *args)
         return -1;
     }
 
-    int32_t new_skill_points = pl_sd->status.skill_point + points;
+    sint32 new_skill_points = pl_sd->status.skill_point + points;
     if (new_skill_points > 0x7FFF)
         new_skill_points = 0x7FFF;
     if (new_skill_points < 0)
@@ -3105,11 +3098,11 @@ int32_t atcommand_charskpoint(int32_t fd, MapSessionData *, const char *args)
 }
 
 /// Adjust someone's status points
-int32_t atcommand_charstpoint(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_charstpoint(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
-    int32_t points;
+    sint32 points;
     char character[100];
     if (sscanf(args, "%d %99[^\n]", &points, character) < 2 || points == 0)
         return -1;
@@ -3120,7 +3113,7 @@ int32_t atcommand_charstpoint(int32_t fd, MapSessionData *, const char *args)
         clif_displaymessage(fd, "Character not found.");
         return -1;
     }
-    int32_t new_status_points = pl_sd->status.status_point + points;
+    sint32 new_status_points = pl_sd->status.status_point + points;
     if (new_status_points > 0x7FFF)
         new_status_points = 0x7FFF;
     if (new_status_points < 0)
@@ -3144,11 +3137,11 @@ int32_t atcommand_charstpoint(int32_t fd, MapSessionData *, const char *args)
 }
 
 /// Give somebody zeny
-int32_t atcommand_charzeny(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_charzeny(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
-    int32_t zeny;
+    sint32 zeny;
     char character[100];
     if (sscanf(args, "%d %99[^\n]", &zeny, character) < 2 || zeny == 0)
         return -1;
@@ -3159,7 +3152,7 @@ int32_t atcommand_charzeny(int32_t fd, MapSessionData *, const char *args)
         clif_displaymessage(fd, "Character not found.");
         return -1;
     }
-    int32_t new_zeny = pl_sd->status.zeny + zeny;
+    sint32 new_zeny = pl_sd->status.zeny + zeny;
     if (zeny > 0 && (zeny > MAX_ZENY || new_zeny > MAX_ZENY))   // fix positiv overflow
         new_zeny = MAX_ZENY;
     else if (zeny < 0 && (zeny < -MAX_ZENY || new_zeny < 0))    // fix negativ overflow
@@ -3183,15 +3176,15 @@ int32_t atcommand_charzeny(int32_t fd, MapSessionData *, const char *args)
 }
 
 /// Warp all online characters to your location
-int32_t atcommand_recallall(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_recallall(sint32 fd, MapSessionData *sd, const char *)
 {
-    if (maps[sd->m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+    if (maps[sd->m].flag.nowarpto && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
     {
         clif_displaymessage(fd, "You are not authorised to warp somenone to your current map.");
         return -1;
     }
 
-    int32_t count = 0;
+    sint32 count = 0;
     for (MapSessionData *pl_sd : auth_sessions)
     {
         if (sd->status.account_id != pl_sd->status.account_id)
@@ -3199,7 +3192,7 @@ int32_t atcommand_recallall(int32_t fd, MapSessionData *sd, const char *)
         if (pc_isGM(sd) < pc_isGM(pl_sd))
             continue;
 
-        if (maps[pl_sd->m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+        if (maps[pl_sd->m].flag.nowarp && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
             count++;
         else
             pc_setpos(pl_sd, Point{sd->mapname, sd->x, sd->y}, BeingRemoveType::QUIT);
@@ -3219,7 +3212,7 @@ int32_t atcommand_recallall(int32_t fd, MapSessionData *sd, const char *)
 }
 
 /// Warp all members of a party to your location
-int32_t atcommand_partyrecall(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_partyrecall(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -3227,7 +3220,7 @@ int32_t atcommand_partyrecall(int32_t fd, MapSessionData *sd, const char *args)
     if (sscanf(args, "%99[^\n]", party_name) < 1)
         return -1;
 
-    if (maps[sd->m].flag.nowarpto && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+    if (maps[sd->m].flag.nowarpto && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
     {
         clif_displaymessage(fd, "You are not authorised to warp somenone to your actual map.");
         return -1;
@@ -3235,20 +3228,20 @@ int32_t atcommand_partyrecall(int32_t fd, MapSessionData *sd, const char *args)
 
     struct party *p = party_searchname(party_name);
     if (!p)
-        p = party_search(atoi(args));
-    if(!p)
+        p = party_search(party_t(atoi(args)));
+    if (!p)
     {
         clif_displaymessage(fd, "Incorrect name or ID, or no one from the party is online.");
         return -1;
     }
-    int32_t count = 0;
+    sint32 count = 0;
     for (MapSessionData *pl_sd : auth_sessions)
     {
         if (sd->status.account_id == pl_sd->status.account_id)
             continue;
         if (pl_sd->status.party_id != p->party_id)
             continue;
-        if (maps[pl_sd->m].flag.nowarp && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+        if (maps[pl_sd->m].flag.nowarp && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
             count++;
         else
             pc_setpos(pl_sd, Point{sd->mapname, sd->x, sd->y}, BeingRemoveType::QUIT);
@@ -3274,9 +3267,9 @@ int32_t atcommand_partyrecall(int32_t fd, MapSessionData *sd, const char *args)
  * 1 = Show users in that map and their location
  * 2 = Shows NPCs in that map
  */
-int32_t atcommand_mapinfo(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_mapinfo(sint32 fd, MapSessionData *sd, const char *args)
 {
-    int32_t list = 0;
+    sint32 list = 0;
     fixed_string<16> map_name;
     sscanf(args, "%d %15[^\n]", &list, &map_name);
     if (list < 0 || list > 2)
@@ -3287,7 +3280,7 @@ int32_t atcommand_mapinfo(int32_t fd, MapSessionData *sd, const char *args)
     if (!map_name.contains(".gat") && map_name.length() < 13)   // 16 - 4 (.gat)
         strcat(&map_name, ".gat");
 
-    int32_t m_id = map_mapname2mapid(map_name);
+    sint32 m_id = map_mapname2mapid(map_name);
     if (m_id < 0)
     {
         clif_displaymessage(fd, "Map not found.");
@@ -3348,7 +3341,7 @@ int32_t atcommand_mapinfo(int32_t fd, MapSessionData *sd, const char *args)
         break;
     case 2:
         clif_displaymessage(fd, "----- NPCs in Map -----");
-        for (int32_t i = 0; i < maps[m_id].npc_num; )
+        for (sint32 i = 0; i < maps[m_id].npc_num; )
         {
             struct npc_data *nd = maps[m_id].npc[i];
             const char *direction = "Unknown";
@@ -3374,7 +3367,7 @@ int32_t atcommand_mapinfo(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Enable an NPC
-int32_t atcommand_enablenpc(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_enablenpc(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -3394,7 +3387,7 @@ int32_t atcommand_enablenpc(int32_t fd, MapSessionData *, const char *args)
 }
 
 /// Disable an NPC
-int32_t atcommand_disablenpc(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_disablenpc(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -3414,7 +3407,7 @@ int32_t atcommand_disablenpc(int32_t fd, MapSessionData *, const char *args)
 }
 
 /// Display the date/time of the server (should be UTC)
-int32_t atcommand_servertime(int32_t fd, MapSessionData *, const char *)
+sint32 atcommand_servertime(sint32 fd, MapSessionData *, const char *)
 {
     time_t time_server = time(&time_server);
     struct tm *datetime = gmtime(&time_server);
@@ -3431,12 +3424,12 @@ int32_t atcommand_servertime(int32_t fd, MapSessionData *, const char *)
  * removes <quantity> item from a character
  * item can be equipped or not.
  */
-int32_t atcommand_chardelitem(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_chardelitem(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
     char item_name[100];
-    int32_t number;
+    sint32 number;
     char character[100];
     if (sscanf(args, "%99s %d %99[^\n]", item_name, &number, character) < 3 || number < 1)
         return -1;
@@ -3449,7 +3442,7 @@ int32_t atcommand_chardelitem(int32_t fd, MapSessionData *sd, const char *args)
         clif_displaymessage(fd, "Invalid item ID or name.");
         return -1;
     }
-    int32_t item_id = item_data->nameid;
+    sint32 item_id = item_data->nameid;
 
     MapSessionData *pl_sd = map_nick2sd(character);
     if (!pl_sd)
@@ -3462,14 +3455,14 @@ int32_t atcommand_chardelitem(int32_t fd, MapSessionData *sd, const char *args)
         clif_displaymessage(fd, "Your GM level don't authorise you to do this action on this player.");
         return -1;
     }
-    int32_t item_position = pc_search_inventory(pl_sd, item_id);
+    sint32 item_position = pc_search_inventory(pl_sd, item_id);
     if (item_position < 0)
     {
         clif_displaymessage(fd, "Character does not have the item.");
         return -1;
     }
-    int32_t count = 0;
-    for (int32_t i = 0; i < number && item_position >= 0; i++)
+    sint32 count = 0;
+    for (sint32 i = 0; i < number && item_position >= 0; i++)
     {
         pc_delitem(pl_sd, item_position, pl_sd->status.inventory[item_position].amount, 0);
         count++;
@@ -3489,7 +3482,7 @@ int32_t atcommand_chardelitem(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Broadcast a message, including name, to all map servers
-int32_t atcommand_broadcast(int32_t, MapSessionData *sd, const char *args)
+sint32 atcommand_broadcast(sint32, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -3503,7 +3496,7 @@ int32_t atcommand_broadcast(int32_t, MapSessionData *sd, const char *args)
 }
 
 /// Broadcast a message, including name, on the current map server
-int32_t atcommand_localbroadcast(int32_t, MapSessionData *sd, const char *args)
+sint32 atcommand_localbroadcast(sint32, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -3519,7 +3512,7 @@ int32_t atcommand_localbroadcast(int32_t, MapSessionData *sd, const char *args)
 
 /// Change an account's recorded email address
 // Note that we can't guaranteed the address actually points to somebody
-int32_t atcommand_email(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_email(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -3558,9 +3551,9 @@ int32_t atcommand_email(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Display an effect on yourself
-int32_t atcommand_effect(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_effect(sint32 fd, MapSessionData *sd, const char *args)
 {
-    int32_t type = 0, flag = 0;
+    sint32 type = 0, flag = 0;
 
     if (!args || !*args || sscanf(args, "%d %d", &type, &flag) < 2)
         return -1;
@@ -3580,7 +3573,7 @@ int32_t atcommand_effect(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// List someone's inventory
-int32_t atcommand_character_item_list(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_character_item_list(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -3599,9 +3592,9 @@ int32_t atcommand_character_item_list(int32_t fd, MapSessionData *sd, const char
         clif_displaymessage(fd, "Your GM level don't authorise you to do this action on this player.");
         return -1;
     }
-    int32_t counter = 0;
-    int32_t count = 0;
-    for (int32_t i = 0; i < MAX_INVENTORY; i++)
+    sint32 counter = 0;
+    sint32 count = 0;
+    for (sint32 i = 0; i < MAX_INVENTORY; i++)
     {
         if (!pl_sd->status.inventory[i].nameid)
             continue;
@@ -3692,7 +3685,7 @@ int32_t atcommand_character_item_list(int32_t fd, MapSessionData *sd, const char
 }
 
 /// List someone's storage
-int32_t atcommand_character_storage_list(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_character_storage_list(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -3718,9 +3711,9 @@ int32_t atcommand_character_storage_list(int32_t fd, MapSessionData *sd, const c
         return -1;
     }
 
-    int32_t counter = 0;
-    int32_t count = 0;
-    for (int32_t i = 0; i < MAX_STORAGE; i++)
+    sint32 counter = 0;
+    sint32 count = 0;
+    for (sint32 i = 0; i < MAX_STORAGE; i++)
     {
         char output[200];
 
@@ -3757,7 +3750,7 @@ int32_t atcommand_character_storage_list(int32_t fd, MapSessionData *sd, const c
 
 /// Toggle whether you can kill players out of PvP
 // (there is no @charkiller command)
-int32_t atcommand_killer(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_killer(sint32 fd, MapSessionData *sd, const char *)
 {
     sd->special_state.killer = !sd->special_state.killer;
 
@@ -3770,7 +3763,7 @@ int32_t atcommand_killer(int32_t fd, MapSessionData *sd, const char *)
 }
 
 /// Allow players to attack you out of PvP
-int32_t atcommand_killable(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_killable(sint32 fd, MapSessionData *sd, const char *)
 {
     sd->special_state.killable = !sd->special_state.killable;
 
@@ -3783,7 +3776,7 @@ int32_t atcommand_killable(int32_t fd, MapSessionData *sd, const char *)
 }
 
 /// Allow a player to be attacked outside of PvP
-int32_t atcommand_charkillable(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_charkillable(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -3803,7 +3796,7 @@ int32_t atcommand_charkillable(int32_t fd, MapSessionData *, const char *args)
 }
 
 /// Move an NPC
-int32_t atcommand_npcmove(int32_t, MapSessionData *sd, const char *args)
+sint32 atcommand_npcmove(sint32, MapSessionData *sd, const char *args)
 {
     if (!sd)
         return -1;
@@ -3811,7 +3804,7 @@ int32_t atcommand_npcmove(int32_t, MapSessionData *sd, const char *args)
     if (!args || !*args)
         return -1;
 
-    int32_t x, y;
+    sint32 x, y;
     char character[100];
     if (sscanf(args, "%d %d %99[^\n]", &x, &y, character) < 3)
         return -1;
@@ -3829,13 +3822,13 @@ int32_t atcommand_npcmove(int32_t, MapSessionData *sd, const char *args)
 }
 
 /// Create a new semipermanent warp (a type of NPC)
-int32_t atcommand_addwarp(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_addwarp(sint32 fd, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
 
     char map[30];
-    int32_t x, y;
+    sint32 x, y;
     if (sscanf(args, "%30s %d %d[^\n]", map, &x, &y) < 3)
         return -1;
 
@@ -3844,7 +3837,7 @@ int32_t atcommand_addwarp(int32_t fd, MapSessionData *sd, const char *args)
     sprintf(w3, "%s%d%d%d%d", map, sd->x, sd->y, x, y);
     sprintf(w4, "1,1,%s.gat,%d,%d", map, x, y);
 
-    int32_t ret = npc_parse_warp(w1, "warp", w3, w4);
+    sint32 ret = npc_parse_warp(w1, "warp", w3, w4);
 
     char output[200];
     sprintf(output, "New warp NPC => %s", w3);
@@ -3855,11 +3848,11 @@ int32_t atcommand_addwarp(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Apply a visual effect on a player (is this useful?)
-int32_t atcommand_chareffect(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_chareffect(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
-    int32_t type = 0;
+    sint32 type = 0;
     char target[255];
     if (sscanf(args, "%d %255s", &type, target) != 2)
         return -1;
@@ -3875,7 +3868,7 @@ int32_t atcommand_chareffect(int32_t fd, MapSessionData *, const char *args)
 }
 
 /// Put everything into storage to simplify your inventory. Intended as a debugging aid
-int32_t atcommand_storeall(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_storeall(sint32 fd, MapSessionData *sd, const char *)
 {
     nullpo_retr(-1, sd);
 
@@ -3887,7 +3880,7 @@ int32_t atcommand_storeall(int32_t fd, MapSessionData *sd, const char *)
             return 1;
         }
     }
-    for (int32_t i = 0; i < MAX_INVENTORY; i++)
+    for (sint32 i = 0; i < MAX_INVENTORY; i++)
     {
         if (sd->status.inventory[i].amount)
         {
@@ -3903,11 +3896,11 @@ int32_t atcommand_storeall(int32_t fd, MapSessionData *sd, const char *)
 }
 
 /// lookup a skill by name
-int32_t atcommand_skillid(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_skillid(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
-    for (int32_t idx = 0; skill_names[idx].id; idx++)
+    for (sint32 idx = 0; skill_names[idx].id; idx++)
     {
         if ((strcasecmp(skill_names[idx].name, args) == 0) ||
             (strcasecmp(skill_names[idx].desc, args) == 0))
@@ -3922,7 +3915,7 @@ int32_t atcommand_skillid(int32_t fd, MapSessionData *, const char *args)
 }
 
 /// Summon monsters
-int32_t atcommand_summon(int32_t, MapSessionData *sd, const char *args)
+sint32 atcommand_summon(sint32, MapSessionData *sd, const char *args)
 {
     nullpo_retr(-1, sd);
 
@@ -3933,25 +3926,25 @@ int32_t atcommand_summon(int32_t, MapSessionData *sd, const char *args)
     if (sscanf(args, "%99s", name) < 1)
         return -1;
 
-    int32_t mob_id = atoi(name);
+    sint32 mob_id = atoi(name);
     if (!mob_id)
         mob_id = mobdb_searchname(name);
     if (!mob_id)
         return -1;
 
-    uint16_t x = sd->x + MPRAND(-5, 10);
-    uint16_t y = sd->y + MPRAND(-5, 10);
+    uint16 x = sd->x + MPRAND(-5, 10);
+    uint16 y = sd->y + MPRAND(-5, 10);
 
     fixed_string<16> ths;
     ths.copy_from("this");
-    int32_t id = mob_once_spawn(sd, {ths, x, y}, "--ja--", mob_id, 1, "");
+    BlockID id = mob_once_spawn(sd, {ths, x, y}, "--ja--", mob_id, 1, "");
     struct mob_data *md = static_cast<struct mob_data *>(map_id2bl(id));
     if (md)
     {
         md->master_id = sd->id;
         md->state.special_mob_ai = 1;
-        md->mode = mob_db[md->mob_class].mode | 0x04;
-        md->deletetimer = add_timer(gettick() + 60000, mob_timer_delete, id);
+        md->mode = mob_db[md->mob_class].mode | MobMode::AGGRESSIVE;
+        md->deletetimer = add_timer(gettick() + std::chrono::minutes(1), mob_timer_delete, id);
         clif_misceffect(md, 344);
     }
 
@@ -3959,19 +3952,19 @@ int32_t atcommand_summon(int32_t, MapSessionData *sd, const char *args)
 }
 
 /// Temporarily adjust the GM level required to use a GM command for testing
-int32_t atcommand_adjcmdlvl(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_adjcmdlvl(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
-    int32_t newlev;
+    sint32 newlev;
     char cmd[100];
     if (sscanf(args, "%d %99s", &newlev, cmd) != 2)
         return -1;
 
-    for (int32_t i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
+    for (sint32 i = 0; i < ARRAY_SIZEOF(atcommand_info); i++)
         if (strcasecmp(cmd, atcommand_info[i].command + 1) == 0)
         {
-            atcommand_info[i].level = newlev;
+            atcommand_info[i].level = gm_level_t(newlev);
             clif_displaymessage(fd, "@command level changed.");
             return 0;
         }
@@ -3981,13 +3974,13 @@ int32_t atcommand_adjcmdlvl(int32_t fd, MapSessionData *, const char *args)
 }
 
 /// Temporarily grant GM powers (for testing)
-int32_t atcommand_adjgmlvl(int32_t, MapSessionData *, const char *args)
+sint32 atcommand_adjgmlvl(sint32, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
-    int32_t newlev;
+    gm_level_t newlev;
     char user[100];
-    if (sscanf(args, "%d %99s", &newlev, user) != 2)
+    if (SSCANF(args, "%hhu %99s", &newlev, user) != 2)
         return -1;
 
     MapSessionData *pl_sd = map_nick2sd(user);
@@ -4000,7 +3993,7 @@ int32_t atcommand_adjgmlvl(int32_t, MapSessionData *, const char *args)
 }
 
 /// Open a trade window with a player without being on the same map
-int32_t atcommand_trade(int32_t, MapSessionData *sd, const char *args)
+sint32 atcommand_trade(sint32, MapSessionData *sd, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -4013,7 +4006,7 @@ int32_t atcommand_trade(int32_t, MapSessionData *sd, const char *args)
 
 // TMW Magic atcommands by Fate
 
-static int32_t magic_base = TMW_MAGIC;
+static sint32 magic_base = TMW_MAGIC;
 static const char *magic_skill_names[] =
 {
     "magic",
@@ -4024,7 +4017,7 @@ static const char *magic_skill_names[] =
     "astral" };
 
 /// Display magic info for a character
-int32_t atcommand_magic_info(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_magic_info(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -4042,7 +4035,7 @@ int32_t atcommand_magic_info(int32_t fd, MapSessionData *, const char *args)
     sprintf(buf, "`%s' has the following magic skills:", character);
     clif_displaymessage(fd, buf);
 
-    for (int32_t i = 0; i < ARRAY_SIZEOF(magic_skill_names); i++)
+    for (sint32 i = 0; i < ARRAY_SIZEOF(magic_skill_names); i++)
     {
         sprintf(buf, "%d in %s", pl_sd->status.skill[i + magic_base].lv,
                  magic_skill_names[i]);
@@ -4053,27 +4046,27 @@ int32_t atcommand_magic_info(int32_t fd, MapSessionData *, const char *args)
     return 0;
 }
 
-static void set_skill(MapSessionData *sd, int32_t i, int32_t level)
+static void set_skill(MapSessionData *sd, sint32 i, sint32 level)
 {
     sd->status.skill[i].id = level ? i : 0;
     sd->status.skill[i].lv = level;
 }
 
 /// Grant somebody some magic skills
-int32_t atcommand_set_magic(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_set_magic(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
     char magic_type[20];
-    int32_t value;
+    sint32 value;
     char character[100];
     if (sscanf(args, "%19s %i %99s", magic_type, &value, character) < 3)
         return -1;
 
-    int32_t skill_index = -1;
+    sint32 skill_index = -1;
     if (strcasecmp("all", magic_type) == 0)
         skill_index = 0;
-    for (int32_t i = 0; skill_index == -1 && i < ARRAY_SIZEOF(magic_skill_names); i++)
+    for (sint32 i = 0; skill_index == -1 && i < ARRAY_SIZEOF(magic_skill_names); i++)
         if (strcasecmp(magic_skill_names[i], magic_type) == 0)
             skill_index = i + magic_base;
 
@@ -4090,7 +4083,7 @@ int32_t atcommand_set_magic(int32_t fd, MapSessionData *, const char *args)
         return -1;
     }
     if (skill_index == 0)
-        for (int32_t i = 0; i < ARRAY_SIZEOF(magic_skill_names); i++)
+        for (sint32 i = 0; i < ARRAY_SIZEOF(magic_skill_names); i++)
             set_skill(pl_sd, i + magic_base, value);
     else
         set_skill(pl_sd, skill_index, value);
@@ -4100,34 +4093,34 @@ int32_t atcommand_set_magic(int32_t fd, MapSessionData *, const char *args)
 }
 
 /// @commands are logged anyway, this function doesn't need to do anything
-int32_t atcommand_log(int32_t, MapSessionData *, const char *)
+sint32 atcommand_log(sint32, MapSessionData *, const char *)
 {
     return 0;
 }
 
 /// say something in chat, that is also recorded in the GM log
-int32_t atcommand_tee(int32_t, MapSessionData *sd, const char *args)
+sint32 atcommand_tee(sint32, MapSessionData *sd, const char *args)
 {
     clif_message(sd, args);
     return 0;
 }
 
 /// Become completely undetectable to players
-int32_t atcommand_invisible(int32_t, MapSessionData *sd, const char *)
+sint32 atcommand_invisible(sint32, MapSessionData *sd, const char *)
 {
     pc_invisibility(sd, 1);
     return 0;
 }
 
 /// Become detectable to players again
-int32_t atcommand_visible(int32_t, MapSessionData *sd, const char *)
+sint32 atcommand_visible(sint32, MapSessionData *sd, const char *)
 {
     pc_invisibility(sd, 0);
     return 0;
 }
 
 /// Implementation for the player iterators
-static int32_t atcommand_jump_iterate(int32_t fd, MapSessionData *sd,
+static sint32 atcommand_jump_iterate(sint32 fd, MapSessionData *sd,
                                   MapSessionData *(*get_start)(void),
                                   MapSessionData *(*get_next)(MapSessionData* current))
 {
@@ -4150,13 +4143,13 @@ static int32_t atcommand_jump_iterate(int32_t fd, MapSessionData *sd,
         clif_displaymessage(fd, "Reached end of players, wrapped");
     }
     if (maps[pl_sd->m].flag.nowarpto
-        && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+        && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
     {
         clif_displaymessage(fd, "You are not authorised to warp you to the map of this player.");
         return -1;
     }
     if (maps[sd->m].flag.nowarp
-        && battle_config.any_warp_GM_min_level > pc_isGM(sd))
+        && gm_level_t(battle_config.any_warp_GM_min_level) > pc_isGM(sd))
     {
         clif_displaymessage(fd, "You are not authorised to warp you from your actual map.");
         return -1;
@@ -4171,19 +4164,19 @@ static int32_t atcommand_jump_iterate(int32_t fd, MapSessionData *sd,
 }
 
 /// Warp to next player
-int32_t atcommand_iterate_forward_over_players(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_iterate_forward_over_players(sint32 fd, MapSessionData *sd, const char *)
 {
     return atcommand_jump_iterate(fd, sd, map_get_first_session, map_get_next_session);
 }
 
 /// Warp to previous player
-int32_t atcommand_iterate_backwards_over_players(int32_t fd, MapSessionData *sd, const char *)
+sint32 atcommand_iterate_backwards_over_players(sint32 fd, MapSessionData *sd, const char *)
 {
     return atcommand_jump_iterate(fd, sd, map_get_last_session, map_get_prev_session);
 }
 
 /// Report something to all GMs
-int32_t atcommand_wgm(int32_t fd, MapSessionData *sd, const char *args)
+sint32 atcommand_wgm(sint32 fd, MapSessionData *sd, const char *args)
 {
     tmw_GmHackMsg("%s: %s", sd->status.name, args);
     if (!pc_isGM(sd))
@@ -4193,7 +4186,7 @@ int32_t atcommand_wgm(int32_t fd, MapSessionData *sd, const char *args)
 }
 
 /// Display a character's skill pool use
-int32_t atcommand_skillpool_info(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_skillpool_info(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
@@ -4208,13 +4201,13 @@ int32_t atcommand_skillpool_info(int32_t fd, MapSessionData *, const char *args)
         return -1;
     }
     char buf[200];
-    int32_t pool_skills[MAX_SKILL_POOL];
-    int32_t pool_skills_nr = skill_pool(pl_sd, pool_skills);
+    sint32 pool_skills[MAX_SKILL_POOL];
+    sint32 pool_skills_nr = skill_pool(pl_sd, pool_skills);
 
     sprintf(buf, "Active skills %d out of %d for %s:", pool_skills_nr,
              skill_pool_max(pl_sd), character);
     clif_displaymessage(fd, buf);
-    for (int32_t i = 0; i < pool_skills_nr; ++i)
+    for (sint32 i = 0; i < pool_skills_nr; ++i)
     {
         sprintf(buf, " - %s [%d]: power %d", skill_name(pool_skills[i]),
                  pool_skills[i], skill_power(pl_sd, pool_skills[i]));
@@ -4225,10 +4218,10 @@ int32_t atcommand_skillpool_info(int32_t fd, MapSessionData *, const char *args)
              skill_pool_skills_size, character);
     clif_displaymessage(fd, buf);
 
-    for (int32_t i = 0; i < skill_pool_skills_size; ++i)
+    for (sint32 i = 0; i < skill_pool_skills_size; ++i)
     {
         const char *name = skill_name(skill_pool_skills[i]);
-        int32_t lvl = pl_sd->status.skill[skill_pool_skills[i]].lv;
+        sint32 lvl = pl_sd->status.skill[skill_pool_skills[i]].lv;
         if (!lvl)
             continue;
         sprintf(buf, " - %s [%d]: lvl %d", name, skill_pool_skills[i], lvl);
@@ -4238,11 +4231,11 @@ int32_t atcommand_skillpool_info(int32_t fd, MapSessionData *, const char *args)
 }
 
 /// Focus somebody on a skill
-int32_t atcommand_skillpool_focus(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_skillpool_focus(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
-    int32_t skill;
+    sint32 skill;
     char character[100];
     if (sscanf(args, "%d %99[^\n]", &skill, character) < 1)
         return -1;
@@ -4262,11 +4255,11 @@ int32_t atcommand_skillpool_focus(int32_t fd, MapSessionData *, const char *args
 }
 
 /// Unfocus somebody's skill
-int32_t atcommand_skillpool_unfocus(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_skillpool_unfocus(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
-    int32_t skill;
+    sint32 skill;
     char character[100];
     if (sscanf(args, "%d %99[^\n]", &skill, character) < 1)
         return -1;
@@ -4286,11 +4279,11 @@ int32_t atcommand_skillpool_unfocus(int32_t fd, MapSessionData *, const char *ar
 }
 
 /// Learn a skill
-int32_t atcommand_skill_learn(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_skill_learn(sint32 fd, MapSessionData *, const char *args)
 {
     if (!args || !*args)
         return -1;
-    int32_t skill, level;
+    sint32 skill, level;
     char character[100];
     if (sscanf(args, "%d %d %99[^\n]", &skill, &level, character) < 1)
         return -1;
@@ -4308,7 +4301,7 @@ int32_t atcommand_skill_learn(int32_t fd, MapSessionData *, const char *args)
 }
 
 /// Check what players are from the same IP
-int32_t atcommand_ipcheck(int32_t fd, MapSessionData *, const char *args)
+sint32 atcommand_ipcheck(sint32 fd, MapSessionData *, const char *args)
 {
     char character[25];
 

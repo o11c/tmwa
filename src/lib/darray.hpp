@@ -46,6 +46,7 @@ protected:
 template<class T>
 class DArray : public DArray_base
 {
+    // TODO: check for what is actually needed (trivially copyable/destructible)
     static_assert(std::is_pod<T>::value, "You must use a POD type");
     static_assert(__alignof__(T) < 4 * sizeof(size_t), "Bad alignment");
 public:

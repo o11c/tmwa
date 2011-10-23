@@ -3,17 +3,17 @@
 
 # include "../common/mmo.hpp"
 
-# include "map.structs.hpp"
+# include "main.structs.hpp"
 
-int32_t storage_storageopen(MapSessionData *sd);
-int32_t storage_storageadd(MapSessionData *sd, int32_t index, int32_t amount);
-int32_t storage_storageget(MapSessionData *sd, int32_t index, int32_t amount);
-int32_t storage_storageclose(MapSessionData *sd);
-int32_t do_init_storage(void);
-struct storage *account2storage(int32_t account_id);
-struct storage *account2storage2(int32_t account_id) __attribute__((pure));
-int32_t storage_storage_quit(MapSessionData *sd);
-int32_t storage_storage_save(int32_t account_id, int32_t final);
-int32_t storage_storage_saved(int32_t account_id);    //Ack from char server that guild store was saved.
+sint32 storage_storageopen(MapSessionData *sd);
+sint32 storage_storageadd(MapSessionData *sd, sint32 index, sint32 amount);
+sint32 storage_storageget(MapSessionData *sd, sint32 index, sint32 amount);
+sint32 storage_storageclose(MapSessionData *sd);
+struct storage *account2storage(account_t account_id);
+__attribute__((pure))
+struct storage *account2storage2(account_t account_id);
+sint32 storage_storage_quit(MapSessionData *sd);
+sint32 storage_storage_save(account_t account_id, sint32 final);
+sint32 storage_storage_saved(account_t account_id);    //Ack from char server that guild store was saved.
 
 #endif // STORAGE_HPP

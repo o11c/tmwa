@@ -1,9 +1,9 @@
 #ifndef TMW_HPP
 #define TMW_HPP
 
-#include "map.structs.hpp"
+#include "main.structs.hpp"
 
-int32_t tmw_CheckChatSpam(MapSessionData *sd, const char *message);
+sint32 tmw_CheckChatSpam(MapSessionData *sd, const char *message);
 void tmw_GmHackMsg(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void tmw_TrimStr(char *str);
 

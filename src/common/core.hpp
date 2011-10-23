@@ -1,6 +1,8 @@
 #ifndef CORE_HPP
 #define CORE_HPP
 
+#include "../lib/ints.hpp"
+
 /// core.c contains a server-independent main() function
 /// and then runs a do_sendrecv loop
 
@@ -10,7 +12,7 @@ extern bool runflag;
 
 /// This is an external function defined by each server
 /// This function must register stuff for the parse loop
-extern void do_init(int32_t, char **);
+extern void do_init(sint32, char **);
 
 /// Cleanup function called whenever a signal kills us
 /// also called when exit() is called

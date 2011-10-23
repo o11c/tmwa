@@ -1,7 +1,8 @@
-#include "map.hpp"
+#include "main.hpp"
 
 #include <sys/time.h>
 #include <netdb.h>
+#include <cassert>
 
 #include "../common/core.hpp"
 #include "../common/mt_rand.hpp"
@@ -28,29 +29,36 @@
 
 static void map_helpscreen() __attribute__((noreturn));
 
-static struct dbt *id_db = NULL;
-static struct dbt *map_db = NULL;
-static struct dbt *nick_db = NULL;
-static struct dbt *charid_db = NULL;
+static DMap<BlockID, BlockList *> id_db;
+const DMap<BlockID, BlockList *>& get_id_db() { return id_db; }
+static std::map<std::string, map_data *> map_db;
+static std::map<std::string, MapSessionData *> nick_db;
+static std::map<charid_t, struct charid2nick> charid_db;
 
-static int32_t users = 0;
-static BlockList *object[MAX_FLOORITEM];
-obj_id_t first_free_object_id = 0, last_object_id = 0;
+static sint32 users = 0;
+// NOTE: the ID range for temporary objects must be the lowest
+// TODO: why not 1?
+constexpr BlockID MIN_TEMPORARY_OBJECT = BlockID(2);
+// TODO: it might allow more efficient code if this were a power of 2
+constexpr BlockID MAX_TEMPORARY_OBJECT = BlockID(500000);
+static BlockID next_object_id = MIN_TEMPORARY_OBJECT;
+static BlockID first_free_object_id = MIN_TEMPORARY_OBJECT;
 
 #define block_free_max 1048576
 static BlockList *block_free[block_free_max];
-static int32_t block_free_count = 0, block_free_lock = 0;
+static sint32 block_free_count = 0, block_free_lock = 0;
 
 #define BL_LIST_MAX 1048576
 static BlockList *bl_list[BL_LIST_MAX];
-static int32_t bl_list_count = 0;
+static sint32 bl_list_count = 0;
 
 map_data_local maps[MAX_MAP_PER_SERVER];
-int32_t map_num = 0;
+sint32 map_num = 0;
 
 in_port_t map_port = 0;
 
-int32_t autosave_interval = DEFAULT_AUTOSAVE_INTERVAL;
+constexpr std::chrono::minutes DEFAULT_AUTOSAVE_INTERVAL(1);
+std::chrono::milliseconds autosave_interval = DEFAULT_AUTOSAVE_INTERVAL;
 
 struct charid2nick
 {
@@ -63,13 +71,13 @@ char motd_txt[256] = "conf/motd.txt";
 char whisper_server_name[24] = "Server";
 
 /// Save the number of users reported by the char server
-void map_setusers(int32_t n)
+void map_setusers(sint32 n)
 {
     users = n;
 }
 
 /// Get the number of users previously reported by the char server
-int32_t map_getusers(void)
+sint32 map_getusers(void)
 {
     return users;
 }
@@ -78,13 +86,14 @@ int32_t map_getusers(void)
 
 /// Free a block
 // prohibits deleting until block_free_lock is 0
-int32_t map_freeblock(BlockList *bl)
+sint32 map_freeblock(BlockList *bl)
 {
     if (!block_free_lock)
     {
         delete bl;
         return 0;
     }
+    // TODO: set a breakpoint to set a watchpoint
     map_log("Adding block %d due to %d locks", block_free_count, block_free_lock);
     if (block_free_count >= block_free_max)
         map_log("%s: MEMORY LEAK: too many free blocks!", __func__);
@@ -93,15 +102,17 @@ int32_t map_freeblock(BlockList *bl)
     return block_free_lock;
 }
 
+
+// TODO: figure out if this is necessary
 /// Temporarily prohibit freeing blocks.
-int32_t map_freeblock_lock(void)
+sint32 map_freeblock_lock(void)
 {
     return ++block_free_lock;
 }
 
 /// Remove a prohibition on freeing blocks
 // if this was the last lock, free the queued ones
-int32_t map_freeblock_unlock(void)
+sint32 map_freeblock_unlock(void)
 {
     if (!block_free_lock)
     {
@@ -113,8 +124,9 @@ int32_t map_freeblock_unlock(void)
         return block_free_lock;
 
     map_log("Freeing %d deferred blocks", block_free_count);
-    for (int32_t i = 0; i < block_free_count; i++)
+    for (sint32 i = 0; i < block_free_count; i++)
     {
+        //TODO: set a breakpoint to unset the watchpoint
         delete block_free[i];
         block_free[i] = NULL;
     }
@@ -124,7 +136,7 @@ int32_t map_freeblock_unlock(void)
 
 
 /// this is a dummy bl->prev so that legitimate blocks always have non-NULL
-static BlockList bl_head(BL_NUL);
+static BlockList bl_head(BL_NUL, BlockID());
 
 
 /// link a new block
@@ -170,7 +182,7 @@ if (bl->m >= map_num || bl->x >= maps[bl->m].xs || bl->y >= maps[bl->m].ys)
 
 /// Remove a block from the list
 // prev shouldn't be NULL
-int32_t map_delblock(BlockList *bl)
+sint32 map_delblock(BlockList *bl)
 {
     nullpo_ret(bl);
 
@@ -227,8 +239,8 @@ int32_t map_delblock(BlockList *bl)
 
 /// Runs a function for every block in the area
 // if type is 0, all types, else BL_MOB, BL_PC, BL_SKILL, etc
-void map_foreachinarea_impl(MapForEachFunc func, int32_t m,
-                            int32_t x_0, int32_t y_0, int32_t x_1, int32_t y_1, BlockType type)
+void map_foreachinarea_impl(MapForEachFunc func, sint32 m,
+                            sint32 x_0, sint32 y_0, sint32 x_1, sint32 y_1, BlockType type)
 {
     if (m < 0)
         return;
@@ -244,17 +256,17 @@ void map_foreachinarea_impl(MapForEachFunc func, int32_t m,
         y_1 = maps[m].ys - 1;
 
     // save the count from before the changes
-    int32_t blockcount = bl_list_count;
+    sint32 blockcount = bl_list_count;
 
     if (type == BL_NUL || type != BL_MOB)
-        for (int32_t by = y_0 / BLOCK_SIZE; by <= y_1 / BLOCK_SIZE; by++)
+        for (sint32 by = y_0 / BLOCK_SIZE; by <= y_1 / BLOCK_SIZE; by++)
         {
-            for (int32_t bx = x_0 / BLOCK_SIZE; bx <= x_1 / BLOCK_SIZE; bx++)
+            for (sint32 bx = x_0 / BLOCK_SIZE; bx <= x_1 / BLOCK_SIZE; bx++)
             {
-                int32_t b = bx + by * maps[m].bxs;
+                sint32 b = bx + by * maps[m].bxs;
                 BlockList *bl = maps[m].block[b];
-                int32_t c = maps[m].block_count[b];
-                for (int32_t i = 0; i < c && bl; i++, bl = bl->next)
+                sint32 c = maps[m].block_count[b];
+                for (sint32 i = 0; i < c && bl; i++, bl = bl->next)
                 {
                     // if we're not doing every type, only allow the right type
                     if (type != BL_NUL && bl->type != type)
@@ -271,14 +283,14 @@ void map_foreachinarea_impl(MapForEachFunc func, int32_t m,
         } // for by
 
     if (type == BL_NUL || type == BL_MOB)
-        for (int32_t by = y_0 / BLOCK_SIZE; by <= y_1 / BLOCK_SIZE; by++)
+        for (sint32 by = y_0 / BLOCK_SIZE; by <= y_1 / BLOCK_SIZE; by++)
         {
-            for (int32_t bx = x_0 / BLOCK_SIZE; bx <= x_1 / BLOCK_SIZE; bx++)
+            for (sint32 bx = x_0 / BLOCK_SIZE; bx <= x_1 / BLOCK_SIZE; bx++)
             {
-                int32_t b = bx + by * maps[m].bxs;
+                sint32 b = bx + by * maps[m].bxs;
                 BlockList *bl = maps[m].block_mob[b];
-                int32_t c = maps[m].block_mob_count[b];
-                for (int32_t i = 0; i < c && bl; i++, bl = bl->next)
+                sint32 c = maps[m].block_mob_count[b];
+                for (sint32 i = 0; i < c && bl; i++, bl = bl->next)
                 {
                     // check bounds
                     if (bl->x < x_0 || bl->x > x_1)
@@ -298,7 +310,7 @@ void map_foreachinarea_impl(MapForEachFunc func, int32_t m,
     // why does this matter?
     map_freeblock_lock();
 
-    for (int32_t i = blockcount; i < bl_list_count; i++)
+    for (sint32 i = blockcount; i < bl_list_count; i++)
         // Check valid list elements only
         if (bl_list[i]->prev)
             func(bl_list[i]);
@@ -322,11 +334,11 @@ void map_foreachinarea_impl(MapForEachFunc func, int32_t m,
 // once with original location and ds (outsight)
 // then with the new location and -ds (insight)
 
-void map_foreachinmovearea_impl(MapForEachFunc func, int32_t m,
-                                int32_t x_0, int32_t y_0, int32_t x_1, int32_t y_1,
-                                int32_t dx, int32_t dy, BlockType type)
+void map_foreachinmovearea_impl(MapForEachFunc func, sint32 m,
+                                sint32 x_0, sint32 y_0, sint32 x_1, sint32 y_1,
+                                sint32 dx, sint32 dy, BlockType type)
 {
-    int32_t blockcount = bl_list_count;
+    sint32 blockcount = bl_list_count;
 
     if (!dx && !dy)
     {
@@ -358,13 +370,13 @@ void map_foreachinmovearea_impl(MapForEachFunc func, int32_t m,
             x_1 = maps[m].xs - 1;
         if (y_1 >= maps[m].ys)
             y_1 = maps[m].ys - 1;
-        for (int32_t by = y_0 / BLOCK_SIZE; by <= y_1 / BLOCK_SIZE; by++)
+        for (sint32 by = y_0 / BLOCK_SIZE; by <= y_1 / BLOCK_SIZE; by++)
         {
-            for (int32_t bx = x_0 / BLOCK_SIZE; bx <= x_1 / BLOCK_SIZE; bx++)
+            for (sint32 bx = x_0 / BLOCK_SIZE; bx <= x_1 / BLOCK_SIZE; bx++)
             {
                 BlockList *bl = maps[m].block[bx + by * maps[m].bxs];
-                int32_t c = maps[m].block_count[bx + by * maps[m].bxs];
-                for (int32_t i = 0; i < c && bl; i++, bl = bl->next)
+                sint32 c = maps[m].block_count[bx + by * maps[m].bxs];
+                for (sint32 i = 0; i < c && bl; i++, bl = bl->next)
                 {
                     if (type && bl->type != type)
                         continue;
@@ -378,7 +390,7 @@ void map_foreachinmovearea_impl(MapForEachFunc func, int32_t m,
 
                 bl = maps[m].block_mob[bx + by * maps[m].bxs];
                 c = maps[m].block_mob_count[bx + by * maps[m].bxs];
-                for (int32_t i = 0; i < c && bl; i++, bl = bl->next)
+                for (sint32 i = 0; i < c && bl; i++, bl = bl->next)
                 {
                     if (type && bl->type != type)
                         continue;
@@ -404,14 +416,14 @@ void map_foreachinmovearea_impl(MapForEachFunc func, int32_t m,
         if (y_1 >= maps[m].ys)
             y_1 = maps[m].ys - 1;
 
-        for (int32_t by = y_0 / BLOCK_SIZE; by <= y_1 / BLOCK_SIZE; by++)
+        for (sint32 by = y_0 / BLOCK_SIZE; by <= y_1 / BLOCK_SIZE; by++)
         {
-            for (int32_t bx = x_0 / BLOCK_SIZE; bx <= x_1 / BLOCK_SIZE; bx++)
+            for (sint32 bx = x_0 / BLOCK_SIZE; bx <= x_1 / BLOCK_SIZE; bx++)
             {
-                int32_t b = bx + by * maps[m].bxs;
+                sint32 b = bx + by * maps[m].bxs;
                 BlockList *bl = maps[m].block[b];
-                int32_t c = maps[m].block_count[b];
-                for (int32_t i = 0; i < c && bl; i++, bl = bl->next)
+                sint32 c = maps[m].block_count[b];
+                for (sint32 i = 0; i < c && bl; i++, bl = bl->next)
                 {
                     if (type && bl->type != type)
                         continue;
@@ -429,7 +441,7 @@ void map_foreachinmovearea_impl(MapForEachFunc func, int32_t m,
 
                 bl = maps[m].block_mob[b];
                 c = maps[m].block_mob_count[b];
-                for (int32_t i = 0; i < c && bl; i++, bl = bl->next)
+                for (sint32 i = 0; i < c && bl; i++, bl = bl->next)
                 {
                     if (type && bl->type != type)
                         continue;
@@ -454,7 +466,7 @@ void map_foreachinmovearea_impl(MapForEachFunc func, int32_t m,
     // prevent freeing blocks
     map_freeblock_lock();
 
-    for (int32_t i = blockcount; i < bl_list_count; i++)
+    for (sint32 i = blockcount; i < bl_list_count; i++)
         // only act on valid blocks
         if (bl_list[i]->prev)
             func(bl_list[i]);
@@ -466,105 +478,76 @@ void map_foreachinmovearea_impl(MapForEachFunc func, int32_t m,
 }
 
 /// Add a temporary object on the floor (loot, etc)
-obj_id_t map_addobject(BlockList *bl)
+BlockID map_addobject(BlockList *bl)
 {
-    if (!bl)
+    nullpo_retr(BlockID(), bl);
+    if (first_free_object_id >= MAX_TEMPORARY_OBJECT)
+        first_free_object_id = MIN_TEMPORARY_OBJECT;
+    if (id_db.replace(first_free_object_id, bl))
     {
-        map_log("%s: nullpo!", __func__);
-        return 0;
-    }
-    if (first_free_object_id < 2 || first_free_object_id >= MAX_FLOORITEM)
-        first_free_object_id = 2;
-    for (; first_free_object_id < MAX_FLOORITEM; first_free_object_id++)
-        if (!object[first_free_object_id])
-            break;
-    if (first_free_object_id >= MAX_FLOORITEM)
-    {
-        map_log("no free object id");
-        return 0;
-    }
-    if (last_object_id < first_free_object_id)
-        last_object_id = first_free_object_id;
-    object[first_free_object_id] = bl;
-    numdb_insert(id_db, first_free_object_id, static_cast<void *>(bl));
-    return first_free_object_id;
-}
-
-// TODO inline this
-static void map_delobjectnofree(obj_id_t id, BlockType type)
-{
-    if (!object[id])
-        return;
-
-    if (object[id]->type != type)
-    {
-        map_log("Incorrect type: expected %d, got %d", type, object[id]->type);
+        map_log("Error: too many or long lived temporary objects!");
         abort();
     }
-
-    map_delblock(object[id]);
-    numdb_erase(id_db, id);
-//  map_freeblock(object[id]);
-    object[id] = NULL;
-
-    if (first_free_object_id > id)
-        first_free_object_id = id;
-
-    while (last_object_id > 2 && object[last_object_id] == NULL)
-        last_object_id--;
+    return first_free_object_id++;
 }
 
 /// Free an object WITH deletion
-void map_delobject(obj_id_t id, BlockType type)
+void map_delobject(BlockID id, BlockType type)
 {
-    BlockList *obj = object[id];
+    assert(type == BL_ITEM || type == BL_SPELL);
+    assert (MIN_TEMPORARY_OBJECT <= id && id < MAX_TEMPORARY_OBJECT);
 
-    if (!obj)
-        return;
+    BlockList *bl = id_db.take(id);
+    assert(bl != NULL);
 
-    map_delobjectnofree(id, type);
-    map_freeblock(obj);
+    if (bl->type != type)
+    {
+        map_log("Incorrect type: expected %d, got %d", type, bl->type);
+        abort();
+    }
+
+    map_delblock(bl);
+    map_freeblock(bl);
 }
 
 /// Execute a function for each temporary object of the given type
+// NOTE: this function depends on the fact the temporary IDs are the lowest
 void map_foreachobject_impl(MapForEachFunc func)
 {
-    int32_t blockcount = bl_list_count;
+    // (why) *is* this (and the freeblock_lock) needed?
+    std::deque<BlockList *> temp_blocks;
 
-    for (int32_t i = 2; i <= last_object_id; i++)
+    for (const auto& pair: id_db)
     {
-        if (object[i])
-        {
-            if (bl_list_count >= BL_LIST_MAX)
-                map_log("%s: too many block !", __func__);
-            else
-                bl_list[bl_list_count++] = object[i];
-        }
+        BlockList *bl = pair.second;
+        //assert pair.first == bl->id
+        if (bl->id >= MAX_TEMPORARY_OBJECT)
+            break;
+
+        temp_blocks.push_back(bl);
     }
 
     map_freeblock_lock();
-    for (int32_t i = blockcount; i < bl_list_count; i++)
-        if (bl_list[i]->prev || bl_list[i]->next)
-            func(bl_list[i]);
+    for (BlockList *bl : temp_blocks)
+        if (bl->prev || bl->next)
+            func(bl);
     map_freeblock_unlock();
-
-    bl_list_count = blockcount;
 }
 
 /// Delete floor items
-void map_clearflooritem_timer(timer_id tid, tick_t, uint32_t id)
+void map_clearflooritem_timer(timer_id tid, tick_t, BlockID id)
 {
     bool flag = tid == NULL;
-    struct flooritem_data *fitem = static_cast<struct flooritem_data *>(object[id]);
+    struct flooritem_data *fitem = static_cast<struct flooritem_data *>(id_db.get(id));
     if (!fitem || fitem->type != BL_ITEM)
     {
         map_log("%s: error: no such item", __func__);
-        return;
+        abort();
     }
     if (!flag && fitem->cleartimer != tid)
     {
         map_log("%s: error: bad data", __func__);
-        return;
+        abort();
     }
     if (flag)
         delete_timer(fitem->cleartimer);
@@ -575,38 +558,37 @@ void map_clearflooritem_timer(timer_id tid, tick_t, uint32_t id)
 /// drop an object on a random point near the object
 // return (y << 16 ) | x for the chosen point
 // TODO rewrite this to avoid the double loop - use an LFSR?
-static uint32_t map_searchrandfreecell(uint16_t m, uint16_t x, uint16_t y, int32_t range)
+// TODO I think I did this with while working in the magic system ...
+static std::pair<uint16, uint16> map_searchrandfreecell(uint16 m, uint16 x, uint16 y, sint32 range)
 {
-    int32_t free_cell = 0;
-    for (int32_t i = -range; i <= range; i++)
+    sint32 free_cell = 0;
+    for (sint32 i = -range; i <= range; i++)
     {
         if (i + y < 0 || i + y >= maps[m].ys)
             continue;
-        for (int32_t j = -range; j <= range; j++)
+        for (sint32 j = -range; j <= range; j++)
         {
             if (j + x < 0 || j + x >= maps[m].xs)
                 continue;
-            int32_t c = read_gat(m, j + x, i + y);
             // must be walkable to drop stuff there
-            if (c & 1)
+            if (read_gat(m, j + x, i + y) & MapCell::SOLID)
                 continue;
             free_cell++;
         }
     }
     if (!free_cell)
-        return -1;
+        abort();
     // choose a cell at random, and repeat the logic
     free_cell = MRAND(free_cell);
-    for (int32_t i = -range; i <= range; i++)
+    for (sint32 i = -range; i <= range; i++)
     {
         if (i + y < 0 || i + y >= maps[m].ys)
             continue;
-        for (int32_t j = -range; j <= range; j++)
+        for (sint32 j = -range; j <= range; j++)
         {
             if (j + x < 0 || j + x >= maps[m].xs)
                 continue;
-            int32_t c = read_gat(m, j + x, i + y);
-            if (c & 1)
+            if (read_gat(m, j + x, i + y) & MapCell::SOLID)
                 continue;
             // the chosen cell
             if (!free_cell)
@@ -620,7 +602,7 @@ static uint32_t map_searchrandfreecell(uint16_t m, uint16_t x, uint16_t y, int32
         }
     }
 
-    return x + (y << 16);
+    return {x, y};
 }
 
 /// put items in a 3x3 square around the point
@@ -628,36 +610,17 @@ static uint32_t map_searchrandfreecell(uint16_t m, uint16_t x, uint16_t y, int32
 // this decays with owner_protection
 // after lifetime it disapeears
 // dispersal: the actual range over which they may be scattered
-int32_t map_addflooritem_any(struct item *item_data, int32_t amount, uint16_t m, uint16_t x,
-                          uint16_t y, MapSessionData **owners,
-                          int32_t *owner_protection, int32_t lifetime, int32_t dispersal)
+BlockID map_addflooritem_any(struct item *item_data, sint32 amount,
+                             uint16 m, uint16 x, uint16 y,
+                             MapSessionData **owners, interval_t *owner_protection,
+                             interval_t lifetime, sint32 dispersal)
 {
-    nullpo_ret(item_data);
+    nullpo_retr(BlockID(), item_data);
 
-    uint32_t xy = map_searchrandfreecell(m, x, y, dispersal);
-    if (xy == -1)
-        return 0;
-    int32_t r = mt_random();
+    std::pair<uint16, uint16> xy = map_searchrandfreecell(m, x, y, dispersal);
+    sint32 r = mt_random();
 
-    struct flooritem_data *fitem = new flooritem_data;
-    fitem->prev = fitem->next = NULL;
-    fitem->m = m;
-    fitem->x = xy & 0xffff;
-    fitem->y = (xy >> 16) & 0xffff;
-    fitem->first_get_id = 0;
-    fitem->first_get_tick = 0;
-    fitem->second_get_id = 0;
-    fitem->second_get_tick = 0;
-    fitem->third_get_id = 0;
-    fitem->third_get_tick = 0;
-
-    // this is kind of ugly
-    fitem->id = map_addobject(fitem);
-    if (!fitem->id)
-    {
-        delete fitem;
-        return 0;
-    }
+    struct flooritem_data *fitem = new flooritem_data(m, xy.first, xy.second);
 
     tick_t tick = gettick();
 
@@ -677,8 +640,7 @@ int32_t map_addflooritem_any(struct item *item_data, int32_t amount, uint16_t m,
     fitem->item_data.amount = amount;
     fitem->subx = (r & 3) * 3 + 3;
     fitem->suby = ((r >> 2) & 3) * 3 + 3;
-    fitem->cleartimer = add_timer(gettick() + lifetime, map_clearflooritem_timer,
-                                  fitem->id);
+    fitem->cleartimer = add_timer(gettick() + lifetime, map_clearflooritem_timer, fitem->id);
 
     map_addblock(fitem);
     clif_dropflooritem(fitem);
@@ -687,21 +649,21 @@ int32_t map_addflooritem_any(struct item *item_data, int32_t amount, uint16_t m,
 }
 
 /// Add an item such that only the given players can pick it up, at first
-int32_t map_addflooritem(struct item *item_data, int32_t amount, uint16_t m, uint16_t x, uint16_t y,
-                      MapSessionData *first_sd,
-                      MapSessionData *second_sd,
-                      MapSessionData *third_sd)
+BlockID map_addflooritem(struct item *item_data, sint32 amount,
+                         uint16 m, uint16 x, uint16 y,
+                         MapSessionData *first_sd, MapSessionData *second_sd,
+                         MapSessionData *third_sd)
 {
     MapSessionData *owners[3] = { first_sd, second_sd, third_sd };
-    int32_t owner_protection[3];
+    interval_t owner_protection[3];
 
-    owner_protection[0] = battle_config.item_first_get_time;
-    owner_protection[1] = owner_protection[0] + battle_config.item_second_get_time;
-    owner_protection[2] = owner_protection[1] + battle_config.item_third_get_time;
+    owner_protection[0] = std::chrono::milliseconds(battle_config.item_first_get_time);
+    owner_protection[1] = owner_protection[0] + std::chrono::milliseconds(battle_config.item_second_get_time);
+    owner_protection[2] = owner_protection[1] + std::chrono::milliseconds(battle_config.item_third_get_time);
 
     return map_addflooritem_any(item_data, amount, m, x, y,
-                                 owners, owner_protection,
-                                 battle_config.flooritem_lifetime, 1);
+                                owners, owner_protection,
+                                std::chrono::milliseconds(battle_config.flooritem_lifetime), 1);
 }
 
 /// Add an charid->charname mapping
@@ -709,39 +671,31 @@ int32_t map_addflooritem(struct item *item_data, int32_t amount, uint16_t m, uin
 // then send the reply to that session
 void map_addchariddb(charid_t charid, const char *name)
 {
-    struct charid2nick *p = static_cast<struct charid2nick *>(numdb_search(charid_db, charid).p);
-    if (!p)
-    {
-        // if not in the database, it will need to be added it
-        CREATE(p, struct charid2nick, 1);
-    }
-    else
-        // is this really necessary?
-        numdb_erase(charid_db, charid);
-
-    STRZCPY(p->nick, name);
-    numdb_insert(charid_db, charid, static_cast<void *>(p));
+    struct charid2nick p;
+    STRZCPY(p.nick, name);
+    charid_db[charid] = p;
 }
 
 /// Add block to DB
 void map_addiddb(BlockList *bl)
 {
     nullpo_retv(bl);
-    numdb_insert(id_db, bl->id, static_cast<void *>(bl));
+    id_db.set(bl->id, bl);
 }
 
 /// Delete block from DB
 void map_deliddb(BlockList *bl)
 {
     nullpo_retv(bl);
-    numdb_erase(id_db, bl->id);
+    id_db.set(bl->id, NULL);
 }
 
 /// Add mapping name to session
 void map_addnickdb(MapSessionData *sd)
 {
     nullpo_retv(sd);
-    strdb_insert(nick_db, sd->status.name, static_cast<void *>(sd));
+    if (!nick_db.insert({sd->status.name, sd}).second)
+        abort();
 }
 
 /// A player quits from the map server
@@ -782,40 +736,40 @@ void map_quit(MapSessionData *sd)
 
     map_delblock(sd);
 
-    numdb_erase(id_db, sd->id);
-    strdb_erase(nick_db, sd->status.name);
-    numdb_erase(charid_db, static_cast<numdb_key_t>(sd->status.char_id));
+    id_db.set(sd->id, NULL);
+    nick_db.erase(sd->status.name);
+    charid_db.erase(sd->status.char_id);
 }
 
 // return the session data of the given account ID
-MapSessionData *map_id2sd(uint32_t id)
+MapSessionData *map_id2sd(BlockID id)
 {
     for (MapSessionData *sd : all_sessions)
         if (sd->id == id)
             return sd;
-        return NULL;
+    return NULL;
 }
-MapSessionData *map_id2authsd(uint32_t id)
+MapSessionData *map_id2authsd(BlockID id)
 {
     for (MapSessionData *sd : auth_sessions)
         if (sd->id == id)
             return sd;
-        return NULL;
+    return NULL;
 }
 
 /// get name of a character
 const char *map_charid2nick(charid_t id)
 {
-    struct charid2nick *p = static_cast<struct charid2nick *>(numdb_search(charid_db, id).p);
-
-    if (!p)
+    auto it = charid_db.find(id);
+    if (it == charid_db.end())
         return NULL;
-    return p->nick;
+
+    return it->second.nick;
 }
 
 /// Operations to iterate over active map sessions
 
-static MapSessionData *map_get_session(int32_t i)
+static MapSessionData *map_get_session(sint32 i)
 {
     if (i < 0 || i > fd_max || !session[i])
         return NULL;
@@ -826,11 +780,11 @@ static MapSessionData *map_get_session(int32_t i)
     return NULL;
 }
 
-static MapSessionData *map_get_session_forward(int32_t start) __attribute__((pure));
-static MapSessionData *map_get_session_forward(int32_t start)
+static MapSessionData *map_get_session_forward(sint32 start) __attribute__((pure));
+static MapSessionData *map_get_session_forward(sint32 start)
 {
     // this loop usually isn't traversed many times
-    for (int32_t i = start; i < fd_max; i++)
+    for (sint32 i = start; i < fd_max; i++)
     {
         MapSessionData *d = map_get_session(i);
         if (d)
@@ -840,10 +794,10 @@ static MapSessionData *map_get_session_forward(int32_t start)
     return NULL;
 }
 
-static MapSessionData *map_get_session_backward(int32_t start)
+static MapSessionData *map_get_session_backward(sint32 start)
 {
     // this loop usually isn't traversed many times
-    for (int32_t i = start; i >= 0; i--)
+    for (sint32 i = start; i >= 0; i--)
     {
         MapSessionData *d = map_get_session(i);
         if (d)
@@ -880,7 +834,7 @@ MapSessionData *map_nick2sd(const char *nick)
         return NULL;
     size_t nicklen = strlen(nick);
 
-    int32_t quantity = 0;
+    sint32 quantity = 0;
     MapSessionData *sd = NULL;
 
     for (MapSessionData *pl_sd : auth_sessions)
@@ -904,28 +858,19 @@ MapSessionData *map_nick2sd(const char *nick)
     return NULL;
 }
 
-BlockList *map_id2bl(uint32_t id)
+BlockList *map_id2bl(BlockID id)
 {
-    if (id < ARRAY_SIZEOF(object))
-        return object[id];
-    return static_cast<BlockList *>(numdb_search(id_db, id).p);
-}
-
-/// Run func for whole ID db
-void map_foreachiddb(DB_Func func)
-{
-    // NOTE not numdb_foreach
-    db_foreach(id_db, func);
+    return id_db.get(id);
 }
 
 /// Add an NPC to a map
 // there was some Japanese comment about warps
 // return the index within that maps NPC list
-int32_t map_addnpc(int32_t m, struct npc_data *nd)
+sint32 map_addnpc(sint32 m, struct npc_data *nd)
 {
     if (m < 0 || m >= map_num)
         return -1;
-    int32_t i;
+    sint32 i;
     for (i = 0; i < maps[m].npc_num && i < MAX_NPC_PER_MAP; i++)
         if (!maps[m].npc[i])
             break;
@@ -943,15 +888,19 @@ int32_t map_addnpc(int32_t m, struct npc_data *nd)
 
     maps[m].npc[i] = nd;
     nd->n = i;
-    numdb_insert(id_db, nd->id, static_cast<void *>(nd));
+    id_db.set(nd->id, nd);
 
     return i;
 }
 
 // get a map index from map name
-int32_t map_mapname2mapid(const fixed_string<16>& name)
+// TODO convert to return a map_data_local directly
+sint32 map_mapname2mapid(const fixed_string<16>& name)
 {
-    map_data *md = static_cast<map_data *>(strdb_search(map_db, &name).p);
+    auto it = map_db.find(&name);
+    if (it == map_db.end())
+        return -1;
+    map_data *md = it->second;
     if (md == NULL || md->gat == NULL)
         return -1;
     return static_cast<map_data_local *>(md)->m;
@@ -960,7 +909,10 @@ int32_t map_mapname2mapid(const fixed_string<16>& name)
 /// Get IP/port of a map on another server
 bool map_mapname2ipport(const fixed_string<16>& name, IP_Address *ip, in_port_t *port)
 {
-    map_data *md = static_cast<map_data *>(strdb_search(map_db, &name).p);
+    auto it = map_db.find(&name);
+    if (it == map_db.end())
+        return 0;
+    map_data *md = it->second;
     if (md == NULL || md->gat)
         return 0;
     map_data_remote *mdos = static_cast<map_data_remote *>(md);
@@ -969,12 +921,12 @@ bool map_mapname2ipport(const fixed_string<16>& name, IP_Address *ip, in_port_t 
     return 1;
 }
 
-Direction map_calc_dir(BlockList *src, int32_t x, int32_t y)
+Direction map_calc_dir(BlockList *src, sint32 x, sint32 y)
 {
     nullpo_retr(Direction::S, src);
 
-    int32_t dx = x - src->x;
-    int32_t dy = y - src->y;
+    sint32 dx = x - src->x;
+    sint32 dy = y - src->y;
     if (dx == 0 && dy == 0)
         // 0
         return Direction::S;
@@ -1014,14 +966,14 @@ Direction map_calc_dir(BlockList *src, int32_t x, int32_t y)
     return Direction::S;
 }
 
-uint8_t map_getcell(int32_t m, int32_t x, int32_t y)
+MapCell map_getcell(sint32 m, sint32 x, sint32 y)
 {
     if (x < 0 || x >= maps[m].xs - 1 || y < 0 || y >= maps[m].ys - 1)
-        return 1;
+        return MapCell::ALL;
     return maps[m].gat[x + y * maps[m].xs];
 }
 
-void map_setcell(int32_t m, int32_t x, int32_t y, uint8_t t)
+void map_setcell(sint32 m, sint32 x, sint32 y, MapCell t)
 {
     if (x < 0 || x >= maps[m].xs || y < 0 || y >= maps[m].ys)
         return;
@@ -1031,8 +983,9 @@ void map_setcell(int32_t m, int32_t x, int32_t y, uint8_t t)
 /// know what to do for maps on other map-servers
 bool map_setipport(const fixed_string<16>& name, IP_Address ip, in_port_t port)
 {
-    map_data *md = static_cast<map_data *>(strdb_search(map_db, &name).p);
-    if (!md)
+    auto it = map_db.find(&name);
+
+    if (it == map_db.end())
     {
         // not exist -> add new data
         map_data_remote *mdr = new map_data_remote;
@@ -1040,14 +993,17 @@ bool map_setipport(const fixed_string<16>& name, IP_Address ip, in_port_t port)
         mdr->gat = NULL;
         mdr->ip = ip;
         mdr->port = port;
-        strdb_insert(map_db, &mdr->name, static_cast<void *>(mdr));
+        map_db.insert({ &name, mdr });
         return 0;
     }
+
+    map_data *md = it->second;
     if (md->gat)
     {
         if (ip != clif_getip() || port != clif_getport())
         {
-            map_log("%s: map server told us one of our maps is not ours!", __func__);
+            map_log("%s: map server told us one of our maps is not ours!",
+                    __func__);
             return 1;
         }
         return 0;
@@ -1060,19 +1016,19 @@ bool map_setipport(const fixed_string<16>& name, IP_Address ip, in_port_t port)
 }
 
 /// Read a map
-static bool map_readmap(int32_t m, const char *filename)
+static bool map_readmap(sint32 m, const char *filename)
 {
     printf("\rLoading Maps [%d/%d]: %-50s  ", m, map_num, filename);
     fflush(stdout);
 
     // read & convert fn
-    uint8_t *gat = static_cast<uint8_t *>(grfio_read(filename));
+    uint8 *gat = static_cast<uint8 *>(grfio_read(filename));
     if (!gat)
         return 0;
 
     maps[m].m = m;
-    int32_t xs = maps[m].xs = *reinterpret_cast<uint16_t *>(gat);
-    int32_t ys = maps[m].ys = *reinterpret_cast<uint16_t *>(gat + 2);
+    sint32 xs = maps[m].xs = *reinterpret_cast<uint16 *>(gat);
+    sint32 ys = maps[m].ys = *reinterpret_cast<uint16 *>(gat + 2);
     printf("%i %i", xs, ys);
     fflush(stdout);
 
@@ -1083,7 +1039,9 @@ static bool map_readmap(int32_t m, const char *filename)
         maps[m].flag.pvp = 1;
 
     // instead of copying, just use it
-    maps[m].gat = gat + 4;
+    // TODO: what about instances? I might need to, after all
+    // TODO: look into cow mmap
+    maps[m].gat = reinterpret_cast<MapCell *>(gat + 4);
 
     maps[m].bxs = (xs + BLOCK_SIZE - 1) / BLOCK_SIZE;
     maps[m].bys = (ys + BLOCK_SIZE - 1) / BLOCK_SIZE;
@@ -1092,10 +1050,10 @@ static bool map_readmap(int32_t m, const char *filename)
 
     CREATE(maps[m].block, BlockList *, size);
     CREATE(maps[m].block_mob, BlockList *, size);
-    CREATE(maps[m].block_count, int32_t, size);
-    CREATE(maps[m].block_mob_count, int32_t, size);
+    CREATE(maps[m].block_count, sint32, size);
+    CREATE(maps[m].block_mob_count, sint32, size);
 
-    strdb_insert(map_db, &maps[m].name, static_cast<void *>(&maps[m]));
+    map_db.insert({ &maps[m].name, &maps[m] });
 
     return 1;
 }
@@ -1103,10 +1061,10 @@ static bool map_readmap(int32_t m, const char *filename)
 /// Read all maps
 static void map_readallmap(void)
 {
-    int32_t maps_removed = 0;
+    sint32 maps_removed = 0;
     char fn[256] = "";
 
-    for (int32_t i = 0; i < map_num; i++)
+    for (sint32 i = 0; i < map_num; i++)
     {
         // if (strstr(maps[i].name, ".gat") != NULL)
         sprintf(fn, "data/%s", &maps[i].name);
@@ -1143,7 +1101,7 @@ static void map_addmap(const fixed_string<16>& mapname)
 
 FILE *map_logfile = NULL;
 char *map_logfile_name = NULL;
-static int32_t map_logfile_index;
+static sint32 map_logfile_index;
 
 static void map_close_logfile(void)
 {
@@ -1163,7 +1121,7 @@ static void map_close_logfile(void)
     }
 }
 
-static void map_start_logfile(int32_t suffix)
+static void map_start_logfile(sint32 suffix)
 {
     char *filename_buf = static_cast<char *>(malloc(strlen(map_logfile_name) + 50));
     map_logfile_index = suffix >> LOGFILE_SECONDS_PER_CHUNK_SHIFT;
@@ -1205,7 +1163,7 @@ void map_log(const char *format, ...)
 
     va_list args;
     va_start(args, format);
-    fprintf(map_logfile, "%d.%06d ", static_cast<int32_t>(tv.tv_sec), static_cast<int32_t>(tv.tv_usec));
+    fprintf(map_logfile, "%d.%06d ", static_cast<sint32>(tv.tv_sec), static_cast<sint32>(tv.tv_usec));
     vfprintf(map_logfile, format, args);
     fputc('\n', map_logfile);
     va_end(args);
@@ -1291,8 +1249,8 @@ static void map_config_read(const char *cfgName)
             }
             if (strcasecmp(w1, "autosave_time") == 0)
             {
-                autosave_interval = atoi(w2) * 1000;
-                if (autosave_interval <= 0)
+                autosave_interval = std::chrono::seconds(atoi(w2));
+                if (autosave_interval <= std::chrono::seconds::zero())
                     autosave_interval = DEFAULT_AUTOSAVE_INTERVAL;
                 continue;
             }
@@ -1336,7 +1294,7 @@ void map_helpscreen(void)
     exit(1);
 }
 
-int32_t compare_item(struct item *a, struct item *b)
+sint32 compare_item(struct item *a, struct item *b)
 {
     return a->nameid == b->nameid;
 }
@@ -1348,13 +1306,13 @@ void term_func(void)
 }
 
 /// parse command-line arguments
-void do_init(int32_t argc, char *argv[])
+void do_init(sint32 argc, char *argv[])
 {
     const char *MAP_CONF_NAME = "conf/map_athena.conf";
     const char *BATTLE_CONF_FILENAME = "conf/battle_athena.conf";
     const char *ATCOMMAND_CONF_FILENAME = "conf/atcommand_athena.conf";
 
-    for (int32_t i = 1; i < argc; i++)
+    for (sint32 i = 1; i < argc; i++)
     {
 
         if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0
@@ -1372,11 +1330,6 @@ void do_init(int32_t argc, char *argv[])
     battle_config_read(BATTLE_CONF_FILENAME);
     atcommand_config_read(ATCOMMAND_CONF_FILENAME);
 
-    id_db = numdb_init();
-    map_db = strdb_init();
-    nick_db = strdb_init();
-    charid_db = numdb_init();
-
     map_readallmap();
 
     do_init_chrif();
@@ -1388,7 +1341,6 @@ void do_init(int32_t argc, char *argv[])
     do_init_npc();
     do_init_pc();
     do_init_party();
-    do_init_storage();
     do_init_skill();
     do_init_magic();
 
@@ -1402,7 +1354,7 @@ void do_init(int32_t argc, char *argv[])
             map_port);
 }
 
-int32_t map_scriptcont(MapSessionData *sd, int32_t id)
+sint32 map_scriptcont(MapSessionData *sd, BlockID id)
 {
     BlockList *bl = map_id2bl(id);
 

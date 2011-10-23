@@ -3,7 +3,7 @@
 #include "../common/timer.hpp"
 #include "../common/utils.hpp"
 
-#include "map.hpp"
+#include "main.hpp"
 #include "pc.hpp"
 
 #include "magic.hpp"
@@ -15,7 +15,7 @@ template class std::map<POD_string, spell_t *>;
 template class std::map<POD_string, area_t *>;
 template class std::vector<std::pair<POD_string, val_t>>;
 
-static void set_int(val_t& v, int32_t i)
+static void set_int(val_t& v, sint32 i)
 {
     v.ty = TY::INT;
     v.v_int = i;
@@ -30,13 +30,13 @@ static void set_string (val_t& v, POD_string x)
 static void set_entity(val_t& v, BlockList *e)
 {
     v.ty = TY::ENTITY;
-    v.v_int = e->id;
+    v.v_int = uint32(e->id);
 }
 
 static void set_invocation(val_t& v, invocation_t *i)
 {
     v.ty = TY::INVOCATION;
-    v.v_int = i->id;
+    v.v_int = uint32(i->id);
 }
 
 static void set_spell(val_t& v, spell_t *x)
@@ -50,8 +50,8 @@ namespace magic_conf
 {
     std::vector<std::pair<POD_string, val_t>> vars;
 
-    //int32_t obscure_chance;
-    int32_t min_casttime;
+    //sint32 obscure_chance;
+    interval_t min_casttime;
 
     std::map<POD_string, POD_string> spell_names;
     std::map<POD_string, spell_t *> spells;
@@ -103,18 +103,18 @@ env_t::env_t() : vars(new val_t[magic_conf::vars.size()]) {}
 
 env_t::env_t(const env_t& src) : vars(new val_t[magic_conf::vars.size()])
 {
-    for (int32_t i = 0; i < magic_conf::vars.size(); i++)
+    for (sint32 i = 0; i < magic_conf::vars.size(); i++)
         magic_copy_var(&vars[i], &src.vars[i]);
 }
 
 env_t::~env_t()
 {
-    for (int32_t i = 0; i < magic_conf::vars.size(); i++)
+    for (sint32 i = 0; i < magic_conf::vars.size(); i++)
         magic_clear_var(&vars[i]);
     delete[] vars;
 }
 
-env_t *spell_create_env(spell_t *spell, MapSessionData *caster, int32_t spellpower,
+env_t *spell_create_env(spell_t *spell, MapSessionData *caster, sint32 spellpower,
                         POD_string param)
 {
     env_t *env = new env_t;
@@ -138,7 +138,7 @@ env_t *spell_create_env(spell_t *spell, MapSessionData *caster, int32_t spellpow
         break;
     default:
         fprintf(stderr, "Unexpected spellarg type %d\n",
-                static_cast<int32_t>(spell->spellarg_ty));
+                static_cast<sint32>(spell->spellarg_ty));
         abort();
     }
 
@@ -158,7 +158,7 @@ static void free_components(component_t *& component_holder)
     component_holder = NULL;
 }
 
-void magic_add_component(component_t *& component_holder, int32_t id, int32_t count)
+void magic_add_component(component_t *& component_holder, sint32 id, sint32 count)
 {
     if (count <= 0)
         return;
@@ -198,7 +198,8 @@ static void copy_components(component_t *& component_holder, component_t *compon
 struct spellguard_check_t
 {
     component_t *catalysts, *components;
-    int32_t mana, casttime;
+    sint32 mana;
+    interval_t casttime;
 };
 
 static bool check_prerequisites(MapSessionData *caster, component_t *component)
@@ -220,7 +221,7 @@ static void consume_components(MapSessionData *caster, component_t *component)
     }
 }
 
-static int32_t spellguard_can_satisfy(spellguard_check_t *check, MapSessionData *caster)
+static sint32 spellguard_can_satisfy(spellguard_check_t *check, MapSessionData *caster)
 {
     tick_t tick = gettick();
 
@@ -228,7 +229,7 @@ static int32_t spellguard_can_satisfy(spellguard_check_t *check, MapSessionData 
         && check_prerequisites(caster, check->catalysts)
         && check_prerequisites(caster, check->components))
     {
-        uint32_t casttime = max(check->casttime, magic_conf::min_casttime);
+        interval_t casttime = std::max(check->casttime, magic_conf::min_casttime);
 
         caster->cast_tick = tick + casttime;
 
@@ -287,7 +288,7 @@ static effect_set_t *spellguard_check_sub(spellguard_check_t *check,
         break;
 
     case SpellGuardType::CASTTIME:
-        check->casttime += magic_eval_int(env, guard->s_mana);
+        check->casttime += std::chrono::milliseconds(magic_eval_int(env, guard->s_casttime));
         break;
 
     case SpellGuardType::EFFECT:
@@ -297,7 +298,7 @@ static effect_set_t *spellguard_check_sub(spellguard_check_t *check,
             return NULL;
 
     default:
-        fprintf(stderr, "Unexpected spellguard type %d\n", static_cast<int32_t>(guard->ty));
+        fprintf(stderr, "Unexpected spellguard type %d\n", static_cast<sint32>(guard->ty));
         return NULL;
     }
 
@@ -310,7 +311,8 @@ static effect_set_t *check_spellguard(spellguard_t *guard,
     spellguard_check_t check;
     check.catalysts = NULL;
     check.components = NULL;
-    check.mana = check.casttime = 0;
+    check.mana = 0;
+    check.casttime = DEFAULT;
 
     effect_set_t *retval = spellguard_check_sub(&check, guard, caster, env);
 
@@ -326,7 +328,7 @@ effect_set_t *spell_trigger(spell_t *spell, MapSessionData *caster, env_t *env)
 {
     spellguard_t *guard = spell->spellguard;
 
-    for (int32_t i = 0; i < spell->letdefs_nr; i++)
+    for (sint32 i = 0; i < spell->letdefs_nr; i++)
         env->vars[spell->letdefs[i].id] = env->magic_eval(spell->letdefs[i].expr);
 
     return check_spellguard(guard, caster, env);
@@ -353,20 +355,20 @@ void spell_update_location(invocation_t *invocation)
     spell_set_location(invocation, owner);
 }
 
+// TODO ditch this function and put it all in the constructor
 invocation_t *spell_instantiate(effect_set_t *effect_set, env_t *env)
 {
     invocation_t *retval = new invocation_t;
 
     retval->env = env;
 
-    retval->caster = env->VAR(Var::CASTER).v_int;
+    retval->caster = BlockID(env->VAR(Var::CASTER).v_int);
     retval->spell = env->VAR(Var::SPELL).v_spell;
     retval->current_effect = effect_set->effect;
     retval->trigger_effect = effect_set->at_trigger;
     retval->end_effect = effect_set->at_end;
 
     BlockList *caster = map_id2bl(retval->caster);    // must still exist
-    retval->id = map_addobject(retval);
     retval->m = caster->m;
     retval->x = caster->x;
     retval->y = caster->y;
@@ -377,27 +379,21 @@ invocation_t *spell_instantiate(effect_set_t *effect_set, env_t *env)
     return retval;
 }
 
-invocation_t::invocation_t(invocation_t* rhs) : BlockList(*rhs),
-    flags(),
-    env(new env_t(*rhs->env)),
-    spell(rhs->spell),
-    caster(rhs->caster),
-    subject(0),
-    timer(0),
-    stack(),
-    script_pos(0),
-    current_effect(rhs->trigger_effect),
-    trigger_effect(rhs->trigger_effect),
-    end_effect(NULL),
-    status_change_refs()
+invocation_t::invocation_t(invocation_t* rhs)
+: BlockList(rhs->type, map_addobject(this), rhs->m, rhs->x, rhs->y)
+, flags()
+, env(new env_t(*rhs->env))
+, spell(rhs->spell)
+, caster(rhs->caster)
+, subject()
+, timer()
+, stack()
+, script_pos()
+, current_effect(rhs->trigger_effect)
+, trigger_effect(rhs->trigger_effect)
+, end_effect(NULL)
+, status_change_refs()
 {
-    // unset some parent fields first
-    // (alternatively, we could have used the other constructor and set m, x, y)
-    id = 0;
-    prev = NULL;
-    next = NULL;
-
-    id = map_addobject(this);
     set_invocation(env->vars[Var::INVOCATION], this);
 }
 
@@ -423,7 +419,7 @@ void spell_bind(MapSessionData *subject, invocation_t *invocation)
 
 void spell_unbind(MapSessionData *subject, invocation_t *invocation)
 {
-    invocation->subject = 0;
+    invocation->subject = BlockID();
 
     if (!subject->active_spells.erase(invocation))
         abort();

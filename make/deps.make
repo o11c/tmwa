@@ -14,3 +14,4 @@ include make/login.make
 include make/char.make
 include make/map.make
 include make/admin.make
+include make/monitor.make

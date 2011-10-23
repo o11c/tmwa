@@ -11,18 +11,18 @@
 struct Version
 {
     // old versions send 255, 'T', 'M', 'W' to client
-    uint8_t major, minor, rev;
+    uint8 major, minor, rev;
 
-    uint8_t dev_flag;
+    uint8 dev_flag;
 
     /// Info flags
     // bit 0 set if registration enabled
-    uint8_t info_flags;
+    uint8 info_flags;
     /// The #defines above
-    uint8_t what_server;
+    uint8 what_server;
     /// Custom modification count. 0 for all official tmwA releases.
     // OTOH, this is the only number changed for eA releases
-    uint16_t mod_version;
+    uint16 mod_version;
 
     bool operator == (const Version& rhs) const
     {

@@ -1,15 +1,15 @@
 #! /usr/bin/make -f
 SHELL=/bin/bash
 .DELETE_ON_ERROR:
-.PHONY: all easy clean common lib install
+.PHONY: all easy clean tmwa-common tmwa-lib install
 
 # The map server is slow to build and link.
 # Put it first for the illusion of better parallel builds.
-all: obj/map/map easy
+all: tmwa-map easy
 # Convenience target to rebuild stuff unlikely to break
 # after I change something in src/lib or src/common
 # (Note also that char server is slower to build than the others)
-easy: obj/char/char obj/login/login obj/admin/admin
+easy: tmwa-char tmwa-login tmwa-admin tmwa-monitor
 
 include make/suffixes.make
 include make/defaults.make
@@ -23,13 +23,15 @@ tags: src/*/
 	ctags -R src/
 
 clean:
-	rm -rf obj/
+	rm -rf obj/ tmwa-*
 
 install:
-	install obj/login/login ${ROOT}/${PREFIX_BIN}/tmwa-login
-	install obj/char/char   ${ROOT}/${PREFIX_BIN}/tmwa-char
-	install obj/map/map     ${ROOT}/${PREFIX_BIN}/tmwa-map
-	install obj/admin/admin ${ROOT}/${PREFIX_BIN}/tmwa-admin
+	install tmwa-login      ${ROOT}/${PREFIX_BIN}/tmwa-login
+	install tmwa-char       ${ROOT}/${PREFIX_BIN}/tmwa-char
+	install tmwa-map        ${ROOT}/${PREFIX_BIN}/tmwa-map
+	install tmwa-admin      ${ROOT}/${PREFIX_BIN}/tmwa-admin
+# Awaiting conversion and generification
+#	install tmwa-monitor    ${ROOT}/${PREFIX_BIN}/tmwa-monitor
 
 warnings:: warnings.commented
 	grep -v '^#' $< > $@

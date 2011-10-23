@@ -41,7 +41,7 @@ struct item_data *itemdb_searchname(const char *str)
  * DBの存在確認
  *------------------------------------------
  */
-struct item_data *itemdb_exists(int32_t nameid)
+struct item_data *itemdb_exists(sint32 nameid)
 {
     return static_cast<struct item_data *>(numdb_search(item_db, nameid).p);
 }
@@ -50,7 +50,7 @@ struct item_data *itemdb_exists(int32_t nameid)
  * DBの検索
  *------------------------------------------
  */
-struct item_data *itemdb_search(int32_t nameid)
+struct item_data *itemdb_search(sint32 nameid)
 {
     struct item_data *id = static_cast<struct item_data *>(numdb_search(item_db, nameid).p);
     if (id)
@@ -64,7 +64,7 @@ struct item_data *itemdb_search(int32_t nameid)
     id->value_sell = id->value_buy / 2;
     id->weight = 10;
     id->sex = 2;
-    id->elv = 0;
+    id->elv = DEFAULT;
     id->flag.available = 0;
     id->flag.no_equip = 0;
 
@@ -92,9 +92,9 @@ struct item_data *itemdb_search(int32_t nameid)
  *
  *------------------------------------------
  */
-int32_t itemdb_isequip(int32_t nameid)
+sint32 itemdb_isequip(sint32 nameid)
 {
-    int32_t type = itemdb_type(nameid);
+    sint32 type = itemdb_type(nameid);
     if (type == 0 || type == 2 || type == 3 || type == 6 || type == 10)
         return 0;
     return 1;
@@ -104,11 +104,11 @@ int32_t itemdb_isequip(int32_t nameid)
  *
  *------------------------------------------
  */
-int32_t itemdb_isequip2(struct item_data *data)
+sint32 itemdb_isequip2(struct item_data *data)
 {
     if (data)
     {
-        int32_t type = data->type;
+        sint32 type = data->type;
         if (type == 0 || type == 2 || type == 3 || type == 6 || type == 10)
             return 0;
         else
@@ -121,9 +121,9 @@ int32_t itemdb_isequip2(struct item_data *data)
  *
  *------------------------------------------
  */
-int32_t itemdb_isequip3(int32_t nameid)
+sint32 itemdb_isequip3(sint32 nameid)
 {
-    int32_t type = itemdb_type(nameid);
+    sint32 type = itemdb_type(nameid);
     if (type == 4 || type == 5 || type == 8)
         return 1;
     return 0;
@@ -137,8 +137,8 @@ static void itemdb_readdb(void)
 {
     FILE *fp;
     char line[1024];
-    int32_t ln = 0, lines = 0;
-    int32_t nameid, j;
+    sint32 ln = 0, lines = 0;
+    sint32 nameid, j;
     char *str[32];
     char *p, *np;
     struct item_data *id;
@@ -207,7 +207,7 @@ static void itemdb_readdb(void)
             id->sex = atoi(str[12]);
             id->equip = static_cast<EPOS>(atoi(str[13]));
             id->wlv = atoi(str[14]);
-            id->elv = atoi(str[15]);
+            id->elv = level_t(atoi(str[15]));
             id->look = atoi(str[16]);
             id->flag.available = 1;
 

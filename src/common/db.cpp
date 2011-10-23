@@ -4,7 +4,9 @@
 
 #include "utils.hpp"
 
-static int32_t strdb_cmp(const char *a, const char *b)
+typedef uint32 hash_t;
+
+static sint32 strdb_cmp(const char *a, const char *b)
 {
     return strcmp(a, b);
 }
@@ -13,7 +15,7 @@ static hash_t strdb_hash(const char *a) __attribute__((pure));
 static hash_t strdb_hash(const char *a)
 {
     hash_t h = 0;
-    const uint8_t *p = reinterpret_cast<const uint8_t *>(a);
+    const uint8 *p = reinterpret_cast<const uint8 *>(a);
     while (*p)
     {
         h = (h * 33 + *p++) ^ (h >> 24);
@@ -29,7 +31,7 @@ struct dbt *strdb_init()
     return table;
 }
 
-static int32_t numdb_cmp(numdb_key_t a, numdb_key_t b)
+static sint32 numdb_cmp(numdb_key_t a, numdb_key_t b)
 {
     if (a == b)
         return 0;
@@ -51,8 +53,8 @@ struct dbt *numdb_init(void)
     return table;
 }
 
-static int32_t table_cmp(struct dbt *table, db_key_t a, db_key_t b) __attribute__((pure));
-static int32_t table_cmp(struct dbt *table, db_key_t a, db_key_t b)
+static sint32 table_cmp(struct dbt *table, db_key_t a, db_key_t b) __attribute__((pure));
+static sint32 table_cmp(struct dbt *table, db_key_t a, db_key_t b)
 {
     switch (table->type)
     {
@@ -80,7 +82,7 @@ db_val_t db_search(struct dbt *table, db_key_t key)
 
     while (p)
     {
-        int32_t c = table_cmp(table, key, p->key);
+        sint32 c = table_cmp(table, key, p->key);
         if (c == 0)
             return p->data;
         if (c < 0)
@@ -322,7 +324,7 @@ static void db_rebalance_erase(struct dbn *z, struct dbn **root)
 struct dbn *db_insert(struct dbt *table, db_key_t key, db_val_t data)
 {
     hash_t hash = table_hash(table, key) % HASH_SIZE;
-    int32_t c = 0;
+    sint32 c = 0;
     struct dbn *prev = NULL;
     struct dbn *p = table->ht[hash];
     while (p)
@@ -374,7 +376,7 @@ db_val_t db_erase(struct dbt *table, db_key_t key)
     struct dbn *p = table->ht[hash];
     while (p)
     {
-        int32_t c = table_cmp(table, key, p->key);
+        sint32 c = table_cmp(table, key, p->key);
         if (c == 0)
             break;
         if (c < 0)
@@ -452,7 +454,7 @@ static inline void db_walk_tree(bool dealloc, struct dbn *p, db_func_t func, va_
 
 void db_foreach(struct dbt *table, DB_Func func)
 {
-    for (int32_t i = 0; i < HASH_SIZE; i++)
+    for (sint32 i = 0; i < HASH_SIZE; i++)
     {
 #ifdef SMART_WALK_TREE
         db_walk_tree(false, table->ht[i], func);
@@ -461,7 +463,7 @@ void db_foreach(struct dbt *table, DB_Func func)
         if (!p)
             continue;
         struct dbn *stack[64];
-        int32_t sp = 0;
+        sint32 sp = 0;
         while (1)
         {
             func(p->key, p->data);
@@ -491,7 +493,7 @@ void db_foreach(struct dbt *table, DB_Func func)
 // This function is suspiciously similar to the previous
 void db_final(struct dbt *table, DB_Func func)
 {
-    for (int32_t i = 0; i < HASH_SIZE; i++)
+    for (sint32 i = 0; i < HASH_SIZE; i++)
     {
 #ifdef SMART_WALK_TREE
         db_walk_tree(true, table->ht[i], func);
@@ -500,7 +502,7 @@ void db_final(struct dbt *table, DB_Func func)
         if (!p)
             continue;
         struct dbn *stack[64];
-        int32_t sp = 0;
+        sint32 sp = 0;
         while (1)
         {
             if (func)

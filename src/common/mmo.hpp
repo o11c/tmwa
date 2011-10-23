@@ -3,10 +3,13 @@
 #ifndef MMO_HPP
 #define MMO_HPP
 
+# include <chrono>
+
 # include "../lib/fixed_string.hpp"
 # include "../lib/ip.hpp"
 # include "../lib/earray.hpp"
 # include "../lib/enum.hpp"
+# include "../lib/ints.hpp"
 
 # define MAX_MAP_PER_SERVER 512
 # define MAX_INVENTORY 100
@@ -16,9 +19,7 @@
 # define GLOBAL_REG_NUM 96
 # define ACCOUNT_REG_NUM 16
 # define ACCOUNT_REG2_NUM 16
-# define DEFAULT_WALK_SPEED 150
-# define MIN_WALK_SPEED 0
-# define MAX_WALK_SPEED 1000
+constexpr std::chrono::milliseconds DEFAULT_WALK_SPEED(150);
 # define MAX_STORAGE 300
 # define MAX_PARTY 12
 
@@ -30,14 +31,13 @@
 # define NUM_HAIR_STYLES 20
 # define NUM_HAIR_COLORS 12
 
-typedef uint32_t account_t;
-typedef uint8_t gm_level_t;
-typedef uint32_t charid_t;
-typedef uint32_t party_t;
-// kept for now to prevent breaking TOO much code
-typedef uint8_t level_t;
+UNIQUE_TYPE(account_t, uint32);
+UNIQUE_TYPE(gm_level_t, uint8);
+UNIQUE_TYPE(charid_t, uint32);
+UNIQUE_TYPE(party_t, uint32);
+UNIQUE_TYPE(level_t, uint8);
 
-BIT_ENUM(EPOS, uint16_t)
+BIT_ENUM(EPOS, uint16)
 {
     NONE    = 0x0000,
 
@@ -56,10 +56,30 @@ BIT_ENUM(EPOS, uint16_t)
     ALL     = 0x83FF
 };
 
+// [Fate] status.option properties.  These are persistent status changes.
+// IDs that are not listed are not used in the code (to the best of my knowledge)
+BIT_ENUM(OPTION, uint16)
+{
+    NONE        = 0x0000,
+
+    HIDE2       = 0x0002,   // apparently some weaker non-GM hide
+    CLOAK       = 0x0004,
+    _10         = 0x0010,
+    _20         = 0x0020,
+    HIDE        = 0x0040,   // [Fate] This is the GM `@hide' flag
+    _800        = 0x0800,
+    INVISIBILITY= 0x1000,   // [Fate] Complete invisibility to other clients
+    SCRIBE      = 0x2000,   // [Fate] Auto-logging of nearby comments
+    CHASEWALK   = 0x4000,
+
+    ALL         = 0x7876,   // 421 8 421 42
+    MASK        = 0xd7b8,   // 841 421 821 8 where did this number come from?
+};
+
 struct item
 {
-    uint16_t nameid;
-    uint16_t amount;
+    uint16 nameid;
+    uint16 amount;
     // I think this is a mask of equip slots, but only one is usually (ever?) used
     EPOS equip;
 };
@@ -67,18 +87,18 @@ struct item
 struct Point
 {
     fixed_string<16> map;
-    uint16_t x, y;
+    uint16 x, y;
 };
 
 struct skill
 {
-    uint16_t id, lv, flags;
+    uint16 id, lv, flags;
 };
 
 struct global_reg
 {
     char str[32];
-    int32_t value;
+    sint32 value;
 };
 
 enum class ATTR
@@ -98,21 +118,21 @@ struct mmo_charstatus
     account_t account_id;
     charid_t partner_id;
 
-    int32_t base_exp, job_exp, zeny;
+    sint32 base_exp, job_exp, zeny;
 
-    int16_t status_point, skill_point;
-    int32_t hp, max_hp, sp, max_sp;
-    int16_t option;
-    int16_t hair, hair_color;
+    sint16 status_point, skill_point;
+    sint32 hp, max_hp, sp, max_sp;
+    OPTION option;
+    sint16 hair, hair_color;
     party_t party_id;
 
-    int16_t weapon, shield;
-    int16_t head, chest, legs;
+    sint16 weapon, shield;
+    sint16 head, chest, legs;
 
     char name[24];
     level_t base_level, job_level;
-    earray<int16_t, ATTR, ATTR::COUNT> stats;
-    uint8_t char_num, sex;
+    earray<sint16, ATTR, ATTR::COUNT> stats;
+    uint8 char_num, sex;
 
     IP_Address mapip;
     in_port_t mapport;
@@ -120,34 +140,28 @@ struct mmo_charstatus
     Point last_point, save_point, memo_point[10];
     struct item inventory[MAX_INVENTORY];
     struct skill skill[MAX_SKILL];
-    int32_t global_reg_num;
+    sint32 global_reg_num;
     struct global_reg global_reg[GLOBAL_REG_NUM];
-    int32_t account_reg_num;
+    sint32 account_reg_num;
     struct global_reg account_reg[ACCOUNT_REG_NUM];
-    int32_t account_reg2_num;
+    sint32 account_reg2_num;
     struct global_reg account_reg2[ACCOUNT_REG2_NUM];
 };
 
 struct storage
 {
-    int32_t dirty;
+    sint32 dirty;
     account_t account_id;
-    int16_t storage_status;
-    int16_t storage_amount;
+    sint16 storage_status;
+    sint16 storage_amount;
     struct item storage_[MAX_STORAGE];
-};
-
-struct gm_account
-{
-    account_t account_id;
-    gm_level_t level;
 };
 
 struct party_member
 {
     account_t account_id;
     char name[24], map[16];
-    int32_t leader;
+    sint32 leader;
     bool online;
     level_t lv;
     class MapSessionData *sd;
@@ -164,8 +178,8 @@ struct party
 
 struct square
 {
-    int32_t val1[5];
-    int32_t val2[5];
+    sint32 val1[5];
+    sint32 val2[5];
 };
 
 /// Reason a login can fail

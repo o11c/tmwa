@@ -9,15 +9,15 @@
 #include "chrif.hpp"
 #include "clif.hpp"
 #include "itemdb.hpp"
-#include "map.hpp"
+#include "main.hpp"
 #include "mob.hpp"
 #include "pc.hpp"
 
-static int32_t tmw_ShorterStrlen(const char *s1, const char *s2);
-static int32_t tmw_CheckChatLameness(const char *message) __attribute__((pure));
-static void tmw_AutoBan(MapSessionData *sd, const char *reason, int32_t length);
+static sint32 tmw_ShorterStrlen(const char *s1, const char *s2);
+static sint32 tmw_CheckChatLameness(const char *message) __attribute__((pure));
+static void tmw_AutoBan(MapSessionData *sd, const char *reason, sint32 length);
 
-int32_t tmw_CheckChatSpam(MapSessionData *sd, const char *message)
+sint32 tmw_CheckChatSpam(MapSessionData *sd, const char *message)
 {
     nullpo_retr(1, sd);
     time_t now = time(NULL);
@@ -80,7 +80,7 @@ int32_t tmw_CheckChatSpam(MapSessionData *sd, const char *message)
     return 0;
 }
 
-void tmw_AutoBan(MapSessionData *sd, const char *reason, int32_t length)
+void tmw_AutoBan(MapSessionData *sd, const char *reason, sint32 length)
 {
     char anotherbuf[512];
 
@@ -101,22 +101,22 @@ void tmw_AutoBan(MapSessionData *sd, const char *reason, int32_t length)
 
     clif_displaymessage(sd->fd, anotherbuf);
     /* type: 2 - ban (year, month, day, hour, minute, second) */
-    chrif_char_ask_name(-1, sd->status.name, CharOperation::BAN, 0, 0, 0, length, 0, 0);
+    chrif_char_ask_name(DEFAULT, sd->status.name, CharOperation::BAN, 0, 0, 0, length, 0, 0);
     clif_setwaitclose(sd->fd);
 }
 
 // Compares the length of two strings and returns that of the shorter
-int32_t tmw_ShorterStrlen(const char *s1, const char *s2)
+sint32 tmw_ShorterStrlen(const char *s1, const char *s2)
 {
-    int32_t s1_len = strlen(s1);
-    int32_t s2_len = strlen(s2);
+    sint32 s1_len = strlen(s1);
+    sint32 s2_len = strlen(s2);
     return (s2_len >= s1_len ? s1_len : s2_len);
 }
 
 // Returns true if more than 50% of input message is caps or punctuation
-int32_t tmw_CheckChatLameness(const char *message)
+sint32 tmw_CheckChatLameness(const char *message)
 {
-    int32_t count, lame;
+    sint32 count, lame;
 
     for (count = lame = 0; *message; message++, count++)
         if (isupper(*message) || ispunct(*message))
@@ -143,8 +143,8 @@ void tmw_GmHackMsg(const char *fmt, ...)
     strcat(outbuf, buf);
 
     intif_whisper_message_to_gm(whisper_server_name,
-                             battle_config.hack_info_GM_level, outbuf,
-                             strlen(outbuf) + 1);
+                                gm_level_t(battle_config.hack_info_GM_level),
+                                outbuf, strlen(outbuf) + 1);
 }
 
 /* Remove leading and trailing spaces from a string, modifying in place. */

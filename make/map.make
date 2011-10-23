@@ -2,7 +2,7 @@ make/map.deps: src/map/magic-parser.cpp src/map/magic-lexer.cpp
 
 include make/map.deps
 
-obj/map/map: obj/map/map.o \
+tmwa-map: obj/map/main.o \
  obj/map/magic-lexer.o \
  obj/map/magic-parser.o \
  obj/map/magic.o \

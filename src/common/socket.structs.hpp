@@ -1,6 +1,7 @@
 #ifndef SOCKET_STRUCTS
 #define SOCKET_STRUCTS
 
+# include "../lib/ints.hpp"
 # include "../lib/ip.hpp"
 
 // Struct declaration
@@ -24,7 +25,7 @@ struct socket_data
 
     /// Since this is a single-threaded application, it can't block
     /// These are the read/write queues
-    uint8_t *rdata, *wdata;
+    uint8 *rdata, *wdata;
     size_t max_rdata, max_wdata;
     /// How much is actually in the queue
     size_t rdata_size, wdata_size;
@@ -38,18 +39,18 @@ struct socket_data
     /// Only called when select() indicates the socket is ready
     /// If, after that, nothing is read, it sets eof
     // These could probably be hard-coded with a little work
-    void (*func_recv)(int32_t);
-    void (*func_send)(int32_t);
+    void (*func_recv)(sint32);
+    void (*func_send)(sint32);
     /// This is the important one
     /// Set to different functions depending on whether the connection
     /// is a player or a server/ladmin
     /// Can be set explicitly or via set_defaultparse
-    void (*func_parse)(int32_t);
+    void (*func_parse)(sint32);
     /// Server-specific data type
     SessionData *session_data;
 
     // used when forwarding a packet with different ID
-    void rfifo_change_packet(uint16_t newpacket);
+    void rfifo_change_packet(uint16 newpacket);
 };
 
 #endif //SOCKET_STRUCTS

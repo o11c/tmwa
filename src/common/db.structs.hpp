@@ -1,6 +1,8 @@
 #ifndef DB_STRUCTS_HPP
 #define DB_STRUCTS_HPP
 
+# include <cstdint>
+
 /// Number of tree roots
 // Somewhat arbitrary - larger wastes more space but is faster for large trees
 // num % HASH_SIZE minimize collisions even for similar num
@@ -33,7 +35,6 @@ struct db_val_t
     db_val_t(void *ptr) : p(ptr) {}
     db_val_t(intptr_t iv) : i(iv) {}
 };
-typedef uint32_t hash_t;
 
 /// DataBase Node
 struct dbn

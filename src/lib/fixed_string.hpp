@@ -2,6 +2,8 @@
 #define FIXED_STRING_HPP
 
 #include <cstring>
+#include <cstddef>
+#include <cstdint>
 
 /// A string taking exactly sz bytes of memory
 // Unused bytes are set to 0

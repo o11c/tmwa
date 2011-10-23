@@ -1,6 +1,6 @@
 include make/common.deps
 
-common: \
+tmwa-common: \
 obj/common/core.o \
 obj/common/db.o \
 obj/common/lock.o \

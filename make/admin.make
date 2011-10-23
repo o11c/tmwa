@@ -1,8 +1,7 @@
 include make/admin.deps
 
-obj/admin/admin: obj/admin/admin.o \
+tmwa-admin: obj/admin/main.o \
  obj/common/core.o \
- obj/common/db.o \
  obj/common/md5calc.o \
  obj/common/mt_rand.o \
  obj/common/socket.o \

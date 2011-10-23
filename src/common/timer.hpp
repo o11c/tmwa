@@ -3,17 +3,11 @@
 
 # include "timer.structs.hpp"
 
-/// This is needed to produce a signed result when 2 ticks are subtracted
-inline int32_t DIFF_TICK(tick_t a, tick_t b)
-{
-    return static_cast<int32_t>(a - b);
-}
-
 inline bool operator <(const TimerData& lhs, const TimerData& rhs)
 {
     // Note: the sense is inverted since the lowest tick is the highest priority
     // TODO delete this operator and just use a manual comparator
-    return DIFF_TICK(lhs.tick, rhs.tick) > 0;
+    return lhs.tick > rhs.tick;
 }
 
 
@@ -43,7 +37,7 @@ timer_id add_timer_interval(tick_t tick, interval_t interval, void (&func)(timer
 template<class... Args>
 timer_id add_timer(tick_t tick, void (&func)(timer_id, tick_t, Args...), Args... args)
 {
-    return add_timer_interval(tick, 0, func, args...);
+    return add_timer_interval(tick, DEFAULT, func, args...);
 }
 
 void delete_timer(timer_id);

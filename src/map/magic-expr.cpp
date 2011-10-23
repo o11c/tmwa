@@ -11,7 +11,7 @@
 #include "battle.hpp"
 #include "itemdb.hpp"
 #include "magic-base.hpp"
-#include "map.hpp"
+#include "main.hpp"
 #include "npc.hpp"
 #include "pc.hpp"
 
@@ -26,13 +26,8 @@
 # define RESULT_INVOCATION  (*(result.ty = TY::INVOCATION, &result.v_invocation))
 
 
-static const int32_t heading_x[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
-static const int32_t heading_y[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
-
-int32_t map_is_solid(int32_t m, int32_t x, int32_t y)
-{
-    return map_getcell(m, x, y) == 1;
-}
+static const sint32 heading_x[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
+static const sint32 heading_y[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
 
 area_t::~area_t()
 {
@@ -73,7 +68,7 @@ area_t::area_t(area_t *area, area_t *other_area) :
     ty(AreaType::UNION)
 {}
 
-area_t::area_t(const location_t& loc, int32_t width, int32_t height) :
+area_t::area_t(const location_t& loc, sint32 width, sint32 height) :
     a_rect({loc, width, height}),
     size(width * height),
     ty(AreaType::RECT)
@@ -127,7 +122,7 @@ static const char *show_entity(BlockList *entity)
     }
 }
 
-static void stringify(val_t *v, int32_t within_op __attribute__((deprecated)))
+static void stringify(val_t *v, sint32 within_op __attribute__((deprecated)))
 {
     static const char *dirs[8] =
     {
@@ -151,7 +146,7 @@ static void stringify(val_t *v, int32_t within_op __attribute__((deprecated)))
         return;
 
     case TY::DIR:
-        buf.assign(dirs[static_cast<int32_t>(v->v_dir)]);
+        buf.assign(dirs[static_cast<sint32>(v->v_dir)]);
         break;
 
     case TY::ENTITY:
@@ -178,14 +173,14 @@ static void stringify(val_t *v, int32_t within_op __attribute__((deprecated)))
         invocation_t *invocation =
             within_op
             ? v->v_invocation
-            : static_cast<invocation_t *>(map_id2bl(v->v_int));
+            : static_cast<invocation_t *>(map_id2bl(BlockID(v->v_int)));
         buf = invocation->spell->name.clone();
     }
         break;
 
     default:
         fprintf(stderr, "[magic] INTERNAL ERROR: Cannot stringify %d\n",
-                static_cast<int32_t>(v->ty));
+                static_cast<sint32>(v->ty));
         abort();
     }
 
@@ -242,7 +237,7 @@ static void make_spell(val_t *v)
 }
 
 // Functions
-// int32_t fun_FOO(result, argv[])
+// sint32 fun_FOO(result, argv[])
 
 static bool fun_add(val_t& result, val_t args[])
 {
@@ -444,7 +439,7 @@ static bool fun_if_then_else(val_t& result, val_t args[])
     return 0;
 }
 
-location_t area_t::rect(uint32_t& width, uint32_t& height)
+location_t area_t::rect(uint32& width, uint32& height)
 {
     switch (ty)
     {
@@ -476,8 +471,8 @@ bool area_t::contains(location_t loc)
     case AreaType::RECT:
     {
         location_t aloc = a_rect.loc;
-        uint32_t awidth = a_rect.width;
-        uint32_t aheight = a_rect.height;
+        uint32 awidth = a_rect.width;
+        uint32 aheight = a_rect.height;
         return aloc.m == loc.m
                 && (loc.x >= aloc.x) && (loc.y >= aloc.y)
                 && (loc.x < aloc.x + awidth) && (loc.y < aloc.y + aheight);
@@ -515,7 +510,7 @@ static bool fun_has_shroud(val_t& result, val_t args[])
 #define BATTLE_GETTER(name) \
 static bool fun_##name(val_t& result, val_t args[]) \
 { \
-    RESULT_INT = static_cast<int32_t>(battle_get_##name(ARG_ENTITY(0))); \
+    RESULT_INT = static_cast<sint32>(battle_get_##name(ARG_ENTITY(0))); \
     return 0; \
 }
 
@@ -525,7 +520,12 @@ BATTLE_GETTER(vit);     // battle_get_vit
 BATTLE_GETTER(dex);     // battle_get_dex
 BATTLE_GETTER(luk);     // battle_get_luk
 BATTLE_GETTER(int);     // battle_get_int
-BATTLE_GETTER(level);   // battle_get_level
+//BATTLE_GETTER(level);   // battle_get_level
+static bool fun_level(val_t& result, val_t args[])
+{
+    RESULT_INT = static_cast<uint8>(battle_get_level(ARG_ENTITY(0)));
+    return 0;
+}
 BATTLE_GETTER(hp);      // battle_get_hp
 BATTLE_GETTER(mdef);    // battle_get_mdef
 BATTLE_GETTER(def);     // battle_get_def
@@ -583,7 +583,7 @@ static bool fun_location(val_t& result, val_t args[])
 
 static bool fun_random(val_t& result, val_t args[])
 {
-    int32_t delta = ARG_INT(0);
+    sint32 delta = ARG_INT(0);
     if (delta < 0)
         delta = -delta;
     if (delta == 0)
@@ -609,11 +609,11 @@ static bool fun_random_dir(val_t& result, val_t args[])
 
 static bool fun_hash_entity(val_t& result, val_t args[])
 {
-    RESULT_INT = ARG_ENTITY(0)->id;
+    RESULT_INT = uint32(ARG_ENTITY(0)->id);
     return 0;
 }
 
-bool magic_find_item(val_t args[], int32_t idx, struct item *item, bool *stackable)
+bool magic_find_item(val_t args[], sint32 idx, struct item *item, bool *stackable)
 {
     struct item_data *item_data;
 
@@ -665,7 +665,7 @@ static bool fun_is_equipped(val_t& result, val_t args[])
     GET_ARG_ITEM(1, item, stackable);
 
     MapSessionData *chr = ARG_PC(0);
-    int32_t retval = 0;
+    sint32 retval = 0;
     for (auto& ii : chr->equip_index)
         if (ii >= 0 && chr->status.inventory[ii].nameid == item.nameid)
         {
@@ -701,7 +701,9 @@ static bool fun_partner(val_t& result, val_t args[])
 {
     if (ARG_ENTITY(0)->type == BL_PC && ARG_PC(0)->status.partner_id)
     {
-        RESULT_ENTITY = map_id2sd(ARG_PC(0)->status.partner_id);
+        // yes, it is necessary to convert to the nick string first
+        // just trust me on this one, tmwA is being stupid again
+        RESULT_ENTITY = map_nick2sd(map_charid2nick(ARG_PC(0)->status.partner_id));
         return 0;
     }
     return 1;
@@ -710,10 +712,10 @@ static bool fun_partner(val_t& result, val_t args[])
 static bool fun_awayfrom(val_t& result, val_t args[])
 {
     location_t& loc = ARG_LOCATION(0);
-    int32_t dx = heading_x[static_cast<int32_t>(ARG_DIR(1))];
-    int32_t dy = heading_y[static_cast<int32_t>(ARG_DIR(1))];
-    int32_t distance = ARG_INT(2);
-    while (distance-- && !map_is_solid(loc.m, loc.x + dx, loc.y + dy))
+    sint32 dx = heading_x[static_cast<sint32>(ARG_DIR(1))];
+    sint32 dy = heading_y[static_cast<sint32>(ARG_DIR(1))];
+    sint32 distance = ARG_INT(2);
+    while (distance-- && !(map_getcell(loc.m, loc.x + dx, loc.y + dy) & MapCell::SOLID))
     {
         loc.x += dx;
         loc.y += dy;
@@ -757,8 +759,8 @@ static bool fun_rdistance(val_t& result, val_t args[])
         RESULT_INT = INT_MAX;
     else
     {
-        int32_t dx = ARG_LOCATION(0).x - ARG_LOCATION(1).x;
-        int32_t dy = ARG_LOCATION(0).y - ARG_LOCATION(1).y;
+        sint32 dx = ARG_LOCATION(0).x - ARG_LOCATION(1).x;
+        sint32 dy = ARG_LOCATION(0).y - ARG_LOCATION(1).y;
         RESULT_INT = sqrt((dx * dx) + (dy * dy));
     }
     return 0;
@@ -773,7 +775,7 @@ static bool fun_anchor(val_t& result, val_t args[])
 
 static bool fun_line_of_sight(val_t& result, val_t args[])
 {
-    BlockList e1(BL_NUL), e2(BL_NUL);
+    BlockList e1(BL_NUL, BlockID()), e2(BL_NUL, BlockID());
 
     COPY_LOCATION(e1, ARG_LOCATION(0));
     COPY_LOCATION(e2, ARG_LOCATION(1));
@@ -790,7 +792,7 @@ location_t area_t::random_location()
     case AreaType::UNION:
     {
         // remember: size = au0->size + au1->size
-        int32_t rv = MRAND(size);
+        sint32 rv = MRAND(size);
         // we are operating under the assumption that each component
         // has at least one walkable cell
         if (rv < a_union[0]->size)
@@ -803,35 +805,35 @@ location_t area_t::random_location()
         return a_loc;
     case AreaType::RECT:
     {
-        uint32_t w = a_rect.width, h = a_rect.height;
+        uint32 w = a_rect.width, h = a_rect.height;
         const location_t loc = a_rect.loc;
 
         if (w < 1 || h < 1)
             abort();
 
-        const uint32_t init_pos = MRAND(w*h);
+        const uint32 init_pos = MRAND(w*h);
         // LFSR has 1-based bit indexing, Also need to add one if w*h is 2^n-1
-        const uint32_t bits = 1 + highest_bit(w*h + 1);
+        const uint32 bits = 1 + highest_bit(w*h + 1);
 
-        uint32_t pos = init_pos;
-        if (map_is_solid(loc.m, loc.x + pos % w, loc.y + pos / w))
+        uint32 pos = init_pos;
+        if (map_getcell(loc.m, loc.x + pos % w, loc.y + pos / w) & MapCell::SOLID)
         {
             do
             {
                 do
                     pos = lfsr_next(pos, bits, true);
                 while (pos >= w*h);
-                if (map_is_solid(loc.m, loc.x + pos % w, loc.y + pos / w))
+                if (map_getcell(loc.m, loc.x + pos % w, loc.y + pos / w) & MapCell::SOLID)
                     break;
                 // LFSR is a cycle, just skip the ones out of range
             } while (pos != init_pos);
         }
 
-        return {loc.m, static_cast<uint16_t>(loc.x + pos % w), static_cast<uint16_t>(loc.y + pos / w)};
+        return {loc.m, static_cast<uint16>(loc.x + pos % w), static_cast<uint16>(loc.y + pos / w)};
     }
 
     default:
-        fprintf(stderr, "Unknown area type %d\n", static_cast<int32_t>(ty));
+        fprintf(stderr, "Unknown area type %d\n", static_cast<sint32>(ty));
         abort();
     }
 }
@@ -854,9 +856,9 @@ static bool fun_script_int(val_t& result, val_t args[])
 static bool fun_rbox(val_t& result, val_t args[])
 {
     location_t loc = ARG_LOCATION(0);
-    int32_t radius = ARG_INT(1);
+    sint32 radius = ARG_INT(1);
 
-    RESULT_AREA = new area_t({loc.m, static_cast<uint16_t>(loc.x - radius), static_cast<uint16_t>(loc.y - radius)},
+    RESULT_AREA = new area_t({loc.m, static_cast<uint16>(loc.x - radius), static_cast<uint16>(loc.y - radius)},
                              radius * 2 + 1, radius * 2 + 1);
 
     return 0;
@@ -873,7 +875,7 @@ static bool fun_running_status_update(val_t& result, val_t args[])
 
 static bool fun_status_option(val_t& result, val_t args[])
 {
-    RESULT_INT = (ARG_PC(0)->status.option & ARG_INT(1)) != 0;
+    RESULT_INT = bool(ARG_PC(0)->status.option & OPTION(ARG_INT(1)));
     return 0;
 }
 
@@ -925,9 +927,9 @@ static bool fun_strlen(val_t& result, val_t args[])
 static bool fun_substr(val_t& result, val_t args[])
 {
     const char *src = ARG_STR(0).c_str();
-    const int32_t slen = ARG_STR(0).size();
-    int32_t offset = ARG_INT(1);
-    int32_t len = ARG_INT(2);
+    const sint32 slen = ARG_STR(0).size();
+    sint32 offset = ARG_INT(1);
+    sint32 len = ARG_INT(2);
 
     if (len < 0)
         len = 0;
@@ -974,8 +976,8 @@ static bool fun_dir_towards(val_t& result, val_t args[])
     if (ARG_LOCATION(0).m != ARG_LOCATION(1).m)
         return 1;
 
-    int32_t dx = ARG_LOCATION(1).x - ARG_LOCATION(0).x;
-    int32_t dy = ARG_LOCATION(1).y - ARG_LOCATION(0).y;
+    sint32 dx = ARG_LOCATION(1).x - ARG_LOCATION(0).x;
+    sint32 dy = ARG_LOCATION(1).y - ARG_LOCATION(0).y;
 
     if (ARG_INT(1))
     {
@@ -1120,7 +1122,7 @@ static bool eval_location(env_t *env, location_t *dest, e_location_t *expr)
 
     fixed_string<16> mapname;
     mapname.copy_from(m.v_string.c_str());
-    int32_t map_id = map_mapname2mapid(mapname);
+    sint32 map_id = map_mapname2mapid(mapname);
     magic_clear_var(&m);
     if (map_id < 0)
         return 1;
@@ -1161,8 +1163,8 @@ static area_t *eval_area(env_t *env, e_area_t *expr)
     {
         val_t width = env->magic_eval(expr->a_rect.width);
         val_t height = env->magic_eval(expr->a_rect.height);
-        int32_t w = width.ty == TY::INT ? width.v_int : 0;
-        int32_t h = height.ty == TY::INT ? height.v_int : 0;
+        sint32 w = width.ty == TY::INT ? width.v_int : 0;
+        sint32 h = height.ty == TY::INT ? height.v_int : 0;
         magic_clear_var(&width);
         magic_clear_var(&height);
         if (!w || !h)
@@ -1176,7 +1178,7 @@ static area_t *eval_area(env_t *env, e_area_t *expr)
 
     default:
         fprintf(stderr, "INTERNAL ERROR: Unknown area type %d\n",
-                static_cast<int32_t>(expr->ty));
+                static_cast<sint32>(expr->ty));
         abort();
     }
 }
@@ -1197,10 +1199,10 @@ static TY type_key(char ty_key)
     }
 }
 
-int32_t magic_signature_check(const char *opname, const char *funname, const char *signature,
-                          int32_t args_nr, val_t args[], int32_t line, int32_t column)
+sint32 magic_signature_check(const char *opname, const char *funname, const char *signature,
+                          sint32 args_nr, val_t args[], sint32 line, sint32 column)
 {
-    for (int32_t i = 0; i < args_nr; i++)
+    for (sint32 i = 0; i < args_nr; i++)
     {
         val_t *arg = &args[i];
         char ty_key = signature[i];
@@ -1210,13 +1212,13 @@ int32_t magic_signature_check(const char *opname, const char *funname, const cha
         if (ty == TY::ENTITY)
         {
             /* Dereference entities in preparation for calling function */
-            arg->v_entity = map_id2bl(arg->v_int);
+            arg->v_entity = map_id2bl(BlockID(arg->v_int));
             if (!arg->v_entity)
                 ty = arg->ty = TY::FAIL;
         }
         else if (ty == TY::INVOCATION)
         {
-            arg->v_invocation = static_cast<invocation_t *>(map_id2bl(arg->v_int));
+            arg->v_invocation = static_cast<invocation_t *>(map_id2bl(BlockID(arg->v_int)));
             if (!arg->v_entity)
                 ty = arg->ty = TY::FAIL;
         }
@@ -1271,7 +1273,7 @@ int32_t magic_signature_check(const char *opname, const char *funname, const cha
             if (ty != TY::FAIL)
                 fprintf(stderr,
                         "[magic-eval]:  L%d:%d: Argument #%d to %s `%s' of incorrect type (%d)\n",
-                        line, column, i + 1, opname, funname, static_cast<int32_t>(ty));
+                        line, column, i + 1, opname, funname, static_cast<sint32>(ty));
             return 1;
         }
     }
@@ -1306,10 +1308,10 @@ val_t env_t::magic_eval(expr_t *expr)
     case ExprType::FUNAPP:
     {
         val_t arguments[MAX_ARGS];
-        int32_t args_nr = expr->e_funapp.args_nr;
+        sint32 args_nr = expr->e_funapp.args_nr;
         const std::pair<const std::string, fun_t> *f = expr->e_funapp.fun;
 
-        for (int32_t i = 0; i < args_nr; ++i)
+        for (sint32 i = 0; i < args_nr; ++i)
             arguments[i] = magic_eval(expr->e_funapp.args[i]);
         if (magic_signature_check("function", f->first.c_str(), f->second.signature, args_nr, arguments,
                 expr->e_funapp.line_nr, expr->e_funapp.column)
@@ -1321,18 +1323,18 @@ val_t env_t::magic_eval(expr_t *expr)
             if (dest_ty != TY::FAIL)
                 dest->ty = dest_ty;
 
-            /* translate entity back into persistent int32_t */
+            /* translate entity back into persistent sint32 */
             // is this really necessary?
             if (dest->ty == TY::ENTITY)
             {
                 if (dest->v_entity)
-                    dest->v_int = dest->v_entity->id;
+                    dest->v_int = uint32(dest->v_entity->id);
                 else
                     dest->ty = TY::FAIL;
             }
         }
 
-        for (int32_t i = 0; i < args_nr; ++i)
+        for (sint32 i = 0; i < args_nr; ++i)
             magic_clear_var(&arguments[i]);
         break;
     }
@@ -1346,12 +1348,12 @@ val_t env_t::magic_eval(expr_t *expr)
 
     case ExprType::SPELLFIELD:
     {
-        int32_t id = expr->e_field.id;
+        sint32 id = expr->e_field.id;
         val_t v = magic_eval(expr->e_field.expr);
 
         if (v.ty == TY::INVOCATION)
         {
-            invocation_t *t = static_cast<invocation_t *>(map_id2bl(v.v_int));
+            invocation_t *t = static_cast<invocation_t *>(map_id2bl(BlockID(v.v_int)));
 
             if (!t)
                 dest->ty = TY::UNDEF;
@@ -1370,13 +1372,13 @@ val_t env_t::magic_eval(expr_t *expr)
 
     default:
         fprintf(stderr, "[magic] INTERNAL ERROR: Unknown expression type %d\n",
-                static_cast<int32_t>(expr->ty));
+                static_cast<sint32>(expr->ty));
         abort();
     }
     return out;
 }
 
-int32_t magic_eval_int(env_t *env, expr_t *expr)
+sint32 magic_eval_int(env_t *env, expr_t *expr)
 {
     val_t result = env->magic_eval(expr);
 

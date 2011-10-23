@@ -1,3 +1,9 @@
+# main targets
+/tmwa-admin
+/tmwa-char
+/tmwa-login
+/tmwa-map
+/tmwa-monitor
 # files generated during make
 /warnings
 /tags

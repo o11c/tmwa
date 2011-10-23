@@ -10,7 +10,7 @@
 #include "clif.hpp"
 #include "itemdb.hpp"
 #include "magic-base.hpp"
-#include "map.hpp"
+#include "main.hpp"
 #include "mob.hpp"
 #include "npc.hpp"
 #include "party.hpp"
@@ -75,8 +75,8 @@ static void builtin_callfunc(ScriptState *st)
         st->state = ScriptExecutionState::END;
     }
     // TODO: instead just adjust st->start += 3 or something
-    int32_t j = 0;
-    for (int32_t i = 2; i < ARG_LIMIT; i++, j++)
+    sint32 j = 0;
+    for (sint32 i = 2; i < ARG_LIMIT; i++, j++)
         PUSH_COPY(i);
 
     st->push<Script::INT>(j);
@@ -94,10 +94,10 @@ static void builtin_callfunc(ScriptState *st)
 /// call a label of the current script
 static void builtin_callsub(ScriptState *st)
 {
-    int32_t pos = GET_ARG_POS(1);
+    sint32 pos = GET_ARG_POS(1);
     // TODO instead just adjust st->start += 3 or something
-    int32_t j = 0;
-    for (int32_t i = 2; i < ARG_LIMIT; i++, j++)
+    sint32 j = 0;
+    for (sint32 i = 2; i < ARG_LIMIT; i++, j++)
         PUSH_COPY(i);
 
     st->push<Script::INT>(j);
@@ -113,15 +113,15 @@ static void builtin_callsub(ScriptState *st)
 /// Get an argument, as passed to callfunc or callsub
 static void builtin_getarg(ScriptState *st)
 {
-    int32_t num = GET_ARG_INT(1);
+    sint32 num = GET_ARG_INT(1);
     if (st->defsp < 4 || st->type_at(st->defsp - 1) != Script::RETINFO)
     {
         map_log("script:getarg without callfunc or callsub!\n");
         st->state = ScriptExecutionState::END;
         return;
     }
-    int32_t max = st->to_int(st->defsp - 4);
-    int32_t stsp = st->defsp - max - 4;
+    sint32 max = st->to_int(st->defsp - 4);
+    sint32 stsp = st->defsp - max - 4;
     if (num >= max)
     {
         map_log("script:getarg arg1(%d) out of range(%d) !\n", num, max);
@@ -163,12 +163,12 @@ static void builtin_close2(ScriptState *st)
 /// Wait for the player to select on of many choices
 static void builtin_menu(ScriptState *st)
 {
-    int32_t menu_choices = 0;
+    sint32 menu_choices = 0;
 
     MapSessionData *sd = script_rid2sd(st);
 
     // We don't need to do this iteration if the player cancels, strictly speaking.
-    for (int32_t i = 1; i < ARG_LIMIT; i += 2)
+    for (sint32 i = 1; i < ARG_LIMIT; i += 2)
     {
         std::string choice = GET_ARG_STRING(i);
         if (choice.empty())
@@ -182,7 +182,7 @@ static void builtin_menu(ScriptState *st)
         sd->state.menu_or_input = true;
 
         std::vector<std::string> choices;
-        for (int32_t i = 1; menu_choices > 0; i += 2, --menu_choices)
+        for (sint32 i = 1; menu_choices > 0; i += 2, --menu_choices)
             choices.push_back(GET_ARG_STRING(i));
         clif_scriptmenu(script_rid2sd(st), st->oid, choices);
     }
@@ -216,16 +216,16 @@ static void builtin_rand(ScriptState *st)
 {
     if (HAS_ARG(2))
     {
-        int32_t min = GET_ARG_INT(1);
-        int32_t max = GET_ARG_INT(2);
+        sint32 min = GET_ARG_INT(1);
+        sint32 max = GET_ARG_INT(2);
         if (max < min)
             std::swap(max, min);
-        int32_t range = max - min + 1;
+        sint32 range = max - min + 1;
         st->push<Script::INT>(range <= 0 ? 0 : MPRAND(min, range));
     }
     else
     {
-        int32_t range = GET_ARG_INT(1);
+        sint32 range = GET_ARG_INT(1);
         st->push<Script::INT>(range <= 0 ? 0 : MRAND(range));
     }
 }
@@ -238,8 +238,8 @@ static void builtin_isat(ScriptState *st)
         return;
 
     std::string str = GET_ARG_STRING(1);
-    int32_t x = GET_ARG_INT(2);
-    int32_t y = GET_ARG_INT(3);
+    sint32 x = GET_ARG_INT(2);
+    sint32 y = GET_ARG_INT(3);
 
     st->push<Script::INT>(x == sd->x && y == sd->y && str == &maps[sd->m].name);
 }
@@ -250,8 +250,8 @@ static void builtin_warp(ScriptState *st)
     MapSessionData *sd = script_rid2sd(st);
 
     std::string str = GET_ARG_STRING(1);
-    int16_t x = GET_ARG_INT(2);
-    int16_t y = GET_ARG_INT(3);
+    sint16 x = GET_ARG_INT(2);
+    sint16 y = GET_ARG_INT(3);
     if (str == "Random")
         pc_randomwarp(sd, BeingRemoveType::WARP);
     else if (str == "SavePoint")
@@ -289,16 +289,16 @@ static void builtin_areawarp(ScriptState *st)
 {
     fixed_string<16> src_map;
     src_map.copy_from(GET_ARG_STRING(1).c_str());
-    int32_t x_0 = GET_ARG_INT(2);
-    int32_t y_0 = GET_ARG_INT(3);
-    int32_t x_1 = GET_ARG_INT(4);
-    int32_t y_1 = GET_ARG_INT(5);
+    sint32 x_0 = GET_ARG_INT(2);
+    sint32 y_0 = GET_ARG_INT(3);
+    sint32 x_1 = GET_ARG_INT(4);
+    sint32 y_1 = GET_ARG_INT(5);
     fixed_string<16> dst_map;
     dst_map.copy_from(GET_ARG_STRING(6).c_str());
-    int16_t x = GET_ARG_INT(7);
-    int16_t y = GET_ARG_INT(8);
+    sint16 x = GET_ARG_INT(7);
+    sint16 y = GET_ARG_INT(8);
 
-    int32_t m = map_mapname2mapid(src_map);
+    sint32 m = map_mapname2mapid(src_map);
     if (m < 0)
         return;
 
@@ -309,16 +309,16 @@ static void builtin_areawarp(ScriptState *st)
 /// Recover HP and SP instantly
 static void builtin_heal(ScriptState *st)
 {
-    int32_t hp = GET_ARG_INT(1);
-    int32_t sp = GET_ARG_INT(2);
+    sint32 hp = GET_ARG_INT(1);
+    sint32 sp = GET_ARG_INT(2);
     pc_heal(script_rid2sd(st), hp, sp);
 }
 
 /// Recover HP and SP gradually, as by an item
 static void builtin_itemheal(ScriptState *st)
 {
-    int32_t hp = GET_ARG_INT(1);
-    int32_t sp = GET_ARG_INT(2);
+    sint32 hp = GET_ARG_INT(1);
+    sint32 sp = GET_ARG_INT(2);
 
     pc_itemheal(script_rid2sd(st), hp, sp);
 }
@@ -326,8 +326,8 @@ static void builtin_itemheal(ScriptState *st)
 /// Recover HP and SP immediately, by percentage
 static void builtin_percentheal(ScriptState *st)
 {
-    int32_t hp = GET_ARG_INT(1);
-    int32_t sp = GET_ARG_INT(2);
+    sint32 hp = GET_ARG_INT(1);
+    sint32 sp = GET_ARG_INT(2);
 
     pc_percentheal(script_rid2sd(st), hp, sp);
 }
@@ -335,7 +335,7 @@ static void builtin_percentheal(ScriptState *st)
 /// Input an integer or string
 static void builtin_input(ScriptState *st)
 {
-    int32_t num = GET_ARG_NAME(1);
+    sint32 num = GET_ARG_NAME(1);
     const std::string& name = str_data[num & 0x00ffffff].str;
     char postfix = name.back();
 
@@ -370,7 +370,7 @@ static void builtin_if(ScriptState *st)
     PUSH_COPY(2);
     st->push<Script::ARG>(0);
     // arguments
-    for (int32_t i = 3; i < ARG_LIMIT; i++)
+    for (sint32 i = 3; i < ARG_LIMIT; i++)
         PUSH_COPY(i);
     st->run_func();
 }
@@ -384,7 +384,7 @@ static void builtin_set(ScriptState *st)
         return;
     }
 
-    int32_t num = GET_ARG_NAME(1);
+    sint32 num = GET_ARG_NAME(1);
     const std::string& name = str_data[num & 0x00ffffff].str;
     char prefix = name.front();
     char postfix = name.back();
@@ -402,7 +402,7 @@ static void builtin_set(ScriptState *st)
 /// Set a variable to an array of values
 static void builtin_setarray(ScriptState *st)
 {
-    int32_t num = GET_ARG_NAME(1);
+    sint32 num = GET_ARG_NAME(1);
     const std::string& name = str_data[num & 0x00ffffff].str;
     char prefix = name.front();
     char postfix = name.back();
@@ -416,7 +416,7 @@ static void builtin_setarray(ScriptState *st)
     if (prefix != '$')
         sd = script_rid2sd(st);
 
-    for (int32_t j = 0, i = 2; i < ARG_LIMIT && j < 128; i++, j++)
+    for (sint32 j = 0, i = 2; i < ARG_LIMIT && j < 128; i++, j++)
     {
         if (postfix == '$')
             set_reg_s(sd, num + (j << 24), name, GET_ARG_STRING(i));
@@ -428,11 +428,11 @@ static void builtin_setarray(ScriptState *st)
 /// Fill an array with something
 static void builtin_cleararray(ScriptState *st)
 {
-    int32_t num = GET_ARG_NAME(1);
+    sint32 num = GET_ARG_NAME(1);
     const std::string& name = str_data[num & 0x00ffffff].str;
     char prefix = name.front();
     char postfix = name.back();
-    int32_t sz = GET_ARG_INT(3);
+    sint32 sz = GET_ARG_INT(3);
 
     if (prefix != '$' && prefix != '@')
     {
@@ -444,25 +444,25 @@ static void builtin_cleararray(ScriptState *st)
         sd = script_rid2sd(st);
 
     if (postfix == '$')
-        for (int32_t i = 0; i < sz; i++)
+        for (sint32 i = 0; i < sz; i++)
             set_reg_s(sd, num + (i << 24), name, GET_ARG_STRING(2));
     else
-        for (int32_t i = 0; i < sz; i++)
+        for (sint32 i = 0; i < sz; i++)
             set_reg_i(sd, num + (i << 24), name, GET_ARG_INT(2));
 }
 
 /// copy between arrays
 static void builtin_copyarray(ScriptState *st)
 {
-    int32_t num = GET_ARG_NAME(1);
+    sint32 num = GET_ARG_NAME(1);
     const std::string& name = str_data[num & 0x00ffffff].str;
     char prefix = name.front();
     char postfix = name.back();
-    int32_t num2 = GET_ARG_NAME(2);
+    sint32 num2 = GET_ARG_NAME(2);
     const std::string& name2 = str_data[num2 & 0x00ffffff].str;
     char prefix2 = name2.front();
     char postfix2 = name2.back();
-    int32_t sz = GET_ARG_INT(3);
+    sint32 sz = GET_ARG_INT(3);
 
     if (prefix != '$' && prefix != '@' && prefix2 != '$' && prefix2 != '@')
     {
@@ -479,15 +479,15 @@ static void builtin_copyarray(ScriptState *st)
         sd = script_rid2sd(st);
 
     if (postfix == '$')
-        for (int32_t i = 0; i < sz; i++)
+        for (sint32 i = 0; i < sz; i++)
             set_reg_s(sd, num + (i << 24), name, get_reg_s(sd, num2 + (i << 24), name2));
     else
-        for (int32_t i = 0; i < sz; i++)
+        for (sint32 i = 0; i < sz; i++)
             set_reg_i(sd, num + (i << 24), name, get_reg_i(sd, num2 + (i << 24), name2));
 }
 
 /// Size of an array (to the last element that is not 0 or "")
-static int32_t getarraysize(ScriptState *st, int32_t num, const std::string& name)
+static sint32 getarraysize(ScriptState *st, sint32 num, const std::string& name)
 {
     char prefix = name.front();
     char postfix = name.back();
@@ -495,7 +495,7 @@ static int32_t getarraysize(ScriptState *st, int32_t num, const std::string& nam
     if (prefix != '$')
         sd = script_rid2sd(st);
 
-    uint8_t i = num >> 24, c = i;
+    uint8 i = num >> 24, c = i;
     if (postfix == '$')
     {
         for (; i < 128; i++)
@@ -513,7 +513,7 @@ static int32_t getarraysize(ScriptState *st, int32_t num, const std::string& nam
 
 static void builtin_getarraysize(ScriptState *st)
 {
-    int32_t num = GET_ARG_NAME(1);
+    sint32 num = GET_ARG_NAME(1);
     const std::string& name = str_data[num & 0x00ffffff].str;
     char prefix = name.front();
 //     char postfix = name.back();
@@ -530,14 +530,14 @@ static void builtin_getarraysize(ScriptState *st)
 /// Delete elements from an array, shifting the remainder
 static void builtin_deletearray(ScriptState *st)
 {
-    int32_t num = GET_ARG_NAME(1);
+    sint32 num = GET_ARG_NAME(1);
     const std::string& name = str_data[num & 0x00ffffff].str;
     char prefix = name.front();
     char postfix = name.back();
-    int32_t count = 1;
+    sint32 count = 1;
     if (HAS_ARG(2))
         count = GET_ARG_INT(2);
-    int32_t sz = getarraysize(st, num, name) - (num >> 24) - count + 1;
+    sint32 sz = getarraysize(st, num, name) - (num >> 24) - count + 1;
 
 
     if (prefix != '$' && prefix != '@')
@@ -549,7 +549,7 @@ static void builtin_deletearray(ScriptState *st)
     if (prefix != '$')
         sd = script_rid2sd(st);
 
-    int32_t i;
+    sint32 i;
     if (postfix == '$')
     {
         for (i = 0; i < sz; i++)
@@ -574,7 +574,7 @@ static void builtin_getelementofarray(ScriptState *st)
         map_log("%s (operator[]): param1 not name !\n", __func__);
         st->push<Script::INT>(0);
     }
-    int32_t i = GET_ARG_INT(2);
+    sint32 i = GET_ARG_INT(2);
     if (i > 127 || i < 0)
     {
         map_log("%s (operator[]): param2 illegal number %d\n", __func__, i);
@@ -588,7 +588,7 @@ static void builtin_getelementofarray(ScriptState *st)
 static void builtin_setlook(ScriptState *st)
 {
     LOOK type = static_cast<LOOK>(GET_ARG_INT(1));
-    int32_t val = GET_ARG_INT(2);
+    sint32 val = GET_ARG_INT(2);
 
     pc_changelook(script_rid2sd(st), type, val);
 }
@@ -597,7 +597,7 @@ static void builtin_setlook(ScriptState *st)
 static void builtin_countitem(ScriptState *st)
 {
     RESOLVE(1);
-    int32_t nameid = 0;
+    sint32 nameid = 0;
     if (TYPE_ARG(1) == Script::STR)
     {
         std::string name = GET_ARG_STRING(1);
@@ -615,8 +615,8 @@ static void builtin_countitem(ScriptState *st)
     }
 
     MapSessionData *sd = script_rid2sd(st);
-    int32_t count = 0;
-    for (int32_t i = 0; i < MAX_INVENTORY; i++)
+    sint32 count = 0;
+    for (sint32 i = 0; i < MAX_INVENTORY; i++)
     {
         if (sd->status.inventory[i].nameid == nameid)
             // we can't break; the item might be in a multiple slots
@@ -630,7 +630,7 @@ static void builtin_checkweight(ScriptState *st)
 {
     RESOLVE(1);
 
-    int32_t nameid = 0;
+    sint32 nameid = 0;
     if (TYPE_ARG(1) == Script::STR)
     {
         std::string name = GET_ARG_STRING(1);
@@ -641,7 +641,7 @@ static void builtin_checkweight(ScriptState *st)
     else
         nameid = GET_ARG_INT(1);
 
-    int32_t amount = GET_ARG_INT(2);
+    sint32 amount = GET_ARG_INT(2);
     if (amount <= 0 || !nameid)
     {
         st->push<Script::INT>(0);
@@ -657,7 +657,7 @@ static void builtin_getitem(ScriptState *st)
 {
     RESOLVE(1);
 
-    int32_t nameid = 0;
+    sint32 nameid = 0;
     if (TYPE_ARG(1) == Script::STR)
     {
         std::string name = GET_ARG_STRING(1);
@@ -668,7 +668,7 @@ static void builtin_getitem(ScriptState *st)
     else
         nameid = GET_ARG_INT(1);
 
-    int32_t amount = GET_ARG_INT(2);
+    sint32 amount = GET_ARG_INT(2);
     if (amount <= 0)
         return;
 
@@ -680,7 +680,7 @@ static void builtin_getitem(ScriptState *st)
 
     MapSessionData *sd;
     if (HAS_ARG(4))
-        sd = map_id2sd(GET_ARG_INT(4));
+        sd = map_id2sd(account_t(GET_ARG_INT(4)));
     else
         sd = script_rid2sd(st);
     if (!sd)
@@ -698,7 +698,7 @@ static void builtin_makeitem(ScriptState *st)
 {
     RESOLVE(1);
 
-    int32_t nameid = 0;
+    sint32 nameid = 0;
     if (TYPE_ARG(1) == Script::STR)
     {
         std::string name = GET_ARG_STRING(1);
@@ -709,15 +709,15 @@ static void builtin_makeitem(ScriptState *st)
     else
         nameid = GET_ARG_INT(1);
 
-    int32_t amount = GET_ARG_INT(2);
+    sint32 amount = GET_ARG_INT(2);
     fixed_string<16> mapname;
     mapname.copy_from(GET_ARG_STRING(3).c_str());
-    int32_t x = GET_ARG_INT(4);
-    int32_t y = GET_ARG_INT(5);
+    sint32 x = GET_ARG_INT(4);
+    sint32 y = GET_ARG_INT(5);
 
     MapSessionData *sd = script_rid2sd(st);
 
-    int32_t m;
+    sint32 m;
     if (sd && strcmp(&mapname, "this") == 0)
         m = sd->m;
     else
@@ -736,7 +736,7 @@ static void builtin_delitem(ScriptState *st)
 {
     RESOLVE(1);
 
-    int32_t nameid = 0;
+    sint32 nameid = 0;
     if (TYPE_ARG(1) == Script::STR)
     {
         std::string name = GET_ARG_STRING(1);
@@ -747,13 +747,13 @@ static void builtin_delitem(ScriptState *st)
     else
         nameid = GET_ARG_INT(1);
 
-    int32_t amount = GET_ARG_INT(2);
+    sint32 amount = GET_ARG_INT(2);
 
     if (!nameid || amount <= 0)
         return;
     MapSessionData *sd = script_rid2sd(st);
 
-    for (int32_t i = 0; i < MAX_INVENTORY; i++)
+    for (sint32 i = 0; i < MAX_INVENTORY; i++)
     {
         if (sd->status.inventory[i].nameid != nameid)
             continue;
@@ -789,6 +789,7 @@ static void builtin_readparam(ScriptState *st)
 }
 
 /// Get one of the character's IDs
+// TODO: if changing IDs, remove the argument and unconditionally use the BlockID
 static void builtin_getcharid(ScriptState *st)
 {
     MapSessionData *sd;
@@ -805,13 +806,13 @@ static void builtin_getcharid(ScriptState *st)
     switch(GET_ARG_INT(1))
     {
     case 0:
-        st->push<Script::INT>(sd->status.char_id);
+        st->push<Script::INT>(unwrap(sd->status.char_id));
         break;
     case 1:
-        st->push<Script::INT>(sd->status.party_id);
+        st->push<Script::INT>(unwrap(sd->status.party_id));
         break;
     case 3:
-        st->push<Script::INT>(sd->status.account_id);
+        st->push<Script::INT>(unwrap(sd->status.account_id));
         break;
     case 2: // guild_id
     default:
@@ -821,7 +822,7 @@ static void builtin_getcharid(ScriptState *st)
 }
 
 /// Actually get party name, or the empty string
-static std::string getpartyname(int32_t party_id)
+static std::string getpartyname(party_t party_id)
 {
     struct party *p = party_search(party_id);
     if (!p)
@@ -832,22 +833,23 @@ static std::string getpartyname(int32_t party_id)
 
 static void builtin_getpartyname(ScriptState *st)
 {
-    int32_t party_id = GET_ARG_INT(1);
+    party_t party_id = party_t(GET_ARG_INT(1));
     st->push<Script::STR>(getpartyname(party_id));
 }
 
 /// fill in an array with party members
 static void builtin_getpartymember(ScriptState *st)
 {
-    struct party *p = party_search(GET_ARG_INT(1));
+    party_t party_id = party_t(GET_ARG_INT(1));
+    struct party *p = party_search(party_id);
 
     if (!p)
     {
         mapreg_setreg(add_str("$@partymembercount"), 0);
         return;
     }
-    int32_t j = 0;
-    for (int32_t i = 0; i < MAX_PARTY; i++)
+    sint32 j = 0;
+    for (sint32 i = 0; i < MAX_PARTY; i++)
     {
         if (p->member[i].account_id)
         {
@@ -912,7 +914,7 @@ static void builtin_getequipid(ScriptState *st)
     MapSessionData *sd = script_rid2sd(st);
     EQ_SCR num = static_cast<EQ_SCR>(GET_ARG_INT(1));
 
-    int32_t i = pc_checkequip(sd, equip[num]);
+    sint32 i = pc_checkequip(sd, equip[num]);
     if (i < 0)
     {
         st->push<Script::INT>(-1);
@@ -934,7 +936,7 @@ static void builtin_getequipname(ScriptState *st)
 {
     MapSessionData *sd = script_rid2sd(st);
     EQ_SCR num = static_cast<EQ_SCR>(GET_ARG_INT(1));
-    int32_t i = pc_checkequip(sd, equip[num]);
+    sint32 i = pc_checkequip(sd, equip[num]);
     if (i < 0)
     {
         st->push<Script::STR>(std::string());
@@ -956,7 +958,7 @@ static void builtin_getequipisequiped(ScriptState *st)
 {
     EQ_SCR num = static_cast<EQ_SCR>(GET_ARG_INT(1));
     MapSessionData *sd = script_rid2sd(st);
-    int32_t i = pc_checkequip(sd, equip[num]);
+    sint32 i = pc_checkequip(sd, equip[num]);
     st->push<Script::INT>(i >= 0);
 }
 
@@ -972,7 +974,7 @@ static void builtin_statusup(ScriptState *st)
 static void builtin_statusup2(ScriptState *st)
 {
     SP type = static_cast<SP>(GET_ARG_INT(2));
-    int32_t val = GET_ARG_INT(2);
+    sint32 val = GET_ARG_INT(2);
     MapSessionData *sd = script_rid2sd(st);
     pc_statusup2(sd, type, val);
 }
@@ -981,7 +983,7 @@ static void builtin_statusup2(ScriptState *st)
 static void builtin_bonus(ScriptState *st)
 {
     SP type = static_cast<SP>(GET_ARG_INT(1));
-    int32_t val = GET_ARG_INT(2);
+    sint32 val = GET_ARG_INT(2);
     MapSessionData *sd = script_rid2sd(st);
     pc_bonus(sd, type, val);
 }
@@ -990,9 +992,9 @@ static void builtin_bonus(ScriptState *st)
 // this function should probably be avoided
 static void builtin_skill(ScriptState *st)
 {
-    int32_t id = GET_ARG_INT(1);
-    int32_t level = GET_ARG_INT(2);
-    int32_t flag = 1;
+    sint32 id = GET_ARG_INT(1);
+    sint32 level = GET_ARG_INT(2);
+    sint32 flag = 1;
     if (HAS_ARG(3))
         flag = GET_ARG_INT(3);
     MapSessionData *sd = script_rid2sd(st);
@@ -1003,8 +1005,8 @@ static void builtin_skill(ScriptState *st)
 /// Grant player a skill, permanently
 static void builtin_setskill(ScriptState *st)
 {
-    int32_t id = GET_ARG_INT(1);
-    int32_t level = GET_ARG_INT(2);
+    sint32 id = GET_ARG_INT(1);
+    sint32 level = GET_ARG_INT(2);
     MapSessionData *sd = script_rid2sd(st);
 
     sd->status.skill[id].id = level ? id : 0;
@@ -1015,14 +1017,15 @@ static void builtin_setskill(ScriptState *st)
 /// Return the level of a skill
 static void builtin_getskilllv(ScriptState *st)
 {
-    int32_t id = GET_ARG_INT(1);
+    sint32 id = GET_ARG_INT(1);
     st->push<Script::INT>(pc_checkskill(script_rid2sd(st), id));
 }
 
 /// Get GM level of a player
 static void builtin_getgmlevel(ScriptState *st)
 {
-    st->push<Script::INT>(pc_isGM(script_rid2sd(st)));
+    gm_level_t lvl = pc_isGM(script_rid2sd(st));
+    st->push<Script::INT>(unwrap(lvl));
 }
 
 /// Stop executing the script, immediately
@@ -1041,7 +1044,7 @@ static void builtin_getopt2(ScriptState *st)
 /// Set opt2
 static void builtin_setopt2(ScriptState *st)
 {
-    int32_t new_opt2 = GET_ARG_INT(1);
+    sint32 new_opt2 = GET_ARG_INT(1);
     MapSessionData *sd = script_rid2sd(st);
     if (new_opt2 == sd->opt2)
         return;
@@ -1053,15 +1056,15 @@ static void builtin_setopt2(ScriptState *st)
 /// Check whether the player's "option" has any of the specified bits
 static void builtin_checkoption(ScriptState *st)
 {
-    int32_t type = GET_ARG_INT(1);
+    OPTION type = OPTION(GET_ARG_INT(1));
     MapSessionData *sd = script_rid2sd(st);
-    st->push<Script::INT>(sd->status.option & type);
+    st->push<Script::INT>(uint16(sd->status.option & type));
 }
 
 /// Set the player's "option"
 static void builtin_setoption(ScriptState *st)
 {
-    int32_t type = GET_ARG_INT(1);
+    OPTION type = OPTION(GET_ARG_INT(1));
     MapSessionData *sd = script_rid2sd(st);
     pc_setoption(sd, type);
 }
@@ -1071,8 +1074,8 @@ static void builtin_savepoint(ScriptState *st)
 {
     fixed_string<16> str;
     str.copy_from(GET_ARG_STRING(1).c_str());
-    int16_t x = GET_ARG_INT(2);
-    int16_t y = GET_ARG_INT(3);
+    sint16 x = GET_ARG_INT(2);
+    sint16 y = GET_ARG_INT(3);
     pc_setsavepoint(script_rid2sd(st), Point{str, x, y});
 }
 
@@ -1084,9 +1087,10 @@ static void builtin_gettimetick(ScriptState *st)
 {
     switch (GET_ARG_INT(1))
     {
-    // System tick (uint32_t, and yes, it will wrap)
+    // System tick (originally uint32, but it will still wrap
+    // until the script integer size is increased)
     case 0:
-        st->push<Script::INT>(gettick());
+        st->push<Script::INT>(std::chrono::duration_cast<std::chrono::milliseconds>(gettick().time_since_epoch()).count());
         break;
     // Seconds since midnight
     case 1:
@@ -1155,7 +1159,7 @@ static void builtin_gettimestr(ScriptState *st)
     time_t now = time(NULL);
 
     std::string fmtstr = GET_ARG_STRING(1);
-    int32_t maxlen = GET_ARG_INT(2);
+    sint32 maxlen = GET_ARG_INT(2);
 
     char tmpstr[maxlen + 1];
     strftime(tmpstr, maxlen, fmtstr.c_str(), gmtime(&now));
@@ -1178,8 +1182,8 @@ static void builtin_openstorage(ScriptState *st)
 /// Gain experience of the 2 types
 static void builtin_getexp(ScriptState *st)
 {
-    int32_t base = GET_ARG_INT(1);
-    int32_t job = GET_ARG_INT(2);
+    sint32 base = GET_ARG_INT(1);
+    sint32 job = GET_ARG_INT(2);
 
     if (base < 0 || job < 0)
         return;
@@ -1193,11 +1197,11 @@ static void builtin_monster(ScriptState *st)
 {
     fixed_string<16> map;
     map.copy_from(GET_ARG_STRING(1).c_str());
-    uint16_t x = GET_ARG_INT(2);
-    uint16_t y = GET_ARG_INT(3);
+    uint16 x = GET_ARG_INT(2);
+    uint16 y = GET_ARG_INT(3);
     std::string str = GET_ARG_STRING(4);
-    int32_t mob_class = GET_ARG_INT(5);
-    int32_t amount = GET_ARG_INT(6);
+    sint32 mob_class = GET_ARG_INT(5);
+    sint32 amount = GET_ARG_INT(6);
     std::string event;
     if (HAS_ARG(7))
         event = GET_ARG_STRING(7);
@@ -1210,13 +1214,13 @@ static void builtin_areamonster(ScriptState *st)
 {
     fixed_string<16> map;
     map.copy_from(GET_ARG_STRING(1).c_str());
-    int32_t x_0 = GET_ARG_INT(2);
-    int32_t y_0 = GET_ARG_INT(3);
-    int32_t x_1 = GET_ARG_INT(4);
-    int32_t y_1 = GET_ARG_INT(5);
+    sint32 x_0 = GET_ARG_INT(2);
+    sint32 y_0 = GET_ARG_INT(3);
+    sint32 x_1 = GET_ARG_INT(4);
+    sint32 y_1 = GET_ARG_INT(5);
     std::string str = GET_ARG_STRING(6);
-    int32_t mob_class = GET_ARG_INT(7);
-    int32_t amount = GET_ARG_INT(8);
+    sint32 mob_class = GET_ARG_INT(7);
+    sint32 amount = GET_ARG_INT(8);
     std::string event;
     if (HAS_ARG(9))
         event = GET_ARG_STRING(9);
@@ -1230,8 +1234,9 @@ static void builtin_killmonster_sub(BlockList *bl, const char *event, bool allfl
 {
     struct mob_data *md = static_cast<struct mob_data *>(bl);
     if (allflag
-            ? (md->spawndelay_1 == -1 && md->spawndelay2 == -1)
-            : (strcmp(event, md->npc_event) == 0))
+        ? (md->spawndelay_1 == SPAWN_ONCE_DELAY
+           && md->spawndelay2 == SPAWN_ONCE_DELAY)
+        : (strcmp(event, md->npc_event) == 0))
         mob_delete(md);
 }
 
@@ -1243,7 +1248,7 @@ static void builtin_killmonster(ScriptState *st)
     std::string event = GET_ARG_STRING(2);
     bool allflag = event == "All";
 
-    int32_t m = map_mapname2mapid(mapname);
+    sint32 m = map_mapname2mapid(mapname);
     if (m < 0)
         return;
     map_foreachinarea(builtin_killmonster_sub, m, 0, 0, maps[m].xs, maps[m].ys,
@@ -1263,7 +1268,7 @@ static void builtin_killmonsterall(ScriptState *st)
     fixed_string<16> mapname;
     mapname.copy_from(GET_ARG_STRING(1).c_str());
 
-    int32_t m = map_mapname2mapid(mapname);
+    sint32 m = map_mapname2mapid(mapname);
     if (m < 0)
         return;
     map_foreachinarea(builtin_killmonsterall_sub,
@@ -1290,7 +1295,7 @@ static void builtin_donpcevent(ScriptState *st)
 /// Invoke an event later
 static void builtin_addtimer(ScriptState *st)
 {
-    int32_t tick = GET_ARG_INT(1);
+    interval_t tick = std::chrono::milliseconds(GET_ARG_INT(1));
     std::string event = GET_ARG_STRING(2);
     pc_addeventtimer(script_rid2sd(st), tick, event.c_str());
 }
@@ -1307,7 +1312,7 @@ static void builtin_initnpctimer(ScriptState *st)
 {
     struct npc_data_script *nd = static_cast<struct npc_data_script *>(map_id2bl(st->oid));
 
-    npc_settimerevent_tick(nd, 0);
+    npc_settimerevent_tick(nd, interval_t::zero());
     npc_timerevent_start(nd);
 }
 
@@ -1337,10 +1342,10 @@ static void builtin_getnpctimer(ScriptState *st)
     switch (GET_ARG_INT(1))
     {
     case 0:
-        st->push<Script::INT>(npc_gettimerevent_tick(nd));
+        st->push<Script::INT>(std::chrono::duration_cast<std::chrono::milliseconds>(npc_gettimerevent_tick(nd)).count());
         break;
     case 1:
-        st->push<Script::INT>((nd->scr.nexttimer >= 0));
+        st->push<Script::INT>(nd->scr.nexttimer >= 0);
         break;
     case 2:
         st->push<Script::INT>(nd->scr.timeramount);
@@ -1353,7 +1358,7 @@ static void builtin_getnpctimer(ScriptState *st)
 /// Set the tick of an NPC timer
 static void builtin_setnpctimer(ScriptState *st)
 {
-    int32_t tick = GET_ARG_INT(1);
+    interval_t tick = std::chrono::milliseconds(GET_ARG_INT(1));
     struct npc_data_script *nd = static_cast<struct npc_data_script *>(map_id2bl(st->oid));
 
     npc_settimerevent_tick(nd, tick);
@@ -1363,7 +1368,7 @@ static void builtin_setnpctimer(ScriptState *st)
 static void builtin_announce(ScriptState *st)
 {
     std::string str = GET_ARG_STRING(1);
-    int32_t flag = GET_ARG_INT(2);
+    sint32 flag = GET_ARG_INT(2);
 
     if (flag & 0x0f)
     {
@@ -1382,9 +1387,9 @@ static void builtin_mapannounce(ScriptState *st)
     fixed_string<16> mapname;
     mapname.copy_from(GET_ARG_STRING(1).c_str());
     std::string str = GET_ARG_STRING(2);
-//     int32_t flag = GET_ARG_INT(3);
+//     sint32 flag = GET_ARG_INT(3);
 
-    int32_t m = map_mapname2mapid(mapname);
+    sint32 m = map_mapname2mapid(mapname);
     if (m < 0)
         return;
     map_foreachinarea(clif_GMmessage,
@@ -1397,14 +1402,14 @@ static void builtin_areaannounce(ScriptState *st)
 {
     fixed_string<16> map;
     map.copy_from(GET_ARG_STRING(1).c_str());
-    int32_t x_0 = GET_ARG_INT(2);
-    int32_t y_0 = GET_ARG_INT(3);
-    int32_t x_1 = GET_ARG_INT(4);
-    int32_t y_1 = GET_ARG_INT(5);
+    sint32 x_0 = GET_ARG_INT(2);
+    sint32 y_0 = GET_ARG_INT(3);
+    sint32 x_1 = GET_ARG_INT(4);
+    sint32 y_1 = GET_ARG_INT(5);
     std::string str = GET_ARG_STRING(6);
-//     int32_t flag = GET_ARG_INT(7);
+//     sint32 flag = GET_ARG_INT(7);
 
-    int32_t m = map_mapname2mapid(map);
+    sint32 m = map_mapname2mapid(map);
     if (m < 0)
         return;
 
@@ -1416,9 +1421,9 @@ static void builtin_areaannounce(ScriptState *st)
 /// Count users - on server, or on map of NPC or player
 static void builtin_getusers(ScriptState *st)
 {
-    int32_t flag = GET_ARG_INT(1);
+    sint32 flag = GET_ARG_INT(1);
     BlockList *bl = map_id2bl((flag & 0x08) ? st->oid : st->rid);
-    int32_t val = (flag & 1) ? map_getusers() : maps[bl->m].users;
+    sint32 val = (flag & 1) ? map_getusers() : maps[bl->m].users;
     st->push<Script::INT>(val);
 }
 
@@ -1427,7 +1432,7 @@ static void builtin_getmapusers(ScriptState *st)
 {
     fixed_string<16> str;
     str.copy_from(GET_ARG_STRING(1).c_str());
-    int32_t m = map_mapname2mapid(str);
+    sint32 m = map_mapname2mapid(str);
     if (m < 0)
     {
         st->push<Script::INT>(-1);
@@ -1437,7 +1442,7 @@ static void builtin_getmapusers(ScriptState *st)
 }
 
 /// Helper to count the users in an area
-static void builtin_getareausers_sub(BlockList *, int32_t *users)
+static void builtin_getareausers_sub(BlockList *, sint32 *users)
 {
     ++*users;
 }
@@ -1447,17 +1452,17 @@ static void builtin_getareausers(ScriptState *st)
 {
     fixed_string<16> str;
     str.copy_from(GET_ARG_STRING(1).c_str());
-    int32_t x_0 = GET_ARG_INT(2);
-    int32_t y_0 = GET_ARG_INT(3);
-    int32_t x_1 = GET_ARG_INT(4);
-    int32_t y_1 = GET_ARG_INT(5);
-    int32_t m = map_mapname2mapid(str);
+    sint32 x_0 = GET_ARG_INT(2);
+    sint32 y_0 = GET_ARG_INT(3);
+    sint32 x_1 = GET_ARG_INT(4);
+    sint32 y_1 = GET_ARG_INT(5);
+    sint32 m = map_mapname2mapid(str);
     if (m < 0)
     {
         st->push<Script::INT>(-1);
         return;
     }
-    int32_t users;
+    sint32 users;
     map_foreachinarea(builtin_getareausers_sub,
                       m, x_0, y_0, x_1, y_1, BL_PC, &users);
     st->push<Script::INT>(users);
@@ -1465,7 +1470,7 @@ static void builtin_getareausers(ScriptState *st)
 
 /// Helper to count the dropped items of a type, and possibly delete them
 template<bool del>
-static void builtin_getareadropitem_sub(BlockList *bl, int32_t item, int32_t *amount)
+static void builtin_getareadropitem_sub(BlockList *bl, sint32 item, sint32 *amount)
 {
     struct flooritem_data *drop = static_cast<struct flooritem_data *>(bl);
 
@@ -1485,12 +1490,12 @@ static void builtin_getareadropitem(ScriptState *st)
 {
     fixed_string<16> str;
     str.copy_from(GET_ARG_STRING(1).c_str());
-    int32_t x_0 = GET_ARG_INT(2);
-    int32_t y_0 = GET_ARG_INT(3);
-    int32_t x_1 = GET_ARG_INT(4);
-    int32_t y_1 = GET_ARG_INT(5);
+    sint32 x_0 = GET_ARG_INT(2);
+    sint32 y_0 = GET_ARG_INT(3);
+    sint32 x_1 = GET_ARG_INT(4);
+    sint32 y_1 = GET_ARG_INT(5);
 
-    int32_t item = 0;
+    sint32 item = 0;
     RESOLVE(6);
     if (TYPE_ARG(6) == Script::STR)
     {
@@ -1502,18 +1507,18 @@ static void builtin_getareadropitem(ScriptState *st)
     else
         item = GET_ARG_INT(6);
 
-    int32_t delitems = 0;
+    sint32 delitems = 0;
 
     if (HAS_ARG(7))
         delitems = GET_ARG_INT(7);
 
-    int32_t m = map_mapname2mapid(str);
+    sint32 m = map_mapname2mapid(str);
     if (m < 0)
     {
         st->push<Script::INT>(-1);
         return;
     }
-    int32_t amount = 0;
+    sint32 amount = 0;
     if (delitems)
         map_foreachinarea(builtin_getareadropitem_sub<true>,
                           m, x_0, y_0, x_1, y_1, BL_ITEM, item, &amount);
@@ -1555,12 +1560,12 @@ static void builtin_hideonnpc(ScriptState *st)
 /// Begin a status effect
 static void builtin_sc_start(ScriptState *st)
 {
-    int32_t type = GET_ARG_INT(1);
-    int32_t tick = GET_ARG_INT(2);
-    int32_t val1 = GET_ARG_INT(3);
+    sint32 type = GET_ARG_INT(1);
+    interval_t tick = std::chrono::milliseconds(GET_ARG_INT(2));
+    sint32 val1 = GET_ARG_INT(3);
     BlockList *bl;
     if (HAS_ARG(4))
-        bl = map_id2bl(GET_ARG_INT(4));
+        bl = map_id2bl(BlockID(GET_ARG_INT(4)));
     else
         bl = script_rid2sd(st);
     skill_status_change_start(bl, type, val1, tick);
@@ -1569,13 +1574,13 @@ static void builtin_sc_start(ScriptState *st)
 /// Maybe begin a status effect
 static void builtin_sc_start2(ScriptState *st)
 {
-    int32_t type = GET_ARG_INT(1);
-    int32_t tick = GET_ARG_INT(2);
-    int32_t val1 = GET_ARG_INT(3);
-    int32_t per = GET_ARG_INT(4);
+    sint32 type = GET_ARG_INT(1);
+    interval_t tick = std::chrono::milliseconds(GET_ARG_INT(2));
+    sint32 val1 = GET_ARG_INT(3);
+    sint32 per = GET_ARG_INT(4);
     BlockList *bl;
     if (HAS_ARG(5))
-        bl = map_id2bl(GET_ARG_INT(5));
+        bl = map_id2bl(BlockID(GET_ARG_INT(5)));
     else
         bl = script_rid2sd(st);
     if (MRAND(10000) < per)
@@ -1585,7 +1590,7 @@ static void builtin_sc_start2(ScriptState *st)
 /// End a status effect
 static void builtin_sc_end(ScriptState *st)
 {
-    int32_t type = GET_ARG_INT(1);
+    sint32 type = GET_ARG_INT(1);
     BlockList *bl = script_rid2sd(st);
     skill_status_change_end(bl, type, NULL);
 }
@@ -1593,7 +1598,7 @@ static void builtin_sc_end(ScriptState *st)
 /// Check whether a status effect is active
 static void builtin_sc_check(ScriptState *st)
 {
-    int32_t type = GET_ARG_INT(1);
+    sint32 type = GET_ARG_INT(1);
     BlockList *bl = script_rid2sd(st);
 
     st->push<Script::INT>(skill_status_change_active(bl, type));
@@ -1602,8 +1607,8 @@ static void builtin_sc_check(ScriptState *st)
 /// Print a debug message to stderr
 static void builtin_debugmes(ScriptState *st)
 {
-    fprintf(stderr, "script debug : %d %d : %s\n", st->rid, st->oid,
-            GET_ARG_STRING(1).c_str());
+    FPRINTF(stderr, "script debug : %d %d : %s\n",
+            st->rid, st->oid, GET_ARG_STRING(1));
 }
 
 /// Resets all skills, and depending on the type, also:
@@ -1613,7 +1618,7 @@ static void builtin_debugmes(ScriptState *st)
 /// 4: job level/exp
 static void builtin_resetlvl(ScriptState *st)
 {
-    int32_t type = GET_ARG_INT(1);
+    sint32 type = GET_ARG_INT(1);
 
     MapSessionData *sd = script_rid2sd(st);
     pc_resetlvl(sd, type);
@@ -1649,27 +1654,27 @@ static void builtin_changesex(ScriptState *st)
         sd->status.sex = 0;
         sd->sex = 0;
     }
-    chrif_char_ask_name(-1, sd->status.name, CharOperation::CHANGE_SEX);
+    chrif_char_ask_name(DEFAULT, sd->status.name, CharOperation::CHANGE_SEX);
     chrif_save(sd);
 }
 
 /// Change the attached player
 static void builtin_attachrid(ScriptState *st)
 {
-    st->rid = GET_ARG_INT(1);
+    st->rid = account_t(GET_ARG_INT(1));
     st->push<Script::INT>(map_id2sd(st->rid) != NULL);
 }
 
 /// Unattach the attached player
 static void builtin_detachrid(ScriptState *st)
 {
-    st->rid = 0;
+    st->rid = DEFAULT;
 }
 
 /// Check whether the player is logged in
 static void builtin_isloggedin(ScriptState *st)
 {
-    st->push<Script::INT>(map_id2sd(GET_ARG_INT(1)) != NULL);
+    st->push<Script::INT>(map_id2sd(BlockID(GET_ARG_INT(1))) != NULL);
 }
 
 /// Note: These were changed to correspond with db/const.txt
@@ -1696,9 +1701,9 @@ static void builtin_setmapflagnosave(ScriptState *st)
     str.copy_from(GET_ARG_STRING(1).c_str());
     fixed_string<16> str2;
     str2.copy_from(GET_ARG_STRING(2).c_str());
-    int32_t x = GET_ARG_INT(3);
-    int32_t y = GET_ARG_INT(4);
-    int32_t m = map_mapname2mapid(str);
+    sint32 x = GET_ARG_INT(3);
+    sint32 y = GET_ARG_INT(4);
+    sint32 m = map_mapname2mapid(str);
     if (m >= 0)
     {
         maps[m].flag.nosave = 1;
@@ -1714,7 +1719,7 @@ static void builtin_setmapflag(ScriptState *st)
     fixed_string<16> str;
     str.copy_from(GET_ARG_STRING(1).c_str());
     MapFlag i = static_cast<MapFlag>(GET_ARG_INT(2));
-    int32_t m = map_mapname2mapid(str);
+    sint32 m = map_mapname2mapid(str);
     if (m >= 0)
     {
         switch (i)
@@ -1756,7 +1761,7 @@ static void builtin_removemapflag(ScriptState *st)
     fixed_string<16> str;
     str.copy_from(GET_ARG_STRING(1).c_str());
     MapFlag i = static_cast<MapFlag>(GET_ARG_INT(2));
-    int32_t m = map_mapname2mapid(str);
+    sint32 m = map_mapname2mapid(str);
     if (m >= 0)
     {
         switch (i)
@@ -1797,7 +1802,7 @@ static void builtin_pvpon(ScriptState *st)
 {
     fixed_string<16> str;
     str.copy_from(GET_ARG_STRING(1).c_str());
-    int32_t m = map_mapname2mapid(str);
+    sint32 m = map_mapname2mapid(str);
     if (m < 0)
         return;
     if (maps[m].flag.pvp)
@@ -1814,7 +1819,7 @@ static void builtin_pvpon(ScriptState *st)
             continue;
         if (!pl_sd->pvp_timer)
             continue;
-        pl_sd->pvp_timer = add_timer(gettick() + 200, pc_calc_pvprank_timer, pl_sd->id);
+        pl_sd->pvp_timer = add_timer(gettick() + std::chrono::milliseconds(200), pc_calc_pvprank_timer, pl_sd->id);
         pl_sd->pvp_rank = 0;
         pl_sd->pvp_lastusers = 0;
         pl_sd->pvp_point = 5;
@@ -1826,7 +1831,7 @@ static void builtin_pvpoff(ScriptState *st)
 {
     fixed_string<16> str;
     str.copy_from(GET_ARG_STRING(1).c_str());
-    int32_t m = map_mapname2mapid(str);
+    sint32 m = map_mapname2mapid(str);
     if (m < 0)
         return;
     if (!maps[m].flag.pvp)
@@ -1860,18 +1865,18 @@ static void builtin_mapwarp(ScriptState *st)
 {
     fixed_string<16> src_map;
     src_map.copy_from(GET_ARG_STRING(1).c_str());
-    int32_t m = map_mapname2mapid(src_map);
+    sint32 m = map_mapname2mapid(src_map);
     if (m < 0)
         return;
 
-    int32_t x_0 = 0;
-    int32_t y_0 = 0;
-    int32_t x_1 = maps[m].xs;
-    int32_t y_1 = maps[m].ys;
+    sint32 x_0 = 0;
+    sint32 y_0 = 0;
+    sint32 x_1 = maps[m].xs;
+    sint32 y_1 = maps[m].ys;
     fixed_string<16> dst_map;
     dst_map.copy_from(GET_ARG_STRING(2).c_str());
-    int16_t x = GET_ARG_INT(3);
-    int16_t y = GET_ARG_INT(4);
+    sint16 x = GET_ARG_INT(3);
+    sint16 y = GET_ARG_INT(4);
 
     map_foreachinarea(builtin_areawarp_sub,
                       m, x_0, y_0, x_1, y_1, BL_PC, Point{dst_map, x, y});
@@ -1887,7 +1892,7 @@ static void builtin_cmdothernpc(ScriptState *st)
 }
 
 /// Helper to count mobs
-static void builtin_mobcount_sub(BlockList *bl, const char *event, int32_t *c)
+static void builtin_mobcount_sub(BlockList *bl, const char *event, sint32 *c)
 {
     if (strcmp(event, static_cast<struct mob_data *>(bl)->npc_event) == 0)
         ++*c;
@@ -1899,13 +1904,13 @@ static void builtin_mobcount(ScriptState *st)
     fixed_string<16> mapname;
     mapname.copy_from(GET_ARG_STRING(1).c_str());
     std::string event = GET_ARG_STRING(2);
-    int32_t m = map_mapname2mapid(mapname);
+    sint32 m = map_mapname2mapid(mapname);
     if (m < 0)
     {
         st->push<Script::INT>(-1);
         return;
     }
-    int32_t c = 0;
+    sint32 c = 0;
     map_foreachinarea(builtin_mobcount_sub, m, 0, 0, maps[m].xs, maps[m].ys,
                       BL_MOB, event.c_str(), &c);
 
@@ -1938,8 +1943,8 @@ static void builtin_divorce(ScriptState *st)
 /// Mob information (not necessarily strings)
 static void builtin_strmobinfo(ScriptState *st)
 {
-    int32_t num = GET_ARG_INT(1);
-    int32_t mob_class = GET_ARG_INT(2);
+    sint32 num = GET_ARG_INT(1);
+    sint32 mob_class = GET_ARG_INT(2);
 
     if (num <= 0 || num >= 8 || (mob_class >= 0 && mob_class <= 1000) || mob_class > 2000)
         abort();
@@ -1953,7 +1958,7 @@ static void builtin_strmobinfo(ScriptState *st)
         st->push<Script::STR>(mob_db[mob_class].jname);
         return;
     case 3:
-        st->push<Script::INT>(mob_db[mob_class].lv);
+        st->push<Script::INT>(unwrap(mob_db[mob_class].lv));
         return;
     case 4:
         st->push<Script::INT>(mob_db[mob_class].max_hp);
@@ -2025,7 +2030,7 @@ static void builtin_getanchorinvocation(ScriptState *st)
 static void builtin_getpartnerid2(ScriptState *st)
 {
     MapSessionData *sd = script_rid2sd(st);
-    st->push<Script::INT>(sd->status.partner_id);
+    st->push<Script::INT>(unwrap(sd->status.partner_id));
 }
 
 /// Fill in some arrays of inventory stuff
@@ -2033,22 +2038,22 @@ static void builtin_getinventorylist(ScriptState *st)
 {
     MapSessionData *sd = script_rid2sd(st);
 
-    int32_t j = 0;
-    for (int32_t i = 0; i < MAX_INVENTORY; i++)
+    sint32 j = 0;
+    for (sint32 i = 0; i < MAX_INVENTORY; i++)
     {
         if (!sd->status.inventory[i].nameid
                 || !sd->status.inventory[i].amount)
             continue;
         sd->reg.set(add_str("@inventorylist_id") + (j << 24), sd->status.inventory[i].nameid);
         sd->reg.set(add_str("@inventorylist_amount") + (j << 24), sd->status.inventory[i].amount);
-        sd->reg.set(add_str("@inventorylist_equip") + (j << 24), static_cast<uint16_t>(sd->status.inventory[i].equip));
+        sd->reg.set(add_str("@inventorylist_equip") + (j << 24), static_cast<uint16>(sd->status.inventory[i].equip));
         j++;
     }
     sd->reg.set(add_str("@inventorylist_count"), j);
 }
 
 /// helper to fill in some arrays of skill stuff
-static void add_to_skill_list(MapSessionData *sd, int32_t skill_id, int32_t& count)
+static void add_to_skill_list(MapSessionData *sd, sint32 skill_id, sint32& count)
 {
     sd->reg.set(add_str("@skilllist_id") + (count << 24), sd->status.skill[skill_id].id);
     sd->reg.set(add_str("@skilllist_lv") + (count << 24), sd->status.skill[skill_id].lv);
@@ -2062,8 +2067,8 @@ static void builtin_getskilllist(ScriptState *st)
 {
     MapSessionData *sd = script_rid2sd(st);
 
-    int32_t j = 0;
-    for (int32_t i = 0; i < MAX_SKILL; i++)
+    sint32 j = 0;
+    for (sint32 i = 0; i < MAX_SKILL; i++)
         if (sd->status.skill[i].id && sd->status.skill[i].lv)
             add_to_skill_list(sd, i, j);
     sd->reg.set(add_str("@skilllist_count"), j);
@@ -2073,13 +2078,13 @@ static void builtin_getskilllist(ScriptState *st)
 static void builtin_getactivatedpoolskilllist(ScriptState *st)
 {
     MapSessionData *sd = script_rid2sd(st);
-    int32_t pool_skills[MAX_SKILL_POOL];
-    int32_t pool_size = skill_pool(sd, pool_skills);
+    sint32 pool_skills[MAX_SKILL_POOL];
+    sint32 pool_size = skill_pool(sd, pool_skills);
 
-    int32_t count = 0;
-    for (int32_t i = 0; i < pool_size; i++)
+    sint32 count = 0;
+    for (sint32 i = 0; i < pool_size; i++)
     {
-        int32_t skill_id = pool_skills[i];
+        sint32 skill_id = pool_skills[i];
         if (sd->status.skill[skill_id].id == skill_id)
             add_to_skill_list(sd, skill_id, count);
     }
@@ -2091,10 +2096,10 @@ static void builtin_getunactivatedpoolskilllist(ScriptState *st)
 {
     MapSessionData *sd = script_rid2sd(st);
 
-    int32_t count = 0;
-    for (int32_t i = 0; i < skill_pool_skills_size; i++)
+    sint32 count = 0;
+    for (sint32 i = 0; i < skill_pool_skills_size; i++)
     {
-        int32_t skill_id = skill_pool_skills[i];
+        sint32 skill_id = skill_pool_skills[i];
         if (sd->status.skill[skill_id].id == skill_id
                 && !(sd->status.skill[skill_id].flags & SKILL_POOL_ACTIVATED))
             add_to_skill_list(sd, skill_id, count);
@@ -2107,10 +2112,10 @@ static void builtin_getpoolskilllist(ScriptState *st)
 {
     MapSessionData *sd = script_rid2sd(st);
 
-    int32_t count = 0;
-    for (int32_t i = 0; i < skill_pool_skills_size; i++)
+    sint32 count = 0;
+    for (sint32 i = 0; i < skill_pool_skills_size; i++)
     {
-        int32_t skill_id = skill_pool_skills[i];
+        sint32 skill_id = skill_pool_skills[i];
         if (sd->status.skill[skill_id].id == skill_id)
             add_to_skill_list(sd, skill_id, count);
     }
@@ -2121,7 +2126,7 @@ static void builtin_getpoolskilllist(ScriptState *st)
 static void builtin_poolskill(ScriptState *st)
 {
     MapSessionData *sd = script_rid2sd(st);
-    int32_t skill_id = GET_ARG_INT(1);
+    sint32 skill_id = GET_ARG_INT(1);
 
     skill_pool_activate(sd, skill_id);
     clif_skillinfoblock(sd);
@@ -2131,7 +2136,7 @@ static void builtin_poolskill(ScriptState *st)
 static void builtin_unpoolskill(ScriptState *st)
 {
     MapSessionData *sd = script_rid2sd(st);
-    int32_t skill_id = GET_ARG_INT(1);
+    sint32 skill_id = GET_ARG_INT(1);
 
     skill_pool_deactivate(sd, skill_id);
     clif_skillinfoblock(sd);
@@ -2141,7 +2146,7 @@ static void builtin_unpoolskill(ScriptState *st)
 static void builtin_checkpoolskill(ScriptState *st)
 {
     MapSessionData *sd = script_rid2sd(st);
-    int32_t skill_id = GET_ARG_INT(1);
+    sint32 skill_id = GET_ARG_INT(1);
 
     st->push<Script::INT>(skill_pool_is_activated(sd, skill_id));
 }
@@ -2150,7 +2155,7 @@ static void builtin_checkpoolskill(ScriptState *st)
 static void builtin_clearitem(ScriptState *st)
 {
     MapSessionData *sd = script_rid2sd(st);
-    for (int32_t i = 0; i < MAX_INVENTORY; i++)
+    for (sint32 i = 0; i < MAX_INVENTORY; i++)
     {
         if (sd->status.inventory[i].amount)
             pc_delitem(sd, i, sd->status.inventory[i].amount, 0);
@@ -2160,7 +2165,7 @@ static void builtin_clearitem(ScriptState *st)
 /// Special effect
 static void builtin_misceffect(ScriptState *st)
 {
-    int32_t type = GET_ARG_INT(1);
+    sint32 type = GET_ARG_INT(1);
     BlockList *bl = NULL;
 
     if (HAS_ARG(2))
@@ -2170,7 +2175,7 @@ static void builtin_misceffect(ScriptState *st)
         if (TYPE_ARG(2) == Script::STR)
             bl = map_nick2sd(GET_ARG_STRING(2).c_str());
         else
-            bl = map_id2bl(GET_ARG_INT(2));
+            bl = map_id2bl(BlockID(GET_ARG_INT(2)));
     }
 
     if (!bl && st->oid)
@@ -2238,21 +2243,21 @@ static void builtin_gmcommand(ScriptState *st)
 {
     MapSessionData *sd = script_rid2sd(st);
     std::string cmd = GET_ARG_STRING(1);
-    is_atcommand(sd->fd, sd, cmd.c_str(), 99);
+    is_atcommand(sd->fd, sd, cmd.c_str(), gm_level_t(-1));
 }
 
 /// Move an NPC within a map
 static void builtin_npcwarp(ScriptState *st)
 {
-    int32_t x = GET_ARG_INT(1);
-    int32_t y = GET_ARG_INT(2);
+    sint32 x = GET_ARG_INT(1);
+    sint32 y = GET_ARG_INT(2);
     std::string npc = GET_ARG_STRING(3);
     struct npc_data *nd = npc_name2id(npc.c_str());
 
     if (!nd)
         return;
 
-    int16_t m = nd->m;
+    sint16 m = nd->m;
 
     if (m < 0 || !nd->prev
         || x < 0 || x >= maps[m].xs
@@ -2299,7 +2304,7 @@ static void builtin_hasitems(ScriptState *st)
 {
     MapSessionData *sd = script_rid2sd(st);
 
-    for (int32_t i = 0; i < MAX_INVENTORY; i++)
+    for (sint32 i = 0; i < MAX_INVENTORY; i++)
     {
         if (sd->status.inventory[i].amount)
         {
@@ -2320,7 +2325,7 @@ static void builtin_getlook(ScriptState *st)
     MapSessionData *sd = script_rid2sd(st);
 
     LOOK type = static_cast<LOOK>(GET_ARG_INT(1));
-    int32_t val = -1;
+    sint32 val = -1;
     switch (type)
     {
     case LOOK::HAIR:
@@ -2378,7 +2383,7 @@ static void builtin_getsavepoint(ScriptState *st)
 
 /// Cause an event to happen in the future
 // this is like addtimer for all
-static void builtin_areatimer_sub(BlockList *bl, int32_t tick, const char *event)
+static void builtin_areatimer_sub(BlockList *bl, interval_t tick, const char *event)
 {
     pc_addeventtimer(static_cast<MapSessionData *>(bl), tick, event);
 }
@@ -2388,14 +2393,14 @@ static void builtin_areatimer(ScriptState *st)
 {
     fixed_string<16> mapname;
     mapname.copy_from(GET_ARG_STRING(1).c_str());
-    int32_t x_0 = GET_ARG_INT(2);
-    int32_t y_0 = GET_ARG_INT(3);
-    int32_t x_1 = GET_ARG_INT(4);
-    int32_t y_1 = GET_ARG_INT(5);
-    int32_t tick = GET_ARG_INT(6);
+    sint32 x_0 = GET_ARG_INT(2);
+    sint32 y_0 = GET_ARG_INT(3);
+    sint32 x_1 = GET_ARG_INT(4);
+    sint32 y_1 = GET_ARG_INT(5);
+    interval_t tick = std::chrono::milliseconds(GET_ARG_INT(6));
     std::string event = GET_ARG_STRING(7);
 
-    int32_t m = map_mapname2mapid(mapname);
+    sint32 m = map_mapname2mapid(mapname);
     if (m < 0)
         return;
 
@@ -2409,10 +2414,10 @@ static void builtin_isin(ScriptState *st)
     MapSessionData *sd = script_rid2sd(st);
 
     std::string str = GET_ARG_STRING(1);
-    int32_t x_0 = GET_ARG_INT(2);
-    int32_t y_0 = GET_ARG_INT(3);
-    int32_t x_1 = GET_ARG_INT(4);
-    int32_t y_1 = GET_ARG_INT(5);
+    sint32 x_0 = GET_ARG_INT(2);
+    sint32 y_0 = GET_ARG_INT(3);
+    sint32 x_1 = GET_ARG_INT(4);
+    sint32 y_1 = GET_ARG_INT(5);
 
     if (!sd)
         return;

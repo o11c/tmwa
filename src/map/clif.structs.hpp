@@ -1,6 +1,8 @@
 #ifndef CLIF_STRUCTS
 #define CLIF_STRUCTS
 
+# include <cstdint>
+
 // these need better names
 // the only one that is fully accurate is DEAD
 enum class BeingRemoveType
@@ -28,4 +30,5 @@ enum class ArrowFail : uint16_t
     NO_AMMO = 0,
     EQUIPPING = 3,
 };
+
 #endif //CLIF_STRUCTS

@@ -1,6 +1,6 @@
 include make/login.deps
 
-obj/login/login: obj/login/login.o \
+tmwa-login: obj/login/main.o \
  obj/common/core.o \
  obj/common/db.o \
  obj/common/lock.o \

@@ -25,10 +25,8 @@ void magic_unshroud(MapSessionData *character);
  * \param invocation The invocation to notify
  * \param bl_id ID of the PC for whom this happened
  * \param type sc_id ID of the status change entry that finished
- * \param supplanted Whether the status_change finished normally(0) or was supplanted by a new status_change(1)
  */
-void spell_effect_report_termination(int32_t invocation, int32_t bl_id, int32_t sc_id,
-                                     int32_t supplanted);
+void spell_effect_report_termination(BlockID invocation, BlockID bl_id, sint32 sc_id);
 
 /**
  * Execute a spell invocation and sets up timers to finish
@@ -45,7 +43,7 @@ void spell_execute_script(invocation_t *invocation);
  *
  * Returns 0 if there is no charged spell or the spell is depleted.
  */
-bool spell_attack(int32_t caster, int32_t target);
+bool spell_attack(BlockID caster, BlockID target);
 
 /**
  * Retrieves an operation by name

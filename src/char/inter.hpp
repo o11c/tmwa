@@ -1,15 +1,17 @@
 #ifndef INTER_HPP
 #define INTER_HPP
 
+#include "../lib/ints.hpp"
+
 void inter_init(const char *file);
 void inter_save(void);
-int32_t inter_parse_frommap(int32_t fd);
-void inter_mapif_init(int32_t fd) __attribute__((deprecated));
+sint32 inter_parse_frommap(sint32 fd);
+void inter_mapif_init(sint32 fd) __attribute__((deprecated));
 
-int32_t inter_check_length(int32_t fd, int32_t length) __attribute__((pure));
+sint32 inter_check_length(sint32 fd, sint32 length) __attribute__((pure));
 
 # define inter_cfgName "conf/inter_athena.conf"
 
-extern int32_t party_share_level;
+extern sint32 party_share_level;
 
 #endif // INTER_HPP

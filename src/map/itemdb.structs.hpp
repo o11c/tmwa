@@ -50,29 +50,29 @@ constexpr earray<EPOS, EQUIP, EQUIP::COUNT> equip_pos =
 
 struct item_data
 {
-    int32_t nameid;
+    sint32 nameid;
     char name[24], jname[24];
-    int32_t value_buy;
-    int32_t value_sell;
-    int32_t type;
-    int32_t sex;
+    sint32 value_buy;
+    sint32 value_sell;
+    sint32 type;
+    sint32 sex;
     EPOS equip;
-    int32_t weight;
-    int32_t atk;
-    int32_t def;
-    int32_t range;
-    int32_t magic_bonus;
-    int32_t look;
+    sint32 weight;
+    sint32 atk;
+    sint32 def;
+    sint32 range;
+    sint32 magic_bonus;
+    sint32 look;
     /// Base level require to equip this
-    int32_t elv;
+    level_t elv;
     /// "Weapon level", used in damage calculations
-    int32_t wlv;
+    sint32 wlv;
     std::vector<Script> use_script;
     std::vector<Script> equip_script;
     struct
     {
         bool available:1;
-        uint32_t no_equip:3;
+        uint32 no_equip:3;
         bool no_drop:1;
         bool no_use:1;
     } flag;

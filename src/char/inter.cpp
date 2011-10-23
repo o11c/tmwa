@@ -6,12 +6,12 @@
 #include "../common/timer.hpp"
 #include "../common/utils.hpp"
 
-#include "char.hpp"
+#include "main.hpp"
 #include "int_party.hpp"
 #include "int_storage.hpp"
 
 // how long to hold whisper data, awaiting answers from map servers
-#define WHISPER_DATA_TTL (60 * 1000)
+constexpr std::chrono::minutes WHISPER_DATA_TTL(1);
 // Number of elements of Whisp/page data deletion list
 #define WHISPER_DELLIST_MAX 256
 
@@ -21,15 +21,15 @@ static struct dbt *accreg_db = NULL;
 struct accreg
 {
     account_t account_id;
-    int32_t reg_num;
+    sint32 reg_num;
     struct global_reg reg[ACCOUNT_REG_NUM];
 };
 
 /// Max level difference to share xp in a party
-int32_t party_share_level = 10;
+sint32 party_share_level = 10;
 
 /// Lengths of packets sent
-int32_t inter_send_packet_length[] =
+sint32 inter_send_packet_length[] =
 {
 // 0x3800
     -1, -1, 27, -1,
@@ -79,7 +79,7 @@ int32_t inter_send_packet_length[] =
 };
 
 /// Lengths of the received packets
-int32_t inter_recv_packet_length[] =
+sint32 inter_recv_packet_length[] =
 {
 // 0x3000
     -1, -1, 7, -1,
@@ -130,7 +130,7 @@ int32_t inter_recv_packet_length[] =
 
 struct WhisperData
 {
-    int32_t id, fd, count, len;
+    sint32 id, fd, count, len;
     tick_t tick;
     // speaker
     char src[24];
@@ -141,8 +141,8 @@ struct WhisperData
 static struct dbt *whis_db = NULL;
 
 // TODO remove these as soon as the good db iterators are implemented
-static int32_t whis_dellist[WHISPER_DELLIST_MAX] __attribute__((deprecated));
-static int32_t whis_delnum __attribute__((deprecated));
+static sint32 whis_dellist[WHISPER_DELLIST_MAX] __attribute__((deprecated));
+static sint32 whis_delnum __attribute__((deprecated));
 
 
 /// Save variables
@@ -151,23 +151,23 @@ static void inter_accreg_tofile(FILE *fp, struct accreg *reg)
     if (!reg->reg_num)
         return;
 
-    fprintf(fp, "%u\t", reg->account_id);
-    for (int32_t j = 0; j < reg->reg_num; j++)
+    FPRINTF(fp, "%u\t", reg->account_id);
+    for (sint32 j = 0; j < reg->reg_num; j++)
         fprintf(fp, "%s,%d ", reg->reg[j].str, reg->reg[j].value);
 }
 
 /// Load variables
-static int32_t inter_accreg_fromstr(const char *p, struct accreg *reg)
+static sint32 inter_accreg_fromstr(const char *p, struct accreg *reg)
 {
-    int32_t n;
-    if (sscanf(p, "%d\t%n", &reg->account_id, &n) != 1 || !reg->account_id)
+    sint32 n;
+    if (SSCANF(p, "%d\t%n", &reg->account_id, &n) != 1 || !reg->account_id)
         return 1;
     p += n;
-    int32_t j;
+    sint32 j;
     for (j = 0; j < ACCOUNT_REG_NUM; j++, p += n)
     {
         char buf[128];
-        int32_t v;
+        sint32 v;
         if (sscanf(p, "%[^,],%d %n", buf, &v, &n) != 2)
             break;
         STRZCPY(reg->reg[j].str, buf);
@@ -186,7 +186,7 @@ static void inter_accreg_init(void)
     if (!fp)
         return;
 
-    int32_t c = 0;
+    sint32 c = 0;
     char line[8192];
     while (fgets(line, sizeof(line), fp))
     {
@@ -216,7 +216,7 @@ static void inter_accreg_save_sub(db_key_t, db_val_t data, FILE *fp)
 /// Save variables of all accounts
 static void inter_accreg_save(void)
 {
-    int32_t lock;
+    sint32 lock;
     FILE *fp = lock_fopen(accreg_txt, &lock);
 
     if (!fp)
@@ -301,9 +301,9 @@ void inter_init(const char *file)
 
 /// Send a message to all GMs
 // length of mes is actually only len-4 - it includes the header
-static void mapif_GMmessage(const char *mes, int32_t len)
+static void mapif_GMmessage(const char *mes, sint32 len)
 {
-    uint8_t buf[len];
+    uint8 buf[len];
 
     WBUFW(buf, 0) = 0x3800;
     WBUFW(buf, 2) = len;
@@ -311,11 +311,11 @@ static void mapif_GMmessage(const char *mes, int32_t len)
     mapif_sendall(buf, len);
 }
 
-extern int32_t server_fd[];
+extern sint32 server_fd[];
 /// Transmit a whisper to all map servers
 static void mapif_whis_message(struct WhisperData *wd)
 {
-    uint8_t buf[56 + wd->len];
+    uint8 buf[56 + wd->len];
 
     WBUFW(buf, 0) = 0x3801;
     WBUFW(buf, 2) = 56 + wd->len;
@@ -327,15 +327,15 @@ static void mapif_whis_message(struct WhisperData *wd)
     mapif_sendall(buf, WBUFW(buf, 2));
     wd->count = 0;
     // This feels hackish but it eliminates the return value check
-    for (int32_t i = 0; i < MAX_MAP_SERVERS; i++)
+    for (sint32 i = 0; i < MAX_MAP_SERVERS; i++)
         if (server_fd[i] >= 0)
             wd->count++;
 }
 
 /// Transmit the result of a whisper back to the map-server that requested it
-static void mapif_whis_end(struct WhisperData *wd, uint8_t flag)
+static void mapif_whis_end(struct WhisperData *wd, uint8 flag)
 {
-    uint8_t buf[27];
+    uint8 buf[27];
 
     WBUFW(buf, 0) = 0x3802;
     STRZCPY2(sign_cast<char *>(WBUFP(buf, 2)), wd->src);
@@ -345,27 +345,27 @@ static void mapif_whis_end(struct WhisperData *wd, uint8_t flag)
 }
 
 /// Send all variables
-static void mapif_account_reg(int32_t fd)
+static void mapif_account_reg(sint32 fd)
 {
     session[fd]->rfifo_change_packet(0x3804);
     mapif_sendallwos(fd, RFIFOP(fd, 0), RFIFOW(fd, 2));
 }
 
 /// Account variable reply
-static void mapif_account_reg_reply(int32_t fd, account_t account_id)
+static void mapif_account_reg_reply(sint32 fd, account_t account_id)
 {
     struct accreg *reg = reinterpret_cast<struct accreg *>(numdb_search(accreg_db, static_cast<numdb_key_t>(account_id)).p);
 
     WFIFOW(fd, 0) = 0x3804;
-    WFIFOL(fd, 4) = account_id;
+    WFIFOL(fd, 4) = uint32(account_id);
     if (!reg)
     {
         WFIFOW(fd, 2) = 8;
     }
     else
     {
-        int32_t p = 8;
-        for (int32_t j = 0; j < reg->reg_num; j++)
+        sint32 p = 8;
+        for (sint32 j = 0; j < reg->reg_num; j++)
         {
             STRZCPY2(sign_cast<char *>(WFIFOP(fd, p)), reg->reg[j].str);
             p += 32;
@@ -383,8 +383,7 @@ static void check_ttl_whisdata_sub(db_key_t, db_val_t data, tick_t tick)
 {
     struct WhisperData *wd = static_cast<struct WhisperData *>(data.p);
 
-    if (DIFF_TICK(tick, wd->tick) > WHISPER_DATA_TTL
-            && whis_delnum < WHISPER_DELLIST_MAX)
+    if (tick > wd->tick + WHISPER_DATA_TTL && whis_delnum < WHISPER_DELLIST_MAX)
     {
         // TODO We really need to implement "delete while traversing"
         // hm, it we use those new methods I made, instead of the foreach
@@ -403,7 +402,7 @@ static void check_ttl_whisdata(void)
     {
         whis_delnum = 0;
         numdb_foreach(whis_db, check_ttl_whisdata_sub, tick);
-        for (int32_t i = 0; i < whis_delnum; i++)
+        for (sint32 i = 0; i < whis_delnum; i++)
         {
             struct WhisperData *wd = reinterpret_cast<struct WhisperData *>(numdb_search(whis_db, whis_dellist[i]).p);
             printf("inter: whis data id=%d time out : from %s to %s\n",
@@ -419,16 +418,16 @@ static void check_ttl_whisdata(void)
 /// received packets from map-server
 
 // GM messaging
-static void mapif_parse_GMmessage(int32_t fd)
+static void mapif_parse_GMmessage(sint32 fd)
 {
     mapif_GMmessage(sign_cast<const char *>(RFIFOP(fd, 4)), RFIFOW(fd, 2));
 }
 
 /// Send whisper
-static void mapif_parse_WhisRequest(int32_t fd)
+static void mapif_parse_WhisRequest(sint32 fd)
 {
     struct WhisperData *wd;
-    static int32_t whisid = 0;
+    static sint32 whisid = 0;
 
     if (RFIFOW(fd, 2) - 52 >= sizeof(wd->msg))
     {
@@ -440,7 +439,7 @@ static void mapif_parse_WhisRequest(int32_t fd)
     struct mmo_charstatus *character = character_by_name(sign_cast<const char *>(RFIFOP(fd, 28)));
     if (!character)
     {
-        uint8_t buf[27];
+        uint8 buf[27];
         WBUFW(buf, 0) = 0x3802;
         memcpy(WBUFP(buf, 2), RFIFOP(fd, 4), 24);
         // flag: 0: success, 1: target not logged in, 2: ignored
@@ -455,7 +454,7 @@ static void mapif_parse_WhisRequest(int32_t fd)
     // if source is destination, don't ask other servers.
     if (strcmp(sign_cast<const char *>(RFIFOP(fd, 4)), character_name) == 0)
     {
-        uint8_t buf[27];
+        uint8 buf[27];
         WBUFW(buf, 0) = 0x3802;
         strzcpy(sign_cast<char *>(WBUFP(buf, 2)), sign_cast<const char *>(RFIFOP(fd, 4)), 24);
         // flag: 0: success, 1: target not logged in, 2: ignored
@@ -483,10 +482,10 @@ static void mapif_parse_WhisRequest(int32_t fd)
 
 /// Whisper result
 // note that we get this once per map server
-static void mapif_parse_WhisReply(int32_t fd)
+static void mapif_parse_WhisReply(sint32 fd)
 {
-    int32_t id = RFIFOL(fd, 2);
-    uint8_t flag = RFIFOB(fd, 6);
+    sint32 id = RFIFOL(fd, 2);
+    uint8 flag = RFIFOB(fd, 6);
     struct WhisperData *wd = static_cast<struct WhisperData *>(numdb_search(whis_db, id).p);
 
     /// timeout or already delivered to another map-server
@@ -508,16 +507,16 @@ static void mapif_parse_WhisReply(int32_t fd)
 
 /// forward @wgm
 // TODO handle immediately on the originating map server and use wos
-static void mapif_parse_WhisToGM(int32_t fd)
+static void mapif_parse_WhisToGM(sint32 fd)
 {
     session[fd]->rfifo_change_packet(0x3803);
     mapif_sendall(RFIFOP(fd, 0), RFIFOW(fd, 2));
 }
 
 /// Store account variables
-static void mapif_parse_AccReg(int32_t fd)
+static void mapif_parse_AccReg(sint32 fd)
 {
-    account_t acc = RFIFOL(fd, 4);
+    account_t acc = account_t(RFIFOL(fd, 4));
     struct accreg *reg = reinterpret_cast<struct accreg *>(numdb_search(accreg_db, static_cast<numdb_key_t>(acc)).p);
 
     if (!reg)
@@ -527,8 +526,8 @@ static void mapif_parse_AccReg(int32_t fd)
         numdb_insert(accreg_db, static_cast<numdb_key_t>(acc), static_cast<void *>(reg));
     }
 
-    int32_t j;
-    int32_t p = 8;
+    sint32 j;
+    sint32 p = 8;
     for (j = 0; j < ACCOUNT_REG_NUM && p < RFIFOW(fd, 2); j++)
     {
         STRZCPY(reg->reg[j].str, sign_cast<const char *>(RFIFOP(fd, p)));
@@ -543,18 +542,19 @@ static void mapif_parse_AccReg(int32_t fd)
 }
 
 /// Account variable reply
-static void mapif_parse_AccRegRequest(int32_t fd)
+static void mapif_parse_AccRegRequest(sint32 fd)
 {
-    mapif_account_reg_reply(fd, RFIFOL(fd, 2));
+    account_t acc = account_t(RFIFOL(fd, 2));
+    mapif_account_reg_reply(fd, acc);
 }
 
 
 /// parse_char failed
 // try inter server packets instead
 // return: 0 unknown, 1 ok, 2 too short
-int32_t inter_parse_frommap(int32_t fd)
+sint32 inter_parse_frommap(sint32 fd)
 {
-    uint16_t cmd = RFIFOW(fd, 0);
+    uint16 cmd = RFIFOW(fd, 0);
 
     if (cmd < 0x3000 || cmd >= 0x3000 + ARRAY_SIZEOF(inter_recv_packet_length))
         return 0;
@@ -562,7 +562,7 @@ int32_t inter_parse_frommap(int32_t fd)
         return 0;
 
     /// return length of packet, looking up variable-length packets, or 0 if not long enough
-    int32_t len = inter_check_length(fd, inter_recv_packet_length[cmd - 0x3000]);
+    sint32 len = inter_check_length(fd, inter_recv_packet_length[cmd - 0x3000]);
     if (len == 0)
         return 2;
 
@@ -599,7 +599,7 @@ int32_t inter_parse_frommap(int32_t fd)
 
 /// Return length if enough bytes remain,
 /// return 0 if not enough in the fifo
-int32_t inter_check_length(int32_t fd, int32_t length)
+sint32 inter_check_length(sint32 fd, sint32 length)
 {
     if (length == -1)
     {

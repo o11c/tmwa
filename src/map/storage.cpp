@@ -6,21 +6,20 @@
 #include "chrif.hpp"
 #include "clif.hpp"
 #include "itemdb.hpp"
-#include "map.hpp"
+#include "main.hpp"
 #include "pc.hpp"
 
-static int32_t storage_delete(int32_t account_id);
-static int32_t storage_comp_item(const void *_i1, const void *_i2);
+static void storage_delete(account_t account_id);
+static sint32 storage_comp_item(const void *_i1, const void *_i2);
 static void sortage_sortitem(struct storage *stor);
 
-
-static struct dbt *storage_db;
+static DMap<account_t, struct storage *> storage_db;
 
 /*==========================================
  * 倉庫内アイテムソート
  *------------------------------------------
  */
-int32_t storage_comp_item(const void *_i1, const void *_i2)
+sint32 storage_comp_item(const void *_i1, const void *_i2)
 {
     const struct item *i1 = static_cast<const struct item *>(_i1);
     const struct item *i2 = static_cast<const struct item *>(_i2);
@@ -41,52 +40,34 @@ void sortage_sortitem(struct storage *stor)
            storage_comp_item);
 }
 
-/*==========================================
- * 初期化とか
- *------------------------------------------
- */
-int32_t do_init_storage(void)      // map.c::do_init()から呼ばれる
+struct storage *account2storage(account_t account_id)
 {
-    storage_db = numdb_init();
-    return 1;
-}
-
-struct storage *account2storage(int32_t account_id)
-{
-    struct storage *stor =
-            static_cast<struct storage *>(numdb_search(storage_db, account_id).p);
+    struct storage *stor = storage_db.get(account_id);
     if (stor == NULL)
     {
         CREATE(stor, struct storage, 1);
         stor->account_id = account_id;
-        numdb_insert(storage_db, static_cast<numdb_key_t>(stor->account_id), static_cast<void *>(stor));
+        storage_db.set(account_id, stor);
     }
     return stor;
 }
 
 // Just to ask storage, without creation
-struct storage *account2storage2(int32_t account_id)
+struct storage *account2storage2(account_t account_id)
 {
-    return static_cast<struct storage *>(numdb_search(storage_db, account_id).p);
+    return storage_db.get(account_id);
 }
 
-int32_t storage_delete(int32_t account_id)
+void storage_delete(account_t account_id)
 {
-    struct storage *stor =
-            static_cast<struct storage *>(numdb_search(storage_db, account_id).p);
-    if (stor)
-    {
-        numdb_erase(storage_db, account_id);
-        free(stor);
-    }
-    return 0;
+    free(storage_db.take(account_id));
 }
 
 /*==========================================
  * カプラ倉庫を開く
  *------------------------------------------
  */
-int32_t storage_storageopen(MapSessionData *sd)
+sint32 storage_storageopen(MapSessionData *sd)
 {
     struct storage *stor;
     nullpo_ret(sd);
@@ -94,10 +75,7 @@ int32_t storage_storageopen(MapSessionData *sd)
     if (sd->state.storage_flag)
         return 1;               //Already open?
 
-    if ((stor = static_cast<struct storage *>(
-            numdb_search(storage_db,
-                         static_cast<numdb_key_t>(sd->status.account_id)).p)
-        ) == NULL)
+    if (!(stor = storage_db.get(sd->status.account_id)))
     {                           //Request storage.
         intif_request_storage(sd->status.account_id);
         return 1;
@@ -118,11 +96,11 @@ int32_t storage_storageopen(MapSessionData *sd)
  * Internal add-item function.
  *------------------------------------------
  */
-static int32_t storage_additem(MapSessionData *sd, struct storage *stor,
-                            struct item *item_data, int32_t amount)
+static sint32 storage_additem(MapSessionData *sd, struct storage *stor,
+                            struct item *item_data, sint32 amount)
 {
     struct item_data *data;
-    int32_t i;
+    sint32 i;
 
     if (item_data->nameid <= 0 || amount <= 0)
         return 1;
@@ -163,8 +141,8 @@ static int32_t storage_additem(MapSessionData *sd, struct storage *stor,
  * Internal del-item function
  *------------------------------------------
  */
-static int32_t storage_delitem(MapSessionData *sd, struct storage *stor,
-                            int32_t n, int32_t amount)
+static sint32 storage_delitem(MapSessionData *sd, struct storage *stor,
+                            sint32 n, sint32 amount)
 {
 
     if (stor->storage_[n].nameid == 0 || stor->storage_[n].amount < amount)
@@ -187,7 +165,7 @@ static int32_t storage_delitem(MapSessionData *sd, struct storage *stor,
  * Add an item to the storage from the inventory.
  *------------------------------------------
  */
-int32_t storage_storageadd(MapSessionData *sd, int32_t idx, int32_t amount)
+sint32 storage_storageadd(MapSessionData *sd, sint32 idx, sint32 amount)
 {
     struct storage *stor;
 
@@ -221,7 +199,7 @@ int32_t storage_storageadd(MapSessionData *sd, int32_t idx, int32_t amount)
  * Retrieve an item from the storage.
  *------------------------------------------
  */
-int32_t storage_storageget(MapSessionData *sd, int32_t idx, int32_t amount)
+sint32 storage_storageget(MapSessionData *sd, sint32 idx, sint32 amount)
 {
     struct storage *stor;
 
@@ -250,7 +228,7 @@ int32_t storage_storageget(MapSessionData *sd, int32_t idx, int32_t amount)
  * Modified By Valaris to save upon closing [massdriller]
  *------------------------------------------
  */
-int32_t storage_storageclose(MapSessionData *sd)
+sint32 storage_storageclose(MapSessionData *sd)
 {
     struct storage *stor;
 
@@ -278,7 +256,7 @@ int32_t storage_storageclose(MapSessionData *sd)
  * When quitting the game.
  *------------------------------------------
  */
-int32_t storage_storage_quit(MapSessionData *sd)
+sint32 storage_storage_quit(MapSessionData *sd)
 {
     struct storage *stor;
 
@@ -295,7 +273,7 @@ int32_t storage_storage_quit(MapSessionData *sd)
     return 0;
 }
 
-int32_t storage_storage_save(int32_t account_id, int32_t final)
+sint32 storage_storage_save(account_t account_id, sint32 final)
 {
     struct storage *stor;
 
@@ -323,7 +301,7 @@ int32_t storage_storage_save(int32_t account_id, int32_t final)
 }
 
 //Ack from Char-server indicating the storage was saved. [Skotlex]
-int32_t storage_storage_saved(int32_t account_id)
+sint32 storage_storage_saved(account_t account_id)
 {
     struct storage *stor;
 

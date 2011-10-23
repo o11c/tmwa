@@ -2,6 +2,8 @@
 #define NULLPO_HPP
 /// return wrappers for unexpected NULL pointers
 
+#include "../lib/ints.hpp"
+
 /// Comment this out to live dangerously
 # define NULLPO_CHECK
 
@@ -18,11 +20,11 @@
 #  define nullpo_retr(ret, t) t;
 # endif // NULLPO_CHECK
 
-# define nullpo_ret(t) nullpo_retr(0, t)
+# define nullpo_ret(t) nullpo_retr(DEFAULT, t)
 # define nullpo_retv(t) nullpo_retr(, t)
 
 /// Used by macros in this header
-bool nullpo_chk(const char *file, int32_t line, const char *func,
+bool nullpo_chk(const char *file, sint32 line, const char *func,
                 const void *target);
 
 #endif // NULLPO_HPP

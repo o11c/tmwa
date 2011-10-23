@@ -5,33 +5,33 @@
 #include "../common/utils.hpp"
 
 #include "clif.hpp"
-#include "map.hpp"
+#include "main.hpp"
 #include "mob.hpp"
 #include "path.hpp"
 #include "pc.hpp"
 #include "skill.hpp"
 
 static struct Damage battle_calc_weapon_attack(BlockList *bl, BlockList *target);
-static int32_t battle_calc_damage(BlockList *target, int32_t damage, int32_t div_, int32_t flag);
+static sint32 battle_calc_damage(BlockList *target, sint32 damage, sint32 div_, BattleFlags flag);
 
-static int32_t battle_get_party_id(BlockList *bl);
-static int32_t battle_get_race(BlockList *bl);
-static int32_t battle_get_mode(BlockList *bl);
+static party_t battle_get_party_id(BlockList *bl);
+static sint32 battle_get_race(BlockList *bl);
+static MobMode battle_get_mode(BlockList *bl);
 
-static int32_t battle_attr_fix(int32_t damage, int32_t atk_elem, int32_t def_elem);
-static int32_t battle_stopattack(BlockList *bl);
-static int32_t battle_get_hit(BlockList *bl);
-static int32_t battle_get_flee(BlockList *bl);
-static int32_t battle_get_flee2(BlockList *bl);
-static int32_t battle_get_def2(BlockList *bl);
-static int32_t battle_get_baseatk(BlockList *bl);
-static int32_t battle_get_atk(BlockList *bl);
-static int32_t battle_get_atk2(BlockList *bl);
-static int32_t battle_get_attack_element(BlockList *bl);
-static int32_t battle_get_attack_element2(BlockList *bl);
+static sint32 battle_attr_fix(sint32 damage, sint32 atk_elem, sint32 def_elem);
+static sint32 battle_stopattack(BlockList *bl);
+static sint32 battle_get_hit(BlockList *bl);
+static sint32 battle_get_flee(BlockList *bl);
+static sint32 battle_get_flee2(BlockList *bl);
+static sint32 battle_get_def2(BlockList *bl);
+static sint32 battle_get_baseatk(BlockList *bl);
+static sint32 battle_get_atk(BlockList *bl);
+static sint32 battle_get_atk2(BlockList *bl);
+static sint32 battle_get_attack_element(BlockList *bl);
+static sint32 battle_get_attack_element2(BlockList *bl);
 
 /// Table of elemental damage modifiers
-int32_t attr_fix_table[4][10][10];
+sint32 attr_fix_table[4][10][10];
 
 struct Battle_Config battle_config;
 
@@ -40,7 +40,7 @@ struct Battle_Config battle_config;
 // In addition, there are some effects
 
 /// Count the number of beings attacking this being, that are at least the given level
-static int32_t battle_counttargeted(BlockList *bl, BlockList *src, AttackResult target_lv)
+static sint32 battle_counttargeted(BlockList *bl, BlockList *src, AttackResult target_lv)
 {
     nullpo_ret(bl);
 
@@ -64,19 +64,19 @@ Direction battle_get_dir(BlockList *bl)
 }
 
 /// Get the (base) level of this being
-int32_t battle_get_level(BlockList *bl)
+level_t battle_get_level(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
-        return static_cast<struct mob_data *>(bl)->stats[MOB_LV];
+        return level_t(static_cast<struct mob_data *>(bl)->stats[MOB_LV]);
     if (bl->type == BL_PC)
         return static_cast<MapSessionData *>(bl)->status.base_level;
-    return 0;
+    return DEFAULT;
 }
 
 /// Get the maximum attack distance of this being
-int32_t battle_get_range(BlockList *bl)
+sint32 battle_get_range(BlockList *bl)
 {
     nullpo_ret(bl);
 
@@ -88,7 +88,7 @@ int32_t battle_get_range(BlockList *bl)
 }
 
 /// Get current HP of this being
-int32_t battle_get_hp(BlockList *bl)
+sint32 battle_get_hp(BlockList *bl)
 {
     nullpo_retr(1, bl);
 
@@ -100,7 +100,7 @@ int32_t battle_get_hp(BlockList *bl)
 }
 
 /// Get maximum HP of this being
-int32_t battle_get_max_hp(BlockList *bl)
+sint32 battle_get_max_hp(BlockList *bl)
 {
     nullpo_retr(1, bl);
 
@@ -109,13 +109,13 @@ int32_t battle_get_max_hp(BlockList *bl)
     if (bl->type != BL_MOB)
         return 1;
 
-    int32_t max_hp = static_cast<struct mob_data *>(bl)->stats[MOB_MAX_HP];
+    sint32 max_hp = static_cast<struct mob_data *>(bl)->stats[MOB_MAX_HP];
     percent_adjust(max_hp, battle_config.monster_hp_rate);
     return max(1, max_hp);
 }
 
 /// Get strength of a being
-int32_t battle_get_str(BlockList *bl)
+sint32 battle_get_str(BlockList *bl)
 {
     nullpo_ret(bl);
 
@@ -127,7 +127,7 @@ int32_t battle_get_str(BlockList *bl)
 }
 
 /// Get agility of a being
-int32_t battle_get_agi(BlockList *bl)
+sint32 battle_get_agi(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
@@ -138,7 +138,7 @@ int32_t battle_get_agi(BlockList *bl)
 }
 
 /// Get vitality of a being
-int32_t battle_get_vit(BlockList *bl)
+sint32 battle_get_vit(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
@@ -149,7 +149,7 @@ int32_t battle_get_vit(BlockList *bl)
 }
 
 /// Get intelligence of a being
-int32_t battle_get_int(BlockList *bl)
+sint32 battle_get_int(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
@@ -160,7 +160,7 @@ int32_t battle_get_int(BlockList *bl)
 }
 
 /// Get dexterity of a being
-int32_t battle_get_dex(BlockList *bl)
+sint32 battle_get_dex(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
@@ -171,7 +171,7 @@ int32_t battle_get_dex(BlockList *bl)
 }
 
 /// Get luck of a being
-int32_t battle_get_luk(BlockList *bl)
+sint32 battle_get_luk(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
@@ -182,15 +182,15 @@ int32_t battle_get_luk(BlockList *bl)
 }
 
 /// Calculate a being's ability to not be hit
-int32_t battle_get_flee(BlockList *bl)
+sint32 battle_get_flee(BlockList *bl)
 {
     nullpo_retr(1, bl);
 
-    int32_t flee;
+    sint32 flee;
     if (bl->type == BL_PC)
         flee = static_cast<MapSessionData *>(bl)->flee;
     else
-        flee = battle_get_agi(bl) + battle_get_level(bl);
+        flee = battle_get_agi(bl) + uint8(battle_get_level(bl));
 
     if (battle_is_unarmed(bl))
         flee += (skill_power_bl(bl, TMW_BRAWLING) >> 3);
@@ -201,15 +201,15 @@ int32_t battle_get_flee(BlockList *bl)
 }
 
 /// Calculate a being's ability to hit something
-int32_t battle_get_hit(BlockList *bl)
+sint32 battle_get_hit(BlockList *bl)
 {
     nullpo_retr(1, bl);
 
-    int32_t hit;
+    sint32 hit;
     if (bl->type == BL_PC)
         hit = static_cast<MapSessionData *>(bl)->hit;
     else
-        hit = battle_get_dex(bl) + battle_get_level(bl);
+        hit = battle_get_dex(bl) + uint8(battle_get_level(bl));
 
     if (battle_is_unarmed(bl))
         // +12 for 200
@@ -219,11 +219,11 @@ int32_t battle_get_hit(BlockList *bl)
 }
 
 /// Calculate a being's luck at not getting hit
-int32_t battle_get_flee2(BlockList *bl)
+sint32 battle_get_flee2(BlockList *bl)
 {
     nullpo_retr(1, bl);
 
-    int32_t flee2;
+    sint32 flee2;
     if (bl->type == BL_PC)
         flee2 = static_cast<MapSessionData *>(bl)->flee2;
     else
@@ -238,7 +238,7 @@ int32_t battle_get_flee2(BlockList *bl)
 }
 
 /// Calculate being's ability to make a critical hit
-static int32_t battle_get_critical(BlockList *bl)
+static sint32 battle_get_critical(BlockList *bl)
 {
     nullpo_retr(1, bl);
 
@@ -249,32 +249,32 @@ static int32_t battle_get_critical(BlockList *bl)
 }
 
 /// Get a being's base attack strength
-int32_t battle_get_baseatk(BlockList *bl)
+sint32 battle_get_baseatk(BlockList *bl)
 {
     nullpo_retr(1, bl);
 
     if (bl->type == BL_PC)
-        return max(1, static_cast<int32_t>(static_cast<MapSessionData *>(bl)->base_atk));
+        return max(1, static_cast<sint32>(static_cast<MapSessionData *>(bl)->base_atk));
 
-    int32_t str = battle_get_str(bl);
-    int32_t dstr = str / 10;
+    sint32 str = battle_get_str(bl);
+    sint32 dstr = str / 10;
     return dstr * dstr + str;
 }
 
 /// Get minimum attack strength of a PC's main weapon
-int32_t battle_get_atk(BlockList *bl)
+sint32 battle_get_atk(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_PC)
-        return max(0, static_cast<int32_t>(static_cast<MapSessionData *>(bl)->watk));
+        return max(0, static_cast<sint32>(static_cast<MapSessionData *>(bl)->watk));
     if (bl->type == BL_MOB)
-        return max(0, static_cast<int32_t>(static_cast<struct mob_data *>(bl)->stats[MOB_ATK1]));
+        return max(0, static_cast<sint32>(static_cast<struct mob_data *>(bl)->stats[MOB_ATK1]));
     return 0;
 }
 
 /// Get minimum attack strength of a PC's second weapon
-static int32_t battle_get_atk_(BlockList *bl)
+static sint32 battle_get_atk_(BlockList *bl)
 {
     nullpo_ret(bl);
 
@@ -284,7 +284,7 @@ static int32_t battle_get_atk_(BlockList *bl)
 }
 
 /// Get maximum attack strength of a PC's main weapon
-int32_t battle_get_atk2(BlockList *bl)
+sint32 battle_get_atk2(BlockList *bl)
 {
     nullpo_ret(bl);
 
@@ -292,11 +292,11 @@ int32_t battle_get_atk2(BlockList *bl)
         return static_cast<MapSessionData *>(bl)->watk2;
     if (bl->type != BL_MOB)
         return 0;
-    return max(0, static_cast<int32_t>(static_cast<struct mob_data *>(bl)->stats[MOB_ATK2]));
+    return max(0, static_cast<sint32>(static_cast<struct mob_data *>(bl)->stats[MOB_ATK2]));
 }
 
 /// Get maximum attack strength of a PC's second weapon
-static int32_t battle_get_atk_2(BlockList *bl)
+static sint32 battle_get_atk_2(BlockList *bl)
 {
     nullpo_ret(bl);
 
@@ -306,11 +306,11 @@ static int32_t battle_get_atk_2(BlockList *bl)
 }
 
 /// Get a being's defense
-int32_t battle_get_def(BlockList *bl)
+sint32 battle_get_def(BlockList *bl)
 {
     nullpo_ret(bl);
 
-    int32_t def = 0;
+    sint32 def = 0;
     if (bl->type == BL_PC)
     {
         def = static_cast<MapSessionData *>(bl)->def;
@@ -330,11 +330,11 @@ int32_t battle_get_def(BlockList *bl)
 }
 
 /// Get a being's magical defense
-int32_t battle_get_mdef(BlockList *bl)
+sint32 battle_get_mdef(BlockList *bl)
 {
     nullpo_ret(bl);
 
-    int32_t mdef = 0;
+    sint32 mdef = 0;
     if (bl->type == BL_PC)
         mdef = static_cast<MapSessionData *>(bl)->mdef;
     if (bl->type == BL_MOB)
@@ -354,11 +354,11 @@ int32_t battle_get_mdef(BlockList *bl)
 }
 
 /// Get a being's secondary defense
-int32_t battle_get_def2(BlockList *bl)
+sint32 battle_get_def2(BlockList *bl)
 {
     nullpo_retr(1, bl);
 
-    int32_t def2 = 1;
+    sint32 def2 = 1;
     if (bl->type == BL_PC)
         def2 = static_cast<MapSessionData *>(bl)->def2;
     if (bl->type == BL_MOB)
@@ -374,32 +374,33 @@ int32_t battle_get_def2(BlockList *bl)
 }
 
 /// Get a being's walk delay
-int32_t battle_get_speed(BlockList *bl)
+interval_t battle_get_speed(BlockList *bl)
 {
-    nullpo_retr(1000, bl);
+    nullpo_retr(std::chrono::seconds(1), bl);
 
     if (bl->type == BL_PC)
         return static_cast<MapSessionData *>(bl)->speed;
 
-    int32_t speed = 1000;
     if (bl->type == BL_MOB)
-        speed = static_cast<struct mob_data *>(bl)->stats[MOB_SPEED];
-    return max(1, speed);
+        return std::chrono::milliseconds(static_cast<struct mob_data *>(bl)->stats[MOB_SPEED]);
+    return std::chrono::seconds(1);
 }
 
 /// Get a being's attack delay
-int32_t battle_get_adelay(BlockList *bl)
+interval_t battle_get_adelay(BlockList *bl)
 {
-    nullpo_retr(4000, bl);
+    nullpo_retr(std::chrono::seconds(4), bl);
 
     if (bl->type == BL_PC)
-        return static_cast<MapSessionData *>(bl)->aspd << 1;
+        // this code is not actually executed
+        return static_cast<MapSessionData *>(bl)->aspd * 2;
 
+    // TODO: simplify this
     struct status_change *sc_data = battle_get_sc_data(bl);
-    int32_t adelay = 4000;
-    int32_t aspd_rate = 100;
+    interval_t adelay = std::chrono::seconds(4);
+    sint32 aspd_rate = 100;
     if (bl->type == BL_MOB)
-        adelay = static_cast<struct mob_data *>(bl)->stats[MOB_ADELAY];
+        adelay = std::chrono::milliseconds(static_cast<struct mob_data *>(bl)->stats[MOB_ADELAY]);
 
     if (sc_data)
     {
@@ -411,20 +412,21 @@ int32_t battle_get_adelay(BlockList *bl)
     }
 
     percent_adjust(adelay, aspd_rate);
-    if (adelay < battle_config.monster_max_aspd << 1)
-        adelay = battle_config.monster_max_aspd << 1;
+    if (adelay < std::chrono::milliseconds(battle_config.monster_max_aspd * 2))
+        adelay = std::chrono::milliseconds(battle_config.monster_max_aspd * 2);
     return adelay;
 }
 
 /// Being's attack motion rate?
-int32_t battle_get_amotion(BlockList *bl)
+interval_t battle_get_amotion(BlockList *bl)
 {
-    nullpo_retr(2000, bl);
+    nullpo_retr(std::chrono::seconds(2), bl);
 
     if (bl->type == BL_PC)
         return static_cast<MapSessionData *>(bl)->amotion;
     struct status_change *sc_data = battle_get_sc_data(bl);
-    int32_t amotion = 2000, aspd_rate = 100;
+    interval_t amotion = std::chrono::seconds(2);
+    sint32 aspd_rate = 100;
     if (bl->type == BL_MOB && static_cast<struct mob_data *>(bl))
         amotion = mob_db[static_cast<struct mob_data *>(bl)->mob_class].amotion;
 
@@ -437,33 +439,33 @@ int32_t battle_get_amotion(BlockList *bl)
     }
 
     percent_adjust(amotion, aspd_rate);
-    if (amotion < battle_config.monster_max_aspd)
-        amotion = battle_config.monster_max_aspd;
+    if (amotion < std::chrono::milliseconds(battle_config.monster_max_aspd))
+        amotion = std::chrono::milliseconds(battle_config.monster_max_aspd);
     return amotion;
 }
 
 /// Being's defense motion rate?
-int32_t battle_get_dmotion(BlockList *bl)
+interval_t battle_get_dmotion(BlockList *bl)
 {
     nullpo_ret(bl);
 
     if (bl->type == BL_MOB)
     {
-        int32_t ret = mob_db[static_cast<struct mob_data *>(bl)->mob_class].dmotion;
+        interval_t ret = mob_db[static_cast<struct mob_data *>(bl)->mob_class].dmotion;
         percent_adjust(ret, battle_config.monster_damage_delay_rate);
         return ret;
     }
     if (bl->type == BL_PC)
     {
-        int32_t ret = static_cast<MapSessionData *>(bl)->dmotion;
+        interval_t ret = static_cast<MapSessionData *>(bl)->dmotion;
         percent_adjust(ret, battle_config.pc_damage_delay_rate);
         return ret;
     }
-    return 2000;
+    return std::chrono::seconds(2);
 }
 
 /// Get a being's (encoded) defense element
-int32_t battle_get_element(BlockList *bl)
+sint32 battle_get_element(BlockList *bl)
 {
     nullpo_retr(20, bl);
 
@@ -477,7 +479,7 @@ int32_t battle_get_element(BlockList *bl)
 }
 
 /// Get a PC's (secondary?) attack element (TODO rewrite element system)
-int32_t battle_get_attack_element(BlockList *bl)
+sint32 battle_get_attack_element(BlockList *bl)
 {
     nullpo_ret(bl);
 
@@ -487,7 +489,7 @@ int32_t battle_get_attack_element(BlockList *bl)
 }
 
 /// Get a PC's (secondary?) attack element
-int32_t battle_get_attack_element2(BlockList *bl)
+sint32 battle_get_attack_element2(BlockList *bl)
 {
     nullpo_ret(bl);
 
@@ -497,7 +499,7 @@ int32_t battle_get_attack_element2(BlockList *bl)
 }
 
 /// Return a party ID (or fake one) for a being
-int32_t battle_get_party_id(BlockList *bl)
+party_t battle_get_party_id(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_PC)
@@ -505,17 +507,17 @@ int32_t battle_get_party_id(BlockList *bl)
     if (bl->type == BL_MOB)
     {
         struct mob_data *md = static_cast<struct mob_data *>(bl);
-        if (md->master_id > 0)
+        if (md->master_id)
             // slave mobs
-            return -md->master_id;
+            return party_t(-uint32(md->master_id));
         // else, it is its own party
-        return -md->id;
+        return party_t(-uint32(md->id));
     }
-    return 0;
+    return DEFAULT;
 }
 
 /// Get a being's race
-int32_t battle_get_race(BlockList *bl)
+sint32 battle_get_race(BlockList *bl)
 {
     nullpo_ret(bl);
 
@@ -538,18 +540,18 @@ int32_t battle_get_race(BlockList *bl)
 // 0x80: can attack
 // 0x100: detector
 // 0x200: changetarget
-int32_t battle_get_mode(BlockList *bl)
+MobMode battle_get_mode(BlockList *bl)
 {
-    nullpo_retr(0x01, bl);
+    nullpo_retr(MobMode::CAN_MOVE, bl);
 
     if (bl->type == BL_MOB)
         return mob_db[static_cast<struct mob_data *>(bl)->mob_class].mode;
-    return 0x01;
+    return MobMode::CAN_MOVE;
 }
 
 /// stat_id: like SP::VIT
 // this is only used by the skill pool system
-int32_t battle_get_stat(SP stat_id, BlockList *bl)
+sint32 battle_get_stat(SP stat_id, BlockList *bl)
 {
     switch (stat_id)
     {
@@ -582,7 +584,7 @@ struct status_change *battle_get_sc_data(BlockList *bl)
 }
 
 /// Get pointer to the number of status effects on a being?
-int16_t *battle_get_sc_count(BlockList *bl)
+sint16 *battle_get_sc_count(BlockList *bl)
 {
     nullpo_retr(NULL, bl);
 
@@ -594,7 +596,7 @@ int16_t *battle_get_sc_count(BlockList *bl)
 }
 
 /// Get a pointer to a being's "opt1" field
-int16_t *battle_get_opt1(BlockList *bl)
+sint16 *battle_get_opt1(BlockList *bl)
 {
     nullpo_ret(bl);
 
@@ -608,7 +610,7 @@ int16_t *battle_get_opt1(BlockList *bl)
 }
 
 /// Get a pointer to a being's "opt2" field
-int16_t *battle_get_opt2(BlockList *bl)
+sint16 *battle_get_opt2(BlockList *bl)
 {
     nullpo_ret(bl);
 
@@ -622,7 +624,7 @@ int16_t *battle_get_opt2(BlockList *bl)
 }
 
 /// Get a pointer to a being's "opt3" field
-int16_t *battle_get_opt3(BlockList *bl)
+sint16 *battle_get_opt3(BlockList *bl)
 {
     nullpo_ret(bl);
     if (bl->type == BL_MOB)
@@ -635,7 +637,7 @@ int16_t *battle_get_opt3(BlockList *bl)
 }
 
 /// Get a pointer to a being's "option" field
-int16_t *battle_get_option(BlockList *bl)
+OPTION *battle_get_option(BlockList *bl)
 {
     nullpo_ret(bl);
 
@@ -645,14 +647,14 @@ int16_t *battle_get_option(BlockList *bl)
         return &static_cast<MapSessionData *>(bl)->status.option;
     if (bl->type == BL_NPC)
         return &static_cast<struct npc_data *>(bl)->option;
-    return 0;
+    return NULL;
 }
 
 //-------------------------------------------------------------------
 
 /// Decrease the HP of target
 // if trying to damage by a negative amount, heal instead
-int32_t battle_damage(BlockList *src, BlockList *target, int32_t damage)
+sint32 battle_damage(BlockList *src, BlockList *target, sint32 damage)
 {
     nullpo_ret(target);
     // src may be NULL for programmatic damage
@@ -682,7 +684,7 @@ int32_t battle_damage(BlockList *src, BlockList *target, int32_t damage)
 
 /// Increase HP of a being (and SP of a PC)
 // if hp is negative, do damage and ignore sp
-int32_t battle_heal(BlockList *src, BlockList *target, int32_t hp, int32_t sp)
+sint32 battle_heal(BlockList *src, BlockList *target, sint32 hp, sint32 sp)
 {
     nullpo_ret(target);
     // src may be NULL for programmatic healing
@@ -703,7 +705,7 @@ int32_t battle_heal(BlockList *src, BlockList *target, int32_t hp, int32_t sp)
 }
 
 /// A being should stop attacking its target
-int32_t battle_stopattack(BlockList *bl)
+sint32 battle_stopattack(BlockList *bl)
 {
     nullpo_ret(bl);
 
@@ -715,9 +717,9 @@ int32_t battle_stopattack(BlockList *bl)
 }
 
 /// Change the amount of elemental damage by the lookup table
-int32_t battle_attr_fix(int32_t damage, int32_t atk_elem, int32_t def_elem)
+sint32 battle_attr_fix(sint32 damage, sint32 atk_elem, sint32 def_elem)
 {
-    int32_t def_type = def_elem % 10, def_lv = def_elem / 10 / 2;
+    sint32 def_type = def_elem % 10, def_lv = def_elem / 10 / 2;
 
     if (atk_elem < 0 || atk_elem > 9 || def_type < 0 || def_type > 9 ||
         def_lv < 1 || def_lv > 4)
@@ -732,11 +734,11 @@ int32_t battle_attr_fix(int32_t damage, int32_t atk_elem, int32_t def_elem)
 }
 
 /// Calculate the damage of attacking
-int32_t battle_calc_damage(BlockList *target, int32_t damage, int32_t div_, int32_t flag)
+sint32 battle_calc_damage(BlockList *target, sint32 damage, sint32 div_, BattleFlags flag)
 {
     nullpo_ret(target);
 
-    if (battle_config.skill_min_damage || flag & BF_MISC)
+    if (battle_config.skill_min_damage || flag & BattleFlags::MISC)
     {
         if (div_ < 255)
         {
@@ -757,7 +759,7 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
     wd.damage2 = 0;
     wd.amotion = battle_get_amotion(md);
     wd.dmotion = battle_get_dmotion(target);
-    wd.flag = BF_SHORT | BF_WEAPON;
+    wd.flag = BattleFlags::SHORT | BattleFlags::WEAPON;
     wd.dmg_lv = AttackResult::ZERO;
 
     wd.type = 0;                   // normal
@@ -771,18 +773,18 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
     if (target->type == BL_MOB)
         tmd = static_cast<struct mob_data *>(target);
 
-    int32_t flee = battle_get_flee(target);
+    sint32 flee = battle_get_flee(target);
 
     if (battle_config.agi_penaly_type == 1)
     {
-        int32_t target_count = battle_counttargeted(target, md, static_cast<AttackResult>(battle_config.agi_penaly_count_lv));
+        sint32 target_count = battle_counttargeted(target, md, static_cast<AttackResult>(battle_config.agi_penaly_count_lv));
         target_count -= battle_config.agi_penaly_count;
         if (target_count > 0)
             percent_subtract(flee, target_count * battle_config.agi_penaly_num);
     }
     if (battle_config.agi_penaly_type == 2)
     {
-        int32_t target_count = battle_counttargeted(target, md, static_cast<AttackResult>(battle_config.agi_penaly_count_lv));
+        sint32 target_count = battle_counttargeted(target, md, static_cast<AttackResult>(battle_config.agi_penaly_count_lv));
         target_count -= battle_config.agi_penaly_count;
         if (target_count > 0)
             flee -= target_count * battle_config.agi_penaly_num;
@@ -795,14 +797,14 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
         wd.damage = battle_get_baseatk(md);
 
     if (mob_db[md->mob_class].range > 3)
-        wd.flag = (wd.flag & ~BF_RANGEMASK) | BF_LONG;
+        wd.flag = (wd.flag & ~BattleFlags::RANGE_MASK) | BattleFlags::LONG;
 
-    int32_t atkmin = battle_get_atk(md);
-    int32_t atkmax = battle_get_atk2(md);
+    sint32 atkmin = battle_get_atk(md);
+    sint32 atkmax = battle_get_atk2(md);
     if (atkmin > atkmax)
         atkmin = atkmax;
 
-    int32_t cri = battle_get_critical(md);
+    sint32 cri = battle_get_critical(md);
     cri -= battle_get_luk(target) * 3;
     percent_adjust(cri, battle_config.enemy_critical_rate);
     if (cri < 1)
@@ -810,7 +812,7 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
     if (tsd && tsd->critical_def)
         percent_subtract(cri, tsd->critical_def);
 
-    int32_t s_ele = battle_get_attack_element(md);
+    sint32 s_ele = battle_get_attack_element(md);
 
     if (battle_config.enemy_critical && MRAND(1000) < cri)
     {
@@ -823,13 +825,13 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
         if (atkmax > atkmin)
             wd.damage += MRAND(atkmax + 1 - atkmin);
 
-        int32_t def1 = battle_get_def(target);
-        int32_t def2 = battle_get_def2(target);
-        int32_t t_vit = battle_get_vit(target);
+        sint32 def1 = battle_get_def(target);
+        sint32 def2 = battle_get_def2(target);
+        sint32 t_vit = battle_get_vit(target);
 
         if (battle_config.vit_penaly_type == 1)
         {
-            int32_t target_count = battle_counttargeted(target, md, static_cast<AttackResult>(battle_config.vit_penaly_count_lv));
+            sint32 target_count = battle_counttargeted(target, md, static_cast<AttackResult>(battle_config.vit_penaly_count_lv));
             target_count -= battle_config.vit_penaly_count;
             if (target_count > 0)
             {
@@ -840,7 +842,7 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
         }
         if (battle_config.vit_penaly_type == 2)
         {
-            int32_t target_count = battle_counttargeted(target, md, static_cast<AttackResult>(battle_config.vit_penaly_count_lv));
+            sint32 target_count = battle_counttargeted(target, md, static_cast<AttackResult>(battle_config.vit_penaly_count_lv));
             target_count -= battle_config.vit_penaly_count;
             if (target_count > 0)
             {
@@ -857,9 +859,9 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
         if (t_vit < 1)
             t_vit = 1;
 
-        int32_t t_def = def2 * 8 / 10;
+        sint32 t_def = def2 * 8 / 10;
 
-        int32_t vitbonusmax = (t_vit / 20) * (t_vit / 20) - 1;
+        sint32 vitbonusmax = (t_vit / 20) * (t_vit / 20) - 1;
         if (battle_config.monster_defense_type)
             wd.damage -= def1 * battle_config.monster_defense_type;
         else
@@ -870,7 +872,7 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
     if (wd.damage < 1)
         wd.damage = 1;
 
-    int32_t hitrate = battle_get_hit(md) - flee + 80;
+    sint32 hitrate = battle_get_hit(md) - flee + 80;
     hitrate = hitrate > 95 ? 95 : (hitrate < 5 ? 5 : hitrate);
     if (wd.type == 0 && MRAND(100) >= hitrate)
     {
@@ -884,11 +886,11 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
 
     if (tsd)
     {
-        int32_t cardfix = 100;
+        sint32 cardfix = 100;
 
-        if (wd.flag & BF_LONG)
+        if (wd.flag & BattleFlags::LONG)
             percent_subtract(cardfix, tsd->long_attack_def_rate);
-        if (wd.flag & BF_SHORT)
+        if (wd.flag & BattleFlags::SHORT)
             percent_subtract(cardfix, tsd->near_attack_def_rate);
         percent_adjust(wd.damage, cardfix);
     }
@@ -913,7 +915,7 @@ static struct Damage battle_calc_mob_weapon_attack(struct mob_data *md,
         wd.dmg_lv = AttackResult::LUCKY;
     }
 
-    if (battle_get_mode(target) & 0x40 && wd.damage > 0)
+    if (battle_get_mode(target) & MobMode::PLANT && wd.damage > 0)
         wd.damage = 1;
     if (tsd && tsd->special_state.no_weapon_damage)
         wd.damage = 0;
@@ -935,24 +937,24 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
                                                   BlockList *target)
 {
     struct Damage wd = {};
-    sd->state.attack_type = BF_WEAPON;
+    sd->state.attack_type_is_weapon = true;
 
     wd.amotion = battle_get_amotion(sd);
     wd.dmotion = battle_get_dmotion(target);
     wd.dmg_lv = AttackResult::ZERO;
-    wd.flag = BF_SHORT | BF_WEAPON;
+    wd.flag = BattleFlags::SHORT | BattleFlags::WEAPON;
     wd.type = 0;                   // normal
     wd.div_ = 1;                   // single attack
 
-    int32_t def1 = battle_get_def(target);
-    int32_t def2 = battle_get_def2(target);
-    int32_t t_vit = battle_get_vit(target);
+    sint32 def1 = battle_get_def(target);
+    sint32 def2 = battle_get_def2(target);
+    sint32 t_vit = battle_get_vit(target);
 
-    int32_t s_ele = battle_get_attack_element(sd);
-    int32_t s_ele_ = battle_get_attack_element2(sd);
-    int32_t t_race = battle_get_race(target);
-    int32_t t_ele = battle_get_element(target) % 10;
-    int32_t t_mode = battle_get_mode(target);
+    sint32 s_ele = battle_get_attack_element(sd);
+    sint32 s_ele_ = battle_get_attack_element2(sd);
+    sint32 t_race = battle_get_race(target);
+    sint32 t_ele = battle_get_element(target) % 10;
+    MobMode t_mode = battle_get_mode(target);
 
     MapSessionData *tsd = NULL;
     if (target->type == BL_PC)
@@ -961,17 +963,17 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
     if (target->type == BL_MOB)
         tmd = static_cast<struct mob_data *>(target);
 
-    int32_t flee = battle_get_flee(target);
+    sint32 flee = battle_get_flee(target);
     if (battle_config.agi_penaly_type == 1)
     {
-        int32_t target_count = battle_counttargeted(target, sd, static_cast<AttackResult>(battle_config.agi_penaly_count_lv));
+        sint32 target_count = battle_counttargeted(target, sd, static_cast<AttackResult>(battle_config.agi_penaly_count_lv));
         target_count -= battle_config.agi_penaly_count;
         if (target_count > 0)
             percent_subtract(flee, target_count * battle_config.agi_penaly_num);
     }
     if (battle_config.agi_penaly_type == 2)
     {
-        int32_t target_count = battle_counttargeted(target, sd, static_cast<AttackResult>(battle_config.agi_penaly_count_lv));
+        sint32 target_count = battle_counttargeted(target, sd, static_cast<AttackResult>(battle_config.agi_penaly_count_lv));
         target_count -= battle_config.agi_penaly_count;
         if (target_count > 0)
             flee -= target_count * battle_config.agi_penaly_num;
@@ -979,28 +981,28 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
     if (flee < 1)
         flee = 1;
 
-    int32_t target_distance = max(abs(sd->x - target->x), abs(sd->y - target->y));
+    sint32 target_distance = max(abs(sd->x - target->x), abs(sd->y - target->y));
     // NOTE: dividing by 75 means the penalty distance is only decreased by 2
     // even at maximum skill, whereas the range increases every 60, maximum 3
-    int32_t malus_dist = max(0, target_distance - skill_power(sd, AC_OWL) / 75);
-    int32_t hitrate = battle_get_hit(sd) - flee + 80;
+    sint32 malus_dist = max(0, target_distance - skill_power(sd, AC_OWL) / 75);
+    sint32 hitrate = battle_get_hit(sd) - flee + 80;
     hitrate -= malus_dist * (malus_dist + 1);
 
-    int32_t dex = battle_get_dex(sd);
-    int32_t watk = battle_get_atk(sd);
-    int32_t watk_ = battle_get_atk_(sd);
+    sint32 dex = battle_get_dex(sd);
+    sint32 watk = battle_get_atk(sd);
+    sint32 watk_ = battle_get_atk_(sd);
 
     wd.damage = wd.damage2 = battle_get_baseatk(sd);
     if (sd->attackrange > 2)
     {
         // up to 31.25% bonus for long-range hit
-        const int32_t range_damage_bonus = 80;
+        const sint32 range_damage_bonus = 80;
         per256_add(wd.damage, (range_damage_bonus * target_distance) / sd->attackrange);
         per256_add(wd.damage2, (range_damage_bonus * target_distance) / sd->attackrange);
     }
 
-    int32_t atkmin = dex;
-    int32_t atkmin_ = dex;
+    sint32 atkmin = dex;
+    sint32 atkmin_ = dex;
     sd->state.arrow_atk = 0;
     if (sd->equip_index[EQUIP::WEAPON] >= 0 && sd->inventory_data[sd->equip_index[EQUIP::WEAPON]])
         percent_adjust(atkmin, 80 + sd->inventory_data[sd->equip_index[EQUIP::WEAPON]]->wlv * 20);
@@ -1009,14 +1011,14 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
     if (sd->status.weapon == 11)
     {
         atkmin = watk * min(atkmin, watk) / 100;
-        wd.flag = (wd.flag & ~BF_RANGEMASK) | BF_LONG;
+        wd.flag = (wd.flag & ~BattleFlags::RANGE_MASK) | BattleFlags::LONG;
         if (sd->arrow_ele > 0)
             s_ele = sd->arrow_ele;
         sd->state.arrow_atk = 1;
     }
 
-    int32_t atkmax = watk;
-    int32_t atkmax_ = watk_;
+    sint32 atkmax = watk;
+    sint32 atkmax_ = watk_;
 
     if (atkmin > atkmax && !(sd->state.arrow_atk))
         atkmin = atkmax;
@@ -1028,7 +1030,7 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
     if (sd->double_rate > 0)
         da = MRAND(100) < sd->double_rate;
 
-    int32_t cri = 0;
+    sint32 cri = 0;
     if (da == 0)
     {
         cri = battle_get_critical(sd);
@@ -1085,7 +1087,7 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
             percent_adjust(wd.damage2, def1 + def2);
             idef_flag_ = 1;
         }
-        if (t_mode & 0x20)
+        if (t_mode & MobMode::BOSS)
         {
             if (!idef_flag && sd->def_ratio_atk_race & (1 << 10))
             {
@@ -1114,7 +1116,7 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
 
         if (battle_config.vit_penaly_type == 1)
         {
-            int32_t target_count = battle_counttargeted(target, sd, static_cast<AttackResult>(battle_config.vit_penaly_count_lv));
+            sint32 target_count = battle_counttargeted(target, sd, static_cast<AttackResult>(battle_config.vit_penaly_count_lv));
             target_count -= battle_config.vit_penaly_count;
             if (target_count > 0)
             {
@@ -1125,7 +1127,7 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
         }
         if (battle_config.vit_penaly_type == 2)
         {
-            int32_t target_count = battle_counttargeted(target, sd, static_cast<AttackResult>(battle_config.vit_penaly_count_lv));
+            sint32 target_count = battle_counttargeted(target, sd, static_cast<AttackResult>(battle_config.vit_penaly_count_lv));
             target_count -= battle_config.vit_penaly_count;
             if (target_count > 0)
             {
@@ -1141,13 +1143,13 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
         if (t_vit < 1)
             t_vit = 1;
 
-        int32_t t_def = def2 * 8 / 10;
-        int32_t vitbonusmax = (t_vit / 20) * (t_vit / 20) - 1;
+        sint32 t_def = def2 * 8 / 10;
+        sint32 vitbonusmax = (t_vit / 20) * (t_vit / 20) - 1;
         if (sd->ignore_def_ele & (1 << t_ele) || sd->ignore_def_race & (1 << t_race))
             idef_flag = 1;
         if (sd->ignore_def_ele_ & (1 << t_ele) || sd->ignore_def_race_ & (1 << t_race))
             idef_flag_ = 1;
-        if (t_mode & 0x20)
+        if (t_mode & MobMode::BOSS)
         {
             if (sd->ignore_def_race & (1 << 10))
                 idef_flag = 1;
@@ -1224,7 +1226,7 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
 
     if (sd->status.weapon > 16)
     {
-        int32_t dmg = wd.damage, dmg2 = wd.damage2;
+        sint32 dmg = wd.damage, dmg2 = wd.damage2;
         wd.damage = wd.damage * 50 / 100;
         if (dmg > 0 && wd.damage < 1)
             wd.damage = 1;
@@ -1268,7 +1270,7 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
     }
 
     // plant flag, but the comment said "robust"
-    if (t_mode & 0x40)
+    if (t_mode & MobMode::PLANT)
     {
         if (wd.damage > 0)
             wd.damage = 1;
@@ -1287,7 +1289,7 @@ static struct Damage battle_calc_pc_weapon_attack(MapSessionData *sd,
             wd.damage2 = battle_calc_damage(target, wd.damage2, wd.div_, wd.flag);
         else
         {
-            int32_t d1 = wd.damage + wd.damage2, d2 = wd.damage2;
+            sint32 d1 = wd.damage + wd.damage2, d2 = wd.damage2;
             wd.damage = battle_calc_damage(target, d1, wd.div_, wd.flag);
             wd.damage2 = (d2 * 100 / d1) * wd.damage / 100;
             if (wd.damage > 1 && wd.damage2 < 1)
@@ -1351,7 +1353,7 @@ AttackResult battle_weapon_attack(BlockList *src, BlockList *target, tick_t tick
     if (tsd && pc_isdead(tsd))
         return AttackResult::ZERO;
 
-    int16_t *opt1 = battle_get_opt1(src);
+    sint16 *opt1 = battle_get_opt1(src);
     if (opt1 && *opt1 > 0)
     {
         battle_stopattack(src);
@@ -1385,7 +1387,7 @@ AttackResult battle_weapon_attack(BlockList *src, BlockList *target, tick_t tick
 
     if (wd.damage > 0 && t_sc_data[SC_PHYS_SHIELD].timer && tsd)
     {
-        int32_t reduction = t_sc_data[SC_PHYS_SHIELD].val1;
+        sint32 reduction = t_sc_data[SC_PHYS_SHIELD].val1;
         if (reduction > wd.damage)
             reduction = wd.damage;
 
@@ -1393,18 +1395,18 @@ AttackResult battle_weapon_attack(BlockList *src, BlockList *target, tick_t tick
         MAP_LOG_PC(static_cast<MapSessionData *>(target), "MAGIC-ABSORB-DMG %d", reduction);
     }
 
-    int32_t damage = wd.damage + wd.damage2;
+    sint32 damage = wd.damage + wd.damage2;
     // returned damage
-    int32_t rdamage = 0;
+    sint32 rdamage = 0;
     if (damage > 0 && src != target && tsd)
     {
-        if (wd.flag & BF_SHORT || tsd->short_weapon_damage_return > 0)
+        if (wd.flag & BattleFlags::SHORT || tsd->short_weapon_damage_return > 0)
         {
             rdamage = damage * tsd->short_weapon_damage_return / 100;
             if (rdamage < 1)
                 rdamage = 1;
         }
-        if (wd.flag & BF_LONG && tsd->long_weapon_damage_return > 0)
+        if (wd.flag & BattleFlags::LONG && tsd->long_weapon_damage_return > 0)
         {
             rdamage = damage * tsd->long_weapon_damage_return / 100;
             if (rdamage < 1)
@@ -1412,12 +1414,12 @@ AttackResult battle_weapon_attack(BlockList *src, BlockList *target, tick_t tick
         }
 
         if (rdamage > 0)
-            clif_damage(src, src, tick, wd.amotion, 0, rdamage, 1, 4, 0);
+            clif_damage(src, src, tick, wd.amotion, DEFAULT, rdamage, 1, 4, 0);
     }
 
     if (wd.div_ == 255 && sd)
     {
-        int32_t delay = 1000 - 4 * battle_get_agi(src) - 2 * battle_get_dex(src);
+        interval_t delay = std::chrono::milliseconds(1000 - 4 * battle_get_agi(src) - 2 * battle_get_dex(src));
         sd->attackabletime = sd->canmove_tick = tick + delay;
     }
     else
@@ -1425,33 +1427,33 @@ AttackResult battle_weapon_attack(BlockList *src, BlockList *target, tick_t tick
         clif_damage(src, target, tick, wd.amotion, wd.dmotion,
                     wd.damage, wd.div_, wd.type, wd.damage2);
         if (sd && sd->status.weapon >= 16 && wd.damage2 == 0)
-            clif_damage(src, target, tick + 10, wd.amotion, wd.dmotion, 0, 1, 0, 0);
+            clif_damage(src, target, tick + std::chrono::milliseconds(10), wd.amotion, wd.dmotion, 0, 1, 0, 0);
     }
 
     map_freeblock_lock();
 
     if (sd)
     {
-        int32_t weapon_index = sd->equip_index[EQUIP::WEAPON];
-        int32_t weapon = 0;
+        sint32 weapon_index = sd->equip_index[EQUIP::WEAPON];
+        sint32 weapon = 0;
         if (sd->inventory_data[weapon_index]
                 && sd->status.inventory[weapon_index].equip & EPOS::WEAPON)
             weapon = sd->inventory_data[weapon_index]->nameid;
 
-        map_log("PC%d %d:%d,%d WPNDMG %s%d %d FOR %d WPN %d",
+        MAP_LOG("PC%d %d:%d,%d WPNDMG %s%d %d FOR %d WPN %d",
                 sd->status.char_id, src->m, src->x, src->y,
                 tsd ? "PC" : "MOB",
-                tsd ? tsd->status.char_id : target->id,
+                target->id,
                 tsd ? 0 : static_cast<struct mob_data *>(target)->mob_class,
                 wd.damage + wd.damage2, weapon);
     }
 
     if (tsd)
     {
-        map_log("PC%d %d:%d,%d WPNINJURY %s%d %d FOR %d",
-                tsd->status.char_id, target->m, target->x, target->y,
+        MAP_LOG("PC%d %d:%d,%d WPNINJURY %s%d %d FOR %d",
+                target->id, target->m, target->x, target->y,
                 tsd ? "PC" : "MOB",
-                sd ? sd->status.char_id : src->id,
+                src->id,
                 sd ? 0 : static_cast<struct mob_data *>(src)->mob_class,
                 wd.damage + wd.damage2);
     }
@@ -1530,8 +1532,8 @@ bool battle_check_target(BlockList *src, BlockList *target)
     if (!maps[ss->m].flag.pvp_noparty)
         return 1;
 
-    int32_t s_p = battle_get_party_id(ss);
-    int32_t t_p = battle_get_party_id(target);
+    party_t s_p = battle_get_party_id(ss);
+    party_t t_p = battle_get_party_id(target);
 
     // return true unless they are in the same party
     return !s_p || !t_p || s_p != t_p;
@@ -1539,7 +1541,7 @@ bool battle_check_target(BlockList *src, BlockList *target)
 
 /// Check if a target is within the given range
 // range 0 = unlimited
-bool battle_check_range(BlockList *src, BlockList *bl, int32_t range)
+bool battle_check_range(BlockList *src, BlockList *bl, sint32 range)
 {
     nullpo_ret(src);
     nullpo_ret(bl);
@@ -1547,7 +1549,7 @@ bool battle_check_range(BlockList *src, BlockList *bl, int32_t range)
     if (src->m != bl->m)
         return 0;
 
-    int32_t arange = max(abs(bl->x - src->x), abs(bl->y - src->y));
+    sint32 arange = max(abs(bl->x - src->x), abs(bl->y - src->y));
 
 
     if (range > 0 && range < arange)
@@ -1567,13 +1569,13 @@ bool battle_check_range(BlockList *src, BlockList *bl, int32_t range)
         return 1;
     // path_search only calculates diagonal first
     // this corrects for the case where target is just around the corner
-    int32_t dx = (src->x > bl->x) - (src->x < bl->x);
-    int32_t dy = (src->x > bl->x) - (src->x < bl->x);
+    sint32 dx = (src->x > bl->x) - (src->x < bl->x);
+    sint32 dy = (src->x > bl->x) - (src->x < bl->x);
     return path_search(&wpd, src->m, src->x + dx, src->y + dy, bl->x - dx, bl->y - dy, 0x10001) != -1;
 }
 
 /// Read the config options
-int32_t battle_config_read(const char *cfgName)
+sint32 battle_config_read(const char *cfgName)
 {
     FILE *fp = fopen_(cfgName, "r");
     if (!fp)
@@ -1582,7 +1584,7 @@ int32_t battle_config_read(const char *cfgName)
         return 1;
     }
 
-    static int32_t count = 0;
+    static sint32 count = 0;
 
     if (!count++)
     {
@@ -1633,11 +1635,11 @@ int32_t battle_config_read(const char *cfgName)
         battle_config.agi_penaly_type = 0;
         battle_config.agi_penaly_count = 3;
         battle_config.agi_penaly_num = 0;
-        battle_config.agi_penaly_count_lv = static_cast<int32_t>(AttackResult::FLEE);
+        battle_config.agi_penaly_count_lv = static_cast<sint32>(AttackResult::FLEE);
         battle_config.vit_penaly_type = 0;
         battle_config.vit_penaly_count = 3;
         battle_config.vit_penaly_num = 0;
-        battle_config.vit_penaly_count_lv = static_cast<int32_t>(AttackResult::DEF);
+        battle_config.vit_penaly_count_lv = static_cast<sint32>(AttackResult::DEF);
         battle_config.player_defense_type = 0;
         battle_config.monster_defense_type = 0;
         battle_config.pc_attack_direction_change = 1;
@@ -1692,7 +1694,7 @@ int32_t battle_config_read(const char *cfgName)
         static const struct
         {
             char str[128];
-            int32_t *val;
+            sint32 *val;
         } data[] =
         {
             {"enemy_critical", &battle_config.enemy_critical},
@@ -1801,7 +1803,7 @@ int32_t battle_config_read(const char *cfgName)
             battle_config_read(w2);
             continue;
         }
-        for (int32_t i = 0; i < sizeof(data) / (sizeof(data[0])); i++)
+        for (sint32 i = 0; i < sizeof(data) / (sizeof(data[0])); i++)
             if (strcasecmp(w1, data[i].str) == 0)
             {
                 *data[i].val = config_switch(w2);
@@ -1824,12 +1826,12 @@ int32_t battle_config_read(const char *cfgName)
             battle_config.restart_sp_rate = 0;
         else if (battle_config.restart_sp_rate > 100)
             battle_config.restart_sp_rate = 100;
-        if (battle_config.natural_healhp_interval < NATURAL_HEAL_INTERVAL)
-            battle_config.natural_healhp_interval = NATURAL_HEAL_INTERVAL;
-        if (battle_config.natural_healsp_interval < NATURAL_HEAL_INTERVAL)
-            battle_config.natural_healsp_interval = NATURAL_HEAL_INTERVAL;
-        if (battle_config.natural_heal_skill_interval < NATURAL_HEAL_INTERVAL)
-            battle_config.natural_heal_skill_interval = NATURAL_HEAL_INTERVAL;
+        if (std::chrono::milliseconds(battle_config.natural_healhp_interval) < NATURAL_HEAL_INTERVAL)
+            battle_config.natural_healhp_interval = std::chrono::duration_cast<std::chrono::milliseconds>(NATURAL_HEAL_INTERVAL).count();
+        if (std::chrono::milliseconds(battle_config.natural_healsp_interval) < NATURAL_HEAL_INTERVAL)
+            battle_config.natural_healsp_interval = std::chrono::duration_cast<std::chrono::milliseconds>(NATURAL_HEAL_INTERVAL).count();
+        if (std::chrono::milliseconds(battle_config.natural_heal_skill_interval) < NATURAL_HEAL_INTERVAL)
+            battle_config.natural_heal_skill_interval = std::chrono::duration_cast<std::chrono::milliseconds>(NATURAL_HEAL_INTERVAL).count();
         if (battle_config.natural_heal_weight_rate < 50)
             battle_config.natural_heal_weight_rate = 50;
         if (battle_config.natural_heal_weight_rate > 101)

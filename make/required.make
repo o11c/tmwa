@@ -7,13 +7,12 @@ override CXX += -m32
 # It's probably not worth porting even to 4.5, and hopeless before that
 override CXX += -std=c++0x
 # With -flto, needed at link time *as well* as at compile time
-override CXX += ${OPTIMIZATION}
+override CXX += ${OPTIMIZATION} ${DEBUG}
 
 # for clock_gettime
-override LDLIBS += -lrt
-# Due to a strange and irreproducable bug in GCC
-# Note: please don't append anything else after this
-override LDLIBS += -Wl,--no-as-needed -lm
+# Link librt.a instead of librt.so to prevent pulling in pthread.so,
+# which makes libc do some unnecessary (for us) checks.
+override LDLIBS += -Wl,-Bstatic -lrt -Wl,-Bdynamic
 
 # I'm not *that* confident in the code
 override CXXFLAGS += -fstack-protector

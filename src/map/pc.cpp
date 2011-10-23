@@ -10,7 +10,7 @@
 #include "clif.hpp"
 #include "itemdb.hpp"
 #include "magic-stmt.hpp"
-#include "map.hpp"
+#include "main.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "path.hpp"
@@ -19,9 +19,7 @@
 #include "storage.hpp"
 #include "trade.hpp"
 
-constexpr auto MAX_PC_CLASS __attribute__((deprecated)) = 7+6+1+6+1+1+1+1+4023;
-
-#define PVP_CALCRANK_INTERVAL 1000  // PVP順位計算の間隔
+constexpr std::chrono::seconds PVP_CALCRANK_INTERVAL(1);
 
 //define it here, since the ifdef only occurs in this file
 #define USE_ASTRAL_SOUL_SKILL
@@ -51,55 +49,711 @@ constexpr auto MAX_PC_CLASS __attribute__((deprecated)) = 7+6+1+6+1+1+1+1+4023;
                    pc_readglobalreg(sd, std::string("MAGIC_EXPERIENCE")) & 0xffff,   \
                    (pc_readglobalreg(sd, std::string("MAGIC_EXPERIENCE")) >> 24) & 0xff)
 
-static int32_t pc_isequip(MapSessionData *sd, int32_t n);
-static int32_t pc_checkoverhp(MapSessionData *);
-static int32_t pc_checkoversp(MapSessionData *);
-static int32_t pc_can_reach(MapSessionData *, int32_t, int32_t);
-static int32_t pc_checkbaselevelup(MapSessionData *sd);
-static int32_t pc_checkjoblevelup(MapSessionData *sd);
-static int32_t pc_nextbaseafter(MapSessionData *);
-static int32_t pc_nextjobafter(MapSessionData *);
-static int32_t pc_calc_pvprank(MapSessionData *sd);
-static int32_t pc_ismarried(MapSessionData *sd);
+static sint32 pc_isequip(MapSessionData *sd, sint32 n);
+static sint32 pc_checkoverhp(MapSessionData *);
+static sint32 pc_checkoversp(MapSessionData *);
+static sint32 pc_can_reach(MapSessionData *, sint32, sint32);
+static sint32 pc_checkbaselevelup(MapSessionData *sd);
+static sint32 pc_checkjoblevelup(MapSessionData *sd);
+static sint32 pc_nextbaseafter(MapSessionData *);
+static sint32 pc_nextjobafter(MapSessionData *);
+static sint32 pc_calc_pvprank(MapSessionData *sd);
+static charid_t pc_ismarried(MapSessionData *sd);
 
-static int32_t max_weight_base[MAX_PC_CLASS]; // 20000
-static int32_t hp_coefficient[MAX_PC_CLASS]; // 0
-static int32_t hp_coefficient2[MAX_PC_CLASS]; // 500
-static int32_t hp_sigma_val[MAX_PC_CLASS][MAX_LEVEL]; // 0, because it's calculated from hp_coefficient
-static int32_t sp_coefficient[MAX_PC_CLASS]; // 100
-static int32_t aspd_base[MAX_PC_CLASS][20]; // 650, 700, 750, 600, 2000, 2000, 800, 2000, 700, 700, 650, 900, 2000, 2000, 2000, 2000, 2000
-static char job_bonus[3][MAX_PC_CLASS][MAX_LEVEL];
-static int32_t exp_table[14][MAX_LEVEL];
-static char statp[255][7];
+__attribute__((deprecated))
+constexpr static sint32 max_weight_base = 20000;
+__attribute__((deprecated))
+constexpr static sint32 hp_coefficient = 0;
+__attribute__((deprecated))
+constexpr static sint32 hp_coefficient2 = 500;
+__attribute__((deprecated))
+constexpr static sint32 hp_sigma_val[256] = {}; // 0, because it's calculated from hp_coefficient
+__attribute__((deprecated))
+constexpr static sint32 sp_coefficient = 100;
 
-static int32_t dirx[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
-static int32_t diry[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
-
-//static struct dbt *gm_account_db;
-static struct gm_account *gm_account = NULL;
-static int32_t GM_num = 0;
-
-int32_t pc_isGM(MapSessionData *sd)
+constexpr static std::chrono::milliseconds aspd_base[17] =
 {
-//  struct gm_account *p;
-    int32_t i;
+    std::chrono::milliseconds(650),
+    std::chrono::milliseconds(700),
+    std::chrono::milliseconds(750),
+    std::chrono::milliseconds(600),
+    std::chrono::milliseconds(2000),
+    std::chrono::milliseconds(2000),
+    std::chrono::milliseconds(800),
+    std::chrono::milliseconds(2000),
+    std::chrono::milliseconds(700),
+    std::chrono::milliseconds(700),
+    std::chrono::milliseconds(650),
+    std::chrono::milliseconds(900),
+    std::chrono::milliseconds(2000),
+    std::chrono::milliseconds(2000),
+    std::chrono::milliseconds(2000),
+    std::chrono::milliseconds(2000),
+    std::chrono::milliseconds(2000),
+};
+__attribute__((deprecated))
+constexpr static char job_bonus[256] =
+{
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+};
 
-    nullpo_ret(sd);
+__attribute__((deprecated))
+constexpr static sint32 exp_table_old[14][256]
+{
+    {9,16,25,36,77,112,153,200,253,320,385,490,585,700,830,970,1120,1260,1420,1620,1860,1990,2240,2504,2950,3426,3934,4474,6889,7995,9174,10425,11748,13967,15775,17678,19677,21773,30543,34212,38065,42102,46323,53026,58419,64041,69892,75973,102468,115254,128692,142784,157528,178184,196300,215198,234879,255341,330188,365914,403224,442116,482590,536948,585191,635278,687211,740988,925400,1473746,1594058,1718928,1848355,1982340,2230113,2386162,2547417,2713878,3206160,3681024,4022472,4377024,4744680,5125440,5767272,6204000,6655464,7121664,7602600,9738720,11649960,13643520,18339300,23836800,35658000,48687000,58135000,99999999,0},
+    {9,16,25,36,77,112,153,200,253,320,385,490,585,700,830,970,1120,1260,1420,1620,1860,1990,2240,2504,2950,3426,3934,4474,6889,7995,9174,10425,11748,13967,15775,17678,19677,21773,30543,34212,38065,42102,46323,53026,58419,64041,69892,75973,102468,115254,128692,142784,157528,178184,196300,215198,234879,255341,330188,365914,403224,442116,482590,536948,585191,635278,687211,740988,925400,1473746,1594058,1718928,1848355,1982340,2230113,2386162,2547417,2713878,3206160,3681024,4022472,4377024,4744680,5125440,5767272,6204000,6655464,7121664,7602600,9738720,11649960,13643520,18339300,23836800,35658000,48687000,58135000,99999999,0},
+    {9,16,25,36,77,112,153,200,253,320,385,490,585,700,830,970,1120,1260,1420,1620,1860,1990,2240,2504,2950,3426,3934,4474,6889,7995,9174,10425,11748,13967,15775,17678,19677,21773,30543,34212,38065,42102,46323,53026,58419,64041,69892,75973,102468,115254,128692,142784,157528,178184,196300,215198,234879,255341,330188,365914,403224,442116,482590,536948,585191,635278,687211,740988,925400,1473746,1594058,1718928,1848355,1982340,2230113,2386162,2547417,2713878,3206160,3681024,4022472,4377024,4744680,5125440,5767272,6204000,6655464,7121664,7602600,9738720,11649960,13643520,18339300,23836800,35658000,48687000,58135000,99999999,0},
+    {9,16,25,36,77,112,153,200,253,320,385,490,585,700,830,970,1120,1260,1420,1620,1860,1990,2240,2504,2950,3426,3934,4474,6889,7995,9174,10425,11748,13967,15775,17678,19677,21773,30543,34212,38065,42102,46323,53026,58419,64041,69892,75973,102468,115254,128692,142784,157528,178184,196300,215198,234879,255341,330188,365914,403224,442116,482590,536948,585191,635278,687211,740988,925400,1473746,1594058,1718928,1848355,1982340,2230113,2386162,2547417,2713878,3206160,3681024,4022472,4377024,4744680,5125440,5767272,6204000,6655464,7121664,7602600,9738720,11649960,13643520,18339300,23836800,35658000,48687000,58135000,99999999,0},
+    {10,18,28,40,85,123,168,220,278,400,41,613,731,875,1038,1213,1400,1575,1775,2268,2604,2786,3136,3506,4130,4796,5508,6264,9645,12392,14220,16159,18209,21649,24451,27401,30499,33748,47342,58160,64711,71573,78749,90144,99312,108870,118816,129154,174196,213220,238080,264150,291427,329640,363155,398116,434526,472381,610848,731828,806448,884232,965180,1073896,1170382,1270556,1374422,1481976,1850800,3389616,3666333,3953534,4251217,4559382,5129260,5488173,5859059,6241919,7374168,9570662,10458427,11380262,12336168,13326144,14994907,16130400,17304200,18516326,19766760,29216160,34949880,40930560,55017900,71510400,106974000,146061000,174405000,200000000,0},
+    {10,18,28,40,85,123,168,220,278,400,41,613,731,875,1038,1213,1400,1575,1775,2268,2604,2786,3136,3506,4130,4796,5508,6264,9645,12392,14220,16159,18209,21649,24451,27401,30499,33748,47342,58160,64711,71573,78749,90144,99312,108870,118816,129154,174196,213220,238080,264150,291427,329640,363155,398116,434526,472381,610848,731828,806448,884232,965180,1073896,1170382,1270556,1374422,1481976,1850800,3389616,3666333,3953534,4251217,4559382,5129260,5488173,5859059,6241919,7374168,9570662,10458427,11380262,12336168,13326144,14994907,16130400,17304200,18516326,19766760,29216160,34949880,40930560,55017900,71510400,106974000,146061000,174405000,200000000,0},
+    {10,18,28,40,85,123,168,220,278,400,41,613,731,875,1038,1213,1400,1575,1775,2268,2604,2786,3136,3506,4130,4796,5508,6264,9645,12392,14220,16159,18209,21649,24451,27401,30499,33748,47342,58160,64711,71573,78749,90144,99312,108870,118816,129154,174196,213220,238080,264150,291427,329640,363155,398116,434526,472381,610848,731828,806448,884232,965180,1073896,1170382,1270556,1374422,1481976,1850800,3389616,3666333,3953534,4251217,4559382,5129260,5488173,5859059,6241919,7374168,9570662,10458427,11380262,12336168,13326144,14994907,16130400,17304200,18516326,19766760,29216160,34949880,40930560,55017900,71510400,106974000,146061000,174405000,200000000,0},
+    {10,18,28,40,91,151,205,268,340,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {30,43,58,76,116,180,220,272,336,520,604,699,802,948,1125,1668,1937,2226,3040,3988,5564,6272,7021,9114,11473,15290,16891,18570,23229,28359,36478,39716,43088,52417,62495,78160,84175,90404,107611,125915,153941,191781,204351,248352,286212,386371,409795,482092,509596,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {144,184,284,348,603,887,1096,1598,2540,3676,4290,4946,6679,9492,12770,14344,16005,20642,27434,35108,38577,42206,52708,66971,82688,89544,96669,117821,144921,174201,186677,199584,238617,286366,337147,358435,380376,447685,526989,610246,644736,793535,921810,1106758,1260955,1487304,1557657,1990632,2083386,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {30,43,58,76,116,180,220,272,336,520,604,699,802,948,1125,1668,1937,2226,3040,3988,5564,6272,7021,9114,11473,15290,16891,18570,23229,28359,36478,39716,43088,52417,62495,78160,84175,90404,107611,125915,153941,191781,204351,248352,286212,386371,409795,482092,509596,982092,992092,1002092,1012092,1022092,1032092,1042092,1052092,1062092,1072092,1082092,1092092,1102092,1112092,1122092,1132092,1142092,1152092,1162092,1172092,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {11,20,31,44,100,166,226,295,374,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {60,86,116,152,232,360,440,544,672,1040,1208,1398,1604,1896,2250,3336,3874,4452,6080,7976,11128,12544,14042,18228,28683,38225,42228,46425,58073,70898,91195,99290,107720,131043,156238,195408,210430,226010,269028,314788,384853,479453,510878,620880,715530,965928,1024488,1205230,1273990,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+    {288,368,568,696,1206,1774,2192,3196,5080,7352,8580,9892,13358,18984,31925,35860,40013,51605,68585,87770,96443,105515,131770,167428,206720,223860,241673,294553,362303,479053,513362,548856,656197,787507,927154,985696,1046034,1231134,1449220,1678177,1773024,2182221,2534978,3043585,3782865,4461912,4672971,5971896,6250158,6875174,7562691,8318960,9150856,10065942,11877812,14015818,16538655,19515624,23028437,28094693,34275525,41816141,51015692,62239144,79666104,101972614,130524946,167071930,213852071,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+};
 
-/*      p = numdb_search(gm_account_db, sd->status.account_id);
-        if (p == NULL)
-                return 0;
-        return p->level; */
+constexpr static sint32 exp_table_new[256][14] =
+{
+    {9,9,9,9,10,10,10,10,30,144,30,11,60,288},
+    {16,16,16,16,18,18,18,18,43,184,43,20,86,368},
+    {25,25,25,25,28,28,28,28,58,284,58,31,116,568},
+    {36,36,36,36,40,40,40,40,76,348,76,44,152,696},
+    {77,77,77,77,85,85,85,91,116,603,116,100,232,1206},
+    {112,112,112,112,123,123,123,151,180,887,180,166,360,1774},
+    {153,153,153,153,168,168,168,205,220,1096,220,226,440,2192},
+    {200,200,200,200,220,220,220,268,272,1598,272,295,544,3196},
+    {253,253,253,253,278,278,278,340,336,2540,336,374,672,5080},
+    {320,320,320,320,400,400,400,0,520,3676,520,0,1040,7352},
+    {385,385,385,385,41,41,41,0,604,4290,604,0,1208,8580},
+    {490,490,490,490,613,613,613,0,699,4946,699,0,1398,9892},
+    {585,585,585,585,731,731,731,0,802,6679,802,0,1604,13358},
+    {700,700,700,700,875,875,875,0,948,9492,948,0,1896,18984},
+    {830,830,830,830,1038,1038,1038,0,1125,12770,1125,0,2250,31925},
+    {970,970,970,970,1213,1213,1213,0,1668,14344,1668,0,3336,35860},
+    {1120,1120,1120,1120,1400,1400,1400,0,1937,16005,1937,0,3874,40013},
+    {1260,1260,1260,1260,1575,1575,1575,0,2226,20642,2226,0,4452,51605},
+    {1420,1420,1420,1420,1775,1775,1775,0,3040,27434,3040,0,6080,68585},
+    {1620,1620,1620,1620,2268,2268,2268,0,3988,35108,3988,0,7976,87770},
+    {1860,1860,1860,1860,2604,2604,2604,0,5564,38577,5564,0,11128,96443},
+    {1990,1990,1990,1990,2786,2786,2786,0,6272,42206,6272,0,12544,105515},
+    {2240,2240,2240,2240,3136,3136,3136,0,7021,52708,7021,0,14042,131770},
+    {2504,2504,2504,2504,3506,3506,3506,0,9114,66971,9114,0,18228,167428},
+    {2950,2950,2950,2950,4130,4130,4130,0,11473,82688,11473,0,28683,206720},
+    {3426,3426,3426,3426,4796,4796,4796,0,15290,89544,15290,0,38225,223860},
+    {3934,3934,3934,3934,5508,5508,5508,0,16891,96669,16891,0,42228,241673},
+    {4474,4474,4474,4474,6264,6264,6264,0,18570,117821,18570,0,46425,294553},
+    {6889,6889,6889,6889,9645,9645,9645,0,23229,144921,23229,0,58073,362303},
+    {7995,7995,7995,7995,12392,12392,12392,0,28359,174201,28359,0,70898,479053},
+    {9174,9174,9174,9174,14220,14220,14220,0,36478,186677,36478,0,91195,513362},
+    {10425,10425,10425,10425,16159,16159,16159,0,39716,199584,39716,0,99290,548856},
+    {11748,11748,11748,11748,18209,18209,18209,0,43088,238617,43088,0,107720,656197},
+    {13967,13967,13967,13967,21649,21649,21649,0,52417,286366,52417,0,131043,787507},
+    {15775,15775,15775,15775,24451,24451,24451,0,62495,337147,62495,0,156238,927154},
+    {17678,17678,17678,17678,27401,27401,27401,0,78160,358435,78160,0,195408,985696},
+    {19677,19677,19677,19677,30499,30499,30499,0,84175,380376,84175,0,210430,1046034},
+    {21773,21773,21773,21773,33748,33748,33748,0,90404,447685,90404,0,226010,1231134},
+    {30543,30543,30543,30543,47342,47342,47342,0,107611,526989,107611,0,269028,1449220},
+    {34212,34212,34212,34212,58160,58160,58160,0,125915,610246,125915,0,314788,1678177},
+    {38065,38065,38065,38065,64711,64711,64711,0,153941,644736,153941,0,384853,1773024},
+    {42102,42102,42102,42102,71573,71573,71573,0,191781,793535,191781,0,479453,2182221},
+    {46323,46323,46323,46323,78749,78749,78749,0,204351,921810,204351,0,510878,2534978},
+    {53026,53026,53026,53026,90144,90144,90144,0,248352,1106758,248352,0,620880,3043585},
+    {58419,58419,58419,58419,99312,99312,99312,0,286212,1260955,286212,0,715530,3782865},
+    {64041,64041,64041,64041,108870,108870,108870,0,386371,1487304,386371,0,965928,4461912},
+    {69892,69892,69892,69892,118816,118816,118816,0,409795,1557657,409795,0,1024488,4672971},
+    {75973,75973,75973,75973,129154,129154,129154,0,482092,1990632,482092,0,1205230,5971896},
+    {102468,102468,102468,102468,174196,174196,174196,0,509596,2083386,509596,0,1273990,6250158},
+    {115254,115254,115254,115254,213220,213220,213220,0,0,0,982092,0,0,6875174},
+    {128692,128692,128692,128692,238080,238080,238080,0,0,0,992092,0,0,7562691},
+    {142784,142784,142784,142784,264150,264150,264150,0,0,0,1002092,0,0,8318960},
+    {157528,157528,157528,157528,291427,291427,291427,0,0,0,1012092,0,0,9150856},
+    {178184,178184,178184,178184,329640,329640,329640,0,0,0,1022092,0,0,10065942},
+    {196300,196300,196300,196300,363155,363155,363155,0,0,0,1032092,0,0,11877812},
+    {215198,215198,215198,215198,398116,398116,398116,0,0,0,1042092,0,0,14015818},
+    {234879,234879,234879,234879,434526,434526,434526,0,0,0,1052092,0,0,16538655},
+    {255341,255341,255341,255341,472381,472381,472381,0,0,0,1062092,0,0,19515624},
+    {330188,330188,330188,330188,610848,610848,610848,0,0,0,1072092,0,0,23028437},
+    {365914,365914,365914,365914,731828,731828,731828,0,0,0,1082092,0,0,28094693},
+    {403224,403224,403224,403224,806448,806448,806448,0,0,0,1092092,0,0,34275525},
+    {442116,442116,442116,442116,884232,884232,884232,0,0,0,1102092,0,0,41816141},
+    {482590,482590,482590,482590,965180,965180,965180,0,0,0,1112092,0,0,51015692},
+    {536948,536948,536948,536948,1073896,1073896,1073896,0,0,0,1122092,0,0,62239144},
+    {585191,585191,585191,585191,1170382,1170382,1170382,0,0,0,1132092,0,0,79666104},
+    {635278,635278,635278,635278,1270556,1270556,1270556,0,0,0,1142092,0,0,101972614},
+    {687211,687211,687211,687211,1374422,1374422,1374422,0,0,0,1152092,0,0,130524946},
+    {740988,740988,740988,740988,1481976,1481976,1481976,0,0,0,1162092,0,0,167071930},
+    {925400,925400,925400,925400,1850800,1850800,1850800,0,0,0,1172092,0,0,213852071},
+    {1473746,1473746,1473746,1473746,3389616,3389616,3389616,0,0,0,0,0,0,0},
+    {1594058,1594058,1594058,1594058,3666333,3666333,3666333,0,0,0,0,0,0,0},
+    {1718928,1718928,1718928,1718928,3953534,3953534,3953534,0,0,0,0,0,0,0},
+    {1848355,1848355,1848355,1848355,4251217,4251217,4251217,0,0,0,0,0,0,0},
+    {1982340,1982340,1982340,1982340,4559382,4559382,4559382,0,0,0,0,0,0,0},
+    {2230113,2230113,2230113,2230113,5129260,5129260,5129260,0,0,0,0,0,0,0},
+    {2386162,2386162,2386162,2386162,5488173,5488173,5488173,0,0,0,0,0,0,0},
+    {2547417,2547417,2547417,2547417,5859059,5859059,5859059,0,0,0,0,0,0,0},
+    {2713878,2713878,2713878,2713878,6241919,6241919,6241919,0,0,0,0,0,0,0},
+    {3206160,3206160,3206160,3206160,7374168,7374168,7374168,0,0,0,0,0,0,0},
+    {3681024,3681024,3681024,3681024,9570662,9570662,9570662,0,0,0,0,0,0,0},
+    {4022472,4022472,4022472,4022472,10458427,10458427,10458427,0,0,0,0,0,0,0},
+    {4377024,4377024,4377024,4377024,11380262,11380262,11380262,0,0,0,0,0,0,0},
+    {4744680,4744680,4744680,4744680,12336168,12336168,12336168,0,0,0,0,0,0,0},
+    {5125440,5125440,5125440,5125440,13326144,13326144,13326144,0,0,0,0,0,0,0},
+    {5767272,5767272,5767272,5767272,14994907,14994907,14994907,0,0,0,0,0,0,0},
+    {6204000,6204000,6204000,6204000,16130400,16130400,16130400,0,0,0,0,0,0,0},
+    {6655464,6655464,6655464,6655464,17304200,17304200,17304200,0,0,0,0,0,0,0},
+    {7121664,7121664,7121664,7121664,18516326,18516326,18516326,0,0,0,0,0,0,0},
+    {7602600,7602600,7602600,7602600,19766760,19766760,19766760,0,0,0,0,0,0,0},
+    {9738720,9738720,9738720,9738720,29216160,29216160,29216160,0,0,0,0,0,0,0},
+    {11649960,11649960,11649960,11649960,34949880,34949880,34949880,0,0,0,0,0,0,0},
+    {13643520,13643520,13643520,13643520,40930560,40930560,40930560,0,0,0,0,0,0,0},
+    {18339300,18339300,18339300,18339300,55017900,55017900,55017900,0,0,0,0,0,0,0},
+    {23836800,23836800,23836800,23836800,71510400,71510400,71510400,0,0,0,0,0,0,0},
+    {35658000,35658000,35658000,35658000,106974000,106974000,106974000,0,0,0,0,0,0,0},
+    {48687000,48687000,48687000,48687000,146061000,146061000,146061000,0,0,0,0,0,0,0},
+    {58135000,58135000,58135000,58135000,174405000,174405000,174405000,0,0,0,0,0,0,0},
+    {99999999,99999999,99999999,99999999,200000000,200000000,200000000,0,0,0,0,0,0,0},
+    {0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+};
 
-    for (i = 0; i < GM_num; i++)
-        if (gm_account[i].account_id == sd->status.account_id)
-            return gm_account[i].level;
-    return 0;
+constexpr static sint32 stat_point_delta[256] =
+{
+    (0 + 14) / 4,
+    (1 + 14) / 4,
+    (2 + 14) / 4,
+    (3 + 14) / 4,
+    (4 + 14) / 4,
+    (5 + 14) / 4,
+    (6 + 14) / 4,
+    (7 + 14) / 4,
+    (8 + 14) / 4,
+    (9 + 14) / 4,
+    (10 + 14) / 4,
+    (11 + 14) / 4,
+    (12 + 14) / 4,
+    (13 + 14) / 4,
+    (14 + 14) / 4,
+    (15 + 14) / 4,
+    (16 + 14) / 4,
+    (17 + 14) / 4,
+    (18 + 14) / 4,
+    (19 + 14) / 4,
+    (20 + 14) / 4,
+    (21 + 14) / 4,
+    (22 + 14) / 4,
+    (23 + 14) / 4,
+    (24 + 14) / 4,
+    (25 + 14) / 4,
+    (26 + 14) / 4,
+    (27 + 14) / 4,
+    (28 + 14) / 4,
+    (29 + 14) / 4,
+    (30 + 14) / 4,
+    (31 + 14) / 4,
+    (32 + 14) / 4,
+    (33 + 14) / 4,
+    (34 + 14) / 4,
+    (35 + 14) / 4,
+    (36 + 14) / 4,
+    (37 + 14) / 4,
+    (38 + 14) / 4,
+    (39 + 14) / 4,
+    (40 + 14) / 4,
+    (41 + 14) / 4,
+    (42 + 14) / 4,
+    (43 + 14) / 4,
+    (44 + 14) / 4,
+    (45 + 14) / 4,
+    (46 + 14) / 4,
+    (47 + 14) / 4,
+    (48 + 14) / 4,
+    (49 + 14) / 4,
+    (50 + 14) / 4,
+    (51 + 14) / 4,
+    (52 + 14) / 4,
+    (53 + 14) / 4,
+    (54 + 14) / 4,
+    (55 + 14) / 4,
+    (56 + 14) / 4,
+    (57 + 14) / 4,
+    (58 + 14) / 4,
+    (59 + 14) / 4,
+    (60 + 14) / 4,
+    (61 + 14) / 4,
+    (62 + 14) / 4,
+    (63 + 14) / 4,
+    (64 + 14) / 4,
+    (65 + 14) / 4,
+    (66 + 14) / 4,
+    (67 + 14) / 4,
+    (68 + 14) / 4,
+    (69 + 14) / 4,
+    (70 + 14) / 4,
+    (71 + 14) / 4,
+    (72 + 14) / 4,
+    (73 + 14) / 4,
+    (74 + 14) / 4,
+    (75 + 14) / 4,
+    (76 + 14) / 4,
+    (77 + 14) / 4,
+    (78 + 14) / 4,
+    (79 + 14) / 4,
+    (80 + 14) / 4,
+    (81 + 14) / 4,
+    (82 + 14) / 4,
+    (83 + 14) / 4,
+    (84 + 14) / 4,
+    (85 + 14) / 4,
+    (86 + 14) / 4,
+    (87 + 14) / 4,
+    (88 + 14) / 4,
+    (89 + 14) / 4,
+    (90 + 14) / 4,
+    (91 + 14) / 4,
+    (92 + 14) / 4,
+    (93 + 14) / 4,
+    (94 + 14) / 4,
+    (95 + 14) / 4,
+    (96 + 14) / 4,
+    (97 + 14) / 4,
+    (98 + 14) / 4,
+    (99 + 14) / 4,
+    (100 + 14) / 4,
+    (101 + 14) / 4,
+    (102 + 14) / 4,
+    (103 + 14) / 4,
+    (104 + 14) / 4,
+    (105 + 14) / 4,
+    (106 + 14) / 4,
+    (107 + 14) / 4,
+    (108 + 14) / 4,
+    (109 + 14) / 4,
+    (110 + 14) / 4,
+    (111 + 14) / 4,
+    (112 + 14) / 4,
+    (113 + 14) / 4,
+    (114 + 14) / 4,
+    (115 + 14) / 4,
+    (116 + 14) / 4,
+    (117 + 14) / 4,
+    (118 + 14) / 4,
+    (119 + 14) / 4,
+    (120 + 14) / 4,
+    (121 + 14) / 4,
+    (122 + 14) / 4,
+    (123 + 14) / 4,
+    (124 + 14) / 4,
+    (125 + 14) / 4,
+    (126 + 14) / 4,
+    (127 + 14) / 4,
+    (128 + 14) / 4,
+    (129 + 14) / 4,
+    (130 + 14) / 4,
+    (131 + 14) / 4,
+    (132 + 14) / 4,
+    (133 + 14) / 4,
+    (134 + 14) / 4,
+    (135 + 14) / 4,
+    (136 + 14) / 4,
+    (137 + 14) / 4,
+    (138 + 14) / 4,
+    (139 + 14) / 4,
+    (140 + 14) / 4,
+    (141 + 14) / 4,
+    (142 + 14) / 4,
+    (143 + 14) / 4,
+    (144 + 14) / 4,
+    (145 + 14) / 4,
+    (146 + 14) / 4,
+    (147 + 14) / 4,
+    (148 + 14) / 4,
+    (149 + 14) / 4,
+    (150 + 14) / 4,
+    (151 + 14) / 4,
+    (152 + 14) / 4,
+    (153 + 14) / 4,
+    (154 + 14) / 4,
+    (155 + 14) / 4,
+    (156 + 14) / 4,
+    (157 + 14) / 4,
+    (158 + 14) / 4,
+    (159 + 14) / 4,
+    (160 + 14) / 4,
+    (161 + 14) / 4,
+    (162 + 14) / 4,
+    (163 + 14) / 4,
+    (164 + 14) / 4,
+    (165 + 14) / 4,
+    (166 + 14) / 4,
+    (167 + 14) / 4,
+    (168 + 14) / 4,
+    (169 + 14) / 4,
+    (170 + 14) / 4,
+    (171 + 14) / 4,
+    (172 + 14) / 4,
+    (173 + 14) / 4,
+    (174 + 14) / 4,
+    (175 + 14) / 4,
+    (176 + 14) / 4,
+    (177 + 14) / 4,
+    (178 + 14) / 4,
+    (179 + 14) / 4,
+    (180 + 14) / 4,
+    (181 + 14) / 4,
+    (182 + 14) / 4,
+    (183 + 14) / 4,
+    (184 + 14) / 4,
+    (185 + 14) / 4,
+    (186 + 14) / 4,
+    (187 + 14) / 4,
+    (188 + 14) / 4,
+    (189 + 14) / 4,
+    (190 + 14) / 4,
+    (191 + 14) / 4,
+    (192 + 14) / 4,
+    (193 + 14) / 4,
+    (194 + 14) / 4,
+    (195 + 14) / 4,
+    (196 + 14) / 4,
+    (197 + 14) / 4,
+    (198 + 14) / 4,
+    (199 + 14) / 4,
+    (200 + 14) / 4,
+    (201 + 14) / 4,
+    (202 + 14) / 4,
+    (203 + 14) / 4,
+    (204 + 14) / 4,
+    (205 + 14) / 4,
+    (206 + 14) / 4,
+    (207 + 14) / 4,
+    (208 + 14) / 4,
+    (209 + 14) / 4,
+    (210 + 14) / 4,
+    (211 + 14) / 4,
+    (212 + 14) / 4,
+    (213 + 14) / 4,
+    (214 + 14) / 4,
+    (215 + 14) / 4,
+    (216 + 14) / 4,
+    (217 + 14) / 4,
+    (218 + 14) / 4,
+    (219 + 14) / 4,
+    (220 + 14) / 4,
+    (221 + 14) / 4,
+    (222 + 14) / 4,
+    (223 + 14) / 4,
+    (224 + 14) / 4,
+    (225 + 14) / 4,
+    (226 + 14) / 4,
+    (227 + 14) / 4,
+    (228 + 14) / 4,
+    (229 + 14) / 4,
+    (230 + 14) / 4,
+    (231 + 14) / 4,
+    (232 + 14) / 4,
+    (233 + 14) / 4,
+    (234 + 14) / 4,
+    (235 + 14) / 4,
+    (236 + 14) / 4,
+    (237 + 14) / 4,
+    (238 + 14) / 4,
+    (239 + 14) / 4,
+    (240 + 14) / 4,
+    (241 + 14) / 4,
+    (242 + 14) / 4,
+    (243 + 14) / 4,
+    (244 + 14) / 4,
+    (245 + 14) / 4,
+    (246 + 14) / 4,
+    (247 + 14) / 4,
+    (248 + 14) / 4,
+    (249 + 14) / 4,
+    (250 + 14) / 4,
+    (251 + 14) / 4,
+    (252 + 14) / 4,
+    (253 + 14) / 4,
+    (254 + 14) / 4,
+    (255 + 14) / 4,
+};
 
+// the config file gave different numbers ...
+// so, if you restat immediately when starting, you get 24 more points
+constexpr static sint32 stat_point_oops = 0; // -24;
+// how many stat points you have, AFTER you have at least 1
+constexpr static sint32 stat_points[256] =
+{
+    stat_point_oops + 45, // there isn't really a level 0, but let's simplify things
+    stat_point_oops + 48,
+    stat_point_oops + 52,
+    stat_point_oops + 56,
+    stat_point_oops + 60,
+    stat_point_oops + 64,
+    stat_point_oops + 69,
+    stat_point_oops + 74,
+    stat_point_oops + 79,
+    stat_point_oops + 84,
+    stat_point_oops + 90,
+    stat_point_oops + 96,
+    stat_point_oops + 102,
+    stat_point_oops + 108,
+    stat_point_oops + 115,
+    stat_point_oops + 122,
+    stat_point_oops + 129,
+    stat_point_oops + 136,
+    stat_point_oops + 144,
+    stat_point_oops + 152,
+    stat_point_oops + 160,
+    stat_point_oops + 168,
+    stat_point_oops + 177,
+    stat_point_oops + 186,
+    stat_point_oops + 195,
+    stat_point_oops + 204,
+    stat_point_oops + 214,
+    stat_point_oops + 224,
+    stat_point_oops + 234,
+    stat_point_oops + 244,
+    stat_point_oops + 255,
+    stat_point_oops + 266,
+    stat_point_oops + 277,
+    stat_point_oops + 288,
+    stat_point_oops + 300,
+    stat_point_oops + 312,
+    stat_point_oops + 324,
+    stat_point_oops + 336,
+    stat_point_oops + 349,
+    stat_point_oops + 362,
+    stat_point_oops + 375,
+    stat_point_oops + 388,
+    stat_point_oops + 402,
+    stat_point_oops + 416,
+    stat_point_oops + 430,
+    stat_point_oops + 444,
+    stat_point_oops + 459,
+    stat_point_oops + 474,
+    stat_point_oops + 489,
+    stat_point_oops + 504,
+    stat_point_oops + 520,
+    stat_point_oops + 536,
+    stat_point_oops + 552,
+    stat_point_oops + 568,
+    stat_point_oops + 585,
+    stat_point_oops + 602,
+    stat_point_oops + 619,
+    stat_point_oops + 636,
+    stat_point_oops + 654,
+    stat_point_oops + 672,
+    stat_point_oops + 690,
+    stat_point_oops + 708,
+    stat_point_oops + 727,
+    stat_point_oops + 746,
+    stat_point_oops + 765,
+    stat_point_oops + 784,
+    stat_point_oops + 804,
+    stat_point_oops + 824,
+    stat_point_oops + 844,
+    stat_point_oops + 864,
+    stat_point_oops + 885,
+    stat_point_oops + 906,
+    stat_point_oops + 927,
+    stat_point_oops + 948,
+    stat_point_oops + 970,
+    stat_point_oops + 992,
+    stat_point_oops + 1014,
+    stat_point_oops + 1036,
+    stat_point_oops + 1059,
+    stat_point_oops + 1082,
+    stat_point_oops + 1105,
+    stat_point_oops + 1128,
+    stat_point_oops + 1152,
+    stat_point_oops + 1176,
+    stat_point_oops + 1200,
+    stat_point_oops + 1224,
+    stat_point_oops + 1249,
+    stat_point_oops + 1274,
+    stat_point_oops + 1299,
+    stat_point_oops + 1324,
+    stat_point_oops + 1350,
+    stat_point_oops + 1376,
+    stat_point_oops + 1402,
+    stat_point_oops + 1428,
+    stat_point_oops + 1455,
+    stat_point_oops + 1482,
+    stat_point_oops + 1509,
+    stat_point_oops + 1536,
+    stat_point_oops + 1564,
+    stat_point_oops + 1592,
+    stat_point_oops + 1620,
+    stat_point_oops + 1648,
+    stat_point_oops + 1677,
+    stat_point_oops + 1706,
+    stat_point_oops + 1735,
+    stat_point_oops + 1764,
+    stat_point_oops + 1794,
+    stat_point_oops + 1824,
+    stat_point_oops + 1854,
+    stat_point_oops + 1884,
+    stat_point_oops + 1915,
+    stat_point_oops + 1946,
+    stat_point_oops + 1977,
+    stat_point_oops + 2008,
+    stat_point_oops + 2040,
+    stat_point_oops + 2072,
+    stat_point_oops + 2104,
+    stat_point_oops + 2136,
+    stat_point_oops + 2169,
+    stat_point_oops + 2202,
+    stat_point_oops + 2235,
+    stat_point_oops + 2268,
+    stat_point_oops + 2302,
+    stat_point_oops + 2336,
+    stat_point_oops + 2370,
+    stat_point_oops + 2404,
+    stat_point_oops + 2439,
+    stat_point_oops + 2474,
+    stat_point_oops + 2509,
+    stat_point_oops + 2544,
+    stat_point_oops + 2580,
+    stat_point_oops + 2616,
+    stat_point_oops + 2652,
+    stat_point_oops + 2688,
+    stat_point_oops + 2725,
+    stat_point_oops + 2762,
+    stat_point_oops + 2799,
+    stat_point_oops + 2836,
+    stat_point_oops + 2874,
+    stat_point_oops + 2912,
+    stat_point_oops + 2950,
+    stat_point_oops + 2988,
+    stat_point_oops + 3027,
+    stat_point_oops + 3066,
+    stat_point_oops + 3105,
+    stat_point_oops + 3144,
+    stat_point_oops + 3184,
+    stat_point_oops + 3224,
+    stat_point_oops + 3264,
+    stat_point_oops + 3304,
+    stat_point_oops + 3345,
+    stat_point_oops + 3386,
+    stat_point_oops + 3427,
+    stat_point_oops + 3468,
+    stat_point_oops + 3510,
+    stat_point_oops + 3552,
+    stat_point_oops + 3594,
+    stat_point_oops + 3636,
+    stat_point_oops + 3679,
+    stat_point_oops + 3722,
+    stat_point_oops + 3765,
+    stat_point_oops + 3808,
+    stat_point_oops + 3852,
+    stat_point_oops + 3896,
+    stat_point_oops + 3940,
+    stat_point_oops + 3984,
+    stat_point_oops + 4029,
+    stat_point_oops + 4074,
+    stat_point_oops + 4119,
+    stat_point_oops + 4164,
+    stat_point_oops + 4210,
+    stat_point_oops + 4256,
+    stat_point_oops + 4302,
+    stat_point_oops + 4348,
+    stat_point_oops + 4395,
+    stat_point_oops + 4442,
+    stat_point_oops + 4489,
+    stat_point_oops + 4536,
+    stat_point_oops + 4584,
+    stat_point_oops + 4632,
+    stat_point_oops + 4680,
+    stat_point_oops + 4728,
+    stat_point_oops + 4777,
+    stat_point_oops + 4826,
+    stat_point_oops + 4875,
+    stat_point_oops + 4924,
+    stat_point_oops + 4974,
+    stat_point_oops + 5024,
+    stat_point_oops + 5074,
+    stat_point_oops + 5124,
+    stat_point_oops + 5175,
+    stat_point_oops + 5226,
+    stat_point_oops + 5277,
+    stat_point_oops + 5328,
+    stat_point_oops + 5380,
+    stat_point_oops + 5432,
+    stat_point_oops + 5484,
+    stat_point_oops + 5536,
+    stat_point_oops + 5589,
+    stat_point_oops + 5642,
+    stat_point_oops + 5695,
+    stat_point_oops + 5748,
+    stat_point_oops + 5802,
+    stat_point_oops + 5856,
+    stat_point_oops + 5910,
+    stat_point_oops + 5964,
+    stat_point_oops + 6019,
+    stat_point_oops + 6074,
+    stat_point_oops + 6129,
+    stat_point_oops + 6184,
+    stat_point_oops + 6240,
+    stat_point_oops + 6296,
+    stat_point_oops + 6352,
+    stat_point_oops + 6408,
+    stat_point_oops + 6465,
+    stat_point_oops + 6522,
+    stat_point_oops + 6579,
+    stat_point_oops + 6636,
+    stat_point_oops + 6694,
+    stat_point_oops + 6752,
+    stat_point_oops + 6810,
+    stat_point_oops + 6868,
+    stat_point_oops + 6927,
+    stat_point_oops + 6986,
+    stat_point_oops + 7045,
+    stat_point_oops + 7104,
+    stat_point_oops + 7164,
+    stat_point_oops + 7224,
+    stat_point_oops + 7284,
+    stat_point_oops + 7344,
+    stat_point_oops + 7405,
+    stat_point_oops + 7466,
+    stat_point_oops + 7527,
+    stat_point_oops + 7588,
+    stat_point_oops + 7650,
+    stat_point_oops + 7712,
+    stat_point_oops + 7774,
+    stat_point_oops + 7836,
+    stat_point_oops + 7899,
+    stat_point_oops + 7962,
+    stat_point_oops + 8025,
+    stat_point_oops + 8088,
+    stat_point_oops + 8152,
+    stat_point_oops + 8216,
+    stat_point_oops + 8280,
+    stat_point_oops + 8344,
+    stat_point_oops + 8409,
+    stat_point_oops + 8474,
+    stat_point_oops + 8539,
+    stat_point_oops + 8604,
+    stat_point_oops + 8670,
+    stat_point_oops + 8736,
+    stat_point_oops + 8802,
+    stat_point_oops + 8868,
+    stat_point_oops + 8935,
+    stat_point_oops + 9002,
+};
+
+constexpr static sint32 dirx[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
+constexpr static sint32 diry[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
+
+static DMap<account_t, gm_level_t> gm_accounts;
+
+gm_level_t pc_isGM(MapSessionData *sd)
+{
+    return gm_accounts.get(sd->id);
 }
 
-int32_t pc_iskiller(MapSessionData *src,
-                 MapSessionData *target)
+sint32 pc_iskiller(MapSessionData *src, MapSessionData *target)
 {
     nullpo_ret(src);
 
@@ -116,35 +770,21 @@ int32_t pc_iskiller(MapSessionData *src,
     return 0;
 }
 
-int32_t pc_set_gm_level(int32_t account_id, int32_t level)
+void pc_set_gm_level(account_t account_id, gm_level_t level)
 {
-    int32_t i;
-    for (i = 0; i < GM_num; i++)
-    {
-        if (account_id == gm_account[i].account_id)
-        {
-            gm_account[i].level = level;
-            return 0;
-        }
-    }
-
-    GM_num++;
-    RECREATE(gm_account, struct gm_account, GM_num);
-    gm_account[GM_num - 1].account_id = account_id;
-    gm_account[GM_num - 1].level = level;
-    return 0;
+    gm_accounts.set(account_id, level);
 }
 
-static int32_t distance(int32_t x_0, int32_t y_0, int32_t x_1, int32_t y_1)
+static sint32 distance(sint32 x_0, sint32 y_0, sint32 x_1, sint32 y_1)
 {
-    int32_t dx, dy;
+    sint32 dx, dy;
 
     dx = abs(x_0 - x_1);
     dy = abs(y_0 - y_1);
     return dx > dy ? dx : dy;
 }
 
-static void pc_invincible_timer(timer_id, tick_t, uint32_t id)
+static void pc_invincible_timer(timer_id, tick_t, BlockID id)
 {
     MapSessionData *sd = map_id2sd(id);
 
@@ -154,30 +794,27 @@ static void pc_invincible_timer(timer_id, tick_t, uint32_t id)
     sd->invincible_timer = NULL;
 }
 
-int32_t pc_setinvincibletimer(MapSessionData *sd, int32_t val)
+void pc_setinvincibletimer(MapSessionData *sd, interval_t val)
 {
-    nullpo_ret(sd);
+    nullpo_retv(sd);
 
     if (sd->invincible_timer)
         delete_timer(sd->invincible_timer);
     sd->invincible_timer = add_timer(gettick() + val, pc_invincible_timer, sd->id);
-
-    return 0;
 }
 
-int32_t pc_delinvincibletimer(MapSessionData *sd)
+void pc_delinvincibletimer(MapSessionData *sd)
 {
-    nullpo_ret(sd);
+    nullpo_retv(sd);
 
     if (sd->invincible_timer)
     {
         delete_timer(sd->invincible_timer);
         sd->invincible_timer = NULL;
     }
-    return 0;
 }
 
-int32_t pc_setrestartvalue(MapSessionData *sd, int32_t type)
+sint32 pc_setrestartvalue(MapSessionData *sd, sint32 type)
 {
     nullpo_ret(sd);
 
@@ -208,7 +845,7 @@ int32_t pc_setrestartvalue(MapSessionData *sd, int32_t type)
         }
         if (battle_config.restart_sp_rate > 0)
         {
-            int32_t sp = sd->status.max_sp * battle_config.restart_sp_rate / 100;
+            sint32 sp = sd->status.max_sp * battle_config.restart_sp_rate / 100;
             if (sd->status.sp < sp)
                 sd->status.sp = sp;
         }
@@ -227,7 +864,7 @@ int32_t pc_setrestartvalue(MapSessionData *sd, int32_t type)
  * 自分をロックしているMOBの数を数える(foreachclient)
  *------------------------------------------
  */
-static void pc_counttargeted_sub(BlockList *bl, uint32_t id, int32_t *c,
+static void pc_counttargeted_sub(BlockList *bl, BlockID id, sint32 *c,
                                  BlockList *src, AttackResult target_lv)
 {
     nullpo_retv(bl);
@@ -253,10 +890,10 @@ static void pc_counttargeted_sub(BlockList *bl, uint32_t id, int32_t *c,
     }
 }
 
-int32_t pc_counttargeted(MapSessionData *sd, BlockList *src,
+sint32 pc_counttargeted(MapSessionData *sd, BlockList *src,
                       AttackResult target_lv)
 {
-    int32_t c = 0;
+    sint32 c = 0;
     map_foreachinarea(pc_counttargeted_sub, sd->m,
                       sd->x - AREA_SIZE, sd->y - AREA_SIZE,
                       sd->x + AREA_SIZE, sd->y + AREA_SIZE, BL_NUL,
@@ -268,13 +905,13 @@ int32_t pc_counttargeted(MapSessionData *sd, BlockList *src,
  * ローカルプロトタイプ宣言 (必要な物のみ)
  *------------------------------------------
  */
-static int32_t pc_walktoxy_sub(MapSessionData *);
+static sint32 pc_walktoxy_sub(MapSessionData *);
 
 /*==========================================
  * saveに必要なステータス修正を行なう
  *------------------------------------------
  */
-int32_t pc_makesavestatus(MapSessionData *sd)
+sint32 pc_makesavestatus(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
@@ -307,12 +944,12 @@ int32_t pc_makesavestatus(MapSessionData *sd)
  * 接続時の初期化
  *------------------------------------------
  */
-int32_t pc_setnewpc(MapSessionData *sd, account_t account_id, charid_t char_id,
-                uint32_t login_id1, uint8_t sex)
+sint32 pc_setnewpc(MapSessionData *sd, /*account_t account_id,*/ charid_t char_id,
+                uint32 login_id1, uint8 sex)
 {
     nullpo_ret(sd);
 
-    sd->id = account_id;
+    //sd->id = account_id;
     sd->char_id = char_id;
     sd->login_id1 = login_id1;
     sd->login_id2 = 0;          // at this point, we can not know the value :(
@@ -325,7 +962,7 @@ int32_t pc_setnewpc(MapSessionData *sd, account_t account_id, charid_t char_id,
     return 0;
 }
 
-EPOS pc_equippoint(MapSessionData *sd, int32_t n)
+EPOS pc_equippoint(MapSessionData *sd, sint32 n)
 {
     nullpo_retr(EPOS(), sd);
 
@@ -335,9 +972,9 @@ EPOS pc_equippoint(MapSessionData *sd, int32_t n)
     return sd->inventory_data[n]->equip;
 }
 
-static int32_t pc_setinventorydata(MapSessionData *sd)
+static sint32 pc_setinventorydata(MapSessionData *sd)
 {
-    int32_t i, id;
+    sint32 i, id;
 
     nullpo_ret(sd);
 
@@ -349,7 +986,7 @@ static int32_t pc_setinventorydata(MapSessionData *sd)
     return 0;
 }
 
-static int32_t pc_calcweapontype(MapSessionData *sd)
+static sint32 pc_calcweapontype(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
@@ -375,14 +1012,14 @@ static int32_t pc_calcweapontype(MapSessionData *sd)
     return 0;
 }
 
-static int32_t pc_setequipindex(MapSessionData *sd)
+static sint32 pc_setequipindex(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
-    for (int16_t& elt : sd->equip_index)
+    for (sint16& elt : sd->equip_index)
         elt = -1;
 
-    for (int32_t i = 0; i < MAX_INVENTORY; i++)
+    for (sint32 i = 0; i < MAX_INVENTORY; i++)
     {
         if (!sd->status.inventory[i].nameid)
             continue;
@@ -421,7 +1058,7 @@ static int32_t pc_setequipindex(MapSessionData *sd)
     return 0;
 }
 
-int32_t pc_isequip(MapSessionData *sd, int32_t n)
+sint32 pc_isequip(MapSessionData *sd, sint32 n)
 {
     struct item_data *item;
     //転生や養子の場合の元の職業を算出する
@@ -434,7 +1071,7 @@ int32_t pc_isequip(MapSessionData *sd, int32_t n)
         return 0;
     if (item->sex != 2 && sd->status.sex != item->sex)
         return 0;
-    if (item->elv > 0 && sd->status.base_level < item->elv)
+    if (item->elv && sd->status.base_level < item->elv)
         return 0;
 
     if (maps[sd->m].flag.pvp
@@ -448,8 +1085,8 @@ int32_t pc_isequip(MapSessionData *sd, int32_t n)
  * char鯖から送られてきたステータスを設定
  *------------------------------------------
  */
-int32_t pc_authok(int32_t id, int32_t login_id2, time_t connect_until_time,
-               int16_t tmw_version, const struct mmo_charstatus *st)
+sint32 pc_authok(account_t id, sint32 login_id2, time_t connect_until_time,
+                 sint16 tmw_version, const struct mmo_charstatus *st)
 {
     MapSessionData *sd = NULL;
 
@@ -491,22 +1128,19 @@ int32_t pc_authok(int32_t id, int32_t login_id2, time_t connect_until_time,
     sd->invincible_timer = NULL;
 
     sd->deal_locked = 0;
-    sd->trade_partner = 0;
+    sd->trade_partner = DEFAULT;
 
-    sd->inchealhptick = 0;
-    sd->inchealsptick = 0;
-    sd->hp_sub = 0;
-    sd->sp_sub = 0;
+    sd->inchealhptick = DEFAULT;
+    sd->inchealsptick = DEFAULT;
+    sd->hp_sub = DEFAULT;
+    sd->sp_sub = DEFAULT;
     sd->quick_regeneration_hp.amount = 0;
     sd->quick_regeneration_sp.amount = 0;
     sd->heal_xp = 0;
-    sd->inchealspirithptick = 0;
-    sd->inchealspiritsptick = 0;
     sd->canact_tick = tick;
     sd->canmove_tick = tick;
     sd->attackabletime = tick;
-    /* We don't want players bypassing spell restrictions. [remoitnane] */
-    sd->cast_tick = tick + pc_readglobalreg(sd, std::string("MAGIC_CAST_TICK"));
+    sd->cast_tick = tick;
 
     sd->doridori_counter = 0;
 
@@ -518,33 +1152,32 @@ int32_t pc_authok(int32_t id, int32_t login_id2, time_t connect_until_time,
     pc_checkitem(sd);
 
     // ステータス異常の初期化
-    for (int32_t i = 0; i < MAX_STATUSCHANGE; i++)
+    for (sint32 i = 0; i < MAX_STATUSCHANGE; i++)
     {
         sd->sc_data[i].timer = NULL;
         sd->sc_data[i].val1 = 0;
     }
     sd->sc_count = 0;
 
-    sd->status.option &= OPTION_MASK;
+    sd->status.option &= OPTION::MASK;
 
     // パーティー関係の初期化
-    sd->party_sended = 0;
-    sd->party_invite = 0;
+    sd->party_sent = false;
+    sd->party_invite = DEFAULT;
     sd->party_x = -1;
     sd->party_y = -1;
     sd->party_hp = -1;
 
     // イベント関係の初期化
     memset(sd->eventqueue, 0, sizeof(sd->eventqueue));
-    for (int32_t i = 0; i < MAX_EVENTTIMER; i++)
+    for (sint32 i = 0; i < MAX_EVENTTIMER; i++)
         sd->eventtimer[i].tid = NULL;
 
     // 位置の設定
     pc_setpos(sd, sd->status.last_point, BeingRemoveType::ZERO);
 
     // パーティ、ギルドデータの要求
-    if (sd->status.party_id > 0
-        && (p = party_search(sd->status.party_id)) == NULL)
+    if (sd->status.party_id && (p = party_search(sd->status.party_id)) == NULL)
         party_request_info(sd->status.party_id);
 
     // pvpの設定
@@ -567,14 +1200,13 @@ int32_t pc_authok(int32_t id, int32_t login_id2, time_t connect_until_time,
 
     if (pc_isGM(sd))
     {
-        printf
-            ("Connection accepted: character '%s' (account: %d; GM level %d).\n",
-             sd->status.name, sd->status.account_id, pc_isGM(sd));
+        PRINTF("Connection accepted: character '%s' (account: %d; GM level %d).\n",
+               sd->status.name, sd->status.account_id, pc_isGM(sd));
         clif_updatestatus(sd, SP::GM);
     }
     else
-        printf("Connection accepted: Character '%s' (account: %d).\n",
-                sd->status.name, sd->status.account_id);
+        PRINTF("Connection accepted: Character '%s' (account: %d).\n",
+               sd->status.name, sd->status.account_id);
 
     // Message of the Dayの送信
     {
@@ -584,7 +1216,7 @@ int32_t pc_authok(int32_t id, int32_t login_id2, time_t connect_until_time,
         {
             while (fgets(buf, sizeof(buf) - 1, fp) != NULL)
             {
-                for (int32_t i = 0; buf[i]; i++)
+                for (sint32 i = 0; buf[i]; i++)
                 {
                     if (buf[i] == '\r' || buf[i] == '\n')
                     {
@@ -625,7 +1257,7 @@ int32_t pc_authok(int32_t id, int32_t login_id2, time_t connect_until_time,
  * session idに問題ありなので後始末
  *------------------------------------------
  */
-int32_t pc_authfail(int32_t id)
+sint32 pc_authfail(account_t id)
 {
     MapSessionData *sd;
 
@@ -638,14 +1270,14 @@ int32_t pc_authfail(int32_t id)
     return 0;
 }
 
-static int32_t pc_calc_skillpoint(MapSessionData *sd)
+static sint32 pc_calc_skillpoint(MapSessionData *sd)
 {
-    int32_t i, skill_points = 0;
+    sint32 i, skill_points = 0;
 
     nullpo_ret(sd);
 
     for (i = 0; i < skill_pool_skills_size; i++) {
-        int32_t lv = sd->status.skill[skill_pool_skills[i]].lv;
+        sint32 lv = sd->status.skill[skill_pool_skills[i]].lv;
         if (lv)
             skill_points += ((lv * (lv - 1)) >> 1) - 1;
     }
@@ -669,22 +1301,21 @@ static void pc_set_weapon_look(MapSessionData *sd)
  * 能動的に変化させたパラメータは自前でsendするように
  *------------------------------------------
  */
-int32_t pc_calcstatus(MapSessionData *sd, bool first)
+sint32 pc_calcstatus(MapSessionData *sd, bool first)
 {
-    int32_t b_speed, b_max_hp, b_max_sp, b_hp, b_sp, b_weight, b_max_weight,
+    sint32 b_max_hp, b_max_sp, b_hp, b_sp, b_weight, b_max_weight,
         b_hit, b_flee;
-    earray<int32_t, ATTR, ATTR::COUNT> b_paramb, b_parame;
-    int32_t b_aspd, b_watk, b_def, b_watk2, b_def2, b_flee2, b_critical,
+    earray<sint32, ATTR, ATTR::COUNT> b_paramb, b_parame;
+    sint32 b_watk, b_def, b_watk2, b_def2, b_flee2, b_critical,
         b_attackrange, b_matk1, b_matk2, b_mdef, b_mdef2;
-    int32_t b_base_atk;
+    sint32 b_base_atk;
     struct skill b_skill[MAX_SKILL];
-    int32_t bl;
-    int32_t aspd_rate, wele, wele_, def_ele, refinedef = 0;
-    int32_t str, dstr, dex;
+    sint32 aspd_rate, wele, wele_, def_ele, refinedef = 0;
+    sint32 str, dstr, dex;
 
     nullpo_ret(sd);
 
-    b_speed = sd->speed;
+    interval_t b_speed = sd->speed;
     b_max_hp = sd->status.max_hp;
     b_max_sp = sd->status.max_sp;
     b_hp = sd->status.hp;
@@ -696,7 +1327,7 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
     memcpy(b_skill, &sd->status.skill, sizeof(b_skill));
     b_hit = sd->hit;
     b_flee = sd->flee;
-    b_aspd = sd->aspd;
+    interval_t b_aspd = sd->aspd;
     b_watk = sd->watk;
     b_def = sd->def;
     b_watk2 = sd->watk2;
@@ -710,12 +1341,12 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
     b_mdef2 = sd->mdef2;
     b_base_atk = sd->base_atk;
 
-    sd->max_weight = max_weight_base[0] + sd->status.stats[ATTR::STR] * 300;
+    sd->max_weight = max_weight_base + sd->status.stats[ATTR::STR] * 300;
 
     if (first & 1)
     {
         sd->weight = 0;
-        for (int32_t i = 0; i < MAX_INVENTORY; i++)
+        for (sint32 i = 0; i < MAX_INVENTORY; i++)
         {
             if (!sd->status.inventory[i].nameid || !sd->inventory_data[i])
                 continue;
@@ -732,7 +1363,7 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
     sd->flee = 0;
     sd->flee2 = 0;
     sd->critical = 0;
-    sd->aspd = 0;
+    sd->aspd = DEFAULT;
     sd->watk = 0;
     sd->def = 0;
     sd->mdef = 0;
@@ -798,7 +1429,7 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
     for (EQUIP i : EQUIPs_no_arrow)
     {
         // if (i == EQUIP::ARROW) continue;
-        int32_t idx = sd->equip_index[i];
+        sint32 idx = sd->equip_index[i];
         if (idx < 0)
             continue;
         if (i == EQUIP::WEAPON && sd->equip_index[EQUIP::SHIELD] == idx)
@@ -831,7 +1462,7 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
     // 装備品によるステータス変化はここで実行
     for (EQUIP i : EQUIPs_no_arrow)
     {
-        int32_t idx = sd->equip_index[i];
+        sint32 idx = sd->equip_index[i];
         if (idx < 0)
             continue;
         if (i == EQUIP::WEAPON && sd->equip_index[EQUIP::SHIELD] == idx)
@@ -854,34 +1485,34 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
                     sd->state.lr_flag = 1;
                     ArgRec arg[] =
                     {
-                        { "@slotId", static_cast<int32_t>(i) },
+                        { "@slotId", static_cast<sint32>(i) },
                         { "@itemId", sd->inventory_data[idx]->nameid }
                     };
-                    run_script_l(sd->inventory_data[idx]->equip_script, 0, sd->id, 0, ARRAY_SIZEOF(arg), arg);
+                    run_script_l(sd->inventory_data[idx]->equip_script, 0, sd->id, DEFAULT, ARRAY_SIZEOF(arg), arg);
                     sd->state.lr_flag = 0;
                 }
                 else
                 {               //二刀流武器以外
                     ArgRec arg[] =
                     {
-                        { "@slotId", static_cast<int32_t>(i) },
+                        { "@slotId", static_cast<sint32>(i) },
                         { "@itemId", sd->inventory_data[idx]->nameid }
                     };
                     sd->watk += sd->inventory_data[idx]->atk;
 
                     sd->attackrange += sd->inventory_data[idx]->range;
-                    run_script_l(sd->inventory_data[idx]->equip_script, 0, sd->id, 0, ARRAY_SIZEOF(arg), arg);
+                    run_script_l(sd->inventory_data[idx]->equip_script, 0, sd->id, DEFAULT, ARRAY_SIZEOF(arg), arg);
                 }
             }
             else if (sd->inventory_data[idx]->type == 5)
             {
                 ArgRec arg[] =
                 {
-                    { "@slotId", static_cast<int32_t>(i) },
+                    { "@slotId", static_cast<sint32>(i) },
                     { "@itemId", sd->inventory_data[idx]->nameid }
                 };
                 sd->watk += sd->inventory_data[idx]->atk;
-                run_script_l(sd->inventory_data[idx]->equip_script, 0, sd->id, 0, ARRAY_SIZEOF(arg), arg);
+                run_script_l(sd->inventory_data[idx]->equip_script, 0, sd->id, DEFAULT, ARRAY_SIZEOF(arg), arg);
             }
         }
     }
@@ -894,16 +1525,16 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
         sd->watk_2 += skill_power(sd, TMW_BRAWLING) >> 3;  // +25 for 200
     }
 
-    int32_t idx = sd->equip_index[EQUIP::ARROW];
+    sint32 idx = sd->equip_index[EQUIP::ARROW];
     if (idx >= 0 && sd->inventory_data[idx])
     {
         ArgRec arg[] =
         {
-            { "@slotId", static_cast<int32_t>(EQUIP::ARROW) },
+            { "@slotId", static_cast<sint32>(EQUIP::ARROW) },
             { "@itemId", sd->inventory_data[idx]->nameid }
         };
         sd->state.lr_flag = 2;
-        run_script_l(sd->inventory_data[idx]->equip_script, 0, sd->id, 0, ARRAY_SIZEOF(arg), arg);
+        run_script_l(sd->inventory_data[idx]->equip_script, 0, sd->id, DEFAULT, ARRAY_SIZEOF(arg), arg);
         sd->state.lr_flag = 0;
         sd->arrow_atk += sd->inventory_data[idx]->atk;
     }
@@ -932,7 +1563,7 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
     if (sd->aspd_add_rate != 100)
         sd->aspd_rate += sd->aspd_add_rate - 100;
 
-    sd->speed -= skill_power(sd, TMW_SPEED) >> 3;
+    sd->speed -= std::chrono::milliseconds(skill_power(sd, TMW_SPEED) >> 3);
     sd->aspd_rate -= skill_power(sd, TMW_SPEED) / 10;
     if (sd->aspd_rate < 20)
         sd->aspd_rate = 20;
@@ -963,11 +1594,11 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
     if (sd->matk1 < sd->matk2)
         std::swap(sd->matk1, sd->matk2);
     // [Fate] New tmw magic system
-    sd->matk1 += sd->status.base_level + sd->spellpower_bonus_current;
+    sd->matk1 += unwrap(sd->status.base_level) + sd->spellpower_bonus_current;
 #ifdef USE_ASTRAL_SOUL_SKILL
     if (sd->matk1 > MAGIC_SKILL_THRESHOLD)
     {
-        int32_t bonus = sd->matk1 - MAGIC_SKILL_THRESHOLD;
+        sint32 bonus = sd->matk1 - MAGIC_SKILL_THRESHOLD;
         // Ok if you are above a certain threshold, you get only (1/8) of that matk1
         // if you have Astral soul skill you can get the whole power again (and additionally the 1/8 added)
         sd->matk1 = MAGIC_SKILL_THRESHOLD + (bonus >> 3) + ((3 * bonus * skill_power(sd, TMW_ASTRAL_SOUL)) >> 9);
@@ -977,8 +1608,8 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
     if (sd->matk1 < 0)
         sd->matk1 = 0;
 
-    sd->hit += sd->paramc[ATTR::DEX] + sd->status.base_level;
-    sd->flee += sd->paramc[ATTR::AGI] + sd->status.base_level;
+    sd->hit += sd->paramc[ATTR::DEX] + unwrap(sd->status.base_level);
+    sd->flee += sd->paramc[ATTR::AGI] + unwrap(sd->status.base_level);
     sd->def2 += sd->paramc[ATTR::VIT];
     sd->mdef2 += sd->paramc[ATTR::INT];
     sd->flee2 += sd->paramc[ATTR::LUK] + 10;
@@ -987,7 +1618,7 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
     // 200 is the maximum of the skill
     // so critical chance can get multiplied by ~1.5 and setting def2 to a third when skill maxed out
     // def2 is the defence gained by vit, whereas "def", which is gained by armor, stays as is
-    int32_t spbsk = skill_power(sd, TMW_RAGING);
+    sint32 spbsk = skill_power(sd, TMW_RAGING);
     if (spbsk != 0 && sd->attackrange <= 2)
     {
         sd->critical = (sd->critical * (128 + spbsk)) / 256;
@@ -1031,14 +1662,14 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
 
     // 二刀流 ASPD 修正
     if (sd->status.weapon <= 16)
-        sd->aspd += aspd_base[0][sd->status.weapon]
-            - (sd->paramc[ATTR::AGI] * 4 + sd->paramc[ATTR::DEX]) * aspd_base[0][sd->status.weapon] / 1000;
+        sd->aspd += aspd_base[sd->status.weapon]
+            - (sd->paramc[ATTR::AGI] * 4 + sd->paramc[ATTR::DEX]) * aspd_base[sd->status.weapon] / 1000;
     else
-        sd->aspd += ((aspd_base[0][sd->weapontype1] -
-                      (sd->paramc[ATTR::AGI] * 4 + sd->paramc[ATTR::DEX]) * aspd_base[0][sd->weapontype1] / 1000
+        sd->aspd += ((aspd_base[sd->weapontype1] -
+                      (sd->paramc[ATTR::AGI] * 4 + sd->paramc[ATTR::DEX]) * aspd_base[sd->weapontype1] / 1000
                      ) +
-                     (aspd_base[0][sd->weapontype2] -
-                      (sd->paramc[ATTR::AGI] * 4 + sd->paramc[ATTR::DEX]) * aspd_base[0][sd->weapontype2] / 1000
+                     (aspd_base[sd->weapontype2] -
+                      (sd->paramc[ATTR::AGI] * 4 + sd->paramc[ATTR::DEX]) * aspd_base[sd->weapontype2] / 1000
                      )
                     ) * 140 / 200;
 
@@ -1054,11 +1685,10 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
 
     sd->max_weight += 1000;
 
-    bl = sd->status.base_level;
+    uint8 bl = unwrap(sd->status.base_level);
 
     sd->status.max_hp +=
-        (3500 + bl * hp_coefficient2[0] +
-         hp_sigma_val[0][(bl > 0) ? bl - 1 : 0]) / 100 * (100 + sd->paramc [ATTR::VIT]) / 100 + sd->parame[ATTR::VIT];
+        (3500 + bl * 500 + 0) / 100 * (100 + sd->paramc [ATTR::VIT]) / 100 + sd->parame[ATTR::VIT];
     if (sd->hprate != 100)
         sd->status.max_hp = sd->status.max_hp * sd->hprate / 100;
 
@@ -1069,7 +1699,7 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
 
     // 最大SP計算
     sd->status.max_sp +=
-        ((sp_coefficient[0] * bl) + 1000) / 100 * (100 + sd->paramc[ATTR::INT]) / 100 + (sd->parame[ATTR::INT]);
+        ((sp_coefficient * bl) + 1000) / 100 * (100 + sd->paramc[ATTR::INT]) / 100 + (sd->parame[ATTR::INT]);
     if (sd->sprate != 100)
         sd->status.max_sp = sd->status.max_sp * sd->sprate / 100;
 
@@ -1118,20 +1748,20 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
 
     if (sd->speed_rate != 100)
         sd->speed = sd->speed * sd->speed_rate / 100;
-    if (sd->speed < 1)
-        sd->speed = 1;
+    if (sd->speed < interval_t(1))
+        sd->speed = interval_t(1);
     if (aspd_rate != 100)
         sd->aspd = sd->aspd * aspd_rate / 100;
 
     if (sd->attack_spell_override)
         sd->aspd = sd->attack_spell_delay;
 
-    if (sd->aspd < battle_config.max_aspd)
-        sd->aspd = battle_config.max_aspd;
+    if (sd->aspd < std::chrono::milliseconds(battle_config.max_aspd))
+        sd->aspd = std::chrono::milliseconds(battle_config.max_aspd);
     sd->amotion = sd->aspd;
-    sd->dmotion = 800 - sd->paramc[ATTR::AGI] * 4;
-    if (sd->dmotion < 400)
-        sd->dmotion = 400;
+    sd->dmotion = std::chrono::milliseconds(800 - sd->paramc[ATTR::AGI] * 4);
+    if (sd->dmotion < std::chrono::milliseconds(400))
+        sd->dmotion = std::chrono::milliseconds(400);
 
     if (sd->status.hp > sd->status.max_hp)
         sd->status.hp = sd->status.max_hp;
@@ -1216,7 +1846,7 @@ int32_t pc_calcstatus(MapSessionData *sd, bool first)
  * 装 備品による能力等のボーナス設定
  *------------------------------------------
  */
-int32_t pc_bonus(MapSessionData *sd, SP type, int32_t val)
+sint32 pc_bonus(MapSessionData *sd, SP type, sint32 val)
 {
     nullpo_ret(sd);
 
@@ -1340,7 +1970,7 @@ int32_t pc_bonus(MapSessionData *sd, SP type, int32_t val)
             break;
         case SP::ADD_SPEED:
             if (sd->state.lr_flag != 2)
-                sd->speed -= val;
+                sd->speed -= std::chrono::milliseconds(val);
             break;
         case SP::SPEED_RATE:
             if (sd->state.lr_flag != 2)
@@ -1355,7 +1985,7 @@ int32_t pc_bonus(MapSessionData *sd, SP type, int32_t val)
             break;
         case SP::ASPD:
             if (sd->state.lr_flag != 2)
-                sd->aspd -= val * 10;
+                sd->aspd -= std::chrono::milliseconds(val * 10);
             break;
         case SP::ASPD_RATE:
             if (sd->state.lr_flag != 2)
@@ -1573,7 +2203,7 @@ int32_t pc_bonus(MapSessionData *sd, SP type, int32_t val)
             }
             break;
         default:
-            map_log("pc_bonus: unknown type %d %d !\n", static_cast<int32_t>(type), val);
+            map_log("pc_bonus: unknown type %d %d !\n", static_cast<sint32>(type), val);
             break;
     }
     return 0;
@@ -1583,7 +2213,7 @@ int32_t pc_bonus(MapSessionData *sd, SP type, int32_t val)
  * スクリプトによるスキル所得
  *------------------------------------------
  */
-int32_t pc_skill(MapSessionData *sd, int32_t id, int32_t level, int32_t flag)
+sint32 pc_skill(MapSessionData *sd, sint32 id, sint32 level, sint32 flag)
 {
     nullpo_ret(sd);
 
@@ -1616,9 +2246,9 @@ int32_t pc_skill(MapSessionData *sd, int32_t id, int32_t level, int32_t flag)
  * 3万個制限にかかるか確認
  *------------------------------------------
  */
-int32_t pc_checkadditem(MapSessionData *sd, int32_t nameid, int32_t amount)
+sint32 pc_checkadditem(MapSessionData *sd, sint32 nameid, sint32 amount)
 {
-    int32_t i;
+    sint32 i;
 
     nullpo_ret(sd);
 
@@ -1644,9 +2274,9 @@ int32_t pc_checkadditem(MapSessionData *sd, int32_t nameid, int32_t amount)
  * 空きアイテム欄の個数
  *------------------------------------------
  */
-int32_t pc_inventoryblank(MapSessionData *sd)
+sint32 pc_inventoryblank(MapSessionData *sd)
 {
-    int32_t i, b;
+    sint32 i, b;
 
     nullpo_ret(sd);
 
@@ -1663,7 +2293,7 @@ int32_t pc_inventoryblank(MapSessionData *sd)
  * お金を払う
  *------------------------------------------
  */
-int32_t pc_payzeny(MapSessionData *sd, int32_t zeny)
+sint32 pc_payzeny(MapSessionData *sd, sint32 zeny)
 {
     double z;
 
@@ -1682,7 +2312,7 @@ int32_t pc_payzeny(MapSessionData *sd, int32_t zeny)
  * お金を得る
  *------------------------------------------
  */
-int32_t pc_getzeny(MapSessionData *sd, int32_t zeny)
+sint32 pc_getzeny(MapSessionData *sd, sint32 zeny)
 {
     double z;
 
@@ -1704,9 +2334,9 @@ int32_t pc_getzeny(MapSessionData *sd, int32_t zeny)
  * アイテムを探して、インデックスを返す
  *------------------------------------------
  */
-int32_t pc_search_inventory(MapSessionData *sd, int32_t item_id)
+sint32 pc_search_inventory(MapSessionData *sd, sint32 item_id)
 {
-    int32_t i;
+    sint32 i;
 
     nullpo_retr(-1, sd);
 
@@ -1720,10 +2350,10 @@ int32_t pc_search_inventory(MapSessionData *sd, int32_t item_id)
     return -1;
 }
 
-int32_t pc_count_all_items(MapSessionData *player, int32_t item_id)
+sint32 pc_count_all_items(MapSessionData *player, sint32 item_id)
 {
-    int32_t i;
-    int32_t count = 0;
+    sint32 i;
+    sint32 count = 0;
 
     nullpo_ret(player);
 
@@ -1736,9 +2366,9 @@ int32_t pc_count_all_items(MapSessionData *player, int32_t item_id)
     return count;
 }
 
-int32_t pc_remove_items(MapSessionData *player, int32_t item_id, int32_t count)
+sint32 pc_remove_items(MapSessionData *player, sint32 item_id, sint32 count)
 {
-    int32_t i;
+    sint32 i;
 
     nullpo_ret(player);
 
@@ -1746,7 +2376,7 @@ int32_t pc_remove_items(MapSessionData *player, int32_t item_id, int32_t count)
     {
         if (player->status.inventory[i].nameid == item_id)
         {
-            int32_t to_delete = count;
+            sint32 to_delete = count;
             /* only delete as much as we have */
             if (to_delete > player->status.inventory[i].amount)
                 to_delete = player->status.inventory[i].amount;
@@ -1768,7 +2398,7 @@ int32_t pc_remove_items(MapSessionData *player, int32_t item_id, int32_t count)
  *------------------------------------------
  */
 PickupFail pc_additem(MapSessionData *sd, struct item *item_data,
-                      int32_t amount)
+                      sint32 amount)
 {
 
     MAP_LOG_PC(sd, "PICKUP %d %d", item_data->nameid, amount);
@@ -1779,11 +2409,11 @@ PickupFail pc_additem(MapSessionData *sd, struct item *item_data,
     if (item_data->nameid <= 0 || amount <= 0)
         return PickupFail::BAD_ITEM;
     struct item_data *data = itemdb_search(item_data->nameid);
-    int32_t w = data->weight * amount;
+    sint32 w = data->weight * amount;
     if (w + sd->weight > sd->max_weight)
         return PickupFail::TOO_HEAVY;
 
-    int32_t i = MAX_INVENTORY;
+    sint32 i = MAX_INVENTORY;
 
     if (!itemdb_isequip2(data))
     {
@@ -1827,11 +2457,11 @@ PickupFail pc_additem(MapSessionData *sd, struct item *item_data,
  * アイテムを減らす
  *------------------------------------------
  */
-int32_t pc_delitem(MapSessionData *sd, int32_t n, int32_t amount, int32_t type)
+sint32 pc_delitem(MapSessionData *sd, sint32 n, sint32 amount, sint32 type)
 {
     nullpo_retr(1, sd);
 
-    if (sd->trade_partner != 0)
+    if (sd->trade_partner)
         trade_tradecancel(sd);
 
     if (sd->status.inventory[n].nameid == 0 || amount <= 0
@@ -1861,11 +2491,11 @@ int32_t pc_delitem(MapSessionData *sd, int32_t n, int32_t amount, int32_t type)
  * アイテムを落す
  *------------------------------------------
  */
-int32_t pc_dropitem(MapSessionData *sd, int32_t n, int32_t amount)
+sint32 pc_dropitem(MapSessionData *sd, sint32 n, sint32 amount)
 {
     nullpo_retr(1, sd);
 
-    if (sd->trade_partner != 0 || sd->npc_id != 0 || sd->state.storage_flag)
+    if (sd->trade_partner || sd->npc_id || sd->state.storage_flag)
         return 0;               // no dropping while trading/npc/storage
 
     if (n < 0 || n >= MAX_INVENTORY)
@@ -1878,7 +2508,7 @@ int32_t pc_dropitem(MapSessionData *sd, int32_t n, int32_t amount)
 
     if (sd->status.inventory[n].nameid <= 0 ||
         sd->status.inventory[n].amount < amount ||
-        sd->trade_partner != 0 || sd->status.inventory[n].amount <= 0)
+        sd->trade_partner || sd->status.inventory[n].amount <= 0)
         return 1;
     map_addflooritem(&sd->status.inventory[n], amount, sd->m, sd->x,
                       sd->y, NULL, NULL, NULL);
@@ -1892,7 +2522,7 @@ int32_t pc_dropitem(MapSessionData *sd, int32_t n, int32_t amount)
  *------------------------------------------
  */
 
-static int32_t can_pick_item_up_from(MapSessionData *self, int32_t other_id)
+static sint32 can_pick_item_up_from(MapSessionData *self, BlockID other_id)
 {
     struct party *p = party_search(self->status.party_id);
 
@@ -1922,30 +2552,31 @@ static int32_t can_pick_item_up_from(MapSessionData *self, int32_t other_id)
         return 1;
     else
     {
-        int32_t distance_x = abs(other->x - self->x);
-        int32_t distance_y = abs(other->y - self->y);
+        sint32 distance_x = abs(other->x - self->x);
+        sint32 distance_y = abs(other->y - self->y);
         return max(distance_x, distance_y) > battle_config.drop_pickup_safety_zone;
     }
 }
 
-int32_t pc_takeitem(MapSessionData *sd, struct flooritem_data *fitem)
+sint32 pc_takeitem(MapSessionData *sd, struct flooritem_data *fitem)
 {
-    uint32_t tick = gettick();
-    int32_t can_take;
+    tick_t tick = gettick();
+    sint32 can_take;
 
     nullpo_ret(sd);
     nullpo_ret(fitem);
 
     /* Sometimes the owners reported to us are buggy: */
+    // Then why didn't you fix it?
 
     if (fitem->first_get_id == fitem->third_get_id
         || fitem->second_get_id == fitem->third_get_id)
-        fitem->third_get_id = 0;
+        fitem->third_get_id = DEFAULT;
 
     if (fitem->first_get_id == fitem->second_get_id)
     {
         fitem->second_get_id = fitem->third_get_id;
-        fitem->third_get_id = 0;
+        fitem->third_get_id = DEFAULT;
     }
 
     can_take = can_pick_item_up_from(sd, fitem->first_get_id);
@@ -1983,10 +2614,10 @@ int32_t pc_takeitem(MapSessionData *sd, struct flooritem_data *fitem)
     return 0;
 }
 
-static int32_t pc_isUseitem(MapSessionData *sd, int32_t n)
+static sint32 pc_isUseitem(MapSessionData *sd, sint32 n)
 {
     struct item_data *item;
-    int32_t nameid;
+    sint32 nameid;
 
     nullpo_ret(sd);
 
@@ -2008,7 +2639,7 @@ static int32_t pc_isUseitem(MapSessionData *sd, int32_t n)
         return 0;
     if (item->sex != 2 && sd->status.sex != item->sex)
         return 0;
-    if (item->elv > 0 && sd->status.base_level < item->elv)
+    if (item->elv && sd->status.base_level < item->elv)
         return 0;
 
     return 1;
@@ -2018,9 +2649,9 @@ static int32_t pc_isUseitem(MapSessionData *sd, int32_t n)
  * アイテムを使う
  *------------------------------------------
  */
-int32_t pc_useitem(MapSessionData *sd, int32_t n)
+sint32 pc_useitem(MapSessionData *sd, sint32 n)
 {
-    int32_t amount;
+    sint32 amount;
 
     nullpo_retr(1, sd);
 
@@ -2035,7 +2666,7 @@ int32_t pc_useitem(MapSessionData *sd, int32_t n)
             return 1;
         }
 
-        run_script(sd->inventory_data[n]->use_script, 0, sd->id, 0);
+        run_script(sd->inventory_data[n]->use_script, 0, sd->id, DEFAULT);
 
         clif_useitemack(sd, n, amount - 1, 1);
         pc_delitem(sd, n, 1, 1);
@@ -2051,9 +2682,9 @@ int32_t pc_useitem(MapSessionData *sd, int32_t n)
  * PCの位置設定
  *------------------------------------------
  */
-int32_t pc_setpos(MapSessionData *sd, const Point& point_org, BeingRemoveType clrtype)
+sint32 pc_setpos(MapSessionData *sd, const Point& point_org, BeingRemoveType clrtype)
 {
-    int32_t m = 0, c = 0;
+    sint32 m = 0;
 
     nullpo_ret(sd);
 
@@ -2062,7 +2693,7 @@ int32_t pc_setpos(MapSessionData *sd, const Point& point_org, BeingRemoveType cl
     if (sd->state.storage_flag == 1)
         storage_storage_quit(sd);  // 倉庫を開いてるなら保存する
 
-    if (sd->party_invite > 0)   // パーティ勧誘を拒否する
+    if (sd->party_invite)   // パーティ勧誘を拒否する
         party_reply_invite(sd, sd->party_invite_account, 0);
 
     skill_castcancel(sd);  // 詠唱中断
@@ -2108,11 +2739,11 @@ int32_t pc_setpos(MapSessionData *sd, const Point& point_org, BeingRemoveType cl
         return 1;
     }
 
-    int32_t x = point.x;
-    int32_t y = point.y;
+    sint32 x = point.x;
+    sint32 y = point.y;
     if (x < 0 || x >= maps[m].xs || y < 0 || y >= maps[m].ys)
         x = y = 0;
-    if ((x == 0 && y == 0) || (c = read_gat(m, x, y)) == 1 )
+    if ((x == 0 && y == 0) || (read_gat(m, x, y) & MapCell::SOLID))
     {
         if (x || y)
         {
@@ -2123,7 +2754,7 @@ int32_t pc_setpos(MapSessionData *sd, const Point& point_org, BeingRemoveType cl
             x = MRAND(maps[m].xs - 2) + 1;
             y = MRAND(maps[m].ys - 2) + 1;
         }
-        while ((c = read_gat(m, x, y)) == 1 );
+        while (read_gat(m, x, y) & MapCell::SOLID);
     }
 
     if (sd->mapname[0] && sd->prev != NULL)
@@ -2153,23 +2784,23 @@ int32_t pc_setpos(MapSessionData *sd, const Point& point_org, BeingRemoveType cl
  * PCのランダムワープ
  *------------------------------------------
  */
-int32_t pc_randomwarp(MapSessionData *sd, BeingRemoveType type)
+sint32 pc_randomwarp(MapSessionData *sd, BeingRemoveType type)
 {
     nullpo_ret(sd);
 
-    int32_t m = sd->m;
+    sint32 m = sd->m;
 
     if (maps[sd->m].flag.noteleport)  // テレポート禁止
         return 0;
 
-    int32_t i = 0;
-    int16_t x, y;
+    sint32 i = 0;
+    sint16 x, y;
     do
     {
         x = MRAND(maps[m].xs - 2) + 1;
         y = MRAND(maps[m].ys - 2) + 1;
     }
-    while (read_gat(m, x, y) == 1 && (i++) < 1000);
+    while ((read_gat(m, x, y) & MapCell::SOLID) && (i++) < 1000);
 
     if (i < 1000)
         pc_setpos(sd, Point{maps[m].name, x, y}, type);
@@ -2181,7 +2812,7 @@ int32_t pc_randomwarp(MapSessionData *sd, BeingRemoveType type)
  *
  *------------------------------------------
  */
-int32_t pc_can_reach(MapSessionData *sd, int32_t x, int32_t y)
+sint32 pc_can_reach(MapSessionData *sd, sint32 x, sint32 y)
 {
     struct walkpath_data wpd;
 
@@ -2204,13 +2835,13 @@ int32_t pc_can_reach(MapSessionData *sd, int32_t x, int32_t y)
  * 次の1歩にかかる時間を計算
  *------------------------------------------
  */
-static int32_t calc_next_walk_step(MapSessionData *sd)
+static interval_t calc_next_walk_step(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
     if (sd->walkpath.path_pos >= sd->walkpath.path_len)
-        return -1;
-    if (static_cast<int32_t>(sd->walkpath.path[sd->walkpath.path_pos]) & 1)
+        return interval_t::zero();
+    if (static_cast<sint32>(sd->walkpath.path[sd->walkpath.path_pos]) & 1)
         return sd->speed * 14 / 10;
 
     return sd->speed;
@@ -2220,12 +2851,11 @@ static int32_t calc_next_walk_step(MapSessionData *sd)
  * 半歩進む(timer関数)
  *------------------------------------------
  */
-static void pc_walk(timer_id, tick_t tick, uint32_t id, uint8_t data)
+static void pc_walk(timer_id, tick_t tick, BlockID id, uint8 data)
 {
     MapSessionData *sd;
-    int32_t i, ctype;
-    int32_t moveblock;
-    int32_t x, y, dx, dy;
+    sint32 moveblock;
+    sint32 x, y, dx, dy;
 
     sd = map_id2sd(id);
     if (sd == NULL)
@@ -2235,10 +2865,6 @@ static void pc_walk(timer_id, tick_t tick, uint32_t id, uint8_t data)
     if (sd->walkpath.path_pos >= sd->walkpath.path_len
         || sd->walkpath.path_pos != data)
         return;
-
-    //歩いたので息吹のタイマーを初期化
-    sd->inchealspirithptick = 0;
-    sd->inchealspiritsptick = 0;
 
     sd->walkpath.path_half ^= 1;
     if (sd->walkpath.path_half == 0)
@@ -2252,22 +2878,22 @@ static void pc_walk(timer_id, tick_t tick, uint32_t id, uint8_t data)
     }
     else
     {                           // マス目境界へ到着
-        if (static_cast<int32_t>(sd->walkpath.path[sd->walkpath.path_pos]) >= 8)
+        if (static_cast<sint32>(sd->walkpath.path[sd->walkpath.path_pos]) >= 8)
             return;
 
         x = sd->x;
         y = sd->y;
-        ctype = map_getcell(sd->m, x, y);
-        if (ctype == 1 || ctype == 5)
+
+        if (map_getcell(sd->m, x, y) & MapCell::SOLID)
         {
             pc_stop_walking(sd, 1);
             return;
         }
         sd->dir = sd->head_dir = sd->walkpath.path[sd->walkpath.path_pos];
-        dx = dirx[static_cast<int32_t>(sd->dir)];
-        dy = diry[static_cast<int32_t>(sd->dir)];
-        ctype = map_getcell(sd->m, x + dx, y + dy);
-        if (ctype == 1 || ctype == 5)
+        dx = dirx[static_cast<sint32>(sd->dir)];
+        dy = diry[static_cast<sint32>(sd->dir)];
+
+        if (map_getcell(sd->m, x + dx, y + dy) & MapCell::SOLID)
         {
             pc_walktoxy_sub(sd);
             return;
@@ -2294,7 +2920,7 @@ static void pc_walk(timer_id, tick_t tick, uint32_t id, uint8_t data)
                               y - AREA_SIZE, x + AREA_SIZE, y + AREA_SIZE,
                               -dx, -dy, BL_NUL, sd);
 
-        if (sd->status.party_id > 0)
+        if (sd->status.party_id)
         {                       // パーティのＨＰ情報通知検査
             struct party *p = party_search(sd->status.party_id);
             if (p != NULL)
@@ -2309,18 +2935,19 @@ static void pc_walk(timer_id, tick_t tick, uint32_t id, uint8_t data)
             }
         }
 
-        if (map_getcell(sd->m, x, y) & 0x80)
+        if (map_getcell(sd->m, x, y) & MapCell::NPC)
             npc_touch_areanpc(sd, sd->m, x, y);
         else
-            sd->areanpc_id = 0;
+            sd->areanpc_id = DEFAULT;
     }
-    if ((i = calc_next_walk_step(sd)) > 0)
+    interval_t i = calc_next_walk_step(sd);
+
+    if (i != interval_t::zero())
     {
-        i = i >> 1;
-        if (i < 1 && sd->walkpath.path_half == 0)
-            i = 1;
-        sd->walktimer =
-            add_timer(tick + i, pc_walk, id, sd->walkpath.path_pos);
+        i /= 2;
+        if (i < interval_t(1) && sd->walkpath.path_half == 0)
+            i = interval_t(1);
+        sd->walktimer = add_timer(tick + i, pc_walk, id, sd->walkpath.path_pos);
     }
 }
 
@@ -2328,25 +2955,24 @@ static void pc_walk(timer_id, tick_t tick, uint32_t id, uint8_t data)
  * 移動可能か確認して、可能なら歩行開始
  *------------------------------------------
  */
-static int32_t pc_walktoxy_sub(MapSessionData *sd)
+static sint32 pc_walktoxy_sub(MapSessionData *sd)
 {
     struct walkpath_data wpd;
-    int32_t i;
 
     nullpo_retr(1, sd);
 
-    if (path_search
-        (&wpd, sd->m, sd->x, sd->y, sd->to_x, sd->to_y, 0))
+    if (path_search(&wpd, sd->m, sd->x, sd->y, sd->to_x, sd->to_y, 0))
         return 1;
     memcpy(&sd->walkpath, &wpd, sizeof(wpd));
 
     clif_walkok(sd);
     sd->state.change_walk_target = 0;
 
-    if ((i = calc_next_walk_step(sd)) > 0)
+    interval_t i = calc_next_walk_step(sd);
+    if (i != interval_t::zero())
     {
-        i = i >> 2;
-        sd->walktimer = add_timer(gettick() + i, pc_walk, sd->id, static_cast<uint8_t>(0));
+        i /= 4;
+        sd->walktimer = add_timer(gettick() + i, pc_walk, sd->id, static_cast<uint8>(0));
     }
     clif_movechar(sd);
 
@@ -2357,7 +2983,7 @@ static int32_t pc_walktoxy_sub(MapSessionData *sd)
  * pc歩 行要求
  *------------------------------------------
  */
-int32_t pc_walktoxy(MapSessionData *sd, int32_t x, int32_t y)
+sint32 pc_walktoxy(MapSessionData *sd, sint32 x, sint32 y)
 {
 
     nullpo_ret(sd);
@@ -2386,7 +3012,7 @@ int32_t pc_walktoxy(MapSessionData *sd, int32_t x, int32_t y)
  * 歩 行停止
  *------------------------------------------
  */
-int32_t pc_stop_walking(MapSessionData *sd, int32_t type)
+sint32 pc_stop_walking(MapSessionData *sd, sint32 type)
 {
     nullpo_ret(sd);
 
@@ -2402,8 +3028,8 @@ int32_t pc_stop_walking(MapSessionData *sd, int32_t type)
         clif_stop(sd);
     if (type & 0x02 && battle_config.pc_damage_delay)
     {
-        uint32_t tick = gettick();
-        int32_t delay = battle_get_dmotion(sd);
+        tick_t tick = gettick();
+        interval_t delay = battle_get_dmotion(sd);
         if (sd->canmove_tick < tick)
             sd->canmove_tick = tick + delay;
     }
@@ -2413,10 +3039,10 @@ int32_t pc_stop_walking(MapSessionData *sd, int32_t type)
 
 void pc_touch_all_relevant_npcs(MapSessionData *sd)
 {
-    if (map_getcell(sd->m, sd->x, sd->y) & 0x80)
+    if (map_getcell(sd->m, sd->x, sd->y) & MapCell::NPC)
         npc_touch_areanpc(sd, sd->m, sd->x, sd->y);
     else
-        sd->areanpc_id = 0;
+        sd->areanpc_id = DEFAULT;
 }
 
 //
@@ -2426,7 +3052,7 @@ void pc_touch_all_relevant_npcs(MapSessionData *sd)
  * スキルの検索 所有していた場合Lvが返る
  *------------------------------------------
  */
-int32_t pc_checkskill(MapSessionData *sd, int32_t skill_id)
+sint32 pc_checkskill(MapSessionData *sd, sint32 skill_id)
 {
     if (sd == NULL)
         return 0;
@@ -2445,7 +3071,7 @@ int32_t pc_checkskill(MapSessionData *sd, int32_t skill_id)
  * 装 備品のチェック
  *------------------------------------------
  */
-int32_t pc_checkequip(MapSessionData *sd, EPOS pos)
+sint32 pc_checkequip(MapSessionData *sd, EPOS pos)
 {
     nullpo_retr(-1, sd);
 
@@ -2462,13 +3088,11 @@ int32_t pc_checkequip(MapSessionData *sd, EPOS pos)
  * PCの攻撃 (timer関数)
  *------------------------------------------
  */
-static void pc_attack_timer(timer_id, tick_t tick, uint32_t id)
+static void pc_attack_timer(timer_id, tick_t tick, BlockID id)
 {
     MapSessionData *sd;
     BlockList *bl;
-    int16_t *opt;
-    int32_t dist, range;
-    int32_t attack_spell_delay;
+    sint32 dist, range;
 
     sd = map_id2sd(id);
     if (sd == NULL)
@@ -2490,24 +3114,23 @@ static void pc_attack_timer(timer_id, tick_t tick, uint32_t id)
     if (sd->m != bl->m || pc_isdead(sd))
         return;
 
-    if (sd->opt1 > 0 || sd->status.option & 2 || sd->status.option & 16388) // 異常などで攻撃できない
+    if (sd->opt1 > 0 || pc_ishiding(sd)) // 異常などで攻撃できない
         return;
 
-    if ((opt = battle_get_option(bl)) != NULL && *opt & 0x46)
+    OPTION *opt = battle_get_option(bl);
+    if (opt && *opt & (OPTION::HIDE | OPTION::CLOAK | OPTION::HIDE2))
         return;
 
     if (!battle_config.sdelay_attack_enable)
     {
-        if (DIFF_TICK(tick, sd->canact_tick) < 0)
-        {
+        if (tick < sd->canact_tick)
             return;
-        }
     }
 
     if (sd->attackabletime > tick)
         return;               // cannot attack yet
 
-    attack_spell_delay = sd->attack_spell_delay;
+    interval_t attack_spell_delay = sd->attack_spell_delay;
     if (sd->attack_spell_override   // [Fate] If we have an active attack spell, use that
         && spell_attack(id, sd->attacktarget))
     {
@@ -2534,7 +3157,7 @@ static void pc_attack_timer(timer_id, tick_t tick, uint32_t id)
                 // TMW client doesn't support this
                 //pc_walktoxy(sd, bl->x, bl->y);
                 clif_movetoattack(sd, bl);
-            sd->attackabletime = tick + (sd->aspd << 1);
+            sd->attackabletime = tick + (sd->aspd * 2);
         }
         else
         {
@@ -2548,9 +3171,9 @@ static void pc_attack_timer(timer_id, tick_t tick, uint32_t id)
             pc_stop_walking(sd, 0);
             sd->attacktarget_lv = battle_weapon_attack(sd, bl, tick);
             map_freeblock_unlock();
-            sd->attackabletime = tick + (sd->aspd << 1);
+            sd->attackabletime = tick + (sd->aspd * 2);
             if (sd->attackabletime <= tick)
-                sd->attackabletime = tick + (battle_config.max_aspd << 1);
+                sd->attackabletime = tick + std::chrono::milliseconds(battle_config.max_aspd * 2);
         }
     }
 
@@ -2566,10 +3189,9 @@ static void pc_attack_timer(timer_id, tick_t tick, uint32_t id)
  * typeが1なら継続攻撃
  *------------------------------------------
  */
-int32_t pc_attack(MapSessionData *sd, int32_t target_id, int32_t type)
+sint32 pc_attack(MapSessionData *sd, BlockID target_id, bool type)
 {
     BlockList *bl;
-    int32_t d;
 
     nullpo_ret(sd);
 
@@ -2579,7 +3201,7 @@ int32_t pc_attack(MapSessionData *sd, int32_t target_id, int32_t type)
 
     if (bl->type == BL_NPC)
     {                           // monster npcs [Valaris]
-        npc_click(sd, RFIFOL(sd->fd, 2));
+        npc_click(sd, target_id);
         return 0;
     }
 
@@ -2590,11 +3212,10 @@ int32_t pc_attack(MapSessionData *sd, int32_t target_id, int32_t type)
     sd->attacktarget = target_id;
     sd->state.attack_continue = type;
 
-    d = DIFF_TICK(sd->attackabletime, gettick());
-    if (d > 0 && d < 2000)
-    {                           // 攻撃delay中
-        sd->attacktimer =
-            add_timer(sd->attackabletime, pc_attack_timer, sd->id);
+    interval_t d = sd->attackabletime - gettick();
+    if (d > interval_t::zero() && d < std::chrono::seconds(2))
+    {
+        sd->attacktimer = add_timer(sd->attackabletime, pc_attack_timer, sd->id);
     }
     else
     {
@@ -2609,7 +3230,7 @@ int32_t pc_attack(MapSessionData *sd, int32_t target_id, int32_t type)
  * 継続攻撃停止
  *------------------------------------------
  */
-int32_t pc_stopattack(MapSessionData *sd)
+sint32 pc_stopattack(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
@@ -2618,15 +3239,15 @@ int32_t pc_stopattack(MapSessionData *sd)
         delete_timer(sd->attacktimer);
         sd->attacktimer = NULL;
     }
-    sd->attacktarget = 0;
+    sd->attacktarget = DEFAULT;
     sd->state.attack_continue = 0;
 
     return 0;
 }
 
-int32_t pc_checkbaselevelup(MapSessionData *sd)
+sint32 pc_checkbaselevelup(MapSessionData *sd)
 {
-    int32_t next = pc_nextbaseexp(sd);
+    sint32 next = pc_nextbaseexp(sd);
 
     nullpo_ret(sd);
 
@@ -2636,7 +3257,7 @@ int32_t pc_checkbaselevelup(MapSessionData *sd)
         sd->status.base_exp -= next;
 
         sd->status.base_level++;
-        sd->status.status_point += (sd->status.base_level + 14) / 4;
+        sd->status.status_point += (unwrap(sd->status.base_level) + 14) / 4;
         clif_updatestatus(sd, SP::STATUSPOINT);
         clif_updatestatus(sd, SP::BASELEVEL);
         clif_updatestatus(sd, SP::NEXTBASEEXP);
@@ -2663,10 +3284,10 @@ static int raise_cost(int x)
  * Compute the maximum for sd->skill_point, i.e., the max. number of skill points that can still be filled in
  *----------------------------------------
  */
-static int32_t pc_skillpt_potential(MapSessionData *sd)
+static sint32 pc_skillpt_potential(MapSessionData *sd)
 {
-    int32_t skill_id;
-    int32_t potential = 0;
+    sint32 skill_id;
+    sint32 potential = 0;
 
     for (skill_id = 0; skill_id < MAX_SKILL; skill_id++)
         if (sd->status.skill[skill_id].id != 0
@@ -2677,9 +3298,9 @@ static int32_t pc_skillpt_potential(MapSessionData *sd)
     return potential;
 }
 
-int32_t pc_checkjoblevelup(MapSessionData *sd)
+sint32 pc_checkjoblevelup(MapSessionData *sd)
 {
-    int32_t next = pc_nextjobexp(sd);
+    sint32 next = pc_nextjobexp(sd);
 
     nullpo_ret(sd);
 
@@ -2702,8 +3323,8 @@ int32_t pc_checkjoblevelup(MapSessionData *sd)
 
         MAP_LOG_PC(sd, "SKILLPOINTS-UP %d", sd->status.skill_point);
 
-        if (sd->status.job_level < 250
-            && sd->status.job_level < sd->status.base_level * 2)
+        if (unwrap(sd->status.job_level) < 250
+            && unwrap(sd->status.job_level) < unwrap(sd->status.base_level) * 2)
             sd->status.job_level++; // Make levelling up a little harder
 
         clif_misceffect(sd, 1);
@@ -2717,12 +3338,12 @@ int32_t pc_checkjoblevelup(MapSessionData *sd)
  * 経験値取得
  *------------------------------------------
  */
-int32_t pc_gainexp(MapSessionData *sd, int32_t base_exp, int32_t job_exp)
+sint32 pc_gainexp(MapSessionData *sd, sint32 base_exp, sint32 job_exp)
 {
     return pc_gainexp_reason(sd, base_exp, job_exp, PC_GAINEXP_REASON::KILLING);
 }
 
-int32_t pc_gainexp_reason(MapSessionData *sd, int32_t base_exp, int32_t job_exp,
+sint32 pc_gainexp_reason(MapSessionData *sd, sint32 base_exp, sint32 job_exp,
                       PC_GAINEXP_REASON reason)
 {
     char output[256];
@@ -2756,7 +3377,7 @@ int32_t pc_gainexp_reason(MapSessionData *sd, int32_t base_exp, int32_t job_exp,
     // [Fate] Adjust experience points that healers can extract from this character
     if (reason != PC_GAINEXP_REASON::HEALING)
     {
-        const int32_t max_heal_xp = 20 + (sd->status.base_level * sd->status.base_level);
+        const sint32 max_heal_xp = 20 + (unwrap(sd->status.base_level) * unwrap(sd->status.base_level));
 
         sd->heal_xp += base_exp;
         if (sd->heal_xp > max_heal_xp)
@@ -2797,9 +3418,9 @@ int32_t pc_gainexp_reason(MapSessionData *sd, int32_t base_exp, int32_t job_exp,
     return 0;
 }
 
-int32_t pc_extract_healer_exp(MapSessionData *sd, int32_t max)
+sint32 pc_extract_healer_exp(MapSessionData *sd, sint32 max)
 {
-    int32_t amount;
+    sint32 amount;
     nullpo_ret(sd);
 
     amount = sd->heal_xp;
@@ -2814,63 +3435,54 @@ int32_t pc_extract_healer_exp(MapSessionData *sd, int32_t max)
  * base level側必要経験値計算
  *------------------------------------------
  */
-int32_t pc_nextbaseexp(MapSessionData *sd)
+sint32 pc_nextbaseexp(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
-    if (sd->status.base_level >= MAX_LEVEL || sd->status.base_level <= 0)
-        return 0;
-
-    return exp_table[0][sd->status.base_level - 1];
+    return exp_table_new[unwrap(sd->status.base_level) - 1][0];
 }
 
 /*==========================================
  * job level側必要経験値計算
  *------------------------------------------
  */
-int32_t pc_nextjobexp(MapSessionData *sd)
+sint32 pc_nextjobexp(MapSessionData *sd)
 {
     // [fate]  For normal levels, this ranges from 20k to 50k, depending on job level.
     // Job level is at most twice the player's experience level (base_level).  Levelling
     // from 2 to 9 is 44 points, i.e., 880k to 2.2M job experience points (this is per
     // skill, obviously.)
 
-    return 20000 + sd->status.job_level * 150;
+    return 20000 + unwrap(sd->status.job_level) * 150;
 }
 
 /*==========================================
  * base level after next [Valaris]
  *------------------------------------------
  */
-int32_t pc_nextbaseafter(MapSessionData *sd)
+sint32 pc_nextbaseafter(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
-    if (sd->status.base_level >= MAX_LEVEL || sd->status.base_level <= 0)
-        return 0;
-
-    return exp_table[0][sd->status.base_level];
+    return exp_table_new[unwrap(sd->status.base_level)][0];
 }
 
 /*==========================================
  * job level after next [Valaris]
  *------------------------------------------
  */
-int32_t pc_nextjobafter(MapSessionData *sd)
+sint32 pc_nextjobafter(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
-    if (sd->status.job_level >= MAX_LEVEL || sd->status.job_level <= 0)
-        return 0;
-
-    return exp_table[7][sd->status.job_level];
+    return exp_table_new[unwrap(sd->status.job_level)][7];
 }
 
 /*==========================================
  * 必要ステータスポイント計算
  *------------------------------------------
  */
-int32_t pc_need_status_point(MapSessionData *sd, SP type)
+sint32 pc_need_status_point(MapSessionData *sd, SP type)
 {
     nullpo_retr(-1, sd);
 
@@ -2884,9 +3496,9 @@ int32_t pc_need_status_point(MapSessionData *sd, SP type)
  * 能力値成長
  *------------------------------------------
  */
-int32_t pc_statusup(MapSessionData *sd, SP type)
+sint32 pc_statusup(MapSessionData *sd, SP type)
 {
-    int32_t need, val = 0;
+    sint32 need, val = 0;
 
     nullpo_ret(sd);
 
@@ -2960,7 +3572,7 @@ int32_t pc_statusup(MapSessionData *sd, SP type)
  * 能力値成長
  *------------------------------------------
  */
-int32_t pc_statusup2(MapSessionData *sd, SP type, int32_t val)
+sint32 pc_statusup2(MapSessionData *sd, SP type, sint32 val)
 {
     nullpo_ret(sd);
 
@@ -3039,7 +3651,7 @@ int32_t pc_statusup2(MapSessionData *sd, SP type, int32_t val)
  * スキルポイント割り振り
  *------------------------------------------
  */
-int32_t pc_skillup(MapSessionData *sd, int32_t skill_num)
+sint32 pc_skillup(MapSessionData *sd, sint32 skill_num)
 {
     nullpo_ret(sd);
 
@@ -3065,11 +3677,11 @@ int32_t pc_skillup(MapSessionData *sd, int32_t skill_num)
  * /resetlvl
  *------------------------------------------
  */
-int32_t pc_resetlvl(MapSessionData *sd, int32_t type)
+sint32 pc_resetlvl(MapSessionData *sd, sint32 type)
 {
     nullpo_ret(sd);
 
-    for (int32_t i = 1; i < MAX_SKILL; i++)
+    for (sint32 i = 1; i < MAX_SKILL; i++)
     {
         sd->status.skill[i].lv = 0;
     }
@@ -3077,12 +3689,11 @@ int32_t pc_resetlvl(MapSessionData *sd, int32_t type)
     if (type == 1)
     {
         sd->status.skill_point = 0;
-        sd->status.base_level = 1;
-        sd->status.job_level = 1;
+        sd->status.base_level = level_t(1);
+        sd->status.job_level = level_t(1);
         sd->status.base_exp = 0;
         sd->status.job_exp = 0;
-        if (sd->status.option != 0)
-            sd->status.option = 0;
+        sd->status.option = OPTION::NONE;
 
         sd->status.stats[ATTR::STR] = 1;
         sd->status.stats[ATTR::AGI] = 1;
@@ -3095,19 +3706,19 @@ int32_t pc_resetlvl(MapSessionData *sd, int32_t type)
     if (type == 2)
     {
         sd->status.skill_point = 0;
-        sd->status.base_level = 1;
-        sd->status.job_level = 1;
+        sd->status.base_level = level_t(1);
+        sd->status.job_level = level_t(1);
         sd->status.base_exp = 0;
         sd->status.job_exp = 0;
     }
     if (type == 3)
     {
-        sd->status.base_level = 1;
+        sd->status.base_level = level_t(1);
         sd->status.base_exp = 0;
     }
     if (type == 4)
     {
-        sd->status.job_level = 1;
+        sd->status.job_level = level_t(1);
         sd->status.job_exp = 0;
     }
 
@@ -3155,11 +3766,11 @@ int32_t pc_resetlvl(MapSessionData *sd, int32_t type)
  * /resetstate
  *------------------------------------------
  */
-int32_t pc_resetstate(MapSessionData *sd)
+sint32 pc_resetstate(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
-    sd->status.status_point = atoi(statp[sd->status.base_level - 1]);
+    sd->status.status_point = stat_points[unwrap(sd->status.base_level)];
 
     clif_updatestatus(sd, SP::STATUSPOINT);
 
@@ -3193,9 +3804,9 @@ int32_t pc_resetstate(MapSessionData *sd)
  * /resetskill
  *------------------------------------------
  */
-int32_t pc_resetskill(MapSessionData *sd)
+sint32 pc_resetskill(MapSessionData *sd)
 {
-    int32_t i, skill;
+    sint32 i, skill;
 
     nullpo_ret(sd);
 
@@ -3219,10 +3830,10 @@ int32_t pc_resetskill(MapSessionData *sd)
  * pcにダメージを与える
  *------------------------------------------
  */
-int32_t pc_damage(BlockList *src, MapSessionData *sd,
-               int32_t damage)
+sint32 pc_damage(BlockList *src, MapSessionData *sd,
+               sint32 damage)
 {
-    int32_t i = 0, j = 0;
+    sint32 i = 0, j = 0;
     nullpo_ret(sd);
 
     // 既に死んでいたら無効
@@ -3261,7 +3872,7 @@ int32_t pc_damage(BlockList *src, MapSessionData *sd,
 
         sd->canlog_tick = gettick();
 
-        if (sd->status.party_id > 0)
+        if (sd->status.party_id)
         {                       // on-the-fly party hp updates [Valaris]
             struct party *p = party_search(sd->status.party_id);
             if (p != NULL)
@@ -3294,7 +3905,7 @@ int32_t pc_damage(BlockList *src, MapSessionData *sd,
     sd->cast_tick = gettick();
     magic_stop_completely(sd);
 
-    if (battle_config.death_penalty_type > 0 && sd->status.base_level >= 20)
+    if (battle_config.death_penalty_type > 0 && sd->status.base_level >= level_t(20))
     {                           // changed penalty options, added death by player if pk_mode [Valaris]
         if (!maps[sd->m].flag.nopenalty)
         {
@@ -3354,19 +3965,19 @@ int32_t pc_damage(BlockList *src, MapSessionData *sd,
     {                           // Moved this outside so it works when PVP isnt enabled and during pk mode [Ancyker]
         for (j = 0; j < MAX_DROP_PER_MAP; j++)
         {
-            int32_t id = maps[sd->m].drop_list[j].drop_id;
-            int32_t type = maps[sd->m].drop_list[j].drop_type;
-            int32_t per = maps[sd->m].drop_list[j].drop_per;
+            sint32 id = maps[sd->m].drop_list[j].drop_id;
+            sint32 type = maps[sd->m].drop_list[j].drop_type;
+            sint32 per = maps[sd->m].drop_list[j].drop_per;
             if (id == 0)
                 continue;
             if (id == -1)
             {                   //ランダムドロップ
-                int32_t eq_num = 0, eq_n[MAX_INVENTORY];
+                sint32 eq_num = 0, eq_n[MAX_INVENTORY];
                 memset(eq_n, 0, sizeof(eq_n));
                 //先ず装備しているアイテム数をカウント
                 for (i = 0; i < MAX_INVENTORY; i++)
                 {
-                    int32_t k;
+                    sint32 k;
                     if ((type == 1 && sd->status.inventory[i].equip == EPOS::NONE)
                         || (type == 2 && sd->status.inventory[i].equip != EPOS::NONE)
                         || type == 3)
@@ -3385,7 +3996,7 @@ int32_t pc_damage(BlockList *src, MapSessionData *sd,
                 }
                 if (eq_num > 0)
                 {
-                    int32_t n = eq_n[MRAND(eq_num)];  //該当アイテムの中からランダム
+                    sint32 n = eq_n[MRAND(eq_num)];  //該当アイテムの中からランダム
                     if (MRAND(10000) < per)
                     {
                         if (sd->status.inventory[n].equip != EPOS::NONE)
@@ -3440,9 +4051,9 @@ int32_t pc_damage(BlockList *src, MapSessionData *sd,
         // [Fate] PK death, trigger scripts
         ArgRec arg[] =
         {
-            { "@killerrid", src->id },
-            { "@victimrid", sd->id },
-            { "@victimlvl", sd->status.base_level }
+            { "@killerrid", unwrap(src->id) },
+            { "@victimrid", unwrap(sd->id) },
+            { "@victimlvl", unwrap(sd->status.base_level) },
         };
         npc_event_doall_l("OnPCKilledEvent", sd->id, ARRAY_SIZEOF(arg), arg);
         npc_event_doall_l("OnPCKillEvent", src->id, ARRAY_SIZEOF(arg), arg);
@@ -3459,9 +4070,9 @@ int32_t pc_damage(BlockList *src, MapSessionData *sd,
  * script用PCステータス読み出し
  *------------------------------------------
  */
-int32_t pc_readparam(MapSessionData *sd, SP type)
+sint32 pc_readparam(MapSessionData *sd, SP type)
 {
-    int32_t val = 0;
+    sint32 val = 0;
 
     nullpo_ret(sd);
 
@@ -3477,10 +4088,10 @@ int32_t pc_readparam(MapSessionData *sd, SP type)
             val = sd->status.zeny;
             break;
         case SP::BASELEVEL:
-            val = sd->status.base_level;
+            val = unwrap(sd->status.base_level);
             break;
         case SP::JOBLEVEL:
-            val = sd->status.job_level;
+            val = unwrap(sd->status.job_level);
             break;
         case SP::SEX:
             val = sd->sex;
@@ -3545,22 +4156,21 @@ int32_t pc_readparam(MapSessionData *sd, SP type)
  * script用PCステータス設定
  *------------------------------------------
  */
-int32_t pc_setparam(MapSessionData *sd, SP type, int32_t val)
+sint32 pc_setparam(MapSessionData *sd, SP type, sint32 val)
 {
-    int32_t i = 0, up_level = 50;
+    sint32 i = 0;
 
     nullpo_ret(sd);
 
     switch (type)
     {
         case SP::BASELEVEL:
-            if (val > sd->status.base_level)
+            if (level_t(val) > sd->status.base_level)
             {
-                for (i = 1; i <= (val - sd->status.base_level); i++)
-                    sd->status.status_point +=
-                        (sd->status.base_level + i + 14) / 4;
+                for (i = 1; i <= (val - unwrap(sd->status.base_level)); i++)
+                    sd->status.status_point += (unwrap(sd->status.base_level) + i + 14) / 4;
             }
-            sd->status.base_level = val;
+            sd->status.base_level = level_t(val);
             sd->status.base_exp = 0;
             clif_updatestatus(sd, SP::BASELEVEL);
             clif_updatestatus(sd, SP::NEXTBASEEXP);
@@ -3570,13 +4180,13 @@ int32_t pc_setparam(MapSessionData *sd, SP type, int32_t val)
             pc_heal(sd, sd->status.max_hp, sd->status.max_sp);
             break;
         case SP::JOBLEVEL:
-            up_level -= 40;
-            if (val >= sd->status.job_level)
+            if (level_t(val) >= sd->status.job_level)
             {
-                if (val > up_level)
-                    val = up_level;
-                sd->status.skill_point += (val - sd->status.job_level);
-                sd->status.job_level = val;
+                level_t up_level = level_t(10);
+                if (level_t(val) > up_level)
+                    val = unwrap(up_level);
+                sd->status.skill_point += val - unwrap(sd->status.job_level);
+                sd->status.job_level = level_t(val);
                 sd->status.job_exp = 0;
                 clif_updatestatus(sd, SP::JOBLEVEL);
                 clif_updatestatus(sd, SP::NEXTJOBEXP);
@@ -3587,7 +4197,7 @@ int32_t pc_setparam(MapSessionData *sd, SP type, int32_t val)
             }
             else
             {
-                sd->status.job_level = val;
+                sd->status.job_level = level_t(val);
                 sd->status.job_exp = 0;
                 clif_updatestatus(sd, SP::JOBLEVEL);
                 clif_updatestatus(sd, SP::NEXTJOBEXP);
@@ -3675,7 +4285,7 @@ int32_t pc_setparam(MapSessionData *sd, SP type, int32_t val)
  * HP/SP回復
  *------------------------------------------
  */
-int32_t pc_heal(MapSessionData *sd, int32_t hp, int32_t sp)
+sint32 pc_heal(MapSessionData *sd, sint32 hp, sint32 sp)
 {
 //  if (battle_config.battle_log)
 //      printf("heal %d %d\n", hp, sp);
@@ -3712,7 +4322,7 @@ int32_t pc_heal(MapSessionData *sd, int32_t hp, int32_t sp)
     if (sp)
         clif_updatestatus(sd, SP::SP);
 
-    if (sd->status.party_id > 0)
+    if (sd->status.party_id)
     {                           // on-the-fly party hp updates [Valaris]
         struct party *p = party_search(sd->status.party_id);
         if (p != NULL)
@@ -3726,10 +4336,10 @@ int32_t pc_heal(MapSessionData *sd, int32_t hp, int32_t sp)
  * HP/SP回復
  *------------------------------------------
  */
-static int32_t pc_itemheal_effect(MapSessionData *sd, int32_t hp, int32_t sp);
+static sint32 pc_itemheal_effect(MapSessionData *sd, sint32 hp, sint32 sp);
 
-static int32_t                     // Compute how quickly we regenerate (less is faster) for that amount
-pc_heal_quick_speed(int32_t amount)
+static sint32                     // Compute how quickly we regenerate (less is faster) for that amount
+pc_heal_quick_speed(sint32 amount)
 {
     if (amount >= 100)
     {
@@ -3749,14 +4359,14 @@ pc_heal_quick_speed(int32_t amount)
     }
 }
 
-static void pc_heal_quick_accumulate(int32_t new_amount,
-                          struct quick_regeneration *quick_regen, int32_t max)
+static void pc_heal_quick_accumulate(sint32 new_amount,
+                          struct quick_regeneration *quick_regen, sint32 max)
 {
-    int32_t current_amount = quick_regen->amount;
-    int32_t current_speed = quick_regen->speed;
-    int32_t new_speed = pc_heal_quick_speed(new_amount);
+    sint32 current_amount = quick_regen->amount;
+    sint32 current_speed = quick_regen->speed;
+    sint32 new_speed = pc_heal_quick_speed(new_amount);
 
-    int32_t average_speed = ((new_speed * new_amount) + (current_speed * current_amount)) / (current_amount + new_amount); // new_amount > 0, current_amount >= 0
+    sint32 average_speed = ((new_speed * new_amount) + (current_speed * current_amount)) / (current_amount + new_amount); // new_amount > 0, current_amount >= 0
 
     quick_regen->speed = average_speed;
     quick_regen->amount = min(current_amount + new_amount, max);
@@ -3764,7 +4374,7 @@ static void pc_heal_quick_accumulate(int32_t new_amount,
     quick_regen->tickdelay = min(quick_regen->speed, quick_regen->tickdelay);
 }
 
-int32_t pc_itemheal(MapSessionData *sd, int32_t hp, int32_t sp)
+sint32 pc_itemheal(MapSessionData *sd, sint32 hp, sint32 sp)
 {
     /* defer healing */
     if (hp > 0)
@@ -3793,9 +4403,9 @@ int32_t pc_itemheal(MapSessionData *sd, int32_t hp, int32_t sp)
 /* pc_itemheal_effect is invoked once every 0.5s whenever the pc
  * has health recovery queued up(cf. pc_natural_heal_sub).
  */
-static int32_t pc_itemheal_effect(MapSessionData *sd, int32_t hp, int32_t sp)
+static sint32 pc_itemheal_effect(MapSessionData *sd, sint32 hp, sint32 sp)
 {
-    int32_t bonus;
+    sint32 bonus;
 //  if (battle_config.battle_log)
 //      printf("heal %d %d\n", hp, sp);
 
@@ -3851,7 +4461,7 @@ static int32_t pc_itemheal_effect(MapSessionData *sd, int32_t hp, int32_t sp)
  * HP/SP回復
  *------------------------------------------
  */
-int32_t pc_percentheal(MapSessionData *sd, int32_t hp, int32_t sp)
+sint32 pc_percentheal(MapSessionData *sd, sint32 hp, sint32 sp)
 {
     nullpo_ret(sd);
 
@@ -3920,7 +4530,7 @@ int32_t pc_percentheal(MapSessionData *sd, int32_t hp, int32_t sp)
  * 見た目変更
  *------------------------------------------
  */
-int32_t pc_changelook(MapSessionData *sd, LOOK type, int32_t val)
+sint32 pc_changelook(MapSessionData *sd, LOOK type, sint32 val)
 {
     nullpo_ret(sd);
 
@@ -3959,7 +4569,7 @@ int32_t pc_changelook(MapSessionData *sd, LOOK type, int32_t val)
  * 付属品(鷹,ペコ,カート)設定
  *------------------------------------------
  */
-int32_t pc_setoption(MapSessionData *sd, int32_t type)
+sint32 pc_setoption(MapSessionData *sd, OPTION type)
 {
     nullpo_ret(sd);
 
@@ -3974,11 +4584,11 @@ int32_t pc_setoption(MapSessionData *sd, int32_t type)
  * script用グローバル変数の値を読む
  *------------------------------------------
  */
-int32_t pc_readglobalreg(MapSessionData *sd, const std::string& reg)
+sint32 pc_readglobalreg(MapSessionData *sd, const std::string& reg)
 {
     nullpo_ret(sd);
 
-    for (int32_t i = 0; i < sd->status.global_reg_num; i++)
+    for (sint32 i = 0; i < sd->status.global_reg_num; i++)
         if (sd->status.global_reg[i].str == reg)
             return sd->status.global_reg[i].value;
 
@@ -3989,7 +4599,7 @@ int32_t pc_readglobalreg(MapSessionData *sd, const std::string& reg)
  * script用グローバル変数の値を設定
  *------------------------------------------
  */
-int32_t pc_setglobalreg(MapSessionData *sd, const std::string& reg, int32_t val)
+sint32 pc_setglobalreg(MapSessionData *sd, const std::string& reg, sint32 val)
 {
     nullpo_ret(sd);
 
@@ -4001,7 +4611,7 @@ int32_t pc_setglobalreg(MapSessionData *sd, const std::string& reg, int32_t val)
     }
     if (val == 0)
     {
-        for (int32_t i = 0; i < sd->status.global_reg_num; i++)
+        for (sint32 i = 0; i < sd->status.global_reg_num; i++)
         {
             if (sd->status.global_reg[i].str == reg)
             {
@@ -4011,7 +4621,7 @@ int32_t pc_setglobalreg(MapSessionData *sd, const std::string& reg, int32_t val)
         }
         return 0;
     }
-    for (int32_t i = 0; i < sd->status.global_reg_num; i++)
+    for (sint32 i = 0; i < sd->status.global_reg_num; i++)
     {
         if (sd->status.global_reg[i].str == reg)
         {
@@ -4035,11 +4645,11 @@ int32_t pc_setglobalreg(MapSessionData *sd, const std::string& reg, int32_t val)
  * script用アカウント変数の値を読む
  *------------------------------------------
  */
-int32_t pc_readaccountreg(MapSessionData *sd, const std::string& reg)
+sint32 pc_readaccountreg(MapSessionData *sd, const std::string& reg)
 {
     nullpo_ret(sd);
 
-    for (int32_t i = 0; i < sd->status.account_reg_num; i++)
+    for (sint32 i = 0; i < sd->status.account_reg_num; i++)
     {
         if (sd->status.account_reg[i].str == reg)
             return sd->status.account_reg[i].value;
@@ -4052,13 +4662,13 @@ int32_t pc_readaccountreg(MapSessionData *sd, const std::string& reg)
  * script用アカウント変数の値を設定
  *------------------------------------------
  */
-int32_t pc_setaccountreg(MapSessionData *sd, const std::string& reg, int32_t val)
+sint32 pc_setaccountreg(MapSessionData *sd, const std::string& reg, sint32 val)
 {
     nullpo_ret(sd);
 
     if (val == 0)
     {
-        for (int32_t i = 0; i < sd->status.account_reg_num; i++)
+        for (sint32 i = 0; i < sd->status.account_reg_num; i++)
         {
             if (sd->status.account_reg[i].str == reg)
             {
@@ -4069,7 +4679,7 @@ int32_t pc_setaccountreg(MapSessionData *sd, const std::string& reg, int32_t val
         intif_saveaccountreg(sd);
         return 0;
     }
-    for (int32_t i = 0; i < sd->status.account_reg_num; i++)
+    for (sint32 i = 0; i < sd->status.account_reg_num; i++)
     {
         if (sd->status.account_reg[i].str == reg)
         {
@@ -4095,11 +4705,11 @@ int32_t pc_setaccountreg(MapSessionData *sd, const std::string& reg, int32_t val
  * script用アカウント変数2の値を読む
  *------------------------------------------
  */
-int32_t pc_readaccountreg2(MapSessionData *sd, const std::string& reg)
+sint32 pc_readaccountreg2(MapSessionData *sd, const std::string& reg)
 {
     nullpo_ret(sd);
 
-    for (int32_t i = 0; i < sd->status.account_reg2_num; i++)
+    for (sint32 i = 0; i < sd->status.account_reg2_num; i++)
     {
         if (sd->status.account_reg2[i].str == reg)
             return sd->status.account_reg2[i].value;
@@ -4112,13 +4722,13 @@ int32_t pc_readaccountreg2(MapSessionData *sd, const std::string& reg)
  * script用アカウント変数2の値を設定
  *------------------------------------------
  */
-int32_t pc_setaccountreg2(MapSessionData *sd, const std::string& reg, int32_t val)
+sint32 pc_setaccountreg2(MapSessionData *sd, const std::string& reg, sint32 val)
 {
     nullpo_retr(1, sd);
 
     if (val == 0)
     {
-        for (int32_t i = 0; i < sd->status.account_reg2_num; i++)
+        for (sint32 i = 0; i < sd->status.account_reg2_num; i++)
         {
             if (sd->status.account_reg2[i].str == reg)
             {
@@ -4129,7 +4739,7 @@ int32_t pc_setaccountreg2(MapSessionData *sd, const std::string& reg, int32_t va
         chrif_saveaccountreg2(sd);
         return 0;
     }
-    for (int32_t i = 0; i < sd->status.account_reg2_num; i++)
+    for (sint32 i = 0; i < sd->status.account_reg2_num; i++)
     {
         if (sd->status.account_reg2[i].str == reg)
         {
@@ -4155,10 +4765,10 @@ int32_t pc_setaccountreg2(MapSessionData *sd, const std::string& reg, int32_t va
  * イベントタイマー処理
  *------------------------------------------
  */
-static void pc_eventtimer(timer_id tid, tick_t, uint32_t id, char *data)
+static void pc_eventtimer(timer_id tid, tick_t, BlockID id, char *data)
 {
     MapSessionData *sd = map_id2sd(id);
-    int32_t i;
+    sint32 i;
     if (sd == NULL)
         return;
 
@@ -4182,9 +4792,9 @@ static void pc_eventtimer(timer_id tid, tick_t, uint32_t id, char *data)
  * イベントタイマー追加
  *------------------------------------------
  */
-int32_t pc_addeventtimer(MapSessionData *sd, int32_t tick, const char *name)
+sint32 pc_addeventtimer(MapSessionData *sd, interval_t tick, const char *name)
 {
-    int32_t i;
+    sint32 i;
 
     nullpo_ret(sd);
 
@@ -4210,9 +4820,9 @@ int32_t pc_addeventtimer(MapSessionData *sd, int32_t tick, const char *name)
  * イベントタイマー削除
  *------------------------------------------
  */
-int32_t pc_deleventtimer(MapSessionData *sd, const char *name)
+sint32 pc_deleventtimer(MapSessionData *sd, const char *name)
 {
-    int32_t i;
+    sint32 i;
 
     nullpo_ret(sd);
 
@@ -4231,9 +4841,9 @@ int32_t pc_deleventtimer(MapSessionData *sd, const char *name)
  * イベントタイマー全削除
  *------------------------------------------
  */
-int32_t pc_cleareventtimer(MapSessionData *sd)
+sint32 pc_cleareventtimer(MapSessionData *sd)
 {
-    int32_t i;
+    sint32 i;
 
     nullpo_ret(sd);
 
@@ -4254,7 +4864,7 @@ int32_t pc_cleareventtimer(MapSessionData *sd)
  * アイテムを装備する
  *------------------------------------------
  */
-static int32_t pc_signal_advanced_equipment_change(MapSessionData *sd, int32_t n)
+static sint32 pc_signal_advanced_equipment_change(MapSessionData *sd, sint32 n)
 {
     if (sd->status.inventory[n].equip & EPOS::SHOES)
         clif_changelook(sd, LOOK::SHOES, 0);
@@ -4269,7 +4879,7 @@ static int32_t pc_signal_advanced_equipment_change(MapSessionData *sd, int32_t n
     return 0;
 }
 
-int32_t pc_equipitem(MapSessionData *sd, int32_t n)
+sint32 pc_equipitem(MapSessionData *sd, sint32 n)
 {
     nullpo_ret(sd);
 
@@ -4279,12 +4889,12 @@ int32_t pc_equipitem(MapSessionData *sd, int32_t n)
         return 0;
     }
 
-    int32_t nameid = sd->status.inventory[n].nameid;
+    sint32 nameid = sd->status.inventory[n].nameid;
     struct item_data *id = sd->inventory_data[n];
     EPOS pos = pc_equippoint(sd, n);
 
     map_log("equip %d(%d) %x:%x\n", nameid, n,
-            static_cast<uint16_t>(id->equip), static_cast<uint16_t>(pos));
+            static_cast<uint16>(id->equip), static_cast<uint16>(pos));
     if (!pc_isequip(sd, n) || !pos)
     {                           // [Valaris]
         clif_equipitemack(sd, n, EPOS::NONE, false);    // fail
@@ -4305,7 +4915,7 @@ int32_t pc_equipitem(MapSessionData *sd, int32_t n)
     }
 
     // BUG: This code is *definitely* not doing what it is supposed to be doing
-    int32_t arrow = pc_search_inventory(sd, pc_checkequip(sd, (EPOS::LEGS | EPOS::CAPE)));    // Added by RoVeRT
+    sint32 arrow = pc_search_inventory(sd, pc_checkequip(sd, (EPOS::LEGS | EPOS::CAPE)));    // Added by RoVeRT
     for (EQUIP i : EQUIPs)
     {
         if (pos & equip_pos[i])
@@ -4335,7 +4945,7 @@ int32_t pc_equipitem(MapSessionData *sd, int32_t n)
     }
     sd->status.inventory[n].equip = pos;
 
-    int32_t view = 0;
+    sint32 view = 0;
     if (sd->inventory_data[n])
     {
         view = sd->inventory_data[n]->look;
@@ -4400,13 +5010,13 @@ int32_t pc_equipitem(MapSessionData *sd, int32_t n)
  * 装 備した物を外す
  *------------------------------------------
  */
-int32_t pc_unequipitem(MapSessionData *sd, int32_t n, CalcStatus type)
+sint32 pc_unequipitem(MapSessionData *sd, sint32 n, CalcStatus type)
 {
     nullpo_ret(sd);
 
     map_log("unequip %d %x:%x\n", n,
-            static_cast<uint16_t>(pc_equippoint(sd, n)),
-            static_cast<uint16_t>(sd->status.inventory[n].equip));
+            static_cast<uint16>(pc_equippoint(sd, n)),
+            static_cast<uint16>(sd->status.inventory[n].equip));
     if (sd->status.inventory[n].equip != EPOS::NONE)
     {
         for (EQUIP i : EQUIPs)
@@ -4458,7 +5068,7 @@ int32_t pc_unequipitem(MapSessionData *sd, int32_t n, CalcStatus type)
     return 0;
 }
 
-int32_t pc_unequipinvyitem(MapSessionData *sd, int32_t n, CalcStatus type)
+sint32 pc_unequipinvyitem(MapSessionData *sd, sint32 n, CalcStatus type)
 {
     nullpo_retr(1, sd);
 
@@ -4480,9 +5090,9 @@ int32_t pc_unequipinvyitem(MapSessionData *sd, int32_t n, CalcStatus type)
  * 装 備品の装備可能チェックを行なう
  *------------------------------------------
  */
-int32_t pc_checkitem(MapSessionData *sd)
+sint32 pc_checkitem(MapSessionData *sd)
 {
-    int32_t i, j, k, id, calc_flag = 0;
+    sint32 i, j, k, id, calc_flag = 0;
     struct item_data *it = NULL;
 
     nullpo_ret(sd);
@@ -4494,8 +5104,8 @@ int32_t pc_checkitem(MapSessionData *sd)
             continue;
         if (!itemdb_available(id))
         {
-            map_log("illeagal imap_logtem id %d in %d[%s] inventory.\n", id,
-                    sd->id, sd->status.name);
+            MAP_LOG("illegal item id %d in %d[%s] inventory.\n",
+                    id, sd->id, sd->status.name);
             pc_delitem(sd, i, sd->status.inventory[i].amount, 3);
             continue;
         }
@@ -4543,7 +5153,7 @@ int32_t pc_checkitem(MapSessionData *sd)
     return 0;
 }
 
-int32_t pc_checkoverhp(MapSessionData *sd)
+sint32 pc_checkoverhp(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
@@ -4559,7 +5169,7 @@ int32_t pc_checkoverhp(MapSessionData *sd)
     return 0;
 }
 
-int32_t pc_checkoversp(MapSessionData *sd)
+sint32 pc_checkoversp(MapSessionData *sd)
 {
     nullpo_ret(sd);
 
@@ -4595,7 +5205,7 @@ static void pc_calc_pvprank_sub(BlockList *bl, MapSessionData *sd2)
  * PVP順位計算
  *------------------------------------------
  */
-int32_t pc_calc_pvprank(MapSessionData *sd)
+sint32 pc_calc_pvprank(MapSessionData *sd)
 {
     nullpo_ret(sd);
     map_data_local *m = &maps[sd->m];
@@ -4612,7 +5222,7 @@ int32_t pc_calc_pvprank(MapSessionData *sd)
  * PVP順位計算(timer)
  *------------------------------------------
  */
-void pc_calc_pvprank_timer(timer_id, tick_t, uint32_t id)
+void pc_calc_pvprank_timer(timer_id, tick_t, account_t id)
 {
     MapSessionData *sd = NULL;
     if (battle_config.pk_mode)  // disable pvp ranking if pk_mode on [Valaris]
@@ -4631,14 +5241,11 @@ void pc_calc_pvprank_timer(timer_id, tick_t, uint32_t id)
  * sdは結婚しているか(既婚の場合は相方のchar_idを返す)
  *------------------------------------------
  */
-int32_t pc_ismarried(MapSessionData *sd)
+charid_t pc_ismarried(MapSessionData *sd)
 {
-    if (sd == NULL)
-        return -1;
-    if (sd->status.partner_id > 0)
-        return sd->status.partner_id;
-    else
-        return 0;
+    nullpo_ret(sd);
+
+    return sd->status.partner_id;
 }
 
 /*==========================================
@@ -4647,8 +5254,7 @@ int32_t pc_ismarried(MapSessionData *sd)
  */
 bool pc_marriage(MapSessionData *sd, MapSessionData *dstsd)
 {
-    if (sd == NULL || dstsd == NULL || sd->status.partner_id > 0
-        || dstsd->status.partner_id > 0)
+    if (pc_ismarried(sd) || pc_ismarried(dstsd))
         return false;
     sd->status.partner_id = dstsd->status.char_id;
     dstsd->status.partner_id = sd->status.char_id;
@@ -4666,18 +5272,17 @@ bool pc_divorce(MapSessionData *sd)
         return false;
 
     // If both are on map server we don't need to bother the char server
-    if ((p_sd =
-         map_nick2sd(map_charid2nick(sd->status.partner_id))) != NULL)
+    if ((p_sd = map_nick2sd(map_charid2nick(sd->status.partner_id))) != NULL)
     {
         if (p_sd->status.partner_id != sd->status.char_id
             || sd->status.partner_id != p_sd->status.char_id)
         {
-            printf("pc_divorce: Illegal partner_id sd=%d p_sd=%d\n",
+            PRINTF("pc_divorce: Illegal partner_id sd=%d p_sd=%d\n",
                     sd->status.partner_id, p_sd->status.partner_id);
             return false;
         }
-        p_sd->status.partner_id = 0;
-        sd->status.partner_id = 0;
+        p_sd->status.partner_id = DEFAULT;
+        sd->status.partner_id = DEFAULT;
 
         if (sd->npc_flags.divorce)
         {
@@ -4719,47 +5324,44 @@ MapSessionData *pc_get_partner(MapSessionData *sd)
  * SP回復量計算
  *------------------------------------------
  */
-static int32_t natural_heal_tick, natural_heal_prev_tick, natural_heal_diff_tick;
-static int32_t pc_spheal(MapSessionData *sd)
-{
-    int32_t a;
+static tick_t natural_heal_tick, natural_heal_prev_tick;
+interval_t natural_heal_diff_tick;
 
+static interval_t pc_spheal(MapSessionData *sd)
+{
     nullpo_ret(sd);
 
-    a = natural_heal_diff_tick;
     if (pc_issit(sd))
-        a += a;
+        return natural_heal_diff_tick * 2;
 
-    return a;
+    return natural_heal_diff_tick;
 }
 
 /*==========================================
  * HP回復量計算
  *------------------------------------------
  */
-static int32_t pc_hpheal(MapSessionData *sd)
+static interval_t pc_hpheal(MapSessionData *sd)
 {
-    int32_t a;
-
     nullpo_ret(sd);
 
-    a = natural_heal_diff_tick;
     if (pc_issit(sd))
-        a += a;
+        return natural_heal_diff_tick * 2;
 
-    return a;
+    return natural_heal_diff_tick;
 }
 
-static int32_t pc_natural_heal_hp(MapSessionData *sd)
+static sint32 pc_natural_heal_hp(MapSessionData *sd)
 {
-    int32_t bhp;
-    int32_t inc_num, bonus, hp_flag;
+    sint32 bhp;
+    sint32 bonus, hp_flag;
 
     nullpo_ret(sd);
 
     if (pc_checkoverhp(sd))
     {
-        sd->hp_sub = sd->inchealhptick = 0;
+        sd->hp_sub = DEFAULT;
+        sd->inchealhptick = DEFAULT;
         return 0;
     }
 
@@ -4768,23 +5370,22 @@ static int32_t pc_natural_heal_hp(MapSessionData *sd)
 
     if (sd->walktimer == NULL)
     {
-        inc_num = pc_hpheal(sd);
-        sd->hp_sub += inc_num;
+        sd->hp_sub += pc_hpheal(sd);
         sd->inchealhptick += natural_heal_diff_tick;
     }
     else if (hp_flag)
     {
-        inc_num = pc_hpheal(sd);
-        sd->hp_sub += inc_num;
-        sd->inchealhptick = 0;
+        sd->hp_sub += pc_hpheal(sd);
+        sd->inchealhptick = DEFAULT;
     }
     else
     {
-        sd->hp_sub = sd->inchealhptick = 0;
+        sd->hp_sub = DEFAULT;
+        sd->inchealhptick = DEFAULT;
         return 0;
     }
 
-    if (sd->hp_sub >= battle_config.natural_healhp_interval)
+    if (sd->hp_sub >= std::chrono::milliseconds(battle_config.natural_healhp_interval))
     {
         bonus = sd->nhealhp;
         if (hp_flag)
@@ -4793,15 +5394,16 @@ static int32_t pc_natural_heal_hp(MapSessionData *sd)
             if (bonus <= 0)
                 bonus = 1;
         }
-        while (sd->hp_sub >= battle_config.natural_healhp_interval)
+        while (sd->hp_sub >= std::chrono::milliseconds(battle_config.natural_healhp_interval))
         {
-            sd->hp_sub -= battle_config.natural_healhp_interval;
+            sd->hp_sub -= std::chrono::milliseconds(battle_config.natural_healhp_interval);
             if (sd->status.hp + bonus <= sd->status.max_hp)
                 sd->status.hp += bonus;
             else
             {
                 sd->status.hp = sd->status.max_hp;
-                sd->hp_sub = sd->inchealhptick = 0;
+                sd->hp_sub = DEFAULT;
+                sd->inchealhptick = DEFAULT;
             }
         }
     }
@@ -4810,66 +5412,66 @@ static int32_t pc_natural_heal_hp(MapSessionData *sd)
 
     if (sd->nshealhp > 0)
     {
-        if (sd->inchealhptick >= battle_config.natural_heal_skill_interval
+        if (sd->inchealhptick >= std::chrono::milliseconds(battle_config.natural_heal_skill_interval)
             && sd->status.hp < sd->status.max_hp)
         {
             bonus = sd->nshealhp;
-            while (sd->inchealhptick >=
-                   battle_config.natural_heal_skill_interval)
+            while (sd->inchealhptick >= std::chrono::milliseconds(battle_config.natural_heal_skill_interval))
             {
-                sd->inchealhptick -=
-                    battle_config.natural_heal_skill_interval;
+                sd->inchealhptick -= std::chrono::milliseconds(battle_config.natural_heal_skill_interval);
                 if (sd->status.hp + bonus <= sd->status.max_hp)
                     sd->status.hp += bonus;
                 else
                 {
                     bonus = sd->status.max_hp - sd->status.hp;
                     sd->status.hp = sd->status.max_hp;
-                    sd->hp_sub = sd->inchealhptick = 0;
+                    sd->hp_sub = DEFAULT;
+                    sd->inchealhptick = DEFAULT;
                 }
             }
         }
     }
     else
-        sd->inchealhptick = 0;
+        sd->inchealhptick = DEFAULT;
 
     return 0;
 }
 
-static int32_t pc_natural_heal_sp(MapSessionData *sd)
+static sint32 pc_natural_heal_sp(MapSessionData *sd)
 {
-    int32_t bsp;
-    int32_t inc_num, bonus;
+    sint32 bsp;
+    sint32 bonus;
 
     nullpo_ret(sd);
 
     if (pc_checkoversp(sd))
     {
-        sd->sp_sub = sd->inchealsptick = 0;
+        sd->sp_sub = DEFAULT;
+        sd->inchealsptick = DEFAULT;
         return 0;
     }
 
     bsp = sd->status.sp;
 
-    inc_num = pc_spheal(sd);
-    sd->sp_sub += inc_num;
+    sd->sp_sub += pc_spheal(sd);
     if (sd->walktimer == NULL)
         sd->inchealsptick += natural_heal_diff_tick;
     else
-        sd->inchealsptick = 0;
+        sd->inchealsptick = DEFAULT;
 
-    if (sd->sp_sub >= battle_config.natural_healsp_interval)
+    if (sd->sp_sub >= std::chrono::milliseconds(battle_config.natural_healsp_interval))
     {
         bonus = sd->nhealsp;;
-        while (sd->sp_sub >= battle_config.natural_healsp_interval)
+        while (sd->sp_sub >= std::chrono::milliseconds(battle_config.natural_healsp_interval))
         {
-            sd->sp_sub -= battle_config.natural_healsp_interval;
+            sd->sp_sub -= std::chrono::milliseconds(battle_config.natural_healsp_interval);
             if (sd->status.sp + bonus <= sd->status.max_sp)
                 sd->status.sp += bonus;
             else
             {
                 sd->status.sp = sd->status.max_sp;
-                sd->sp_sub = sd->inchealsptick = 0;
+                sd->sp_sub = DEFAULT;
+                sd->inchealsptick = DEFAULT;
             }
         }
     }
@@ -4879,39 +5481,38 @@ static int32_t pc_natural_heal_sp(MapSessionData *sd)
 
     if (sd->nshealsp > 0)
     {
-        if (sd->inchealsptick >= battle_config.natural_heal_skill_interval
+        if (sd->inchealsptick >= std::chrono::milliseconds(battle_config.natural_heal_skill_interval)
             && sd->status.sp < sd->status.max_sp)
         {
             bonus = sd->nshealsp;
             sd->doridori_counter = 0;
-            while (sd->inchealsptick >=
-                   battle_config.natural_heal_skill_interval)
+            while (sd->inchealsptick >= std::chrono::milliseconds(battle_config.natural_heal_skill_interval))
             {
-                sd->inchealsptick -=
-                    battle_config.natural_heal_skill_interval;
+                sd->inchealsptick -= std::chrono::milliseconds(battle_config.natural_heal_skill_interval);
                 if (sd->status.sp + bonus <= sd->status.max_sp)
                     sd->status.sp += bonus;
                 else
                 {
                     bonus = sd->status.max_sp - sd->status.sp;
                     sd->status.sp = sd->status.max_sp;
-                    sd->sp_sub = sd->inchealsptick = 0;
+                    sd->sp_sub = DEFAULT;
+                    sd->inchealsptick = DEFAULT;
                 }
             }
         }
     }
     else
-        sd->inchealsptick = 0;
+        sd->inchealsptick = DEFAULT;
 
     return 0;
 }
 
-static int32_t pc_quickregenerate_effect(struct quick_regeneration *quick_regen,
-                           int32_t heal_speed)
+static sint32 pc_quickregenerate_effect(struct quick_regeneration *quick_regen,
+                           sint32 heal_speed)
 {
     if (!(quick_regen->tickdelay--))
     {
-        int32_t bonus =
+        sint32 bonus =
             min(heal_speed * battle_config.itemheal_regeneration_factor,
                  quick_regen->amount);
 
@@ -4957,13 +5558,13 @@ static void pc_natural_heal_sub(MapSessionData *sd)
 
     if (sd->quick_regeneration_hp.amount || sd->quick_regeneration_sp.amount)
     {
-        int32_t hp_bonus =
+        sint32 hp_bonus =
                 pc_quickregenerate_effect(&sd->quick_regeneration_hp,
                                           (sd->sc_data[SC_POISON].timer == NULL
                                               || sd->sc_data[SC_SLOWPOISON].timer)
                                           ? sd->nhealhp
                                           : 1);   // [fate] slow down when poisoned
-        int32_t sp_bonus = pc_quickregenerate_effect(&sd->quick_regeneration_sp,
+        sint32 sp_bonus = pc_quickregenerate_effect(&sd->quick_regeneration_sp,
                                                  sd->nhealsp);
 
         pc_itemheal_effect(sd, hp_bonus, sp_bonus);
@@ -4982,11 +5583,11 @@ static void pc_natural_heal_sub(MapSessionData *sd)
     }
     else
     {
-        sd->hp_sub = sd->inchealhptick = 0;
-        sd->sp_sub = sd->inchealsptick = 0;
+        sd->hp_sub = DEFAULT;
+        sd->inchealhptick = DEFAULT;
+        sd->sp_sub = DEFAULT;
+        sd->inchealsptick = DEFAULT;
     }
-    sd->inchealspirithptick = 0;
-    sd->inchealspiritsptick = 0;
 }
 
 /*==========================================
@@ -4996,7 +5597,7 @@ static void pc_natural_heal_sub(MapSessionData *sd)
 static void pc_natural_heal(timer_id, tick_t tick)
 {
     natural_heal_tick = tick;
-    natural_heal_diff_tick = DIFF_TICK(natural_heal_tick, natural_heal_prev_tick);
+    natural_heal_diff_tick = natural_heal_tick - natural_heal_prev_tick;
     for (MapSessionData *sd : auth_sessions)
         pc_natural_heal_sub(sd);
 
@@ -5007,7 +5608,7 @@ static void pc_natural_heal(timer_id, tick_t tick)
  * セーブポイントの保存
  *------------------------------------------
  */
-int32_t pc_setsavepoint(MapSessionData *sd, const Point& point)
+sint32 pc_setsavepoint(MapSessionData *sd, const Point& point)
 {
     nullpo_ret(sd);
 
@@ -5020,7 +5621,7 @@ int32_t pc_setsavepoint(MapSessionData *sd, const Point& point)
  * 自動セーブ 各クライアント
  *------------------------------------------
  */
-static int32_t last_save_fd, save_flag;
+static sint32 last_save_fd, save_flag;
 static void pc_autosave_sub(MapSessionData *sd)
 {
     nullpo_retv(sd);
@@ -5041,36 +5642,29 @@ static void pc_autosave_sub(MapSessionData *sd)
  */
 static void pc_autosave(timer_id, tick_t)
 {
-    int32_t interval;
-
     save_flag = 0;
     for (MapSessionData *sd : auth_sessions)
         pc_autosave_sub(sd);
     if (save_flag == 0)
         last_save_fd = 0;
 
-    interval = autosave_interval / (clif_countusers() + 1);
-    if (interval <= 0)
-        interval = 1;
+    interval_t interval = autosave_interval / (clif_countusers() + 1);
+    if (interval < interval_t(1))
+        interval = interval_t(1);
     add_timer(gettick() + interval, pc_autosave);
 }
 
-int32_t pc_read_gm_account(int32_t fd)
+size_t pc_read_gm_account(sint32 fd)
 {
-    int32_t i = 0;
-    if (gm_account != NULL)
-        free(gm_account);
-    GM_num = 0;
-
-    CREATE(gm_account, struct gm_account, (RFIFOW(fd, 2) - 4) / 5);
-    for (i = 4; i < RFIFOW(fd, 2); i = i + 5)
+    gm_accounts.clear();
+    for (sint32 i = 4; i < RFIFOW(fd, 2); i += 5)
     {
-        gm_account[GM_num].account_id = RFIFOL(fd, i);
-        gm_account[GM_num].level = RFIFOB(fd, i + 4);
-        //printf("GM account: %d -> level %d\n", gm_account[GM_num].account_id, gm_account[GM_num].level);
-        GM_num++;
+        account_t account_id = account_t(RFIFOL(fd, i));
+        gm_level_t level = gm_level_t(RFIFOB(fd, i + 4));
+
+        gm_accounts.set(account_id, level);
     }
-    return GM_num;
+    return gm_accounts.size();
 }
 
 void pc_setstand(MapSessionData *sd)
@@ -5080,331 +5674,43 @@ void pc_setstand(MapSessionData *sd)
     sd->state.dead_sit = 0;
 }
 
-//
-// 初期化物
-//
-/*==========================================
- * 設定ファイル読み込む
- * exp.txt 必要経験値
- * job_db1.txt 重量,hp,sp,攻撃速度
- * job_db2.txt job能力値ボーナス
- * attr_fix.txt 属性修正テーブル
- * size_fix.txt サイズ補正テーブル
- * refine_db.txt 精錬データテーブル
- *------------------------------------------
- */
-static int32_t pc_readdb(void)
-{
-    int32_t i, j, k;
-    FILE *fp;
-    char line[1024], *p;
-
-    // 必要経験値読み込み
-
-    fp = fopen_("db/exp.txt", "r");
-    if (fp == NULL)
-    {
-        printf("can't read db/exp.txt\n");
-        return 1;
-    }
-    i = 0;
-    while (fgets(line, sizeof(line) - 1, fp))
-    {
-        int32_t bn, b1, b2, b3, b4, b5, b6, jn, j1, j2, j3, j4, j5, j6;
-        if (line[0] == '/' && line[1] == '/')
-            continue;
-        if (sscanf
-            (line, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d", &bn, &b1, &b2,
-             &b3, &b4, &b5, &b6, &jn, &j1, &j2, &j3, &j4, &j5, &j6) != 14)
-            continue;
-        exp_table[0][i] = bn;
-        exp_table[1][i] = b1;
-        exp_table[2][i] = b2;
-        exp_table[3][i] = b3;
-        exp_table[4][i] = b4;
-        exp_table[5][i] = b5;
-        exp_table[6][i] = b6;
-        exp_table[7][i] = jn;
-        exp_table[8][i] = j1;
-        exp_table[9][i] = j2;
-        exp_table[10][i] = j3;
-        exp_table[11][i] = j4;
-        exp_table[12][i] = j5;
-        exp_table[13][i] = j6;
-        i++;
-        if (i >= battle_config.maximum_level)
-            break;
-    }
-    fclose_(fp);
-    printf("read db/exp.txt done\n");
-
-    // JOB補正数値１
-    fp = fopen_("db/job_db1.txt", "r");
-    if (fp == NULL)
-    {
-        printf("can't read db/job_db1.txt\n");
-        return 1;
-    }
-    i = 0;
-    while (fgets(line, sizeof(line) - 1, fp))
-    {
-        char *split[50];
-        if (line[0] == '/' && line[1] == '/')
-            continue;
-        for (j = 0, p = line; j < 21 && p; j++)
-        {
-            split[j] = p;
-            p = strchr(p, ',');
-            if (p)
-                *p++ = 0;
-        }
-        if (j < 21)
-            continue;
-        max_weight_base[i] = atoi(split[0]);
-        hp_coefficient[i] = atoi(split[1]);
-        hp_coefficient2[i] = atoi(split[2]);
-        sp_coefficient[i] = atoi(split[3]);
-        for (j = 0; j < 17; j++)
-            aspd_base[i][j] = atoi(split[j + 4]);
-        i++;
-// -- moonsoul (below two lines added to accommodate high numbered new class ids)
-        if (i == 24)
-            i = 4001;
-        if (i == MAX_PC_CLASS)
-            break;
-    }
-    fclose_(fp);
-    printf("read db/job_db1.txt done\n");
-
-    // JOBボーナス
-    fp = fopen_("db/job_db2.txt", "r");
-    if (fp == NULL)
-    {
-        printf("can't read db/job_db2.txt\n");
-        return 1;
-    }
-    i = 0;
-    while (fgets(line, sizeof(line) - 1, fp))
-    {
-        if (line[0] == '/' && line[1] == '/')
-            continue;
-        for (j = 0, p = line; j < MAX_LEVEL && p; j++)
-        {
-            if (sscanf(p, "%d", &k) == 0)
-                break;
-            job_bonus[0][i][j] = k;
-            job_bonus[2][i][j] = k; //養子職のボーナスは分からないので仮
-            p = strchr(p, ',');
-            if (p)
-                p++;
-        }
-        i++;
-// -- moonsoul (below two lines added to accommodate high numbered new class ids)
-        if (i == 24)
-            i = 4001;
-        if (i == MAX_PC_CLASS)
-            break;
-    }
-    fclose_(fp);
-    printf("read db/job_db2.txt done\n");
-
-    // JOBボーナス2 転生職用
-    fp = fopen_("db/job_db2-2.txt", "r");
-    if (fp == NULL)
-    {
-        printf("can't read db/job_db2-2.txt\n");
-        return 1;
-    }
-    i = 0;
-    while (fgets(line, sizeof(line) - 1, fp))
-    {
-        if (line[0] == '/' && line[1] == '/')
-            continue;
-        for (j = 0, p = line; j < MAX_LEVEL && p; j++)
-        {
-            if (sscanf(p, "%d", &k) == 0)
-                break;
-            job_bonus[1][i][j] = k;
-            p = strchr(p, ',');
-            if (p)
-                p++;
-        }
-        i++;
-        if (i == MAX_PC_CLASS)
-            break;
-    }
-    fclose_(fp);
-    printf("read db/job_db2-2.txt done\n");
-
-    // 属性修正テーブル
-    for (i = 0; i < 4; i++)
-        for (j = 0; j < 10; j++)
-            for (k = 0; k < 10; k++)
-                attr_fix_table[i][j][k] = 100;
-    fp = fopen_("db/attr_fix.txt", "r");
-    if (fp == NULL)
-    {
-        printf("can't read db/attr_fix.txt\n");
-        return 1;
-    }
-    while (fgets(line, sizeof(line) - 1, fp))
-    {
-        char *split[10];
-        int32_t lv, n;
-        if (line[0] == '/' && line[1] == '/')
-            continue;
-        for (j = 0, p = line; j < 3 && p; j++)
-        {
-            split[j] = p;
-            p = strchr(p, ',');
-            if (p)
-                *p++ = 0;
-        }
-        lv = atoi(split[0]);
-        n = atoi(split[1]);
-//      printf("%d %d\n", lv, n);
-
-        for (i = 0; i < n; )
-        {
-            if (!fgets(line, sizeof(line) - 1, fp))
-                break;
-            if (line[0] == '/' && line[1] == '/')
-                continue;
-
-            for (j = 0, p = line; j < n && p; j++)
-            {
-                while (*p == 32 && *p > 0)
-                    p++;
-                attr_fix_table[lv - 1][i][j] = atoi(p);
-                if (battle_config.attr_recover == 0
-                    && attr_fix_table[lv - 1][i][j] < 0)
-                    attr_fix_table[lv - 1][i][j] = 0;
-                p = strchr(p, ',');
-                if (p)
-                    *p++ = 0;
-            }
-
-            i++;
-        }
-    }
-    fclose_(fp);
-    printf("read db/attr_fix.txt done\n");
-
-    return 0;
-}
-
-static int32_t pc_calc_sigma(void)
-{
-    int32_t i, j, k;
-
-    for (i = 0; i < MAX_PC_CLASS; i++)
-    {
-        memset(hp_sigma_val[i], 0, sizeof(hp_sigma_val[i]));
-        for (k = 0, j = 2; j <= MAX_LEVEL; j++)
-        {
-            k += hp_coefficient[i] * j + 50;
-            k -= k % 100;
-            hp_sigma_val[i][j - 1] = k;
-        }
-    }
-    return 0;
-}
-
-static void pc_statpointdb(void)
-{
-    char *buf_stat;
-    int32_t i = 0, j = 0, k = 0, l = 0, end = 0;
-
-    FILE *stp;
-
-    stp = fopen_("db/statpoint.txt", "r");
-
-    if (stp == NULL)
-    {
-        printf("can't read db/statpoint.txt\n");
-        return;
-    }
-
-    fseek(stp, 0, SEEK_END);
-    end = ftell(stp);
-    rewind(stp);
-
-    CREATE(buf_stat, char, end + 1);
-    l = fread(buf_stat, 1, end, stp);
-    fclose_(stp);
-    printf("read db/statpoint.txt done (size=%d)\n", l);
-
-    for (i = 0; i < 255; i++)
-    {
-        j = 0;
-        while (*(buf_stat + k) != '\n')
-        {
-            statp[i][j] = *(buf_stat + k);
-            j++;
-            k++;
-        }
-        statp[i][j + 1] = '\0';
-        k++;
-    }
-
-    free(buf_stat);
-}
-
 /*==========================================
  * pc関 係初期化
  *------------------------------------------
  */
-int32_t do_init_pc(void)
+sint32 do_init_pc(void)
 {
-    pc_readdb();
-    pc_statpointdb();
-    pc_calc_sigma();
-
-//  gm_account_db = numdb_init();
-
     natural_heal_prev_tick = gettick() + NATURAL_HEAL_INTERVAL;
     add_timer_interval(natural_heal_prev_tick, NATURAL_HEAL_INTERVAL, pc_natural_heal);
     add_timer(gettick() + autosave_interval, pc_autosave);
     return 0;
 }
 
-void pc_invisibility(MapSessionData *sd, int32_t enabled)
+void pc_invisibility(MapSessionData *sd, sint32 enabled)
 {
-    if (enabled && !(sd->status.option & OPTION_INVISIBILITY))
+    if (enabled && !(sd->status.option & OPTION::INVISIBILITY))
     {
         clif_being_remove(sd, BeingRemoveType::WARP);
-        sd->status.option |= OPTION_INVISIBILITY;
+        sd->status.option |= OPTION::INVISIBILITY;
         clif_status_change(sd, CLIF_OPTION_SC_INVISIBILITY, 1);
     }
     else if (!enabled)
     {
-        sd->status.option &= ~OPTION_INVISIBILITY;
+        sd->status.option &= ~OPTION::INVISIBILITY;
         clif_status_change(sd, CLIF_OPTION_SC_INVISIBILITY, 0);
         pc_setpos(sd, Point{maps[sd->m].name, sd->x, sd->y}, BeingRemoveType::WARP);
     }
 }
 
-int32_t pc_logout(MapSessionData *sd) // [fate] Player logs out
+sint32 pc_logout(MapSessionData *sd) // [fate] Player logs out
 {
-    uint32_t tick = gettick();
-
     if (!sd)
         return 0;
 
     if (sd->sc_data[SC_POISON].timer)
         sd->status.hp = 1;      // Logging out while poisoned -> bad
 
-    /*
-     * Trying to rapidly sign out/in or switch characters to avoid a spell's
-     * cast time is also bad. [remoitnane]
-     */
-    if (sd->cast_tick > tick)
-    {
-        if (pc_setglobalreg(sd, std::string("MAGIC_CAST_TICK"), sd->cast_tick - tick))
-            sd->status.sp = 1;
-    }
-    else
-        pc_setglobalreg(sd, std::string("MAGIC_CAST_TICK"), 0);
+    pc_setglobalreg(sd, std::string("MAGIC_CAST_TICK"), 0);
 
     MAP_LOG_STATS(sd, "LOGOUT");
     return 0;

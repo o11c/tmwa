@@ -4,7 +4,7 @@
 # include <cstddef>
 # include <type_traits>
 
-/// An array that enforces indexing by a particular type (generally an enum)
+/// An array that enforces indexing by a particular type (has to be an enum)
 template<class E, class I, I max>
 class earray
 {

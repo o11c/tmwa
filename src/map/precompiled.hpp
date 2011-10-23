@@ -5,6 +5,7 @@
 # include <cstdio>
 # include <cstdlib>
 # include <cstring>
+# include <deque>
 # include <functional>
 # include <iterator>
 # include <map>

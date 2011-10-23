@@ -11,21 +11,21 @@
 typedef struct
 {
     size_t declen;
-    int16_t next; // next index into the filelist[] array, or -1
+    sint16 next; // next index into the filelist[] array, or -1
     char fn[128 - 4 - 2];       // file name
 } FILELIST;
 
-#define FILELIST_LIMIT  32768   // limit to number of filelists - if you increase this, change all shorts to int32_t
+#define FILELIST_LIMIT  32768   // limit to number of filelists - if you increase this, change all shorts to sint32
 #define FILELIST_ADDS   1024    // amount to increment when reallocing
 
 static FILELIST *filelist = NULL;
 /// Number of entries used
-static uint16_t filelist_entrys = 0;
+static uint16 filelist_entrys = 0;
 /// Number of FILELIST entries actually allocated
-static uint16_t filelist_maxentry = 0;
+static uint16 filelist_maxentry = 0;
 
 /// First index of the given hash, into the filelist[] array
-static int16_t filelist_hash[256] =
+static sint16 filelist_hash[256] =
 //me grumbles about [0 ... 255] not implemented in C++ mode
 {
     -1, -1, -1, -1,     -1, -1, -1, -1,     -1, -1, -1, -1,     -1, -1, -1, -1,
@@ -50,14 +50,14 @@ static int16_t filelist_hash[256] =
 };
 
 /// Hash a filename
-static uint8_t filehash(const char *fname) __attribute__((pure));
-static uint8_t filehash(const char *fname)
+static uint8 filehash(const char *fname) __attribute__((pure));
+static uint8 filehash(const char *fname)
 {
     // Larger than the return type - upper bits are used in the process
-    uint32_t hash = 0;
+    uint32 hash = 0;
     while (*fname)
     {
-        hash = (hash << 1) + (hash >> 7) * 9 + static_cast<uint8_t>(*fname);
+        hash = (hash << 1) + (hash >> 7) * 9 + static_cast<uint8>(*fname);
         fname++;
     }
     return hash;
@@ -67,7 +67,7 @@ static uint8_t filehash(const char *fname)
 static FILELIST *filelist_find(const char *fname) __attribute__((pure));
 static FILELIST *filelist_find(const char *fname)
 {
-    int16_t idx = filelist_hash[filehash(fname)];
+    sint16 idx = filelist_hash[filehash(fname)];
     while (idx >= 0)
     {
         if (strcmp(filelist[idx].fn, fname) == 0)
@@ -94,8 +94,8 @@ static FILELIST *filelist_add(FILELIST * entry)
         filelist_maxentry += FILELIST_ADDS;
     }
 
-    uint16_t new_index = filelist_entrys++;
-    uint8_t hash = filehash(entry->fn);
+    uint16 new_index = filelist_entrys++;
+    uint8 hash = filehash(entry->fn);
     entry->next = filelist_hash[hash];
     filelist_hash[hash] = new_index;
 
@@ -188,8 +188,8 @@ void *grfio_reads(const char *fname, size_t *size)
         strncpy(lentry.fn, fname, sizeof(lentry.fn) - 1);
         entry = filelist_modify(&lentry);
     }
-    uint8_t *buf2;
-    CREATE(buf2, uint8_t, lentry.declen + 1024);
+    uint8 *buf2;
+    CREATE(buf2, uint8, lentry.declen + 1024);
     if (!fread(buf2, 1, lentry.declen, in))
         exit(1);
     fclose_(in);

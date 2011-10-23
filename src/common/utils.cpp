@@ -6,14 +6,14 @@
 
 static const char hex[] = "0123456789abcdef";
 
-void hexdump(Log& log, const uint8_t *data, size_t len)
+void hexdump(Log& log, const uint8 *data, size_t len)
 {
     if (len > 0x10000)
         len = 0x10000;
     //         0         1         2         3         4         5         6
     //         012345678901234567890123456789012345678901234567890123456789
     log.debug("----  ?0 ?1 ?2 ?3  ?4 ?5 ?6 ?7  ?8 ?9 ?A ?B  ?C ?D ?E ?F\n");
-    for (uint16_t i = 0; i < len / 16; i++, data += 16)
+    for (uint16 i = 0; i < len / 16; i++, data += 16)
     {
         char buf[56 + 1];
         buf[0] = hex[(i >> 8) % 16];
@@ -21,7 +21,7 @@ void hexdump(Log& log, const uint8_t *data, size_t len)
         buf[2] = hex[i % 16];
         buf[3] = '?';
 
-        for (uint8_t j = 0; j < 16; j++)
+        for (uint8 j = 0; j < 16; j++)
         {
             if (j % 4 == 0)
                 buf[4 + (j / 4) * 13] = ' ';
@@ -40,7 +40,7 @@ void hexdump(Log& log, const uint8_t *data, size_t len)
         buf[2] = hex[(len / 16) % 16];
         buf[3] = '?';
 
-        for (uint8_t j = 0; j < len % 16; j++)
+        for (uint8 j = 0; j < len % 16; j++)
         {
             if (j % 4 == 0)
                 buf[4 + (j / 4) * 13] = ' ';
@@ -64,7 +64,7 @@ bool strzcpy(char *dst, const char *src, size_t n)
 /// Make a string safe by replacing control characters with _
 void remove_control_chars(char *str)
 {
-    for (int32_t i = 0; str[i]; i++)
+    for (sint32 i = 0; str[i]; i++)
         if (!(str[i] & 0xE0))
             str[i] = '_';
 }
@@ -72,7 +72,7 @@ void remove_control_chars(char *str)
 /// Check if there are any control chars
 bool has_control_chars(char *str)
 {
-    for (int32_t i = 0; str[i]; i++)
+    for (sint32 i = 0; str[i]; i++)
         if (!(str[i] & 0xE0))
             return true;
     return false;
@@ -119,7 +119,7 @@ bool e_mail_check(const char *email)
 // Parses booleans: on/off and yes/no in english, français, deutsch, español
 // Then falls back to atoi (which means non-integers are parsed as 0)
 // TODO replace by config_parse_bool and config_parse_int?
-int32_t config_switch(const char *str)
+sint32 config_switch(const char *str)
 {
     if (strcasecmp(str, "on") == 0 || strcasecmp(str, "yes") == 0
         || strcasecmp(str, "oui") == 0 || strcasecmp(str, "ja") == 0
@@ -141,7 +141,7 @@ const char *stamp_now(bool millis)
     static char tmpstr[DATE_FORMAT_MAX + 4];
     strftime(tmpstr, DATE_FORMAT_MAX, DATE_FORMAT, gmtime(&tv.tv_sec));
     if (millis)
-        sprintf(tmpstr + DATE_FORMAT_MAX - 1, ".%03u", static_cast<uint32_t>(tv.tv_usec / 1000));
+        sprintf(tmpstr + DATE_FORMAT_MAX - 1, ".%03u", static_cast<uint32>(tv.tv_usec / 1000));
     return tmpstr;
 }
 

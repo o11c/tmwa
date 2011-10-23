@@ -5,16 +5,18 @@
 
 # include <cstdio>
 
+# include "../lib/ints.hpp"
+
 /// The digest state - becomes the output
 typedef struct
 {
     // classically named {A,B,C,D}
     // but use an so we can index
-    uint32_t val[4];
+    uint32 val[4];
 } MD5_state;
 typedef struct
 {
-    uint32_t data[16];
+    uint32 data[16];
 } MD5_block;
 
 // Implementation
@@ -22,7 +24,7 @@ void MD5_init(MD5_state *state);
 void MD5_do_block(MD5_state *state, MD5_block block);
 
 // Output formatting
-void MD5_to_bin(MD5_state state, uint8_t out[0x10]);
+void MD5_to_bin(MD5_state state, uint8 out[0x10]);
 void MD5_to_str(MD5_state state, char out[0x21]);
 
 // Convenience

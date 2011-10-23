@@ -1,6 +1,6 @@
 include make/char.deps
 
-obj/char/char: obj/char/char.o \
+tmwa-char: obj/char/main.o \
  obj/char/inter.o \
  obj/char/int_party.o \
  obj/char/int_storage.o \

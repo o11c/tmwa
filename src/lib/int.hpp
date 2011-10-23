@@ -3,6 +3,60 @@
 
 # include <cstdint>
 
+# pragma GCC diagnostic ignored "-Wtype-limits"
+
+/// safe comparisons between signed and unsigned integers
+template<class A, class B>
+__attribute__((const))
+bool eq(A a, B b)
+{
+    if (a < 0 && b >= 0)
+        return false;
+    if (a >= 0 && b < 0)
+        return false;
+    return a == b;
+}
+template<class A, class B>
+__attribute__((const))
+bool ne(A a, B b)
+{
+    return !eq(a, b);
+}
+template<class A, class B>
+__attribute__((const))
+bool lt(A a, B b)
+{
+    if (a < 0 && b >= 0)
+        return true;
+    if (a >= 0 && b < 0)
+        return false;
+    return a < b;
+}
+template<class A, class B>
+__attribute__((const))
+bool gt(A a, B b)
+{
+    return lt(b, a);
+}
+template<class A, class B>
+__attribute__((const))
+bool le(A a, B b)
+{
+    return !gt(a, b);
+    if (a < 0 && b >= 0)
+        return true;
+    if (a >= 0 && b < 0)
+        return false;
+    return a < b;
+}
+template<class A, class B>
+__attribute__((const))
+bool ge(A a, B b)
+{
+    return !lt(a, b);
+}
+# pragma GCC diagnostic pop
+
 /// bit twiddling
 /// http://graphics.stanford.edu/~seander/bithacks.html
 
@@ -63,4 +117,5 @@ inline uint32_t lowest_bit(uint64_t v)
 {
     return __builtin_ctzll(v);
 }
+
 #endif // INT_HPP

@@ -67,6 +67,9 @@ struct Session
     std::unique_ptr<SessionData, SessionDeleter> session_data;
 
     io::FD fd;
+
+    void write_ptr(const void *ptr, size_t len);
+    bool read_line(AString& out);
 };
 
 inline

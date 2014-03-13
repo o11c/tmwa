@@ -59,6 +59,32 @@ IteratorPair<ValueIterator<io::FD, IncrFD>> iter_fds()
     return {io::FD::cast_dammit(0), io::FD::cast_dammit(fd_max)};
 }
 
+
+void Session::write_ptr(const void *ptr, size_t len)
+{
+    uint8_t *dst = static_cast<uint8_t *>(WFIFOP(this, 0));
+    const uint8_t *src = static_cast<const uint8_t *>(ptr);
+    really_memcpy(dst, src, len);
+    WFIFOSET(this, len);
+}
+bool Session::read_line(AString& out)
+{
+    size_t limit = RFIFOREST(this);
+    for (size_t i = 0; i < limit; ++i)
+    {
+        if (RFIFOB(this, i) != '\n')
+            continue;
+        bool cr = i && RFIFOB(this, i - 1) == '\r';
+        const char *start = static_cast<const char *>(RFIFOP(this, 0));
+        const char *fin = static_cast<const char *>(RFIFOP(this, i - cr));
+        out = AString(start, fin);
+        RFIFOSKIP(this, i + 1);
+        return true;
+    }
+    return false;
+}
+
+
 /// clean up by discarding handled bytes
 inline
 void RFIFOFLUSH(Session *s)

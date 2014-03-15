@@ -11,48 +11,58 @@
 
 void SessionDeleter::operator()(SessionData *sd)
 {
-    really_delete1 static_cast<IrcSessionData *>(sd);
+    really_delete1 static_cast<Irc *>(sd);
 }
 
-RString nick, pass, host;
-uint16_t port;
-std::vector<RString> channels;
+std::unique_ptr<IrcSettings> config = IrcSettings::create();
 
 static
 bool irc_confs(XString key, ZString value)
 {
-    if (key == "pass")
-    {
-        pass = value;
-        return true;
-    }
-    if (key == "nick")
-    {
-        nick = value;
-        return true;
-    }
     if (key == "host")
     {
-        host = value;
+        config->host = value;
         return true;
     }
     if (key == "port")
     {
-        return extract(value, &port);
+        return extract(value, &config->port);
+    }
+    if (key == "pass")
+    {
+        config->pass = value;
+        return true;
+    }
+    if (key == "nick")
+    {
+        config->nick = value;
+        return true;
+    }
+    if (key == "owner")
+    {
+        config->owner = value;
+        return true;
+    }
+    if (key == "ping")
+    {
+        return extract(value, &config->ping);
+    }
+    if (key == "reconnect")
+    {
+        return extract(value, &config->reconnect);
     }
     if (key == "join")
     {
-        channels.push_back(value);
+        config->channels.push_back(value);
+        return true;
+    }
+    if (key == "raw_log")
+    {
+        config->raw_log = value;
         return true;
     }
 
     return false;
-}
-
-static
-void irc_parse(Session *s)
-{
-    static_cast<IrcSessionData *>(s->session_data.get())->parse();
 }
 
 int do_init(int argc, ZString *argv)
@@ -92,18 +102,7 @@ int do_init(int argc, ZString *argv)
         exit(0);
     }
 
-    set_defaultparse(irc_parse);
-    for (IP4Address ip : gai4(host))
-    {
-        if (Session *s = make_connection(ip, port))
-        {
-            auto sd = make_unique<IrcSessionData, SessionDeleter>(s, nick, pass);
-            for (RString ch : channels)
-                sd->join(ch);
-            s->session_data = std::move(sd);
-            break;
-        }
-    }
+    Irc::create(std::move(config));
     return 0;
 }
 

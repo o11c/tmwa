@@ -1,3 +1,6 @@
 [submodule "deps/attoconf"]
 	path = deps/attoconf
 	url = git://github.com/o11c/attoconf.git
+[submodule "doc"]
+	path = doc
+	url = git://github.com/themanaworld/tmwa.wiki.git

@@ -1491,14 +1491,14 @@ void parse_tologin(Session *ls)
                 ItemNameId source_id = fixed.source_item_id;
                 ItemNameId dest_id = fixed.dest_item_id;
 
-                Packet_Fixed<0x2afa> fixed_fa;
+                Packet_Fixed<0x2bfb> fixed_fa;
                 fixed_fa.source_item_id = source_id;
                 fixed_fa.dest_item_id = dest_id;
 
                 // forward package to map servers
                 for (Session *ss : iter_map_sessions())
                 {
-                    send_fpacket<0x2afa, 10>(ss, fixed_fa);
+                    send_fpacket<0x2bfb, 10>(ss, fixed_fa);
                 }
 
                 for (CharPair& cp : char_keys)
@@ -1754,10 +1754,10 @@ void parse_frommap(Session *ms)
             }
 
                 // Receiving map names list from the map-server
-            case 0x2afa:
+            case 0x2bfa:
             {
-                std::vector<Packet_Repeat<0x2afa>> repeat;
-                rv = recv_packet_repeatonly<0x2afa, 4, 16>(ms, repeat);
+                std::vector<Packet_Repeat<0x2bfa>> repeat;
+                rv = recv_packet_repeatonly<0x2bfa, 4, 16>(ms, repeat);
                 if (rv != RecvResult::Complete)
                     break;
 

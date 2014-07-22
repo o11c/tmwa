@@ -168,17 +168,17 @@ int chrif_connect(Session *s)
 static
 int chrif_sendmap(Session *s)
 {
-    std::vector<Packet_Repeat<0x2afa>> repeat_fa;
+    std::vector<Packet_Repeat<0x2bfa>> repeat_fa;
     for (auto& pair : maps_db)
     {
         map_abstract *ma = pair.second.get();
         if (!ma->gat)
             continue;
-        Packet_Repeat<0x2afa> info;
+        Packet_Repeat<0x2bfa> info;
         info.map_name = ma->name_;
         repeat_fa.push_back(info);
     }
-    send_packet_repeatonly<0x2afa, 4, 16>(s, repeat_fa);
+    send_packet_repeatonly<0x2bfa, 4, 16>(s, repeat_fa);
 
     return 0;
 }
@@ -1018,7 +1018,7 @@ void ladmin_itemfrob_c(dumb_ptr<block_list> bl, ItemNameId source_id, ItemNameId
 }
 
 static
-void ladmin_itemfrob(Session *, const Packet_Fixed<0x2afa>& fixed)
+void ladmin_itemfrob(Session *, const Packet_Fixed<0x2bfb>& fixed)
 {
     ItemNameId source_id = fixed.source_item_id;
     ItemNameId dest_id = fixed.dest_item_id;
@@ -1070,10 +1070,10 @@ void chrif_parse(Session *s)
                 chrif_connectack(s, fixed);
                 break;
             }
-            case 0x2afa:
+            case 0x2bfb:
             {
-                Packet_Fixed<0x2afa> fixed;
-                rv = recv_fpacket<0x2afa, 10>(s, fixed);
+                Packet_Fixed<0x2bfb> fixed;
+                rv = recv_fpacket<0x2bfb, 10>(s, fixed);
                 if (rv != RecvResult::Complete)
                     break;
 

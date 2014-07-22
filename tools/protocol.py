@@ -89,6 +89,10 @@ class NativeType(LowType):
     def __init__(self, name):
         self.name = name
 
+    def __repr__(self):
+        return 'NativeType(%r)' % (self.name)
+
+
     def a_tag(self):
         return self.name
 
@@ -97,6 +101,10 @@ class NetworkType(LowType):
 
     def __init__(self, name):
         self.name = name
+
+    def __repr__(self):
+        return 'NetworkType(%r)' % (self.name)
+
 
     def e_tag(self):
         return self.name
@@ -111,6 +119,10 @@ class NeutralType(Type):
     def __init__(self, name):
         self.name = name
 
+    def __repr__(self):
+        return 'NeutralType(%r)' % (self.name)
+
+
     def native_tag(self):
         return self.name
 
@@ -124,6 +136,10 @@ class StringType(Type):
 
     def __init__(self, native):
         self.native = native
+
+    def __repr__(self):
+        return 'StringType(%r)' % self.native
+
 
     def native_tag(self):
         return self.native.a_tag()
@@ -142,6 +158,10 @@ class ProvidedType(Type):
         self.native = native
         self.network = network
 
+    def __repr__(self):
+        return 'ProvidedType(native=%r, network=%r)' % (self.native, self.network)
+
+
     def native_tag(self):
         return self.native.a_tag()
 
@@ -154,6 +174,10 @@ class EnumType(Type):
     def __init__(self, native, under):
         self.native = native
         self.under = under
+
+    def __repr__(self):
+        return 'EnumType(%r, %r)' % (self.native, self.under)
+
 
     def native_tag(self):
         return self.native.a_tag()
@@ -189,6 +213,10 @@ class WrappedType(Type):
     def __init__(self, native, under):
         self.native = native
         self.under = under
+
+    def __repr__(self):
+        return 'WrappedType(%r, %r)' % (self.native, self.under)
+
 
     def native_tag(self):
         return self.native.a_tag()
@@ -246,6 +274,10 @@ class StructType(Type):
         self.fields = fields
         self.size = size
         self.ctor = ctor
+
+    def __repr__(self):
+        return '<StructType(id=%r, name=%r, size=%r, ctor=%r) with %d fields>' % (self.id, self.name, self.size, self.ctor, len(self.fields))
+
 
     def native_tag(self):
         return self.name
@@ -332,6 +364,10 @@ class PartialStructType(Type):
         self.native = native
         self.body = body
 
+    def __repr__(self):
+        return '<PartialStructType(native=%r) with %d pieces of a body>' % (self.native, len(self.body))
+
+
     def native_tag(self):
         return self.native.a_tag()
 
@@ -414,6 +450,10 @@ class Include(object):
         self.path = path
         self._types = []
 
+    def __repr__(self):
+        return 'Include(%r)' % self.path
+
+
     def testcase(self, outdir):
         basename = os.path.basename(self.path.strip('<">'))
         root = os.path.splitext(basename)[0]
@@ -450,17 +490,74 @@ class Include(object):
         return ty
 
 
-class FixedPacket(object):
+class BasePacket(object):
+    __slots__ = ('id', 'name', 'pre', 'post', 'desc')
+
+    def __init__(self, **kwargs):
+        for s in BasePacket.__slots__:
+            setattr(self, s, kwargs[s])
+            del kwargs[s]
+        assert not kwargs, repr(kwargs)
+
+    def base_repr_fragment(self):
+        return ', '.join('%s=%r' % (s, getattr(self, s)) for s in BasePacket.__slots__)
+
+    def comment_doc(self):
+        id = self.id
+        name = self.name
+        desc = self.desc
+        pre = self.pre
+        post = self.post
+
+        comment = 'Packet 0x%04x: "%s"\n' % (id, name)
+        if desc:
+            prestr = ', '.join('packet 0x%04x' % x for x in pre) or 'none'
+            poststr = ', '.join('packet 0x%04x' % x for x in post) or 'none'
+            comment += 'pre:  ' + prestr + '\n'
+            comment += 'post: ' + poststr + '\n'
+            comment += desc
+        else:
+            comment += 'UNDOCUMENTED\n'
+        comment = ''.join('// ' + c + '\n' if c else '//\n' for c in comment.split('\n'))
+        return comment
+
+    def wiki_doc(self, root):
+        # TODO do markdown magic
+        id = self.id
+        name = self.name
+        desc = self.desc
+        pre = self.pre
+        post = self.post
+
+        wiki = 'Packet 0x%04x: "%s"\n\n' % (id, name)
+        if desc:
+            prestr = ', '.join('[[Packet 0x%04x]]' % x for x in pre) or 'none'
+            poststr = ', '.join('[[Packet 0x%04x]]' % x for x in post) or 'none'
+            wiki += 'pre:  ' + prestr + '\n\n'
+            wiki += 'post: ' + poststr + '\n\n'
+            wiki += desc
+            wiki += '\n\n![](packets-near-0x%04x.png)\n' % root
+        else:
+            wiki += 'UNDOCUMENTED\n'
+        return wiki
+
+class FixedPacket(BasePacket):
     __slots__ = ('fixed_struct')
 
-    def __init__(self, fixed_struct):
+    def __init__(self, fixed_struct, **kwargs):
+        BasePacket.__init__(self, **kwargs)
         self.fixed_struct = fixed_struct
+
+    def __repr__(self):
+        return 'FixedPacket(%r, %s)' % (self.fixed_struct, self.base_repr_fragment())
+
 
     def dump_fwd(self, fwd):
         self.fixed_struct.dump_fwd(fwd)
         fwd.write('\n')
 
     def dump_native(self, f):
+        f.write(self.comment_doc())
         self.fixed_struct.dump_native(f)
         f.write('\n')
 
@@ -472,12 +569,17 @@ class FixedPacket(object):
         self.fixed_struct.dump_convert(f)
         f.write('\n')
 
-class VarPacket(object):
+class VarPacket(BasePacket):
     __slots__ = ('head_struct', 'repeat_struct')
 
-    def __init__(self, head_struct, repeat_struct):
+    def __init__(self, head_struct, repeat_struct, **kwargs):
+        BasePacket.__init__(self, **kwargs)
         self.head_struct = head_struct
         self.repeat_struct = repeat_struct
+
+    def __repr__(self):
+        return 'VarPacket(%r, %r, %s)' % (self.head_struct, self.repeat_struct, self.base_repr_fragment())
+
 
     def dump_fwd(self, fwd):
         self.head_struct.dump_fwd(fwd)
@@ -485,6 +587,7 @@ class VarPacket(object):
         fwd.write('\n')
 
     def dump_native(self, f):
+        f.write(self.comment_doc())
         self.head_struct.dump_native(f)
         self.repeat_struct.dump_native(f)
         f.write('\n')
@@ -499,38 +602,66 @@ class VarPacket(object):
         self.repeat_struct.dump_convert(f)
         f.write('\n')
 
+def sanitize_line(line, n):
+    if not line:
+        return line
+    m = len(line) - len(line.lstrip(' '))
+    assert m >= n, 'not %d: %r' % (n, line)
+    return line[n:]
+
+def sanitize_multiline(text):
+    text = text.strip('\n').rstrip(' ')
+    assert '\r' not in text
+    assert '\t' not in text
+    n = len(text) - len(text.lstrip(' '))
+    return '\n'.join(sanitize_line(l, n) for l in text.split('\n'))
+
 def packet(id, name,
         fixed=None, fixed_size=None,
         payload=None, payload_size=None,
         head=None, head_size=None,
         repeat=None, repeat_size=None,
         option=None, option_size=None,
+        pre=None, post=None, desc=None,
 ):
     assert (fixed is None) <= (fixed_size is None)
     assert (payload is None) <= (payload_size is None)
     assert (head is None) <= (head_size is None)
     assert (repeat is None) <= (repeat_size is None)
     assert (option is None) <= (option_size is None)
+    assert (pre is None) == (post is None) == (not desc)
+
+    if desc:
+        desc = sanitize_multiline(desc)
 
     if fixed is not None:
         assert not head and not repeat and not option and not payload
         return FixedPacket(
-                StructType(id, 'Packet_Fixed<0x%04x>' % id, fixed, fixed_size))
+                StructType(id, 'Packet_Fixed<0x%04x>' % id, fixed, fixed_size),
+                id=id, name=name, pre=pre, post=post, desc=desc,
+        )
     elif payload is not None:
         assert not head and not repeat and not option
         return FixedPacket(
-                StructType(id, 'Packet_Payload<0x%04x>' % id, payload, payload_size))
+                StructType(id, 'Packet_Payload<0x%04x>' % id, payload, payload_size),
+                id=id, name=name, pre=pre, post=post, desc=desc,
+        )
     else:
         assert head
         if option:
+            assert not repeat
             return VarPacket(
                     StructType(id, 'Packet_Head<0x%04x>' % id, head, head_size),
-                    StructType(id, 'Packet_Option<0x%04x>' % id, option, option_size))
+                    StructType(id, 'Packet_Option<0x%04x>' % id, option, option_size),
+                    id=id, name=name, pre=pre, post=post, desc=desc,
+            )
         else:
             assert repeat
             return VarPacket(
                     StructType(id, 'Packet_Head<0x%04x>' % id, head, head_size),
-                    StructType(id, 'Packet_Repeat<0x%04x>' % id, repeat, repeat_size))
+                    StructType(id, 'Packet_Repeat<0x%04x>' % id, repeat, repeat_size),
+                    id=id, name=name, pre=pre, post=post, desc=desc,
+            )
 
 
 class Channel(object):
@@ -540,6 +671,14 @@ class Channel(object):
         self.server = server
         self.client = client
         self.packets = []
+
+    def __repr__(self):
+        return '<Channel(%r, %r) with %d packets>' % (
+                self.server,
+                self.client,
+                len(self.packets),
+        )
+
 
     def x(self, id, name, **kwargs):
         self.packets.append(packet(id, name, **kwargs))
@@ -614,6 +753,14 @@ class Context(object):
         self._includes = []
         self._channels = []
         self._types = []
+
+    def __repr__(self):
+        return '<Context(%r) with %d _includes, %d _channels, %d _types>' % (
+                self.outdir,
+                len(self._includes),
+                len(self._channels),
+                len(self._types),
+        )
 
 
     def sysinclude(self, name):
@@ -833,7 +980,7 @@ class Context(object):
         return rv
 
 
-def main():
+def make_context():
 
     ## setup
 
@@ -1341,6 +1488,11 @@ def main():
             at(26, account_pass, 'new pass'),
         ],
         fixed_size=50,
+        pre=[],
+        post=[0x2740],
+        desc='''
+            Sent by a client to the character server to request a password change.
+        ''',
     )
     char_user.s(0x0062, 'change password response',
         fixed=[
@@ -1348,6 +1500,17 @@ def main():
             at(2, u8, 'status'),
         ],
         fixed_size=3,
+        pre=[0x2741],
+        post=[],
+        desc='''
+            Sent by the character server with the response of a password change request.
+
+            Status:
+                0: The account was not found.
+                1: Success.
+                2: The old password was incorrect.
+                3: The new password was too short.
+        ''',
     )
     login_user.r(0x0063, 'update host',
         head=[
@@ -1357,6 +1520,13 @@ def main():
         head_size=4,
         repeat=[at(0, u8, 'c')],
         repeat_size=1,
+        pre=[0x0064],
+        post=[],
+        desc='''
+            This packet gives the client the location of the update server URL, such as http://tmwdata.org/updates/
+
+            It is only sent if an update host is specified for the server (there is one in the default configuration) and the client identifies as accepting an update host (which all supported clients do).
+        ''',
     )
     login_user.r(0x0064, 'login request',
         fixed=[
@@ -1367,6 +1537,13 @@ def main():
             at(54, version_2, 'version 2 flags'),
         ],
         fixed_size=55,
+        pre=[0x7531],
+        post=[0x006a, 0x0081, 0x0063, 0x0069],
+        desc='''
+            Registers login credentials.
+
+            All clients must now set both defined version 2 flags.
+        ''',
     )
     char_user.r(0x0065, 'char-server connection request',
         fixed=[
@@ -2538,7 +2715,7 @@ def main():
         repeat=[
             at(0, u8, 'c'),
         ],
-        repeat_size=1
+        repeat_size=1,
     )
     map_user.s(0x010c, 'MVP (unused)',
         fixed=[
@@ -3208,7 +3385,9 @@ def main():
         fixed_size=3,
     )
     # wtf duplicate v
-    char_map.r(0x2afa, 'map list',
+    # formerly 0x2afa, now fixed, but now sorted wrong
+    # (should go below, but don't want to break diff)
+    char_map.r(0x2bfa, 'map list',
         head=[
             at(0, u16, 'packet id'),
             at(2, u16, 'packet length'),
@@ -3220,7 +3399,9 @@ def main():
         repeat_size=16,
     )
     # wtf duplicate ^
-    char_map.s(0x2afa, 'itemfrob',
+    # formerly 0x2afa, now fixed, but now sorted wrong
+    # (should go below, but don't want to break diff)
+    char_map.s(0x2bfb, 'itemfrob',
         fixed=[
             at(0, u16, 'packet id'),
             at(2, item_name_id4, 'source item id'),
@@ -3487,6 +3668,7 @@ def main():
         ],
         fixed_size=6,
     )
+    # 2bfa/2bfb are injected above
 
     char_map.r(0x3000, 'gm broadcast',
         head=[
@@ -4237,7 +4419,111 @@ def main():
         payload_size=4,
     )
 
-    ## teardown
+    return ctx
+
+def check(ctx):
+    d = {}
+
+    for ch in ctx._channels:
+        for p in ch.packets:
+            id = p.id
+            if id in d:
+                print('packet 0x%04x duplicated (old=%r, new=%r)' % (id, d[id], p))
+            d[id] = p
+
+    for (id, packet) in sorted(d.items()):
+        if packet.pre is None:
+            if False:
+                print('packet 0x%04x pre sequence is undocumented' % (id))
+        else:
+            for pre in packet.pre:
+                if pre not in d:
+                    print('packet 0x%04x pre 0x%04x does not exist' % (id, pre))
+                elif d[pre].post is None:
+                    print('packet 0x%04x pre 0x%04x undocumented post' % (id, pre))
+                elif id not in d[pre].post:
+                    print('packet 0x%04x pre 0x%04x does not have me in post' % (id, pre))
+        if packet.post is None:
+            if False:
+                print('packet 0x%04x post sequence is undocumented' % (id))
+        else:
+            for post in packet.post:
+                if post not in d:
+                    print('packet 0x%04x post 0x%04x does not exist' % (id, post))
+                elif d[post].pre is None:
+                    print('packet 0x%04x post 0x%04x undocumented pre' % (id, post))
+                elif id not in d[post].pre:
+                    print('packet 0x%04x post 0x%04x does not have me in pre' % (id, post))
+
+    return d
+
+def partition(d):
+    ''' given a directed graph in the form
+        {1: [2, 3], 2: [3, 4], 3: [], 4: [], 5: [6], 6: []}
+        return a list of sets of connected keys, in the form
+        [{1, 2, 3, 4}, {5, 6}]
+    '''
+    leaders = {k: k for k in d}
+
+    # this code looks nothing like what I was intending to write
+    changed = True
+    while changed:
+        changed = False
+        for k, vlist in d.items():
+            if vlist:
+                m = min(leaders[v] for v in vlist)
+                if m < leaders[k]:
+                    changed = True
+                    leaders[k] = m
+                else:
+                    m = leaders[k]
+            else:
+                m = leaders[k]
+            for v in vlist:
+                if m < leaders[v]:
+                    changed = True
+                    leaders[v] = m
+
+    followers = {}
+    for k, v in leaders.items():
+        followers.setdefault(v, []).append(k)
+    return [set(v) for v in followers.values()]
+
+def make_dots(ctx):
+    d = check(ctx)
+    p = partition({k: v.post or [] for (k, v) in d.items()})
+    roots = {} # rebuild what was just thrown away in partition()
+
+    for g in glob.glob('doc/*.dot'):
+        os.rename(g, g + '.old')
+    for g in glob.glob('doc/Packet-*.md'):
+        os.rename(g, g + '.old')
+    for s in p:
+        s = sorted(s)
+        dot = 'doc/packets-near-0x%04x.dot' % s[0]
+        with OpenWrite(dot) as f:
+            f.write('digraph {\n')
+            for i in s:
+                roots[i] = s[0]
+                p = d[i]
+                f.write('"0x%04x"[label="Packet \\N: %s"];\n' % (i, p.name))
+                if p.post is not None:
+                    for p2 in p.post:
+                        f.write('"0x%04x" -> "0x%04x";\n' % (i, p2))
+            f.write('}\n')
+
+    for (id, p) in d.items():
+        md = 'doc/Packet-0x%04x.md' % id
+        with OpenWrite(md) as f:
+            f.write(p.wiki_doc(roots[id]))
+
+    for g in glob.glob('doc/*.old'):
+        print('Obsolete: %s' % g)
+        os.remove(g)
+
+def main():
+    ctx = make_context()
+    make_dots(ctx)
     ctx.dump()
 
 if __name__ == '__main__':

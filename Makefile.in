@@ -214,6 +214,11 @@ BINARIES := $(patsubst src/%/main.cpp,bin/${tmwa}-%,${MAIN_SOURCES})
 LIBRARIES := $(patsubst src/%/lib.cpp,lib/lib${tmwa}-%.${LIB_SUFFIX_FAKE},${LIB_SOURCES})
 TEST_BINARIES := $(patsubst src/%/test.cpp,bin/test-%,${TEST_SOURCES})
 
+DOC_DOTS := $(shell cd ${SRC_DIR}; find doc/ -name '*.dot')
+DOC_PNGS := $(patsubst %.dot,${SRC_DIR}/%.png,${DOC_DOTS})
+DOC_OBSOLETE :=
+DOC_OBSOLETE += $(filter-out ${DOC_PNGS},$(wildcard ${SRC_DIR}/doc/*.png))
+
 # tricky part
 
 # We can't put comments in a macro so here goes:
@@ -681,6 +686,14 @@ obj/%.tcc.formatted: src/%.tcc tools/indenter
 	grep -q '^} // namespace tmwa$$' $<
 	touch $@
 .PHONY: format format-cpp format-hpp
+
+vpath doc/%.dot ${SRC_DIR}
+${SRC_DIR}/doc/%.png: doc/%.dot
+	dot -Tpng $< -o $@
+doc: ${DOC_PNGS}
+	test -e ${SRC_DIR}/doc/.git
+	rm -f ${DOC_OBSOLETE}
+.PHONY: doc
 
 most: $(filter-out bin/${tmwa}-map,${BINARIES})
 magic: $(filter obj/map/magic%,${PDC_OBJECTS})

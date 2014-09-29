@@ -3388,6 +3388,7 @@ RecvResult clif_parse_WantToConnection(Session *s, dumb_ptr<map_session_data> sd
         s->session_data.reset(sd.operator->());
         sd->sess = s;
 
+        s->name = STRPRINTF("account_id=%d char_id=%d"_fmt, account_id, fixed.char_id);
         pc_setnewpc(sd, account_id, fixed.char_id, fixed.login_id1,
                 fixed.client_tick,
                 fixed.sex);

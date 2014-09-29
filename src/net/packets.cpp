@@ -26,6 +26,14 @@
 
 namespace tmwa
 {
+static
+void do_debug_dump(ZString name, io::WriteFile& out, const Byte *data, size_t sz)
+{
+    (void)name;
+    // also timestamp
+    out.really_put(reinterpret_cast<const char *>(data), sz);
+}
+
 size_t packet_avail(Session *s)
 {
     return s->rdata_size - s->rdata_pos;
@@ -48,6 +56,13 @@ void packet_discard(Session *s, size_t sz)
 }
 bool packet_send(Session *s, const Byte *data, size_t sz)
 {
+    if (const char *log = getenv("TMWA_NETWORK_LOG"))
+    {
+        ZString logz(strings::really_construct_from_a_pointer, log, nullptr);
+        io::AppendFile out(logz, false);
+        do_debug_dump(STRPRINTF("send %s"_fmt, s->name), out, data, sz);
+    }
+
     if (s->wdata_size + sz > s->max_wdata)
     {
         realloc_fifo(s, s->max_rdata, s->max_wdata << 1);

@@ -69,7 +69,7 @@ struct SessionParsers
 
 struct Session
 {
-    Session(SessionIO, SessionParsers);
+    Session(RString, SessionIO, SessionParsers);
     Session(Session&&) = delete;
     Session& operator = (Session&&) = delete;
 
@@ -128,6 +128,9 @@ public:
     friend void do_sendrecv(interval_t next);
     friend void do_parsepacket(void);
     friend void delete_session(Session *);
+
+public:
+    RString name;
 };
 
 inline

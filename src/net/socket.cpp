@@ -61,7 +61,7 @@ static
 std::array<std::unique_ptr<Session>, FD_SETSIZE> session;
 DIAG_POP();
 
-Session::Session(SessionIO io, SessionParsers p)
+Session::Session(RString _name, SessionIO io, SessionParsers p)
 : created()
 , connected()
 , eof()
@@ -78,6 +78,7 @@ Session::Session(SessionIO io, SessionParsers p)
 , for_inferior()
 , session_data()
 , fd()
+, name(_name)
 {
     set_io(io);
     set_parsers(p);
@@ -230,6 +231,10 @@ void connect_client(Session *ls)
     fd.fcntl(F_SETFL, O_NONBLOCK);
 
     set_session(fd, make_unique<Session>(
+                STRPRINTF("client ip=%s port=%d fd=%d"_fmt,
+                    IP4Address(client_address.sin_addr),
+                    ntohs(client_address.sin_port),
+                    fd.uncast_dammit()),
                 SessionIO{.func_recv= recv_to_fifo, .func_send= send_from_fifo},
                 ls->for_inferior));
     Session *s = get_session(fd);
@@ -291,6 +296,7 @@ Session *make_listen_port(uint16_t port, SessionParsers inferior)
     readfds.set(fd);
 
     set_session(fd, make_unique<Session>(
+                STRPRINTF("listen fd=%d ip=0.0.0.0 port=%d"_fmt, fd.uncast_dammit(), port),
                 SessionIO{.func_recv= connect_client, .func_send= nullptr},
                 SessionParsers{.func_parse= nullptr, .func_delete= nothing_delete}));
     Session *s = get_session(fd);
@@ -344,6 +350,7 @@ Session *make_connection(IP4Address ip, uint16_t port, SessionParsers parsers)
     readfds.set(fd);
 
     set_session(fd, make_unique<Session>(
+                STRPRINTF("connection fd=%d ip=%s port=%d"_fmt, fd.uncast_dammit(), ip, port),
                 SessionIO{.func_recv= recv_to_fifo, .func_send= send_from_fifo},
                 parsers));
     Session *s = get_session(fd);

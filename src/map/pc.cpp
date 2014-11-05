@@ -606,7 +606,7 @@ int pc_isequip(dumb_ptr<map_session_data> sd, IOff0 n)
  * char鯖から送られてきたステータスを設定
  *------------------------------------------
  */
-int pc_authok(AccountId id, int login_id2, TimeT connect_until_time,
+int pc_authok(AccountId id, int login_id2,
         short tmw_version, const CharKey *st_key, const CharData *st_data)
 {
     dumb_ptr<map_session_data> sd = nullptr;
@@ -760,15 +760,6 @@ int pc_authok(AccountId id, int login_id2, TimeT connect_until_time,
     sd->packet_flood_reset_due = TimeT();
     sd->packet_flood_in = 0;
 
-    // message of the limited time of the account
-    if (connect_until_time)
-    {
-        timestamp_seconds_buffer buffer;
-        stamp_time(buffer, &connect_until_time);
-        AString tmpstr = STRPRINTF("Your account time limit is: %s"_fmt, buffer);
-
-        clif_wis_message(sd->sess, wisp_server_name, tmpstr);
-    }
     pc_calcstatus(sd, 1);
 
     return 0;

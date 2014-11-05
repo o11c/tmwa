@@ -224,29 +224,6 @@ AString ladmin_log_filename = "log/ladmin.log"_s;
 //                 all other values are 'No MSG', then use state 9 please.
 //    'error_message_#7': message of the code error 6 = Your are Prohibited to log in until %s (packet 0x006a)
 //
-//  timeadd <account_name> <modifier>
-//    Adds or substracts time from the validity limit of an account.
-//    Modifier is done as follows:
-//      Adjustment value (-1, 1, +1, etc...)
-//      Modified element:
-//        a or y: year
-//        m:  month
-//        j or d: day
-//        h:  hour
-//        mn: minute
-//        s:  second
-//    <example> timeadd testname +1m-2mn1s-6y
-//              this example adds 1 month and 1 second, and substracts 2 minutes and 6 years at the same time.
-//  NOTE: You can not modify a unlimited validity limit.
-//        If you want modify it, you want probably create a limited validity limit.
-//        So, at first, you must set the validity limit to a date/time.
-//
-//  timeset <account_name> yyyy/mm/dd [hh:mm:ss]
-//    Changes the validity limit of an account.
-//    Default time [hh:mm:ss]: 23:59:59.
-//  timeset <account_name> 0
-//    Gives an unlimited validity limit (0 = unlimited).
-//
 //  unban/unbanish <account name>
 //    Unban an account.
 //    Like banset <account name> 0.
@@ -569,34 +546,6 @@ void display_help(ZString param)
         PRINTF("  'error_message_#7': message of the code error 6\n"_fmt);
         PRINTF("                      = Your are Prohibited to log in until... (packet 0x006a)\n"_fmt);
     }
-    else if (command == "timeadd"_s)
-    {
-        PRINTF("timeadd <account_name> <modifier>\n"_fmt);
-        PRINTF("  Adds or substracts time from the validity limit of an account.\n"_fmt);
-        PRINTF("  Modifier is done as follows:\n"_fmt);
-        PRINTF("    Adjustment value (-1, 1, +1, etc...)\n"_fmt);
-        PRINTF("    Modified element:\n"_fmt);
-        PRINTF("      a or y: year\n"_fmt);
-        PRINTF("      m:  month\n"_fmt);
-        PRINTF("      j or d: day\n"_fmt);
-        PRINTF("      h:  hour\n"_fmt);
-        PRINTF("      mn: minute\n"_fmt);
-        PRINTF("      s:  second\n"_fmt);
-        PRINTF("  <example> timeadd testname +1m-2mn1s-6y\n"_fmt);
-        PRINTF("            this example adds 1 month and 1 second, and substracts 2 minutes\n"_fmt);
-        PRINTF("            and 6 years at the same time.\n"_fmt);
-        PRINTF("NOTE: You can not modify a unlimited validity limit.\n"_fmt);
-        PRINTF("      If you want modify it, you want probably create a limited validity limit.\n"_fmt);
-        PRINTF("      So, at first, you must set the validity limit to a date/time.\n"_fmt);
-    }
-    else if (command == "timeadd"_s)
-    {
-        PRINTF("timeset <account_name> yyyy/mm/dd [hh:mm:ss]\n"_fmt);
-        PRINTF("  Changes the validity limit of an account.\n"_fmt);
-        PRINTF("  Default time [hh:mm:ss]: 23:59:59.\n"_fmt);
-        PRINTF("timeset <account_name> 0\n"_fmt);
-        PRINTF("  Gives an unlimited validity limit (0 = unlimited).\n"_fmt);
-    }
     else if (command == "unban"_s)
     {
         PRINTF("unban/unbanish <account name>\n"_fmt);
@@ -665,10 +614,6 @@ void display_help(ZString param)
         PRINTF(" search <expression>                  -- Seek accounts\n"_fmt);
         PRINTF(" sex <nomcompte> <sexe>               -- Modify the sex of an account\n"_fmt);
         PRINTF(" state <account_name> <new_state> <error_message_#7> -- Change the state\n"_fmt);
-        PRINTF(" timeadd <account_name> <modifier>    -- Add or substract time from the\n"_fmt);
-        PRINTF("   example: ta apple +1m-2mn1s-2y        validity limit of an account\n"_fmt);
-        PRINTF(" timeset <account_name> yyyy/mm/dd [hh:mm:ss] -- Change the validify limit\n"_fmt);
-        PRINTF(" timeset <account_name> 0             -- Give a unlimited validity limit\n"_fmt);
         PRINTF(" unban <account name>                 -- Remove the banishment of an account\n"_fmt);
         PRINTF(" unblock <account name>               -- Set state 0 (Account ok) to an account\n"_fmt);
         PRINTF(" version                              -- Gives the version of the login-server\n"_fmt);
@@ -1556,179 +1501,6 @@ void blockaccount(ZString param)
     changestatesub(name, 5, "-"_s);   // state 5, no error message
 }
 
-//---------------------------------------------------------------------
-// Sub-function: Add/substract time to the validity limit of an account
-//---------------------------------------------------------------------
-static
-void timeaddaccount(ZString param)
-{
-    AccountName name;
-    HumanTimeDiff modif {};
-
-    if (!qsplit(param, &name, &modif))
-    {
-        PRINTF("Please input an account name and a modifier.\n"_fmt);
-        PRINTF("  <example>: timeadd testname +1m-2mn1s-6y\n"_fmt);
-        PRINTF("             this example adds 1 month and 1 second, and substracts 2 minutes\n"_fmt);
-        PRINTF("             and 6 years at the same time.\n"_fmt);
-        LADMIN_LOG("Incomplete parameters to modify a limit time ('timeadd' command).\n"_fmt);
-        return;
-    }
-    if (name.is_print())
-    {
-        return;
-    }
-
-    if (!modif)
-    {
-        PRINTF("Please give an adjustment with this command:\n"_fmt);
-        PRINTF("  Adjustment value (-1, 1, +1, etc...)\n"_fmt);
-        PRINTF("  Modified element:\n"_fmt);
-        PRINTF("    a or y: year\n"_fmt);
-        PRINTF("    m:      month\n"_fmt);
-        PRINTF("    j or d: day\n"_fmt);
-        PRINTF("    h:      hour\n"_fmt);
-        PRINTF("    mn:     minute\n"_fmt);
-        PRINTF("    s:      second\n"_fmt);
-        PRINTF("  <example> timeadd testname +1m-2mn1s-6y\n"_fmt);
-        PRINTF("            this example adds 1 month and 1 second, and substracts 2 minutes\n"_fmt);
-        PRINTF("            and 6 years at the same time.\n"_fmt);
-        LADMIN_LOG("No adjustment isn't an adjustment ('timeadd' command).\n"_fmt);
-        return;
-    }
-
-    LADMIN_LOG("Request to login-server to modify a time limit.\n"_fmt);
-
-    Packet_Fixed<0x7950> fixed_50;
-    fixed_50.account_name = name;
-    fixed_50.valid_add = modif;
-    send_fpacket<0x7950, 38>(login_session, fixed_50);
-    bytes_to_read = 1;
-}
-
-//-------------------------------------------------
-// Sub-function: Set a validity limit of an account
-//-------------------------------------------------
-static
-void timesetaccount(ZString param)
-{
-    AccountName name;
-    XString date;
-    XString time_;
-    int year, month, day, hour, minute, second;
-
-    year = month = day = hour = minute = second = 0;
-
-    // # of seconds 1/1/1970 (timestamp): Validity limit of the account (0 = unlimited)
-    TimeT connect_until_time = TimeT();
-    struct tm tmtime = connect_until_time;   // initialize
-
-    if (!qsplit(param, &name, &date, &time_)
-            && !qsplit(param, &name, &date))
-    {
-        PRINTF("Please input an account name, a date and a hour.\n"_fmt);
-        PRINTF("<example>: timeset <account_name> yyyy/mm/dd [hh:mm:ss]\n"_fmt);
-        PRINTF("           timeset <account_name> 0   (0 = unlimited)\n"_fmt);
-        PRINTF("           Default time [hh:mm:ss]: 23:59:59.\n"_fmt);
-        LADMIN_LOG("Incomplete parameters to set a limit time ('timeset' command).\n"_fmt);
-        return;
-    }
-    if (!name.is_print())
-        return;
-
-    if (!time_)
-        time_ = "23:59:59"_s;
-
-    if (date != "0"_s
-        && ((!extract(date, record<'/'>(&year, &month, &day))
-                && !extract(date, record<'-'>(&year, &month, &day))
-                && !extract(date, record<'.'>(&year, &month, &day)))
-            || !extract(time_, record<':'>(&hour, &minute, &second))))
-    {
-        PRINTF("Please input 0 or a date and a time (format: 0 or yyyy/mm/dd hh:mm:ss).\n"_fmt);
-        LADMIN_LOG("Invalid format for the date/time ('timeset' command).\n"_fmt);
-        return;
-    }
-
-    if (date == "0"_s)
-    {
-        connect_until_time = TimeT();
-    }
-    else
-    {
-        if (year < 70)
-        {
-            year = year + 100;
-        }
-        if (year >= 1900)
-        {
-            year = year - 1900;
-        }
-        if (month < 1 || month > 12)
-        {
-            PRINTF("Please give a correct value for the month (from 1 to 12).\n"_fmt);
-            LADMIN_LOG("Invalid month for the date ('timeset' command).\n"_fmt);
-            return;
-        }
-        month = month - 1;
-        if (day < 1 || day > 31)
-        {
-            PRINTF("Please give a correct value for the day (from 1 to 31).\n"_fmt);
-            LADMIN_LOG("Invalid day for the date ('timeset' command).\n"_fmt);
-            return;
-        }
-        if (((month == 3 || month == 5 || month == 8 || month == 10)
-             && day > 30) ||(month == 1 && day > 29))
-        {
-            PRINTF("Please give a correct value for a day of this month (%d).\n"_fmt,
-                    month);
-            LADMIN_LOG("Invalid day for this month ('timeset' command).\n"_fmt);
-            return;
-        }
-        if (hour < 0 || hour > 23)
-        {
-            PRINTF("Please give a correct value for the hour (from 0 to 23).\n"_fmt);
-            LADMIN_LOG("Invalid hour for the time ('timeset' command).\n"_fmt);
-            return;
-        }
-        if (minute < 0 || minute > 59)
-        {
-            PRINTF("Please give a correct value for the minutes (from 0 to 59).\n"_fmt);
-            LADMIN_LOG("Invalid minute for the time ('timeset' command).\n"_fmt);
-            return;
-        }
-        if (second < 0 || second > 59)
-        {
-            PRINTF("Please give a correct value for the seconds (from 0 to 59).\n"_fmt);
-            LADMIN_LOG("Invalid second for the time ('timeset' command).\n"_fmt);
-            return;
-        }
-        tmtime.tm_year = year;
-        tmtime.tm_mon = month;
-        tmtime.tm_mday = day;
-        tmtime.tm_hour = hour;
-        tmtime.tm_min = minute;
-        tmtime.tm_sec = second;
-        tmtime.tm_isdst = -1;  // -1: no winter/summer time modification
-        connect_until_time = tmtime;
-        if (connect_until_time.error())
-        {
-            PRINTF("Invalid date.\n"_fmt);
-            PRINTF("Please add 0 or a date and a time (format: 0 or yyyy/mm/dd hh:mm:ss).\n"_fmt);
-            LADMIN_LOG("Invalid date. ('timeset' command).\n"_fmt);
-            return;
-        }
-    }
-
-    LADMIN_LOG("Request to login-server to set a time limit.\n"_fmt);
-
-    Packet_Fixed<0x7948> fixed_48;
-    fixed_48.account_name = name;
-    fixed_48.valid_until = connect_until_time;
-    send_fpacket<0x7948, 30>(login_session, fixed_48);
-    bytes_to_read = 1;
-}
-
 //------------------------------------------------------------------------------
 // Sub-function: Asking to displaying information about an account (by its name)
 //------------------------------------------------------------------------------
@@ -1902,10 +1674,6 @@ void prompt(void)
             changesex(parameters);
         else if (command == "state"_s)
             changestate(parameters);
-        else if (command == "timeadd"_s)
-            timeaddaccount(parameters);
-        else if (command == "timeset"_s)
-            timesetaccount(parameters);
         else if (command == "unban"_s)
             unbanaccount(parameters);
         else if (command == "unblock"_s)
@@ -2491,47 +2259,6 @@ void parse_fromlogin(Session *s)
                 break;
             }
 
-            case 0x7949:       // answer of an account validity limit set
-            {
-                Packet_Fixed<0x7949> fixed;
-                rv = recv_fpacket<0x7949, 34>(s, fixed);
-                if (rv != RecvResult::Complete)
-                    break;
-
-                AccountId account_id = fixed.account_id;
-                AccountName name = fixed.account_name;
-                if (!account_id)
-                {
-                    PRINTF("Account [%s] validity limit changing failed. Account doesn't exist.\n"_fmt,
-                            name);
-                    LADMIN_LOG("Account [%s] validity limit changing failed. Account doesn't exist.\n"_fmt,
-                            name);
-                }
-                else
-                {
-                    TimeT timestamp = fixed.valid_until;
-                    if (!timestamp)
-                    {
-                        PRINTF("Validity Limit of the account [%s][id: %d] successfully changed to [unlimited].\n"_fmt,
-                                name, account_id);
-                        LADMIN_LOG("Validity Limit of the account [%s][id: %d] successfully changed to [unlimited].\n"_fmt,
-                                name, account_id);
-                    }
-                    else
-                    {
-                        timestamp_seconds_buffer tmpstr;
-                        stamp_time(tmpstr, &timestamp);
-                        PRINTF("Validity Limit of the account [%s][id: %d] successfully changed to be until %s.\n"_fmt,
-                                name, account_id, tmpstr);
-                        LADMIN_LOG("Validity Limit of the account [%s][id: %d] successfully changed to be until %s.\n"_fmt,
-                                name, account_id,
-                                tmpstr);
-                    }
-                }
-                bytes_to_read = 0;
-                break;
-            }
-
             case 0x794b:       // answer of an account ban set
             {
                 Packet_Fixed<0x794b> fixed;
@@ -2636,50 +2363,6 @@ void parse_fromlogin(Session *s)
                 break;
             }
 
-            case 0x7951:       // answer of an account validity limit changing
-            {
-                Packet_Fixed<0x7951> fixed;
-                rv = recv_fpacket<0x7951, 34>(s, fixed);
-                if (rv != RecvResult::Complete)
-                    break;
-
-                AccountId account_id = fixed.account_id;
-                AccountName name = fixed.account_name;
-                if (!account_id)
-                {
-                    PRINTF("Account [%s] validity limit changing failed. Account doesn't exist.\n"_fmt,
-                            name);
-                    LADMIN_LOG("Account [%s] validity limit changing failed. Account doesn't exist.\n"_fmt,
-                            name);
-                }
-                else
-                {
-                    TimeT timestamp = fixed.valid_until;
-                    if (!timestamp)
-                    {
-                        PRINTF("Validity limit of the account [%s][id: %d] unchanged.\n"_fmt,
-                                name, account_id);
-                        PRINTF("The account have an unlimited validity limit or\n"_fmt);
-                        PRINTF("the changing is impossible with the proposed adjustments.\n"_fmt);
-                        LADMIN_LOG("Validity limit of the account [%s][id: %d] unchanged. The account have an unlimited validity limit or the changing is impossible with the proposed adjustments.\n"_fmt,
-                                name, account_id);
-                    }
-                    else
-                    {
-                        timestamp_seconds_buffer tmpstr;
-                        stamp_time(tmpstr, &timestamp);
-                        PRINTF("Validity limit of the account [%s][id: %d] successfully changed to be until %s.\n"_fmt,
-                                name, account_id,
-                                tmpstr);
-                        LADMIN_LOG("Validity limit of the account [%s][id: %d] successfully changed to be until %s.\n"_fmt,
-                                name, account_id,
-                                tmpstr);
-                    }
-                }
-                bytes_to_read = 0;
-                break;
-            }
-
             case 0x7953:       // answer of a request about informations of an account (by account name/id)
             {
                 Packet_Head<0x7953> head;
@@ -2700,7 +2383,6 @@ void parse_fromlogin(Session *s)
                     timestamp_milliseconds_buffer lastlogin = head.last_login_string;
                     VString<15> last_ip_ = head.ip_string;
                     AccountEmail email = head.email;
-                    TimeT connect_until_time = head.connect_until;
                     TimeT ban_until_time = head.ban_until;
                     AString& memo = repeat;
                     if (!account_id)
@@ -2794,17 +2476,6 @@ void parse_fromlogin(Session *s)
                                     connections);
                         PRINTF(" Last connection at: %s (ip: %s)\n"_fmt,
                                 lastlogin, last_ip_);
-                        if (!connect_until_time)
-                        {
-                            PRINTF(" Validity limit: unlimited.\n"_fmt);
-                        }
-                        else
-                        {
-                            timestamp_seconds_buffer tmpstr;
-                            stamp_time(tmpstr, &connect_until_time);
-                            PRINTF(" Validity limit: until %s.\n"_fmt,
-                                    tmpstr);
-                        }
                         PRINTF(" Memo:   '%s'\n"_fmt, memo);
                     }
                 }

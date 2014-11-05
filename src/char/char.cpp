@@ -110,7 +110,7 @@ AccountPass passwd;
 static
 ServerName server_name;
 static
-CharName wisp_server_name = stringish<CharName>("Server"_s);
+const CharName WISP_SERVER_NAME = stringish<CharName>("Server"_s);
 static
 IP4Address login_ip;
 static
@@ -131,8 +131,6 @@ IP4Address lan_map_ip = IP4_LOCALHOST;
 static
 IP4Mask lan_subnet = IP4Mask(IP4_LOCALHOST, IP4_BROADCAST);
 static
-int char_name_option = 0;      // Option to know which letters/symbols are authorised in the name of a character (0: all, 1: only those in char_name_letters, 2: all EXCEPT those in char_name_letters) by [Yor]
-static
 std::bitset<256> char_name_letters;  // list of letters/symbols authorised (or not) in a character name. by [Yor]
 static constexpr
 GmLevel default_gm_level = GmLevel::from(0_u32);
@@ -145,7 +143,6 @@ struct char_session_data : SessionData
     SEX sex;
     unsigned short packet_tmw_version;
     AccountEmail email;
-    TimeT connect_until_time;
 };
 
 void SessionDeleter::operator()(SessionData *sd)
@@ -162,15 +159,11 @@ struct AuthFifoEntry
     int delflag;
     SEX sex;
     unsigned short packet_tmw_version;
-    TimeT connect_until_time;  // # of seconds 1/1/1970 (timestamp): Validity limit of the account (0 = unlimited)
 };
 static
 std::array<AuthFifoEntry, 256> auth_fifo;
 static
 auto auth_fifo_iter = auth_fifo.begin();
-
-static
-int check_ip_flag = 1;         // It's to check IP of a player between char-server and other servers (part of anti-hacking system)
 
 static
 CharId char_id_count = wrap<CharId>(150000);
@@ -193,8 +186,6 @@ static
 AString online_txt_filename = "online.txt"_s;
 static
 AString online_html_filename = "online.html"_s;
-static
-int online_sorting_option = 0; // sorting option to display online players in online files
 static
 int online_refresh_html = 20;  // refresh time (in sec) of the html file in the explorer
 static
@@ -492,7 +483,7 @@ bool extract(XString str, CharPair *cp)
     else if (!extract(hair_style, &p->hair))
         return false;
 
-    if (wisp_server_name == k->name)
+    if (WISP_SERVER_NAME == k->name)
         return false;
 
     // TODO replace *every* lookup with a map lookup
@@ -690,7 +681,6 @@ CharPair *make_new_char(Session *s, CharName name, const Stats6& stats, uint8_t 
     }
 
     // Check Authorised letters/symbols in the name of the character
-    if (char_name_option == 1)
     {
         // only letters/symbols in char_name_letters are authorised
         for (uint8_t c : name.to__actual())
@@ -701,17 +691,6 @@ CharPair *make_new_char(Session *s, CharName name, const Stats6& stats, uint8_t 
                 return nullptr;
             }
     }
-    else if (char_name_option == 2)
-    {
-        // letters/symbols in char_name_letters are forbidden
-        for (uint8_t c : name.to__actual())
-            if (char_name_letters[c])
-            {
-                CHAR_LOG("Make new char error (invalid letter in the name): (connection #%d, account: %d), name: %s, invalid letter: %c.\n"_fmt,
-                        s, sd->account_id, name, c);
-                return nullptr;
-            }
-    }                           // else, all letters/symbols are authorised (except control char removed before)
 
     // TODO this comment is obsolete
     // this is why it needs to be unsigned
@@ -766,10 +745,10 @@ CharPair *make_new_char(Session *s, CharName name, const Stats6& stats, uint8_t 
         }
     }
 
-    if (wisp_server_name == name)
+    if (WISP_SERVER_NAME == name)
     {
         CHAR_LOG("Make new char error (name used is wisp name for server): (connection #%d, account: %d) slot %d, name: %s (actual name whisper server: %s), stats: %d+%d+%d+%d+%d+%d=%d, hair: %d, hair color: %d.\n"_fmt,
-                s, sd->account_id, slot, name, wisp_server_name,
+                s, sd->account_id, slot, name, WISP_SERVER_NAME,
                 stats.str, stats.agi, stats.vit, stats.int_, stats.dex, stats.luk,
                 stats.str + stats.agi + stats.vit + stats.int_ + stats.dex + stats.luk,
                 hair_style, hair_color);
@@ -1287,7 +1266,6 @@ void parse_tologin(Session *ls)
                             sd->email = stringish<AccountEmail>(fixed.email);
                             if (!e_mail_check(sd->email))
                                 sd->email = DEFAULT_EMAIL;
-                            sd->connect_until_time = fixed.connect_until;
                             // send characters to player
                             mmo_char_send006b(s2, sd);
                         }
@@ -1326,7 +1304,6 @@ void parse_tologin(Session *ls)
                             sd->email = fixed.email;
                             if (!e_mail_check(sd->email))
                                 sd->email = DEFAULT_EMAIL;
-                            sd->connect_until_time = fixed.connect_until;
                             break;
                         }
                     }
@@ -1783,7 +1760,6 @@ void parse_frommap(Session *ms)
 
                 Packet_Fixed<0x2afb> fixed_fb;
                 fixed_fb.unknown = 0;
-                fixed_fb.whisper_name = wisp_server_name;
                 send_fpacket<0x2afb, 27>(ms, fixed_fb);
 
                 {
@@ -1859,7 +1835,7 @@ void parse_frommap(Session *ms)
                         afi.login_id1 == login_id1 &&
                         // here, it's the only area where it's possible that we doesn't know login_id2 (map-server asks just after 0x72 packet, that doesn't given the value)
                         (afi.login_id2 == login_id2 || login_id2 == 0) &&  // relate to the versions higher than 18
-                        (!check_ip_flag || afi.ip == ip)
+                        afi.ip == ip
                         && !afi.delflag)
                     {
                         CharPair *cp = nullptr;
@@ -1880,7 +1856,6 @@ void parse_frommap(Session *ms)
                         Packet_Payload<0x2afd> payload_fd; // not file descriptor
                         payload_fd.account_id = account_id;
                         payload_fd.login_id2 = afi.login_id2;
-                        payload_fd.connect_until = afi.connect_until_time;
                         cd->sex = afi.sex;
                         payload_fd.packet_tmw_version = afi.packet_tmw_version;
                         FPRINTF(stderr,
@@ -1986,7 +1961,6 @@ void parse_frommap(Session *ms)
                 auth_fifo_iter->login_id1 = fixed.login_id1;
                 auth_fifo_iter->login_id2 = fixed.login_id2;
                 auth_fifo_iter->delflag = 2;
-                auth_fifo_iter->connect_until_time = TimeT();    // unlimited/unknown time by default (not display in map-server)
                 auth_fifo_iter->ip = fixed.ip;
                 auth_fifo_iter++;
 
@@ -2025,7 +1999,6 @@ void parse_frommap(Session *ms)
                 auth_fifo_iter->char_id = fixed.char_id;
                 auth_fifo_iter->delflag = 0;
                 auth_fifo_iter->sex = fixed.sex;
-                auth_fifo_iter->connect_until_time = TimeT();    // unlimited/unknown time by default (not display in map-server)
                 auth_fifo_iter->ip = fixed.client_ip;
 
                 // default, if not found in the loop
@@ -2417,7 +2390,6 @@ void handle_x0066(Session *s, struct char_session_data *sd, uint8_t rfifob_2, IP
             auth_fifo_iter->login_id2 = sd->login_id2;
             auth_fifo_iter->delflag = 0;
             auth_fifo_iter->sex = sd->sex;
-            auth_fifo_iter->connect_until_time = sd->connect_until_time;
             auth_fifo_iter->ip = s->client_ip;
             auth_fifo_iter->packet_tmw_version = sd->packet_tmw_version;
             auth_fifo_iter++;
@@ -2486,7 +2458,6 @@ void parse_char(Session *s)
                         s->session_data = make_unique<char_session_data, SessionDeleter>();
                         sd = static_cast<char_session_data *>(s->session_data.get());
                         sd->email = stringish<AccountEmail>("no mail"_s);  // put here a mail without '@' to refuse deletion if we don't receive the e-mail
-                        sd->connect_until_time = TimeT(); // unknow or illimited (not displaying on map-server)
                     }
                     sd->account_id = account_id;
                     sd->login_id1 = fixed.login_id1;
@@ -2505,8 +2476,7 @@ void parse_char(Session *s)
                         if (afi.account_id == sd->account_id
                             && afi.login_id1 == sd->login_id1
                             && afi.login_id2 == sd->login_id2
-                            && (!check_ip_flag
-                                || afi.ip == s->client_ip)
+                            && afi.ip == s->client_ip
                             && afi.delflag == 2)
                         {
                             afi.delflag = 1;
@@ -2923,11 +2893,6 @@ bool char_config(XString w1, ZString w2)
             server_name = stringish<ServerName>(w2);
             PRINTF("%s server has been intialized\n"_fmt, w2);
         }
-        else if (w1 == "wisp_server_name"_s)
-        {
-            if (w2.size() >= 4)
-                wisp_server_name = stringish<CharName>(w2);
-        }
         else if (w1 == "login_ip"_s)
         {
             h = gethostbyname(w2.c_str());
@@ -2986,10 +2951,6 @@ bool char_config(XString w1, ZString w2)
             if (max_connect_user < 0)
                 max_connect_user = 0;   // unlimited online players
         }
-        else if (w1 == "check_ip_flag"_s)
-        {
-            check_ip_flag = config_switch(w2);
-        }
         else if (w1 == "autosave_time"_s)
         {
             autosave_time = std::chrono::seconds(atoi(w2.c_str()));
@@ -3008,10 +2969,6 @@ bool char_config(XString w1, ZString w2)
         {
             char_log_filename = w2;
         }
-        else if (w1 == "char_name_option"_s)
-        {
-            char_name_option = atoi(w2.c_str());
-        }
         else if (w1 == "char_name_letters"_s)
         {
             if (!w2)
@@ -3027,10 +2984,6 @@ bool char_config(XString w1, ZString w2)
         else if (w1 == "online_html_filename"_s)
         {
             online_html_filename = w2;
-        }
-        else if (w1 == "online_sorting_option"_s)
-        {
-            online_sorting_option = atoi(w2.c_str());
         }
         else if (w1 == "online_gm_display_min_level"_s)
         {

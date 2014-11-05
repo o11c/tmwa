@@ -130,10 +130,6 @@ AString gm_account_filename = "save/gm_account.txt"_s;
 static
 AString login_log_filename = "log/login.log"_s;
 static
-AString login_log_unknown_packets_filename = "log/login_unknown_packets.log"_s;
-static
-int save_unknown_packets = 0;
-static
 tick_t creation_time_GM_account_file;
 static
 std::chrono::seconds gm_account_filename_check_timer = 15_s;
@@ -159,13 +155,6 @@ std::chrono::seconds anti_freeze_interval = 15_s;
 static
 Session *login_session;
 
-enum class ACO
-{
-    DENY_ALLOW,
-    ALLOW_DENY,
-    MUTUAL_FAILURE,
-};
-
 static
 ACO access_order = ACO::DENY_ALLOW;
 static
@@ -174,12 +163,6 @@ access_allow, access_deny, access_ladmin;
 
 static
 GmLevel min_level_to_connect = GmLevel::from(0_u32);  // minimum level of player/GM (0: player, 1-99: gm) to connect on the server
-static
-int add_to_unlimited_account = 0;  // Give possibility or not to adjust (ladmin command: timeadd) the time of an unlimited account.
-static
-int start_limited_time = -1;   // Starting additional sec from now for the limited time at creation of accounts (-1: unlimited time, 0 or more: additional sec from now)
-static
-int check_ip_flag = 1;         // It's to check IP of a player between login-server and char-server (part of anti-hacking system)
 
 DIAG_PUSH();
 DIAG_I(missing_noreturn);
@@ -216,7 +199,6 @@ struct AuthData
     AccountEmail email;             // e-mail (by default: a@a.com)
     timestamp_seconds_buffer error_message;     // Message of error code #6 = Your are Prohibited to log in until %s (packet 0x006a)
     TimeT ban_until_time;      // # of seconds 1/1/1970 (timestamp): ban time limit of the account (0 = no ban)
-    TimeT connect_until_time;  // # of seconds 1/1/1970 (timestamp): Validity limit of the account (0 = unlimited)
     IP4Address last_ip;           // save of last IP of connection
     VString<254> memo;             // a memo field
     int account_reg2_num;
@@ -482,7 +464,7 @@ AString mmo_auth_tostr(const AuthData *p)
             p->state,
             p->email,
             p->error_message,
-            p->connect_until_time,
+            TimeT(),
             p->last_ip,
             p->memo,
             p->ban_until_time);
@@ -502,6 +484,7 @@ bool extract(XString line, AuthData *ad)
     std::vector<GlobalReg> vars;
     VString<1> sex;
     VString<15> ip;
+    TimeT unused_connect_until_time;
     if (!extract(line,
                 record<'\t'>(
                     &ad->account_id,
@@ -513,7 +496,7 @@ bool extract(XString line, AuthData *ad)
                     &ad->state,
                     &ad->email,
                     &ad->error_message,
-                    &ad->connect_until_time,
+                    &unused_connect_until_time,
                     &ip,
                     &ad->memo,
                     &ad->ban_until_time,
@@ -645,7 +628,7 @@ void mmo_auth_sync(void)
     FPRINTF(fp,
             "// Accounts file: here are saved all information about the accounts.\n"_fmt);
     FPRINTF(fp,
-            "// Structure: ID, account name, password, last login time, sex, # of logins, state, email, error message for state 7, validity time, last (accepted) login ip, memo field, ban timestamp, repeated(register text, register value)\n"_fmt);
+            "// Structure: ID, account name, password, last login time, sex, # of logins, state, email, error message for state 7, validity time (unused), last (accepted) login ip, memo field, ban timestamp, repeated(register text, register value)\n"_fmt);
     FPRINTF(fp, "// Some explanations:\n"_fmt);
     FPRINTF(fp,
             "//   account name    : between 4 to 23 char for a normal account (standard client can't send less than 4 char).\n"_fmt);
@@ -797,17 +780,6 @@ AccountId mmo_auth_new(struct mmo_account *account, SEX sex, AccountEmail email)
     ad.error_message = stringish<timestamp_seconds_buffer>("-"_s);
     ad.ban_until_time = TimeT();
 
-    if (start_limited_time < 0)
-        ad.connect_until_time = TimeT(); // unlimited
-    else
-    {
-        // limited time
-        TimeT timestamp = static_cast<time_t>(TimeT::now()) + start_limited_time;
-        // there used to be a silly overflow check here, but it wasn't
-        // correct, and we don't support time-limited accounts.
-        ad.connect_until_time = timestamp;
-    }
-
     ad.last_ip = IP4Address();
     ad.memo = "!"_s;
     ad.account_reg2_num = 0;
@@ -899,14 +871,6 @@ int mmo_auth(struct mmo_account *account, Session *s)
                         account->userid, tmpstr, ip);
                 ad->ban_until_time = TimeT(); // reset the ban time
             }
-        }
-
-        if (ad->connect_until_time
-            && ad->connect_until_time < TimeT::now())
-        {
-            LOGIN_LOG("Connection refused (account: %s, expired ID, ip: %s)\n"_fmt,
-                    account->userid, ip);
-            return 2;           // 2 = This ID is expired
         }
 
         LOGIN_LOG("Authentification accepted (account: %s (id: %d), ip: %s)\n"_fmt,
@@ -1029,8 +993,7 @@ void parse_fromchar(Session *s)
                             auth_fifo[i].login_id1 == fixed.login_id1 &&
                             auth_fifo[i].login_id2 == fixed.login_id2 &&    // relate to the versions higher than 18
                             auth_fifo[i].sex == fixed.sex &&
-                            (!check_ip_flag
-                                || auth_fifo[i].ip == fixed.ip)
+                            auth_fifo[i].ip == fixed.ip
                             && !auth_fifo[i].delflag)
                         {
                             auth_fifo[i].delflag = 1;
@@ -1059,7 +1022,6 @@ void parse_fromchar(Session *s)
                                     fixed_13.account_id = acc;
                                     fixed_13.invalid = 0;
                                     fixed_13.email = ad.email;
-                                    fixed_13.connect_until = ad.connect_until_time;
 
                                     send_fpacket<0x2713, 51>(s, fixed_13);
                                     break;
@@ -1118,7 +1080,6 @@ void parse_fromchar(Session *s)
                         Packet_Fixed<0x2717> fixed_17;
                         fixed_17.account_id = account_id;
                         fixed_17.email = ad.email;
-                        fixed_17.connect_until = ad.connect_until_time;
 
                         send_fpacket<0x2717, 50>(s, fixed_17);
                         if (rv != RecvResult::Complete)
@@ -1605,19 +1566,17 @@ void parse_fromchar(Session *s)
 
             default:
             {
-                io::AppendFile logfp(login_log_unknown_packets_filename);
-                if (logfp.is_open())
                 {
                     timestamp_milliseconds_buffer timestr;
                     stamp_time(timestr);
-                    FPRINTF(logfp,
+                    FPRINTF(stderr,
                             "%s: receiving of an unknown packet -> disconnection\n"_fmt,
                             timestr);
-                    FPRINTF(logfp,
+                    FPRINTF(stderr,
                             "parse_fromchar: connection #%d (ip: %s), packet: 0x%x (with being read: %zu).\n"_fmt,
                             s, ip, packet_id, packet_avail(s));
-                    FPRINTF(logfp, "Detail (in hex):\n"_fmt);
-                    packet_dump(logfp, s);
+                    FPRINTF(stderr, "Detail (in hex):\n"_fmt);
+                    packet_dump(s);
                 }
                 PRINTF("parse_fromchar: Unknown packet 0x%x (from a char-server)! -> disconnection.\n"_fmt,
                         packet_id);
@@ -2332,48 +2291,6 @@ void parse_admin(Session *s)
                 break;
             }
 
-            case 0x7948:       // Request to change the validity limit (timestamp) (absolute value)
-            {
-                Packet_Fixed<0x7948> fixed;
-                rv = recv_fpacket<0x7948, 30>(s, fixed);
-                if (rv != RecvResult::Complete)
-                    break;
-
-                Packet_Fixed<0x7949> fixed_49;
-                {
-                    fixed_49.account_id = AccountId();
-                    AccountName account_name = stringish<AccountName>(fixed.account_name.to_print());
-                    TimeT timestamp = fixed.valid_until;
-                    timestamp_seconds_buffer tmpstr = stringish<timestamp_seconds_buffer>("unlimited"_s);
-                    if (timestamp)
-                        stamp_time(tmpstr, &timestamp);
-                    AuthData *ad = search_account(account_name);
-                    if (ad)
-                    {
-                        fixed_49.account_name = ad->userid;
-                        LOGIN_LOG("'ladmin': Change of a validity limit (account: %s, new validity: %lld (%s), ip: %s)\n"_fmt,
-                                ad->userid,
-                                timestamp,
-                                tmpstr,
-                                ip);
-                        ad->connect_until_time = timestamp;
-                        fixed_49.account_id = ad->account_id;
-                    }
-                    else
-                    {
-                        fixed_49.account_name = account_name;
-                        LOGIN_LOG("'ladmin': Attempt to change the validity limit of an unknown account (account: %s, received validity: %lld (%s), ip: %s)\n"_fmt,
-                                account_name,
-                                timestamp,
-                                tmpstr,
-                                ip);
-                    }
-                    fixed_49.valid_until = timestamp;
-                }
-                send_fpacket<0x7949, 34>(s, fixed_49);
-                break;
-            }
-
             case 0x794a:       // Request to change the final date of a banishment (timestamp) (absolute value)
             {
                 Packet_Fixed<0x794a> fixed;
@@ -2477,7 +2394,7 @@ void parse_admin(Session *s)
                             timestamp_seconds_buffer tmpstr = stringish<timestamp_seconds_buffer>("no banishment"_s);
                             if (timestamp)
                                 stamp_time(tmpstr, &timestamp);
-                            LOGIN_LOG("'ladmin': Adjustment of a final date of a banishment (account: %s, (%+d y %+d m %+d d %+d h %+d mn %+d s) -> new validity: %lld (%s), ip: %s)\n"_fmt,
+                            LOGIN_LOG("'ladmin': Adjustment of a final date of a banishment (account: %s, (%+d y %+d m %+d d %+d h %+d mn %+d s) -> new ban: %lld (%s), ip: %s)\n"_fmt,
                                     ad->userid,
                                     ban_diff.year, ban_diff.month,
                                     ban_diff.day, ban_diff.hour,
@@ -2585,99 +2502,6 @@ void parse_admin(Session *s)
                 break;
             }
 
-            case 0x7950:       // Request to change the validity limite (timestamp) (relative change)
-            {
-                Packet_Fixed<0x7950> fixed;
-                rv = recv_fpacket<0x7950, 38>(s, fixed);
-                if (rv != RecvResult::Complete)
-                    break;
-
-                Packet_Fixed<0x7951> fixed_51;
-                {
-                    fixed_51.account_id = AccountId();
-                    AccountName account_name = stringish<AccountName>(fixed.account_name.to_print());
-                    AuthData *ad = search_account(account_name);
-                    if (ad)
-                    {
-                        fixed_51.account_id = ad->account_id;
-                        fixed_51.account_name = ad->userid;
-                        if (add_to_unlimited_account == 0 && !ad->connect_until_time)
-                        {
-                            LOGIN_LOG("'ladmin': Attempt to adjust the validity limit of an unlimited account (account: %s, ip: %s)\n"_fmt,
-                                    ad->userid, ip);
-                            fixed_51.valid_until = TimeT();
-                        }
-                        else
-                        {
-                            TimeT now = TimeT::now();
-                            TimeT timestamp = ad->connect_until_time;
-                            if (!timestamp || timestamp < now)
-                                timestamp = now;
-                            struct tm tmtime = timestamp;
-                            HumanTimeDiff v_diff = fixed.valid_add;
-                            tmtime.tm_year += v_diff.year;
-                            tmtime.tm_mon += v_diff.month;
-                            tmtime.tm_mday += v_diff.day;
-                            tmtime.tm_hour += v_diff.hour;
-                            tmtime.tm_min += v_diff.minute;
-                            tmtime.tm_sec += v_diff.second;
-                            timestamp = tmtime;
-                            if (timestamp.okay())
-                            {
-                                timestamp_seconds_buffer tmpstr = stringish<timestamp_seconds_buffer>("unlimited"_s);
-                                timestamp_seconds_buffer tmpstr2 = stringish<timestamp_seconds_buffer>("unlimited"_s);
-                                if (ad->connect_until_time)
-                                    stamp_time(tmpstr, &ad->connect_until_time);
-                                if (timestamp)
-                                    stamp_time(tmpstr2, &timestamp);
-                                LOGIN_LOG("'ladmin': Adjustment of a validity limit (account: %s, %lld (%s) + (%+d y %+d m %+d d %+d h %+d mn %+d s) -> new validity: %lld (%s), ip: %s)\n"_fmt,
-                                        ad->userid,
-                                        ad->connect_until_time,
-                                        tmpstr,
-                                        v_diff.year,
-                                        v_diff.month,
-                                        v_diff.day,
-                                        v_diff.hour,
-                                        v_diff.minute,
-                                        v_diff.second,
-                                        timestamp,
-                                        tmpstr2,
-                                        ip);
-                                ad->connect_until_time = timestamp;
-                                fixed_51.valid_until = timestamp;
-                            }
-                            else
-                            {
-                                timestamp_seconds_buffer tmpstr = stringish<timestamp_seconds_buffer>("unlimited"_s);
-                                if (ad->connect_until_time)
-                                    stamp_time(tmpstr, &ad->connect_until_time);
-                                LOGIN_LOG("'ladmin': Impossible to adjust a validity limit (account: %s, %lld (%s) + (%+d y %+d m %+d d %+d h %+d mn %+d s) -> ???, ip: %s)\n"_fmt,
-                                        ad->userid,
-                                        ad->connect_until_time,
-                                        tmpstr,
-                                        v_diff.year,
-                                        v_diff.month,
-                                        v_diff.day,
-                                        v_diff.hour,
-                                        v_diff.minute,
-                                        v_diff.second,
-                                        ip);
-                                fixed_51.valid_until = TimeT();
-                            }
-                        }
-                    }
-                    else
-                    {
-                        fixed_51.account_name = account_name;
-                        LOGIN_LOG("'ladmin': Attempt to adjust the validity limit of an unknown account (account: %s, ip: %s)\n"_fmt,
-                                account_name, ip);
-                        fixed_51.valid_until = TimeT();
-                    }
-                }
-                send_fpacket<0x7951, 34>(s, fixed_51);
-                break;
-            }
-
             case 0x7952:       // Request about informations of an account (by account name)
             {
                 Packet_Fixed<0x7952> fixed;
@@ -2701,7 +2525,6 @@ void parse_admin(Session *s)
                     head_53.last_login_string = ad->lastlogin;
                     head_53.ip_string = convert_for_printf(ad->last_ip);
                     head_53.email = ad->email;
-                    head_53.connect_until = ad->connect_until_time;
                     head_53.ban_until = ad->ban_until_time;
 
                     XString repeat_53 = ad->memo;
@@ -2747,7 +2570,6 @@ void parse_admin(Session *s)
                         head_53.last_login_string = ad.lastlogin;
                         head_53.ip_string = convert_for_printf(ad.last_ip);
                         head_53.email = ad.email;
-                        head_53.connect_until = ad.connect_until_time;
                         head_53.ban_until = ad.ban_until_time;
                         XString repeat_53 = ad.memo;
                         send_vpacket<0x7953, 150, 1>(s, head_53, repeat_53);
@@ -2781,19 +2603,17 @@ void parse_admin(Session *s)
 
             default:
             {
-                io::AppendFile logfp(login_log_unknown_packets_filename);
-                if (logfp.is_open())
                 {
                     timestamp_milliseconds_buffer timestr;
                     stamp_time(timestr);
-                    FPRINTF(logfp,
+                    FPRINTF(stderr,
                             "%s: receiving of an unknown packet -> disconnection\n"_fmt,
                             timestr);
-                    FPRINTF(logfp,
+                    FPRINTF(stderr,
                             "parse_admin: connection #%d (ip: %s), packet: 0x%x (with being read: %zu).\n"_fmt,
                             s, ip, packet_id, packet_avail(s));
-                    FPRINTF(logfp, "Detail (in hex):\n"_fmt);
-                    packet_dump(logfp, s);
+                    FPRINTF(stderr, "Detail (in hex):\n"_fmt);
+                    packet_dump(s);
                 }
                 LOGIN_LOG("'ladmin': End of connection, unknown packet (ip: %s)\n"_fmt,
                         ip);
@@ -3196,22 +3016,19 @@ void parse_login(Session *s)
 
             default:
             {
-                if (save_unknown_packets)
                 {
-                    io::AppendFile logfp(login_log_unknown_packets_filename);
-                    if (logfp.is_open())
                     {
                         timestamp_milliseconds_buffer timestr;
                         stamp_time(timestr);
-                        FPRINTF(logfp,
+                        FPRINTF(stderr,
                                 "%s: receiving of an unknown packet -> disconnection\n"_fmt,
                                 timestr);
-                        FPRINTF(logfp,
+                        FPRINTF(stderr,
                                 "parse_login: connection #%d (ip: %s), packet: 0x%x (with being read: %zu).\n"_fmt,
                                 s, ip, packet_id,
                                 packet_avail(s));
-                        FPRINTF(logfp, "Detail (in hex):\n"_fmt);
-                        packet_dump(logfp, s);
+                        FPRINTF(stderr, "Detail (in hex):\n"_fmt);
+                        packet_dump(s);
                     }
                 }
                 LOGIN_LOG("End of connection, unknown packet (ip: %s)\n"_fmt, ip);
@@ -3373,14 +3190,6 @@ bool login_config(XString w1, ZString w2)
         {
             login_log_filename = w2;
         }
-        else if (w1 == "login_log_unknown_packets_filename"_s)
-        {
-            login_log_unknown_packets_filename = w2;
-        }
-        else if (w1 == "save_unknown_packets"_s)
-        {
-            save_unknown_packets = config_switch(w2);
-        }
         else if (w1 == "display_parse_login"_s)
         {
             display_parse_login = config_switch(w2);   // 0: no, 1: yes
@@ -3396,18 +3205,6 @@ bool login_config(XString w1, ZString w2)
         else if (w1 == "min_level_to_connect"_s)
         {
             min_level_to_connect = GmLevel::from(static_cast<uint32_t>(atoi(w2.c_str())));
-        }
-        else if (w1 == "add_to_unlimited_account"_s)
-        {
-            add_to_unlimited_account = config_switch(w2);
-        }
-        else if (w1 == "start_limited_time"_s)
-        {
-            start_limited_time = atoi(w2.c_str());
-        }
-        else if (w1 == "check_ip_flag"_s)
-        {
-            check_ip_flag = config_switch(w2);
         }
         else if (w1 == "order"_s)
         {
@@ -3587,13 +3384,6 @@ bool display_conf_warnings(void)
         rv = false;
     }
 
-    if (save_unknown_packets != 0 && save_unknown_packets != 1)
-    {
-        PRINTF("WARNING: Invalid value for save_unknown_packets parameter -> set to 0-no save.\n"_fmt);
-        save_unknown_packets = 0;
-        rv = false;
-    }
-
     if (display_parse_login != 0 && display_parse_login != 1)
     {                           // 0: no, 1: yes
         PRINTF("***WARNING: Invalid value for display_parse_login parameter\n"_fmt);
@@ -3615,30 +3405,6 @@ bool display_conf_warnings(void)
         PRINTF("***WARNING: Invalid value for display_parse_fromchar parameter\n"_fmt);
         PRINTF("            -> set to 0 (no display).\n"_fmt);
         display_parse_fromchar = 0;
-        rv = false;
-    }
-
-    if (add_to_unlimited_account != 0 && add_to_unlimited_account != 1)
-    {                           // 0: no, 1: yes
-        PRINTF("***WARNING: Invalid value for add_to_unlimited_account parameter\n"_fmt);
-        PRINTF("            -> set to 0 (impossible to add a time to an unlimited account).\n"_fmt);
-        add_to_unlimited_account = 0;
-        rv = false;
-    }
-
-    if (start_limited_time < -1)
-    {                           // -1: create unlimited account, 0 or more: additionnal sec from now to create limited time
-        PRINTF("***WARNING: Invalid value for start_limited_time parameter\n"_fmt);
-        PRINTF("            -> set to -1 (new accounts are created with unlimited time).\n"_fmt);
-        start_limited_time = -1;
-        rv = false;
-    }
-
-    if (check_ip_flag != 0 && check_ip_flag != 1)
-    {                           // 0: no, 1: yes
-        PRINTF("***WARNING: Invalid value for check_ip_flag parameter\n"_fmt);
-        PRINTF("            -> set to 1 (check players ip between login-server & char-server).\n"_fmt);
-        check_ip_flag = 1;
         rv = false;
     }
 
@@ -3745,12 +3511,6 @@ void save_config_in_log(void)
 
     // not necessary to log the 'login_log_filename', we are inside :)
 
-    LOGIN_LOG("- with the unknown packets file name: '%s'.\n"_fmt,
-            login_log_unknown_packets_filename);
-    if (save_unknown_packets)
-        LOGIN_LOG("- to SAVE all unkown packets.\n"_fmt);
-    else
-        LOGIN_LOG("- to SAVE only unkown packets sending by a char-server or a remote administration.\n"_fmt);
     if (display_parse_login)
         LOGIN_LOG("- to display normal parse packets on console.\n"_fmt);
     else
@@ -3769,24 +3529,6 @@ void save_config_in_log(void)
     else
         LOGIN_LOG("- to accept only GM with level %d or more.\n"_fmt,
                 min_level_to_connect);
-
-    if (add_to_unlimited_account)
-        LOGIN_LOG("- to authorize adjustment (with timeadd ladmin) on an unlimited account.\n"_fmt);
-    else
-        LOGIN_LOG("- to refuse adjustment (with timeadd ladmin) on an unlimited account. You must use timeset (ladmin command) before.\n"_fmt);
-
-    if (start_limited_time < 0)
-        LOGIN_LOG("- to create new accounts with an unlimited time.\n"_fmt);
-    else if (start_limited_time == 0)
-        LOGIN_LOG("- to create new accounts with a limited time: time of creation.\n"_fmt);
-    else
-        LOGIN_LOG("- to create new accounts with a limited time: time of creation + %d second(s).\n"_fmt,
-                start_limited_time);
-
-    if (check_ip_flag)
-        LOGIN_LOG("- with control of players IP between login-server and char-server.\n"_fmt);
-    else
-        LOGIN_LOG("- to not check players IP between login-server and char-server.\n"_fmt);
 
     if (access_order == ACO::DENY_ALLOW)
     {

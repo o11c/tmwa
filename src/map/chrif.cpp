@@ -320,8 +320,6 @@ int chrif_sendmapack(Session *, Packet_Fixed<0x2afb> fixed)
         exit(1);
     }
 
-    wisp_server_name = fixed.whisper_name;
-
     chrif_state = 2;
 
     return 0;
@@ -1095,12 +1093,11 @@ void chrif_parse(Session *s)
 
                 AccountId id = payload.account_id;
                 int login_id2 = payload.login_id2;
-                TimeT connect_until_time = payload.connect_until;
                 short tmw_version = payload.packet_tmw_version;
                 CharKey st_key = payload.char_key;
                 CharData st_data = payload.char_data;
                 pc_authok(id, login_id2,
-                        connect_until_time, tmw_version,
+                        tmw_version,
                         &st_key, &st_data);
                 break;
             }

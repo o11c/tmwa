@@ -3089,7 +3089,7 @@ def build_context():
             at(2, account_id, 'account id'),
             at(6, u8, 'invalid'),
             at(7, account_email, 'email'),
-            at(47, time32, 'connect until'),
+            at(47, time32, 'connect until unused'),
         ],
         fixed_size=51,
     )
@@ -3112,7 +3112,7 @@ def build_context():
             at(0, u16, 'packet id'),
             at(2, account_id, 'account id'),
             at(6, account_email, 'email'),
-            at(46, time32, 'connect until'),
+            at(46, time32, 'connect until unused'),
         ],
         fixed_size=50,
     )
@@ -3310,7 +3310,7 @@ def build_context():
         fixed=[
             at(0, u16, 'packet id'),
             at(2, u8, 'unknown'),
-            at(3, char_name, 'whisper name'),
+            at(3, char_name, 'whisper name unused'),
         ],
         fixed_size=27,
     )
@@ -3331,7 +3331,7 @@ def build_context():
             at(2, u16, 'packet length'),
             at(4, account_id, 'account id'),
             at(8, u32, 'login id2'),
-            at(12, time32, 'connect until'),
+            at(12, time32, 'connect until unused'),
             at(16, u16, 'packet tmw version'),
             at(18, char_key, 'char key'),
             at(None, char_data, 'char data'),
@@ -4162,23 +4162,6 @@ def build_context():
         ],
         fixed_size=30,
     )
-    login_admin.r(0x7948, 'validity absolute request',
-        fixed=[
-            at(0, u16, 'packet id'),
-            at(2, account_name, 'account name'),
-            at(26, time32, 'valid until'),
-        ],
-        fixed_size=30,
-    )
-    login_admin.s(0x7949, 'validity absolute result',
-        fixed=[
-            at(0, u16, 'packet id'),
-            at(2, account_id, 'account id'),
-            at(6, account_name, 'account name'),
-            at(30, time32, 'valid until'),
-        ],
-        fixed_size=34,
-    )
     login_admin.r(0x794a, 'ban absolute request',
         fixed=[
             at(0, u16, 'packet id'),
@@ -4233,23 +4216,6 @@ def build_context():
         ],
         fixed_size=4,
     )
-    login_admin.r(0x7950, 'validity relative request',
-        fixed=[
-            at(0, u16, 'packet id'),
-            at(2, account_name, 'account name'),
-            at(26, human_time_diff, 'valid add'),
-        ],
-        fixed_size=38,
-    )
-    login_admin.s(0x7951, 'validity relative result',
-        fixed=[
-            at(0, u16, 'packet id'),
-            at(2, account_id, 'account id'),
-            at(6, account_name, 'account name'),
-            at(30, time32, 'valid until'),
-        ],
-        fixed_size=34,
-    )
     login_admin.r(0x7952, 'account name info request',
         fixed=[
             at(0, u16, 'packet id'),
@@ -4271,7 +4237,7 @@ def build_context():
             at(60, millis, 'last login string'),
             at(84, str16, 'ip string'),
             at(100, account_email, 'email'),
-            at(140, time32, 'connect until'),
+            at(140, time32, 'connect until unused'),
             at(144, time32, 'ban until'),
             at(148, SkewLengthType(u16, 150), 'magic packet length'),
         ],
